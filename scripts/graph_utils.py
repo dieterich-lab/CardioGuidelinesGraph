@@ -13,8 +13,8 @@ LIST_LIMIT = 128
 DISTINCT_VALUE_LIMIT = 10
 
 include_docs_query = (
-    "MERGE (d:Document {id:$document.metadata.id}) "
-    # "SET d.text = $document.page_content "  # we don't want the page content as text property as the relations take care of that
+    "MERGE (d:DOCUMENT {id:$document.metadata.id}) "
+    "SET d.page_content = $document.page_content "
     "SET d += $document.metadata "
     "WITH d "
 )
@@ -33,14 +33,14 @@ def _get_node_import_query(baseEntityLabel: bool, include_source: bool) -> str:
             "SET source += row.properties "
             f"{'MERGE (d)-[:MENTIONS]->(source) ' if include_source else ''}"
             "WITH source, row "
-            "CALL apoc.create.addLabels( source, [row.type] ) YIELD node "
+            "CALL apoc.create.addLabels(source, [row.type]) YIELD node "
             "RETURN distinct 'done' AS result"
         )
     else:
         return (
             f"{include_docs_query if include_source else ''}"
             "UNWIND $data AS row "
-            "CALL apoc.merge.node([row.type], {id: row.id}, "
+            "CALL apoc.merge.node([toUpper(row.type)], {value: row.id}, "
             "row.properties, {}) YIELD node "
             f"{'MERGE (d)-[:MENTIONS]->(node) ' if include_source else ''}"
             "RETURN distinct 'done' AS result"
@@ -63,13 +63,13 @@ def _get_rel_import_query(baseEntityLabel: bool) -> str:
             # "MATCH (d:Document {id:$document.metadata.id}) "
             # "WITH d "
             "UNWIND $data AS row "
-            "CALL apoc.merge.node([row.source_label], {id: row.source},"
+            "CALL apoc.merge.node([toUpper(row.source_label)], {value: row.source},"
             "{}, {}) YIELD node as source "
-            "CALL apoc.merge.node([row.target_label], {id: row.target},"
+            "CALL apoc.merge.node([toUpper(row.target_label)], {value: row.target},"
             "{}, {}) YIELD node as target "
-            "CALL apoc.merge.relationship(source, row.type, {}, row.properties, target) YIELD rel "
-            "SET rel.texts = coalesce(rel.texts, []) + row.text "  # here, we collect all the text chunks where a relation was found
-            # "SET rel.texts = coalesce(rel.texts, []) + [row.text, d.id] "
+            "CALL apoc.merge.relationship(source, 'CONNECTED', {}, row.properties, target) YIELD rel "
+            "SET rel.chunks = coalesce(rel.chunks, []) + row.chunk "  # here, we collect all the text chunks where a relation was found
+            "SET rel.value = row.type "
             "RETURN distinct 'done' "
         )
 
@@ -149,11 +149,12 @@ class MyNeo4jGraph(Neo4jGraph):
                             "source_label": _remove_backticks(el.source.type),
                             "target": el.target.id,
                             "target_label": _remove_backticks(el.target.type),
-                            "type": _remove_backticks(
-                                el.type.replace(" ", "_").upper()
-                            ),
+                            "type": _remove_backticks(el.type),
+                            # "type": _remove_backticks(
+                            #     el.type.replace(" ", "_").upper()
+                            # ),
                             "properties": el.properties,
-                            "text": document.source.page_content,
+                            "chunk": document.source.page_content,
                         }
                         for el in document.relationships
                     ],

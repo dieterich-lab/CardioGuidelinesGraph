@@ -1,0 +1,20 @@
+# NVL Chronische Herzinsuffizienz RASi Langfassung – Version 4.0
+
+|Substanzklasse|getestet gegen/im Vergleich zu|Mortalität, Hospitalisierungen|langfristige Endpunkte|Hypotonierisiko|Diuretikagebrauch|weitere Anwendungsgebiete|wichtige Kontraindikationen und Sicherheitshinweise|
+|---|---|---|---|---|---|---|---|
+|ACEi|Placebo|↓|(↔)|↑|(↔)|▪ arterielle Hypertonie ▪ nach Myokardinfarkt|▪ Hypotonie ▪ Hyperkaliämie ▪ Angioödem|
+|ARB|ACEi|↔|(↔)|↔|(↔)|▪ insb. diabetische Nephropathie|▪ Husten ▪ Vorsicht bei eGFR < 30 ml/min/1,73 m2|
+|ARNI|auf Basis von BB (+MRA)|↓|(↓)|↑|↓| |▪ nach Myokardinfarkt ▪ Bradykardie ▪ Hyperkaliämie ▪ Angioödem|
+|BB|auf Basis von ACEi/ARB (+Digitalis)|↓|(↔)|↑|(↔)|▪ A. pectoris ▪ Tachyarrhythmien|▪ AV-Block ▪ Hypotonie (kontraindiziert bei SBP < 90 mmHg)|
+|MRA|auf Basis von RASi+BB|↓|?|↑|↓|▪ primärer Hyperaldosteronismus ▪ Ausgleich des kaliuretischen Effekts von Diuretika|▪ Hyperkaliämie, Hyponatriämie ▪ Hypotonie ▪ Gynäkomastie ▪ gastrointestinale Nebenwirkungen|
+|SGLT2i|auf Basis von RASi+BB (+MRA)|↓|↓|↔|↓|▪ chronische Nierenerkrankungen|▪ urogenitale Infektionen ▪ atypische Ketoazidose|
+
+Die Tabelle enthält eine stark vereinfachte Darstellung der Evidenz sowie der von der Leitliniengruppe getroffenen Auswahl von Anwendungsgebieten, Kontraindikationen und Nebenwirkungen der bei Herzinsuffienz relevanten Wirkstoffe. Für die ausführliche Beschreibung der Evidenz mit Effektmaßen und Aussagesicherheit siehe Hintergrundtexte und Evidenztabellen; für die vollständige Darstellung der Indikationen, Kontraindikationen und Nebenwirkungen siehe Fachinformationen der einzelnen Wirkstoffe sowie Empfehlungen der NVL Typ-2-Diabetes [147], NVH Chronische KHK [148] und NVL Hypertonie [149]. CAVE: Für einige Wirkstoffe der aufgeführten Substanzklassen liegt keine Zulassung für die Behandlung von Herzinsuffizienz vor bzw. nicht für alle klinischen Settings im Rahmen der Behandlung von Herzinsuffizienz (Off-Label-Use).
+
+Legende: ↓ Endpunkt seltener erreicht; ↑ Endpunkt häufiger erreicht; ↔ neutraler Effekt; ? keine ausreichende Evidenz aus Herzinsuffizienz-Studien; () Angaben in Klammern: aus Studien zu Herzinsuffizienz keine bzw. methodisch schwache Evidenz aus Subgruppenanalysen;
+
+Anmerkungen: aRASi, MRA und SGLT2i können kurzfristig einen hämodynamisch bedingten Kreatininanstieg auslösen, der in der Regel aber keine strukturelle Nephrotoxizität reflektiert. bIn Studien zu Herzinsuffizienz keine Effekte, jedoch in Studien zu chronischen Nierenerkrankungen Reduktion renaler Endpunkte; c nur ACEi; dBisoprolol, Carvedilol, Metroprolol, Nebivolol; eSpironolacton; CAVE: keine ausdrückliche Zulassung für Herzinsuffizienz; fEplerenon; g klinisch relevanter Aspekt, keine Zulassung; hDapagliflozin; iEmpagliflozin
+
+Abkürzungen: ACEi Angiotensin Converting Enzyme-Inhibitoren; ARB Angiotensinrezeptorblocker; ARNI Angiotensin-Rezeptor-Neprilysin-Inhibitoren; BB Betarezeptorenblocker; eGFR geschätzte glomeruläre Filtrationsrate; MRA Mineralokortikoidrezeptorantagonisten; RASi Renin-Angiotensin-System-Inhibitoren; SGLT2i Sodium dependent glucose co-transporter 2 Inhibitoren; K Kalium; SBP systolischer Blutdruck
+
+Seite 52
