@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --job-name=langchain-kg
+#SBATCH --job-name=generate_graph
 #SBATCH --output=../outputs/slurm/langchain-kg.txt
 #SBATCH --partition=long
 #SBATCH --mem=100G
 
 
-python -u langchain_kg.py
+python -u generate_graph.py

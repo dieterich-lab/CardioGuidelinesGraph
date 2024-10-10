@@ -24,6 +24,15 @@ def _remove_backticks(text: str) -> str:
     return text.replace("`", "")
 
 
+def escape_json(s):
+    _s = ""
+    for ss in s:
+        _s += ss
+        if ss in ["{", "}"]:
+            _s += ss
+    return _s
+
+
 def _get_node_import_query(baseEntityLabel: bool, include_source: bool) -> str:
     if baseEntityLabel:
         return (

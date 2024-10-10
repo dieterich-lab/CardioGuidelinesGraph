@@ -27,20 +27,36 @@ NODES = [
     "PATIENTENMANAGEMENT",
 ]
 
-GUIDELINES_BASESTRINGPARTS = [
+GUIDELINES_BASESTRINGPARTS_JSON = [
     "Du bist ein professioneller Arzt, der sich auf die Krankheit Herzinsuffizienz spezialsiert hat. "
     "Deine Aufgabe ist es, Beziehungen zwischen bestimmten Entitäten aus einer Richtlinie über die Behandlung von Patienten mit "
     "Herzinsuffizienz zu identifizieren. Diese Entitäten beziehen sich sowohl auf das Krankheitsbild Herzinsuffizienz, sowie "
     "dessen Behandlung und den Umgang mit dem Patienten. Die Entitäten sind Dir vorgegeben, Du bist aber frei in der Textwahl "
     "für die Beziehungen zwischen den Entitäten. Stelle Deine Ergebnisse als Liste mit Objekten im JSON Format zur Verfügung. "
     "Jedes Objekt sollte die Schlüssel 'head', 'head_type', 'relation', 'tail' und 'tail_type' beinhalten. "
-    "Der 'head'-Schlüssel muss den Nmaen der ersten Entität enthalten. 'head_type' enthält den Typ dieser Entität."
+    "Der 'head'-Schlüssel muss den Namen der ersten Entität enthalten. 'head_type' enthält den Typ dieser Entität."
     "'relation' beinhaltet den Freitext, der die Beziehung zwischen erster und zweiter Entität beschreibt. "
     "Der 'tail'-Schlüssel muss den Namen der zweiten Entität enthalten. 'tail_type' enthält den Typ der zweiten "
     "Entität. "
     "Versuche so viele Entitäten und deren Beziehungen wie möglich zu extrahieren. Achte auf Konsistenz "
     "WICHTIG: Füge keine Erklärungen oder zusätzlichen Text hinzu."
 ]
+
+GUIDELINES_BASESTRINGPARTS_TRIPLE = [
+    "Du bist ein professioneller Arzt, der sich auf die Krankheit Herzinsuffizienz spezialsiert hat. "
+    "Deine Aufgabe ist es, Beziehungen zwischen bestimmten Entitäten aus einer Richtlinie über die Behandlung von Patienten mit "
+    "Herzinsuffizienz zu identifizieren. Diese Entitäten beziehen sich sowohl auf das Krankheitsbild Herzinsuffizienz, sowie "
+    "dessen Behandlung und den Umgang mit dem Patienten. Die Entitäten sind Dir vorgegeben, Du bist aber frei in der Textwahl "
+    "für die Beziehungen zwischen den Entitäten. Stelle Deine Ergebnisse als Liste mit Triple-Objekten zur Verfügung. "
+    "Jedes Objekt hat die Attribute 'head', 'head_type', 'relation', 'tail' und 'tail_type' beinhalten. "
+    "Das 'head'-Attribut muss den Namen der ersten Entität enthalten. 'head_type' enthält den Typ dieser Entität."
+    "'relation' beinhaltet den Freitext, der die Beziehung zwischen erster und zweiter Entität beschreibt. "
+    "Das 'tail'-Attribut muss den Namen der zweiten Entität enthalten. 'tail_type' enthält den Typ der zweiten "
+    "Entität. "
+    "Versuche so viele Entitäten und deren Beziehungen wie möglich zu extrahieren. Achte auf Konsistenz "
+    "WICHTIG: Füge keine Erklärungen oder zusätzlichen Text hinzu."
+]
+
 
 GUIDELINES_EXAMPLES = [
     {
@@ -106,13 +122,6 @@ GUIDELINES_EXAMPLES = [
         "tail": "chronische Herzinsuffizienz",
         "tail_type": "KRANKHEIT",
     },
-    # {
-    #     "head": "chronische Herzinsuffizienz",
-    #     "head_type": "KRANKHEIT",
-    #     "relation": "ist bei überlebtem plötzlichen Herztod und anhaltende hämodynamisch wirksame Kammertachykardien (die nicht durch vermeidbare Ursachen aufgetreten sind) empfohlen",
-    #     "tail": "ICD",
-    #     "tail_type": "KRANKHEIT",
-    # },
     {
         "head": "Anamnese",
         "head_type": "DIAGNOSTIK",
@@ -152,4 +161,15 @@ Hier ist die Tabelle:
 |BB|auf Basis von ACEi/ARB (+Digitalis)|↓|(↔)|↑|(↔)|▪ A. pectoris ▪ Tachyarrhythmien|▪ AV-Block ▪ Hypotonie (kontraindiziert bei SBP < 90 mmHg)|
 |MRA|auf Basis von RASi+BB|↓|?|↑|↓|▪ primärer Hyperaldosteronismus ▪ Ausgleich des kaliuretischen Effekts von Diuretika|▪ Hyperkaliämie, Hyponatriämie ▪ Hypotonie ▪ Gynäkomastie ▪ gastrointestinale Nebenwirkungen|
 |SGLT2i|auf Basis von RASi+BB (+MRA)|↓|↓|↔|↓|▪ chronische Nierenerkrankungen|▪ urogenitale Infektionen ▪ atypische Ketoazidose|
+"""
+
+WORKING_TABLE_PROMPT = """
+Du bist ein spezialisierter Arzt, der medizinische Informationen in Form von Tripeln Tabellen 
+einer klinischen Richtlinie über Herzinssufizienz extrahiert. 
+Jedes extrahierte Tripel muss immer aus den folgenden drei Einträgen bestehen:
+1. head: Beschreibt die Start-Entität.
+2. relation: Beschreibt die Relation zwischen Start-Entität und Ziel-Entität und darf ein beliebiger Freitext passend zum Input sein.
+3. tail: Beschreibt die Ziel-Entität.
+
+WICHTIG: Extrahiere für jeden Tabelleneintrag ein eigenes Tripel. Lasse keine Zeile und keine Spalte aus!
 """

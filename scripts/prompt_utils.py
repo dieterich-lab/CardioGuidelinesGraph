@@ -65,7 +65,6 @@ class MyUnstructuredRelation(BaseModel):
     head_type: str = Field(
         description="Typ der extrahierten Start-Entität wie Person, Firma, etc"
     )
-    relation: str = Field(description="relation between the head and the tail entities")
     relation: str = Field(description="Relation zwischen der Start- und End-Entität")
     tail: str = Field(
         description=(
