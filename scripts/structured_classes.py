@@ -42,9 +42,19 @@ class Triples(BaseModel):
     triples: List[Triple] = Field(description="Liste aller extrahierten Triples")
 
 
-class Router(BaseModel):
+class TableRouter(BaseModel):
     """
     Eine Funktion, die entscheidet ob es sich bei einem Input um eine Tabelle handelt oder nicht.
+    """
+
+    decision: Literal["ja", "nein"] = Field(
+        description="Eine entweder positive oder negative Antwort."
+    )
+
+
+class MedicRouter(BaseModel):
+    """
+    Eine Funktion, die entscheidet ob es sich bei einem Input um Wissen zur medizinischen Behandlung von Patienten handelt.
     """
 
     decision: Literal["ja", "nein"] = Field(

@@ -22,7 +22,7 @@ from langchain_text_splitters import (
 )
 
 # from prompt_utils import create_unstructured_prompt
-from structured_classes import Router, Triples
+from structured_classes import MedicRouter, TableRouter, Triples
 from templates import WORKING_TABLE_PROMPT
 
 # model = "mixtral:8x22b"
@@ -93,7 +93,7 @@ graph_prompt = ChatPromptTemplate.from_messages(
 )
 
 
-routing_prompt = ChatPromptTemplate.from_messages(
+table_routing_prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
@@ -108,12 +108,12 @@ routing_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-medic_prompt = ChatPromptTemplate.from_messages(
+medic_routing_prompt = ChatPromptTemplate.from_messages(
     [
         (
             "system",
             """
-            Du bist ein Assistent zum Erkennen von medizinischen Inhalten, die aus einer Richtlinie für chronische Herzinsuffizienz stammten.
+            Du bist ein Assistent zum Erkennen von medizinischen Inhalten.
             """,
         ),
         (
@@ -125,12 +125,15 @@ medic_prompt = ChatPromptTemplate.from_messages(
 
 
 graph_schema = convert_to_openai_tool(Triples)
-routing_schema = convert_to_openai_tool(Router)
+table_routing_schema = convert_to_openai_tool(TableRouter)
+medic_routing_schema = convert_to_openai_tool(MedicRouter)
 graph_llm = llm.with_structured_output(graph_schema, include_raw=True)
-routing_llm = llm.with_structured_output(routing_schema, include_raw=True)
+table_routing_llm = llm.with_structured_output(table_routing_schema, include_raw=True)
+medic_routing_llm = llm.with_structured_output(medic_routing_schema, include_raw=True)
 
 graph_chain = graph_prompt | graph_llm
-routing_chain = routing_prompt | routing_llm
+table_routing_chain = table_routing_prompt | table_routing_llm
+medic_routing_chain = medic_routing_prompt | medic_routing_llm
 
 # graphdoc_pkl_path = f"../outputs/seite52/{task}_graph_documents.pkl"
 graphdoc_pkl_path = f"../outputs/{task}_graph_documents.pkl"
@@ -152,23 +155,54 @@ def route(info):
         else:
             return graph_chain
     except:
-        return None
+        if "nein" in info["answer"]["raw"].content.lower():
+            return None
+        else:
+            return graph_chain
 
 
-routed_chain = {
-    "answer": routing_chain,
+def table_route(info):
+    try:
+        if info["answer"]["parsed"]["decision"] == "nein":
+            return None
+        else:
+            return medic_routed_chain
+    except:
+        if "nein" in info["answer"]["raw"].content.lower():
+            return None
+        else:
+            return medic_routed_chain
+
+
+table_routed_chain = {
+    "answer": table_routing_chain,
     "input": lambda x: x["input"],
 } | RunnableLambda(route)
+
+medic_routed_chain = {
+    "answer": medic_routing_chain,
+    "input": lambda x: x["input"],
+} | RunnableLambda(route)
+
+medic_table_routed_chain = {
+    "answer": table_routing_chain,
+    "input": lambda x: x["input"],
+} | RunnableLambda(table_route)
 
 
 f = open(graphdoc_pkl_path, "wb")
 for i, (doc, page_nrs) in enumerate(docs):
     try:
-        msg = routed_chain.invoke(
+        msg = table_routed_chain.invoke(
             {
                 "input": doc.page_content,
             }
         )
+        # msg = medic_table_routed_chain.invoke(
+        #     {
+        #         "input": doc.page_content,
+        #     }
+        # )
         if msg is None:
             parsed = []
         else:
