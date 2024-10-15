@@ -4,35 +4,18 @@ from typing import List, Literal
 from pydantic import BaseModel, Field
 
 
-class Nodes(str, Enum):
-    krankheit = "KRANKHEIT"
-    anatomie = "ANATOMIE"
-    medikamente = "MEDIKAMENTE"
-    nicht_deterministische_therapeutische_massnahmen = (
-        "NICHT-MEDIKAMENTÖSE THERAPEUTISCHE MASSNAHMEN"
-    )
-    invasive_therapiemassnahmen = "INVASIVE THERAPIEMASSNAHMEN"
-    diagnostik = "DIAGNOSTIK"
-    krankheitsmanagmement = "KRANKHEITSMANAGEMENT"
-    patientenmanagement = "PATIENTENMANAGEMENT"
-
-    # Erlaubt sind nur die folgenden Typen:
-
-
-# KRANKHEIT,
-# ANATOMIE,
-# MEDIKAMENTE,
-# NICHT-MEDIKAMENTÖSE THERAPEUTISCHE MASSNAHMEN,
-# INVASIVE THERAPIEMASSNAHMEN,
-# DIAGNOSTIK,
-# KRANKHEITSMANAGEMENT,
-# PATIENTENMANAGEMENT,
-
-
 class Triple(BaseModel):
     head: str = Field(description="Beschreibt die Start-Entität")
-    # head_type: str = Field(
-    #     # head_type: Nodes = Field(
+    # head_type: Literal[
+    #     "KRANKHEIT",
+    #     "ANATOMIE",
+    #     "MEDIKAMENTE",
+    #     "NICHT-MEDIKAMENTÖSE THERAPEUTISCHE MASSNAHMEN",
+    #     "INVASIVE THERAPIEMASSNAHMEN",
+    #     "DIAGNOSTIK",
+    #     "KRANKHEITSMANAGEMENT",
+    #     "PATIENTENMANAGEMENT",
+    # ] = Field(
     #     description="""Beschreibt den Typ der Start-Entität.
     # """
     # )
@@ -40,9 +23,17 @@ class Triple(BaseModel):
         description="Beschreibt die Relation zwischen Start-Entität und Ziel-Entität. Darf ein beliebiger Freitext sein."
     )
     tail: str = Field(description="Beschreibt die Ziel-Entität")
-    # tail_type: str = Field(
-    #     # tail_type: Nodes = Field(
-    #     description="""Beschreibt den Typ der Ziel-Entität.
+    # tail_type: Literal[
+    #     "KRANKHEIT",
+    #     "ANATOMIE",
+    #     "MEDIKAMENTE",
+    #     "NICHT-MEDIKAMENTÖSE THERAPEUTISCHE MASSNAHMEN",
+    #     "INVASIVE THERAPIEMASSNAHMEN",
+    #     "DIAGNOSTIK",
+    #     "KRANKHEITSMANAGEMENT",
+    #     "PATIENTENMANAGEMENT",
+    # ] = Field(
+    #     description="""Beschreibt den Typ der End-Entität.
     # """
     # )
 
