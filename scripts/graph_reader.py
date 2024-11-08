@@ -1,49 +1,55 @@
-import asyncio
-import json
-import os
+import argparse
 import pickle
 import re
 from pathlib import Path
 
 from json_repair import repair_json
 from langchain_community.graphs.graph_document import GraphDocument, Node, Relationship
-from langchain_core.documents import Document
 
 # from graph_utils import escape_json
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
 from langchain_core.utils.function_calling import convert_to_openai_tool
 
 # from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_ollama import ChatOllama
-from langchain_text_splitters import (
-    MarkdownTextSplitter,
-    RecursiveCharacterTextSplitter,
-)
+from langchain_text_splitters import MarkdownTextSplitter
 
 # from prompt_utils import create_unstructured_prompt
 from structured_classes import MedicRouter, TableRouter, Triples
 from templates import WORKING_TABLE_PROMPT
+from utils import Timeout
 
-# model = "mixtral:8x22b"
-# model = "mixtral:8x7b"
-# model = "mixtral:instruct"
-nemo = "mistral-nemo"
-llama31 = "llama3.1"
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--dev",
+    action="store_true",
+)
+parser.add_argument(
+    "--model", choices=["nemo", "mixtral_big", "mixtral_small", "v03"], default="nemo"
+)
+args = parser.parse_args()
+model_dict = {
+    "nemo": "mistral-nemo",
+    "mixtral_big": "mixtral:8x22b",
+    "mixtral_small": "mixtral:8x7b",
+    "v03": "mistral:v0.3",
+}
+model = model_dict[args.model]
+
 g4 = "10.250.135.153"
-g23 = "10.250.135.143"
+g2 = "10.250.135.143"
 g5 = "10.250.135.156"
 port34 = "11434"
 port35 = "11435"
 port36 = "11436"
+PORT = port35
 llm = ChatOllama(
-    model=nemo,
-    base_url=f"http://{g4}:{port36}",
+    model=model,
+    base_url=f"http://{g4}:{PORT}",
     temperature=0.0,
     keep_alive="24h",
 )
-
-task = "guidelines"
 
 text_splitter = MarkdownTextSplitter(
     chunk_size=1000,
@@ -52,32 +58,13 @@ text_splitter = MarkdownTextSplitter(
     is_separator_regex=False,
 )
 
-source_doc_path = Path("../data/herzinsuffizienz.txt")
-# source_doc_path = Path("../data/seite52/seite52.txt")
-doc_pkl_path = "../outputs/doc_chunks.pkl"
-# chunk_pkl_path = "../outputs/seite52/doc_chunks.pkl"
+# source_doc_path = Path("../data/marker/herzinsuffizienz.md")
+source_doc_path = Path("../data/marker/tabelle3.md")
+# graphdoc_pkl_path = f"../outputs/marker/herzinsuffizienz_graph_documents.pkl"
+graphdoc_pkl_path = f"../outputs/tabelle3_graph_documents.pkl"
 
-source_doc = open(source_doc_path, "r").read().strip()
 
-# f = open(doc_pkl_path, "wb")
-# docs = text_splitter.create_documents([source_doc])
-# page_nrs = [1]
-# for pt in docs:
-#     _page_nrs = re.findall(r"Seite\s+(\d+)", pt.page_content)
-#     if not page_nrs:
-#         page_nrs = _page_nrs
-#     pickle.dump((pt, page_nrs), f)
-# f.close()
-
-docs = list()
-
-with open(doc_pkl_path, "rb") as f:
-    while 1:
-        try:
-            docs.append(pickle.load(f))
-        except EOFError:
-            break
-print(len(docs))
+chunks = text_splitter.create_documents([open(source_doc_path, "r").read().strip()])
 
 graph_prompt = ChatPromptTemplate.from_messages(
     [
@@ -98,12 +85,12 @@ table_routing_prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             """
-            Du bist ein Assistent zum Erkennen von Markdown-Tabellen.
+            Bitte sage mir, ob es sich im folgenden Text eine Tabelle oder Auflistung befindet.
             """,
         ),
         (
             "human",
-            "Handelt es sich bei dem folgenden Input um eine Markdown-Tabelle? Benutze ausschließlich das vorgegebene Format! Input: {input}",
+            "Benute für Deine Antwort das vorgebene Format. Input: {input}",
         ),
     ]
 )
@@ -134,18 +121,6 @@ medic_routing_llm = llm.with_structured_output(medic_routing_schema, include_raw
 graph_chain = graph_prompt | graph_llm
 table_routing_chain = table_routing_prompt | table_routing_llm
 medic_routing_chain = medic_routing_prompt | medic_routing_llm
-
-# graphdoc_pkl_path = f"../outputs/seite52/{task}_graph_documents.pkl"
-graphdoc_pkl_path = f"../outputs/{task}_graph_documents.pkl"
-
-
-async def extract():
-    tasks = [
-        asyncio.create_task(graph_chain.ainvoke({"input": page_text.page_content}))
-        for page_text, _ in docs
-    ]
-    results = await asyncio.gather(*tasks)
-    return results
 
 
 def route(info):
@@ -190,12 +165,30 @@ medic_table_routed_chain = {
 } | RunnableLambda(table_route)
 
 
-f = open(graphdoc_pkl_path, "wb")
-for i, (doc, page_nrs) in enumerate(docs):
+if not args.dev:
+    f = open(graphdoc_pkl_path, "wb")
+
+for i, chunk in enumerate(chunks):
+    # for i, (doc, page_nrs) in enumerate(docs):
+    print(i)
+    c = 0
     try:
+        # while c < 5:
+        #     try:
+        #         with Timeout(60):
+        #             msg = table_routed_chain.invoke(
+        #                 {
+        #                     "input": doc.page_content,
+        #                 }
+        #             )
+        #             break
+        #     except Timeout.Timeout:
+        #         print("Timeout")
+        #         c += 1
         msg = table_routed_chain.invoke(
             {
-                "input": doc.page_content,
+                "input": chunk,
+                # "input": doc.page_content,
             }
         )
         # msg = medic_table_routed_chain.invoke(
@@ -212,8 +205,13 @@ for i, (doc, page_nrs) in enumerate(docs):
                 for p in _parsed:
                     if not isinstance(p, dict):
                         continue
-                    parsed = [t for t in p["triples"] if len(t) == 3]
-                    break
+                    if "triples" in p:
+                        parsed = [t for t in p["triples"] if len(t) == 3]
+                        break
+                    for k, v in p.items():
+                        if "triples" in v:
+                            parsed = [t for t in v["triples"] if len(t) == 3]
+                            break
             else:
                 parsed = msg["parsed"]["triples"]
 
@@ -230,14 +228,13 @@ for i, (doc, page_nrs) in enumerate(docs):
                 Relationship(source=Node(id=n1), target=Node(id=n2), type=triple[1])
             )
         nodes = [Node(id=el) for el in list(nodes_set)]
-        graph_doc = GraphDocument(nodes=nodes, relationships=rels, source=doc)
-        graph_doc.source.metadata["pages"] = page_nrs
+        graph_doc = GraphDocument(nodes=nodes, relationships=rels, source=chunk)
+        # graph_doc.source.metadata["pages"] = page_nrs
         pickle.dump(graph_doc, f)
     except Exception as e:
         print(e)
 
-f.close()
+if not args.dev:
+    f.close()
 
-
-# results = asyncio.run(extract())
-# print(results)
+print(f"Finished writing graph docs to {graphdoc_pkl_path}.")

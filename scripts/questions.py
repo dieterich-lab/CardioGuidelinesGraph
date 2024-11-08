@@ -2,7 +2,7 @@
 questions1 = [
     "Ist eine Hyperkaliämie eine Kontraindikation für ACE-Hemmer?",
     "Welches LVEF ist für eine HFrEF notwendig?",
-    "Nenne mir zwei häufige Ursachen für chronische Herzinsuffizienz",
+    "Nenne mir zwei häufige Ursachen für chronische Herzinsuffizienz?",
     "Was ist die Definition für NYHA IV?",
     "Welche Voraussetzungen braucht ein symptomatischer Patient für eine kardiale Resynchronisation?",
     "Wo liegt die standardisierte Jahresprävalenz der chronischen Herzinsuffizienz 2010 bei ≥18-jährigen Frauen?",
@@ -60,7 +60,7 @@ answers2 = [
     "Digoxin wirkt nicht lebensverlängernd, kann aber die Symptomatik und Lebensqualität verbessern sowie die Belastungstoleranz erhöhen und die Hospitalisierungsrate senken. Obwohl sich sämtliche Studiendaten auf Digoxin beziehen, kommen nach Meinung der Leitliniengruppe auch die halbsynthetischen Digoxin-Derivate (Beta-Acetyldigoxin, Metildigoxin) und Digitoxin für die Therapie der Herzinsuffizienz in Betracht. Bei HFrEF und Sinusrhythmus sieht die Leitliniengruppe Digitalisglykoside als zusätzliche Reservemittel, wenn die Patient*innen trotz optimaler Therapie erheblich symptomatisch bleiben. Die offene Empfehlung ist begründet durch die schwache Evidenzlage, insbesondere was die Behandlung auf Basis der heute empfohlenen prognoseverbesserenden Medikation betrifft, sowie durch die geringe therapeutische Breite und damit verbundene Risiken. Da tachyarrhythmisches Vorhofflimmern bei Herzinsuffizienz häufig ist, können Digoxin oder Digitoxin bei Patient*innen mit Herzinsuffizienz über diese Komorbidität indiziert sein. Zur Empfehlung für Patient*innen mit komorbiden Nierenerkrankungen siehe Kapitel 8.1 Nierenerkrankungen.",
     "Patient*innen mit Herzinsuffizienz sollen die von der Ständigen Impfkommission für Menschen mit chronischen Erkrankungen empfohlenen Impfungen empfohlen werden. Dies betrifft insbesondere Influenza, Pneumokokken und COVID-19.",
     "Patienten mit chronischer Herzinsuffizienz soll die Implantation eines Defibrillators (ICD) empfohlen werden, wenn sie eine Lebenserwartung von über einem Jahr haben und eine der folgenden Voraussetzungen erfüllen: überlebter plötzlicher Herztod; anhaltende, hämodynamisch wirksame Kammertachykardien (die nicht durch vermeidbare Ursachen aufgetreten sind).",
-	"Blickdiagnose/körperliche Untersuchung: Typische Symptome von Patienten mit dekompensierter Herzinsuffizienz sind Atemnot bei geringer Belastung, Müdigkeit, periphere Ödeme, Husten und Gewichts- oder Bauchumfangzunahme (Aszites). Die einzelnen Symptome sind für sich allein genommen unspezifisch; [574] die Gesamtkonstellation von Symptomen und Befunden kann jedoch eine akut dekompensierte Herzinsuffizienz sehr wahrscheinlich machen (siehe Tabelle 5).",
+    "Blickdiagnose/körperliche Untersuchung: Typische Symptome von Patienten mit dekompensierter Herzinsuffizienz sind Atemnot bei geringer Belastung, Müdigkeit, periphere Ödeme, Husten und Gewichts- oder Bauchumfangzunahme (Aszites). Die einzelnen Symptome sind für sich allein genommen unspezifisch; [574] die Gesamtkonstellation von Symptomen und Befunden kann jedoch eine akut dekompensierte Herzinsuffizienz sehr wahrscheinlich machen (siehe Tabelle 5).",
 ]
 
 # 3 Fragen-Patienten mit Pumpfunktionsstörung

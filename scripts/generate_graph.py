@@ -93,7 +93,8 @@ graphdoc_pkl_path = f"../outputs/seite52/{task}_graph_documents.pkl"
 # graphdoc_pkl_path = f"../outputs/{task}_graph_documents.pkl"
 
 f = open(graphdoc_pkl_path, "wb")
-for i, (page_text, page_infos) in enumerate(page_texts):
+for i, (page_text, page_infos) in enumerate(page_texts[957:958]):
+    # for i, (page_text, page_infos) in enumerate(page_texts):
     page, page_nr = page_infos
     print(i, page_nr)
     try:

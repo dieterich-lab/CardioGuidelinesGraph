@@ -131,3 +131,29 @@ Erhärtet sich nach dem Screening der Verdacht auf psychische/psychosomatische K
 
 Zur Behandlung psychischer/psychosomatischer Erkrankungen bei Patienten mit Herzinsuffizienz siehe Kapitel 8.7 Psychische Komorbidität. Das Patientenblatt „Warum alltägliche und seelische Belastungen wichtig werden können“ erklärt in allgemeinverständlicher Sprache den Zusammenhang zwischen psychischen und somatischen Beschwerden (siehe Anhang Patientenblätter).
 """
+
+
+class MedicEntities(BaseModel):
+    """
+    Ein Klasse, die eine Liste von
+
+    - medizinischen,
+    - anatomischen,
+    - diagnostischen
+    - labortechnischen
+
+       Konzepten enhält.
+    """
+
+    names: List[str] = Field(
+        ...,
+        description="Liste mit medizinischen, anatomischen, diagnostischen und laborwissenschaftlichen Konzepten.",
+    )
+
+
+class Entities(BaseModel):
+    """
+    Eine Liste von Nomen und Konzepten.
+    """
+
+    names: List[str] = Field(..., description="Eine Liste von Nomen und Konzepten.")

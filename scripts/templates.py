@@ -138,33 +138,8 @@ GUIDELINES_EXAMPLES = [
     },
 ]
 
-TABLE_PROMPT = """
-Im folgenden siehst Du eine eine deutsche Tabelle, die aus einer klinischen Richtlinie über Herzinsuffizienz stammt.
-Die Tabelle ist im Markdown-Format. Bitte wandle die Tabelle vollständig in Tripel um, so dass die Tripel
-in einen Wissensgraphen eingepflegt werden können.
-
-Hier sind Deine Anweisungen:
-
-* Benutze JSON-Format für die Tripel, mit den Einträgen "head", "relation" und "tail".
-* Gebe alle möglichen Tripel aus.
-* Sollte in einer Zelle eine Liste enthalten sein, erstelle für jedes Listenelement ein eigenes Tripel.
-* Gib nur die Liste der JSON-Objekte aus.
-* WICHTIG: Antworte auf Deutsch.
-
-Hier ist die Tabelle:
-
-|Substanzklasse|getestet gegen/im Vergleich zu|Mortalität, Hospitalisierungen|langfristige Endpunkte|Hypotonierisiko|Diuretikagebrauch|weitere Anwendungsgebiete|wichtige Kontraindikationen und Sicherheitshinweise|
-|---|---|---|---|---|---|---|---|
-|ACEi|Placebo|↓|(↔)|↑|(↔)|▪ arterielle Hypertonie ▪ nach Myokardinfarkt|▪ Hypotonie ▪ Hyperkaliämie ▪ Angioödem|
-|ARB|ACEi|↔|(↔)|↔|(↔)|▪ insb. diabetische Nephropathie|▪ Husten ▪ Vorsicht bei eGFR < 30 ml/min/1,73 m2|
-|ARNI|auf Basis von BB (+MRA)|↓|(↓)|↑|↓| |▪ nach Myokardinfarkt ▪ Bradykardie ▪ Hyperkaliämie ▪ Angioödem|
-|BB|auf Basis von ACEi/ARB (+Digitalis)|↓|(↔)|↑|(↔)|▪ A. pectoris ▪ Tachyarrhythmien|▪ AV-Block ▪ Hypotonie (kontraindiziert bei SBP < 90 mmHg)|
-|MRA|auf Basis von RASi+BB|↓|?|↑|↓|▪ primärer Hyperaldosteronismus ▪ Ausgleich des kaliuretischen Effekts von Diuretika|▪ Hyperkaliämie, Hyponatriämie ▪ Hypotonie ▪ Gynäkomastie ▪ gastrointestinale Nebenwirkungen|
-|SGLT2i|auf Basis von RASi+BB (+MRA)|↓|↓|↔|↓|▪ chronische Nierenerkrankungen|▪ urogenitale Infektionen ▪ atypische Ketoazidose|
-"""
-
 WORKING_TABLE_PROMPT = """
-Du bist ein spezialisierter Arzt, der medizinische Informationen in Form von Tripeln Tabellen 
+Du bist ein spezialisierter Arzt, der medizinische Informationen in Form von Tripeln aus Tabellen 
 einer klinischen Richtlinie über Herzinssufizienz extrahiert. 
 Jedes extrahierte Tripel muss immer aus den folgenden drei Einträgen bestehen:
 1. head: Beschreibt die Start-Entität.
@@ -172,4 +147,17 @@ Jedes extrahierte Tripel muss immer aus den folgenden drei Einträgen bestehen:
 3. tail: Beschreibt die Ziel-Entität.
 
 WICHTIG: Extrahiere für jeden Tabelleneintrag ein eigenes Tripel. Lasse keine Zeile und keine Spalte aus!
+"""
+
+TABLE_PROMPT = """
+Du bist ein spezialisierter Arzt, der medizinische Informationen in Form von Tripeln aus Tabellen und Auflistungen
+einer klinischen Richtlinie über Herzinssufizienz extrahiert. 
+
+Jedes extrahierte Tripel muss immer aus den folgenden drei Einträgen bestehen:
+1. head: Beschreibt die Start-Entität.
+2. relation: Beschreibt die Relation zwischen Start-Entität und Ziel-Entität und darf ein beliebiger Freitext passend zum Input sein.
+3. tail: Beschreibt die Ziel-Entität.
+
+WICHTIG: 
+* Extrahiere für jeden Tabelleneintrag ein eigenes Tripel. Lasse keine Zeile und keine Spalte aus!
 """
