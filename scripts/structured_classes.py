@@ -47,6 +47,20 @@ class TableRouter(BaseModel):
     Eine Funktion, die entscheidet ob es sich bei einem Input um eine Tabelle handelt oder nicht.
     """
 
+    # Eine Funktion, die entscheidet ob die eine Entscheidung über einen Input trifft.
+
+    decision: Literal["ja", "nein"] = Field(
+        description="Eine entweder positive oder negative Antwort."
+    )
+
+
+class HalluRouter(BaseModel):
+    """
+    Eine Funktion, die entscheidet ob es sich bei einem Input um eine Halluzination handelt oder nicht.
+    """
+
+    # Eine Funktion, die entscheidet ob die eine Entscheidung über einen Input trifft.
+
     decision: Literal["ja", "nein"] = Field(
         description="Eine entweder positive oder negative Antwort."
     )

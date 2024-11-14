@@ -138,26 +138,119 @@ GUIDELINES_EXAMPLES = [
     },
 ]
 
-WORKING_TABLE_PROMPT = """
+GUIDELINES_EXAMPLES_SIMPLE = [
+    {
+        "head": "Herzinsuffizienz",
+        "relation": "wird bei LVEF < 40% zu",
+        "tail": "Herzinsuffizienz mit reduzierter linksventrikulärer Ejektionsfraktion (HFrEF)",
+    },
+    {
+        "head": "Herzinsuffizienz",
+        "relation": "wird bei LVEF 40-49% zu",
+        "tail": "Herzinsuffizienz mit geringgradig eingeschränkter linksventrikulärer Ejektionsfraktion (HFmrEF)",
+    },
+    {
+        "head": "Herzinsuffizienz",
+        "relation": "wird bei LVEF = 50% zu",
+        "tail": "Herzinsuffizienz mit erhaltener linksventrikulärer Ejektionsfraktion (HFpEF)",
+    },
+    {
+        "head": "Das Schlagvolumen des Herzens",
+        "relation": "ist reduziert bei",
+        "tail": "HFrEF",
+    },
+    {
+        "head": "Myokard",
+        "relation": "ist beschädigt bei",
+        "tail": "HFrEF",
+    },
+    {
+        "head": "Betablocker",
+        "relation": "ist eine prognoseverbessernde Substanzgruppe bei",
+        "tail": "HFrEF",
+    },
+    {
+        "head": "Bisoprolol",
+        "relation": "ist ein",
+        "tail": "Betablocker",
+    },
+    {
+        "head": "ACEi",
+        "relation": "kontraindiziert bei",
+        "tail": "Angioödem",
+    },
+    {
+        "head": "gesunder Lebensstil",
+        "relation": "ist indiziert bei",
+        "tail": "chronische Herzinsuffizienz",
+    },
+    {
+        "head": "Anamnese",
+        "relation": "ist erforderlich bei Symptomen einer",
+        "tail": "Herzinsuffizienz",
+    },
+    {
+        "head": "Shared-Decision-Making",
+        "relation": "unterstützt die",
+        "tail": "Selbstbestimmungsaufklärung",
+    },
+]
+
+# 1. head: Beschreibt die Start-Entität.
+# 2. relation: Beschreibt die Relation zwischen Start-Entität und Ziel-Entität und darf ein beliebiger Freitext passend zum Input sein.
+# 3. tail: Beschreibt die Ziel-Entität.
+TABLE_PROMPT = """
 Du bist ein spezialisierter Arzt, der medizinische Informationen in Form von Tripeln aus Tabellen 
 einer klinischen Richtlinie über Herzinssufizienz extrahiert. 
-Jedes extrahierte Tripel muss immer aus den folgenden drei Einträgen bestehen:
-1. head: Beschreibt die Start-Entität.
-2. relation: Beschreibt die Relation zwischen Start-Entität und Ziel-Entität und darf ein beliebiger Freitext passend zum Input sein.
-3. tail: Beschreibt die Ziel-Entität.
 
-WICHTIG: Extrahiere für jeden Tabelleneintrag ein eigenes Tripel. Lasse keine Zeile und keine Spalte aus!
-"""
+Halte Dich an das folgende JSON Format:
+{format_instructions}
 
-TABLE_PROMPT = """
-Du bist ein spezialisierter Arzt, der medizinische Informationen in Form von Tripeln aus Tabellen und Auflistungen
-einer klinischen Richtlinie über Herzinssufizienz extrahiert. 
+Hier sind Beispiele, wie die gewünschten Tripel aussehen können:
+{examples}
 
-Jedes extrahierte Tripel muss immer aus den folgenden drei Einträgen bestehen:
-1. head: Beschreibt die Start-Entität.
-2. relation: Beschreibt die Relation zwischen Start-Entität und Ziel-Entität und darf ein beliebiger Freitext passend zum Input sein.
-3. tail: Beschreibt die Ziel-Entität.
-
-WICHTIG: 
+WICHTIG:
 * Extrahiere für jeden Tabelleneintrag ein eigenes Tripel. Lasse keine Zeile und keine Spalte aus!
 """
+
+TEXT_PROMPT = """
+Du bist ein spezialisierter Arzt, der medizinische Informationen in Form von Tripeln aus Paragraphen 
+einer klinischen Richtlinie über Herzinssufizienz extrahiert. 
+
+Halte Dich an das folgende JSON Format:
+{format_instructions}
+
+Hier sind Beispiele, wie die gewünschten Tripel aussehen können:
+{examples}
+
+WICHTIG: 
+* Halte die Tripel so generell wie möglich, so dass sie leicht verständlich sind.
+"""
+TABLE_PROMPT_SIMPLE = """
+Du bist ein spezialisierter Arzt, der medizinische Informationen in Form von Tripeln aus Tabellen 
+einer klinischen Richtlinie über Herzinssufizienz extrahiert. 
+
+Halte Dich an das folgende JSON Format:
+{format_instructions}
+
+WICHTIG:
+* Extrahiere für jeden Tabelleneintrag ein eigenes Tripel. Lasse keine Zeile und keine Spalte aus!
+* Extrahiere so viele Inhalte wie möglich aus der Tabelle!
+"""
+
+TEXT_PROMPT_SIMPLE = """
+Du bist ein spezialisierter Arzt, der medizinische Informationen in Form von Tripeln aus Paragraphen 
+einer klinischen Richtlinie über Herzinssufizienz extrahiert. 
+
+Halte Dich an das folgende JSON Format:
+{format_instructions}
+
+WICHTIG: 
+* Halte die Tripel so generell wie möglich, so dass sie leicht verständlich sind.
+* Extrahiere so viele Inhalte wie möglich aus dem Text!
+"""
+# Beispiel: für 'Koronare Herzkrankheit (KHK), arterielle Hypertonie sowie deren Kombination' solltest Du die einzelnen Entitäten
+# 'Koronare Herzkrankheit (KHK)', 'arterielle Hypertonie', 'Koronare Herzkrankheit (KHK) und arterielle Hypertonie' erstellen.
+
+# * Wenn Ziel-Entitäten durch Komma getrennt sind, so erstelle ein eigenes Tripel für jeden "tail".
+# * Extrahiere ausschließlich Informationen, die im Input stehen und erfinde keine Details.

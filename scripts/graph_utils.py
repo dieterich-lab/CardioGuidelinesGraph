@@ -1,8 +1,16 @@
 from hashlib import md5
 from typing import List
 
+from json_repair import repair_json
 from langchain_community.graphs import Neo4jGraph
 from langchain_community.graphs.graph_document import GraphDocument
+from langchain_core.exceptions import OutputParserException
+from langchain_core.output_parsers import (
+    BaseGenerationOutputParser,
+    JsonOutputToolsParser,
+)
+from langchain_core.outputs import ChatGeneration, Generation
+from utils import Timeout
 
 BASE_ENTITY_LABEL = "__Entity__"
 EXCLUDED_LABELS = ["_Bloom_Perspective_", "_Bloom_Scene_"]
@@ -169,3 +177,67 @@ class MyNeo4jGraph(Neo4jGraph):
                     ],
                 },
             )
+
+
+def parse_msg(msg, keyword):
+    if msg is None:
+        return None
+    parsed = msg["parsed"]
+    if parsed is None:
+        _parsed = repair_json(msg["raw"].content, return_objects=True)
+        if isinstance(_parsed, dict) and keyword in _parsed:
+            return _parsed[keyword]
+        for p in _parsed:
+            if not isinstance(p, dict):
+                continue
+            if keyword in p:
+                parsed = [t for t in p[keyword] if len(t) == 3]
+                break
+            for _, v in p.items():
+                if keyword in v:
+                    parsed = [t for t in v[keyword] if len(t) == 3]
+                    break
+    else:
+        parsed = msg["parsed"][keyword]
+
+    return parsed
+
+
+class CustomParser(JsonOutputToolsParser):
+    # class CustomParser(BaseGenerationOutputParser[str]):
+
+    def parse_result(self, result: List[Generation], *, partial: bool = False) -> str:
+        generation = None
+        # generation = result[0]
+        if generation is None:
+            return None
+        parsed = generation["parsed"]
+        if parsed is None:
+            _parsed = repair_json(generation["raw"].content, return_objects=True)
+            for p in _parsed:
+                if not isinstance(p, dict):
+                    continue
+                if "triples" in p:
+                    parsed = [t for t in p["triples"] if len(t) == 3]
+                    break
+                for _, v in p.items():
+                    if "triples" in v:
+                        parsed = [t for t in v["triples"] if len(t) == 3]
+                        break
+        else:
+            parsed = generation["parsed"]["triples"]
+        return parsed
+
+
+def attempt(x, s, func, args):
+    c = 0
+    res = None
+    while c < x:
+        try:
+            with Timeout(s):
+                res = func(args)
+                break
+        except Timeout.Timeout:
+            print("Timeout")
+            c += 1
+    return res
