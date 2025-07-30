@@ -1,0 +1,25 @@
+import mysql.connector
+
+# Connect to the database
+conn = mysql.connector.connect(
+    host="10.250.135.23",  # MySQL server
+    port="3306",           # Port
+    user="test_user",      # Database user
+    password="medicaldatabase",  # Database password
+    database="snomedct"    # Database name
+)
+
+cursor = conn.cursor()  # Create a cursor
+
+# Test the query directly in Python
+cursor.execute("SHOW TABLES")
+
+tables = cursor.fetchall()
+
+for table in tables:
+    print(table[0].decode())  # Decode bytearray to string
+else:
+    print("No data returned")
+
+cursor.close()
+conn.close()
