@@ -62,6 +62,9 @@ summary_testlist = [
 
 
 def recursive_summarizer(statement, raw_dict, summarized_dict):
+    """
+    Recursive function to summarize a statement and its subject and object.
+    """
     subject_summary = Summary(summary="")
     object_summary = Summary(summary="")
     if statement.statement_node_ID in summarized_dict:
@@ -104,6 +107,9 @@ def recursive_summarizer(statement, raw_dict, summarized_dict):
 
 
 def summarizer_main_loop(statements):
+    """
+    wrapper function for the recursive summarizer.
+    """
     raw_dict = {}
     summarized_dict = {}
     for i, s in enumerate(statements.statement, 1):
@@ -122,7 +128,12 @@ def summarizer_main_loop(statements):
     return summarized_dict
 
 
-if __name__ == "__main__":
+def summarize_wrapper():
+    """
+    Wrapper function to get all Nodes,
+    then call the summarizer_main_loop function to summarize the statements,
+    and then update the summaries in the Neo4j database.
+    """
     # Get all nodes from the database
     nodes = GetAllNodes()
 
@@ -153,3 +164,8 @@ if __name__ == "__main__":
                     print("Summary updated successfully for Node ID:", true_id)
         except Exception as e:
             print(f"Database connection error: {str(e)}")
+    return
+
+
+if __name__ == "__main__":
+    summarize_wrapper()

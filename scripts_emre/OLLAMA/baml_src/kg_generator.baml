@@ -120,45 +120,60 @@ function SimpleText(input: string) -> SplittedText {
 }
 
 function Hypergrapher(input: SentencesIDexplanation) -> TriplesID {
-  client Qwen32b5
+  client Qwen14b5
   prompt #"
     Extract all triples from the following sentences.
     Nested Statements may be represented by using Nodes that represent entire Statements, indexed by the sentence ID
+
+    Keep your thinking process short and concise, focus on the task at hand.
+    Immediatly output the result if you find yourself thinking the same thing more than twice.
+    
     {{input}}
     {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
   "#
 }
 
 function EasyFormatting(input: string) -> SentencesID {
-  client Qwen32b5
+  client Qwen14b5
   prompt #"
-    "Simplify the following text into a list of simple sentences.
-    Each sentence should be a simple statement that can be easily understood.
-    All information must be preserved with zero semantic loss
+    Simplify the following text into a list of atomic, self-contained sentences.
+    Each sentence should express only one idea or claim.
+    If a sentence contains both a source (such as a study, registry, or expert) and a claim, split them so that the claim is one sentence and the attribution is a separate sentence referencing the claim.
+    Avoid using pronouns ("this", "it", etc.) as subjects—repeat the subject explicitly if necessary.
+    Preserve all information with zero semantic loss.
     {{input}}
     {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
   "#
 }
 
 function FormattedFacts(input: string) -> SentencesID {
-  client Qwen32b5
+  client Qwen14b5
   prompt #"
-    "Break down this text into simple and short sentences. 
-    Each of these sentences should contain a small amout of the information represented here.
-    All the sentences together should represent the same information as the original text without losing any meaning or information
+    Simplify the following text into a list of atomic, self-contained sentences.
+    Each sentence should express only one idea or claim.
+    If a sentence contains both a source (such as a study, registry, or expert) and a claim, split them so that the claim is one sentence and the attribution is a separate sentence referencing the claim.
+    Avoid using pronouns ("this", "these", "it") as subjects—repeat the subject explicitly if necessary.
+    Preserve all information with zero semantic loss.
 
-    Example: "a study has shown that Patients with Fever and a recent travel History to Ghana should visit a doctor"
-    should be transformed into:
-    1. Patients with Fever and a recent travel History to Ghana
-    2. These Patients should visit a doctor
-    3. This is shown by a study
+    Example:
+    Input:
+    A recent study reported that high blood pressure increases the risk of stroke, especially in elderly patients.
+
+    Output:
+    1. "High blood pressure increases the risk of stroke."
+    2. "sentence 1 especially in elderly patients." 
+    3. "A recent study reported sentence 1." 
+
+    Keep your thinking process short and concise, focus on the task at hand.
+    Immediatly output the result if you find yourself thinking the same thing more than twice.
     {{input}}
+    {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
     {{ ctx.output_format}}
   "#
 }
 
 function PrototypeNester(sentences: SentencesID, original: string) -> SentencesIDexplanation {
-  client Qwen32b5
+  client Qwen14b5
   prompt #"
     "If the follwing sentences contain nested statements, identify the nested statement and represent them in a sequence of sentences that each may reference other sentences in the same list"
     The reference is done by using the sentence ID of the referenced sentence in parentheses.
@@ -189,6 +204,9 @@ function PrototypeNester(sentences: SentencesID, original: string) -> SentencesI
     You may change the sentences and sentence order in order to get the optimal nesting of statements.
 
     DO NOT use the Sentence ID references in the explanation field, just use the full sentence spelled out.
+
+    Keep your thinking process short and concise, focus on the task at hand.
+    Immediatly output the result if you find yourself thinking the same thing more than twice.
 
     Please apply this method to the following sentences:
     {{sentences}}

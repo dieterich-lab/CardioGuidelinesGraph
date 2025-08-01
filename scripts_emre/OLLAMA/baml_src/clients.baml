@@ -154,10 +154,30 @@ client<llm> Qwen14b4 {
   }
 }
 
+client<llm> Qwen14b5 {
+  provider "openai-generic"
+  options {
+    base_url "http://10.250.135.156:11430/v1"
+    model qwen3:14b
+    max_tokens 10000
+    temperature 0.0
+  }
+}
+
 client<llm> Qwen30b4 {
   provider "openai-generic"
   options {
     base_url "http://10.250.135.153:11430/v1"
+    model qwen3:30b
+    max_tokens 100000
+    temperature 0.0
+  }
+}
+
+client<llm> Qwen30b5 {
+  provider "openai-generic"
+  options {
+    base_url "http://10.250.135.156:11430/v1"
     model qwen3:30b
     max_tokens 100000
     temperature 0.0
