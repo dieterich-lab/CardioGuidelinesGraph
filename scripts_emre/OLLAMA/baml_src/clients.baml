@@ -46,6 +46,46 @@ client<llm> GemmaG4 {
   }
 }
 
+client<llm> GemmaG5 {
+  provider "openai-generic"
+  options {
+    base_url "http://10.250.135.156:11435/v1"
+    model gemma3
+    max_tokens 10000
+    temperature 0.0
+  }
+}
+
+client<llm> Llava34bG5 {
+  provider "openai-generic"
+  options {
+    base_url "http://10.250.135.156:11435/v1"
+    model llava:34b
+    max_tokens 10000
+    temperature 0.0
+  }
+}
+
+client<llm> Qwen25vl72bG5 {
+  provider "openai-generic"
+  options {
+    base_url "http://10.250.135.156:11435/v1"
+    model qwen2.5vl:72b
+    max_tokens 10000
+    temperature 0.0
+  }
+}
+
+client<llm> Qwen25vl32bG5 {
+  provider "openai-generic"
+  options {
+    base_url "http://10.250.135.156:11435/v1"
+    model qwen2.5vl:32b
+    max_tokens 10000
+    temperature 0.0
+  }
+}
+
 client<llm> Llama4 {
   provider "openai-generic"
   options {
