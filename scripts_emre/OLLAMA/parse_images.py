@@ -97,7 +97,7 @@ def extract_images(pdf_path: str, img_path: str) -> None:
     default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/esc_ccs/",
     help="Path to the directory with images.",
 )
-def parse_images(imgx_path: str) -> None:
+def parse_image_to_flowchart(imgx_path: str) -> None:
     """Parse images and save extracted structures as pickle files."""
     try:
         if not os.path.exists(imgx_path):
@@ -160,7 +160,7 @@ def save_json(imgx_path: str) -> None:
             return
 
         # Create output directory for JSON files
-        json_path = imgx_path.replace("images", "structures_json")
+        json_path = imgx_path.replace("images", "flowchart_structures")
         ensure_directory_exists(json_path)
 
         triples, trees = list(), list()
@@ -224,7 +224,7 @@ def process_all(ctx, pdf_path: str, output_dir: str) -> None:
     ctx.invoke(extract_images, pdf_path=pdf_path, img_path=img_path)
 
     # Parse images
-    ctx.invoke(parse_images, imgx_path=img_path)
+    ctx.invoke(parse_image_to_flowchart, imgx_path=img_path)
 
     # Save as JSON
     ctx.invoke(save_json, imgx_path=img_path)
