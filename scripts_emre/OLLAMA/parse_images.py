@@ -110,7 +110,7 @@ def parse_image_to_flowchart(imgx_path: str) -> None:
             return
 
         # Create output directory for pickle files
-        pkl_path = Path(imgx_path.replace("images", "structures_pkl"))
+        pkl_path = Path(imgx_path.replace("images", "flowchart_structures"))
         ensure_directory_exists(str(pkl_path))
 
         # Temporarily store errors to report after progress bar completes
@@ -149,7 +149,7 @@ def parse_image_to_flowchart(imgx_path: str) -> None:
 def save_json(imgx_path: str) -> None:
     """Read structures from pickle files and save as JSON."""
     try:
-        pkl_path = Path(imgx_path.replace("images", "structures_pkl"))
+        pkl_path = Path(imgx_path.replace("images", "flowchart_structures"))
         if not pkl_path.exists():
             logger.error(f"Pickle directory not found: {pkl_path}")
             return
