@@ -33,6 +33,42 @@ def ensure_directory_exists(path: str) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
+def process_single_image(img_path: str) -> tuple[list, list]:
+    """Process a single image and return triples and trees."""
+    with open(img_path, "rb") as image_file:
+        img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
+    img = Image.from_base64("image/png", img_b64)
+    res = b.Image2Table(img=img)
+
+    triples, trees = list(), list()
+    for x in res.list:
+        if type(x) is SemanticTriple:
+            triples.append(x.model_dump())
+        elif type(x) is IfElseTree:
+            trees.append(x.model_dump())
+
+    return triples, trees
+
+
+def save_results(
+    triples: list, trees: list, output_dir: str, filename_prefix: str = ""
+) -> None:
+    """Save triples and trees to JSON files."""
+    ensure_directory_exists(output_dir)
+
+    prefix = f"{filename_prefix}_" if filename_prefix else ""
+    triples_file = os.path.join(output_dir, f"{prefix}triples.json")
+    trees_file = os.path.join(output_dir, f"{prefix}trees.json")
+
+    with open(triples_file, "w") as f:
+        json.dump(triples, f, indent=4)
+
+    with open(trees_file, "w") as f:
+        json.dump(trees, f, indent=4)
+
+    logger.info(f"Results saved to: {triples_file} and {trees_file}")
+
+
 @click.group()
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
 def cli(verbose):
@@ -59,37 +95,32 @@ def parse_image_to_table(imgx_path: str) -> None:
             logger.warning(f"No images found in: {imgx_path}")
             return
 
-        # Create output directory for JSON files
-        json_path = imgx_path.replace("images", "tables_json")
-        ensure_directory_exists(json_path)
-
-        # Temporarily store errors to report after progress bar completes
-        results = list()
+        all_triples, all_trees = list(), list()
         with click.progressbar(
             imgx_paths, length=len(imgx_paths), label="Parsing images"
         ) as images:
             for img_path in images:
-                with open(img_path, "rb") as image_file:
-                    img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
-                img = Image.from_base64("image/png", img_b64)
-                res = b.Image2Table(img=img)
-                results.extend(res.model_dump()["triples"])
+                triples, trees = process_single_image(img_path)
+                all_triples.extend(triples)
+                all_trees.extend(trees)
 
-        # Save results to JSON file
-        json_file = os.path.join(json_path, "tables.json")
-        with open(json_file, "w") as f:
-            json.dump(results, f, indent=4)
-
-        logger.info(f"Parsed tables saved to: {json_file}")
+        # Create output directory and save results
+        json_path = imgx_path.replace("images", "tables_json")
+        save_results(all_triples, all_trees, json_path, "tables")
 
     except Exception as e:
         logger.error(f"Error during image parsing: {e}")
 
 
 @cli.command("test")
-def parse_single_test_image() -> None:
+@click.option(
+    "--test-image",
+    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/page37/36.png",
+    help="Path to the test image to parse.",
+)
+def parse_single_test_image(test_image: str) -> None:
     """Parse a single test image for rapid prototyping."""
-    img_path = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/page37/36.png"
+    img_path = test_image
 
     try:
         if not os.path.exists(img_path):
@@ -98,36 +129,16 @@ def parse_single_test_image() -> None:
 
         logger.info(f"Parsing test image: {img_path}")
 
-        with open(img_path, "rb") as image_file:
-            img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
-        img = Image.from_base64("image/png", img_b64)
-        res = b.Image2Table(img=img)
+        triples, trees = process_single_image(img_path)
 
-        triples, trees = list(), list()
-
-        for x in res.list:
-            if type(x) is SemanticTriple:
-                triples.append(x.model_dump())
-            elif type(x) is IfElseTree:
-                trees.append(x.model_dump())
-
-        # Save results to test JSON file
+        # Save results to test directory
         output_dir = (
             Path(
                 "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/table_structures"
             )
             / Path(img_path).parent.name
         )
-        ensure_directory_exists(output_dir)
-
-        triples_file = os.path.join(output_dir, "triples.json")
-        trees_file = os.path.join(output_dir, "trees.json")
-
-        with open(triples_file, "w") as f:
-            json.dump(triples, f, indent=4)
-
-        with open(trees_file, "w") as f:
-            json.dump(trees, f, indent=4)
+        save_results(triples, trees, str(output_dir))
 
     except Exception as e:
         logger.error(f"Error during test image parsing: {e}")
