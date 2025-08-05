@@ -18,7 +18,7 @@ function Image2Table(img: image) -> ListOfStructuralData {
 }
 
 function Markdown2Table(markdown: string) -> ListOfStructuralData {
-  client Qwen32b5
+  client Qwen32b5_35
   prompt #"
     The following markdown document comes from a medical guideline about cardiovascular diseases.
     When you don't see a table, you should return an empty list.
