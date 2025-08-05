@@ -63,33 +63,16 @@ def parse_markdown(chunk: str) -> list:
         return []
 
 
-def save_results(results: list, output_dir: str, filename_prefix: str = "") -> None:
+def save_results(results: list, output_dir: str, filename: str) -> None:
     """Save all results to a single JSON file."""
     ensure_directory_exists(output_dir)
 
-    prefix = f"{filename_prefix}_" if filename_prefix else ""
-    tables_file = os.path.join(output_dir, f"{prefix}tables.json")
+    tables_file = os.path.join(output_dir, filename)
 
     with open(tables_file, "w") as f:
         json.dump(results, f, indent=4)
 
     logger.info(f"Results saved to: {tables_file}")
-
-
-def get_output_directory(
-    input_path: str, source_type: str, is_batch: bool = True
-) -> str:
-    """Generate output directory path based on input path and processing type."""
-    if source_type == "image":
-        base_dir = input_path.replace("images", "table_structures")
-        if not is_batch:
-            return str(Path(base_dir).parent / "from_images" / Path(base_dir).stem)
-        return base_dir
-    else:  # markdown
-        base_dir = input_path.replace("markdown", "table_structures")
-        if not is_batch:
-            return str(Path(base_dir).parent / "from_markdown" / Path(base_dir).name)
-        return base_dir
 
 
 def process_files(
@@ -146,7 +129,6 @@ def parse_images(path: str, single: bool) -> None:
                 return
             logger.info(f"Parsing single image: {path}")
             results = parse_image(path)
-            output_dir = get_output_directory(path, "image", is_batch=False)
         else:
             if not os.path.isdir(path):
                 logger.error(f"Directory expected but got file: {path}")
@@ -156,9 +138,11 @@ def parse_images(path: str, single: bool) -> None:
                 logger.warning(f"No images found in: {path}")
                 return
             results = process_files(file_paths, "image", is_batch=True)
-            output_dir = get_output_directory(path, "image", is_batch=True)
+        output_dir = (
+            Path(path.replace("images", "table_structures")).parent / "from_images"
+        )
 
-        save_results(results, output_dir, "tables")
+        save_results(results, output_dir, f"{Path(path).stem}.json")
         logger.info(f"Found {len(results)} total structures")
 
     except Exception as e:
@@ -195,16 +179,17 @@ def parse_markdown_files(path: str, single: bool) -> None:
         if single:
             logger.info(f"Parsing markdown file as single chunk: {path}")
             results = parse_markdown(markdown_content)
-            output_dir = get_output_directory(path, "markdown", is_batch=False)
         else:
             from langchain_text_splitters import MarkdownTextSplitter
 
             markdown_splitter = MarkdownTextSplitter()
             chunks = markdown_splitter.split_text(markdown_content)
             results = process_files(chunks, "markdown", is_batch=True)
-            output_dir = get_output_directory(path, "markdown", is_batch=True)
+        output_dir = (
+            Path(path.replace("markdown", "table_structures")).parent / "from_markdown"
+        )
 
-        save_results(results, output_dir, "tables")
+        save_results(results, output_dir, f"{Path(path).stem}.json")
         logger.info(f"Found {len(results)} total structures")
 
     except Exception as e:
