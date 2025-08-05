@@ -103,21 +103,26 @@ This script performs visual analysis of PDF pages to extract structured informat
 **Functionality:**
 - Converts PDF pages to high-quality images
 - Utilizes visual LLMs to analyze medical flowcharts, tables, and diagrams
-- Extracts structured information including:
-  - If-else decision trees from clinical flowcharts
-  - Semantic triples (subject-predicate-object) from medical content
+- Extracts all structured information from medical content (semantic triples and if-else decision trees)
 - Saves extracted information as JSON files for downstream processing
+- Includes source filepath tracking for all extracted structures
 
 **Usage:**
 ```bash
-python parse_images.py --input-dir /path/to/pdf/pages/ --output-dir /path/to/json/output/ --model [llm_model_name]
+python parse_images.py extract --pdf-path /path/to/pdf.pdf --img-path /path/to/images/
+python parse_images.py parse --imgx-path /path/to/images/
+python parse_images.py save_json --imgx-path /path/to/images/
+# Or run the complete pipeline:
+python parse_images.py process_all --pdf-path /path/to/pdf.pdf --output-dir /path/to/output/
 ```
 
 **Default Paths:**
 - PDF Path: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf`
 - Image Output Path: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/{pdf_name}/`
-- Structures Output Paths: 
-  - Pickle: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/structures_pkl/{pdf_name}/`
-  - JSON: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/structures_json/{pdf_name}/`
+- Structures Output Path: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/flowchart_structures/{pdf_name}/`
+
+**Output:**
+- All extracted structures are saved to a single `structures.json` file
+- Each structure includes source filepath information for traceability
 
 These utilities form a crucial part of our knowledge graph construction pipeline, enabling the transformation of complex medical guidelines into a structured format that can be queried to provide precise clinical decision support.

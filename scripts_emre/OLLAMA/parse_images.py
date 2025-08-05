@@ -125,6 +125,11 @@ def parse_image_to_flowchart(imgx_path: str) -> None:
                     img = Image.from_base64("image/png", img_b64)
                     res = b.Image2Tree(img=img)
 
+                    # Add source filepath to all structures
+                    for x in res.list:
+                        structure_data = x.model_dump()
+                        structure_data["source_filepath"] = img_path
+
                     pkl_name = Path(img_path).stem + ".pkl"
                     with open(pkl_path / pkl_name, "wb") as pkl_file:
                         pickle.dump(res, pkl_file)
@@ -163,7 +168,7 @@ def save_json(imgx_path: str) -> None:
         json_path = imgx_path.replace("images", "flowchart_structures")
         ensure_directory_exists(json_path)
 
-        triples, trees = list(), list()
+        all_structures = list()
 
         # Temporarily store errors to report after progress bar completes
         errors = []
@@ -175,10 +180,14 @@ def save_json(imgx_path: str) -> None:
                     with open(struc_path, "rb") as pkl_file:
                         res = pickle.load(pkl_file)
                     for x in res.list:
-                        if type(x) is SemanticTriple:
-                            triples.append(x.model_dump())
-                        elif type(x) is IfElseTree:
-                            trees.append(x.model_dump())
+                        structure_data = x.model_dump()
+                        # Add source filepath if not already present
+                        if "source_filepath" not in structure_data:
+                            # Derive image path from pickle path
+                            img_name = Path(struc_path).stem + ".png"
+                            img_path = str(Path(imgx_path) / img_name)
+                            structure_data["source_filepath"] = img_path
+                        all_structures.append(structure_data)
                 except Exception as e:
                     errors.append((struc_path, str(e)))
 
@@ -186,17 +195,13 @@ def save_json(imgx_path: str) -> None:
         for struc_path, error in errors:
             logger.error(f"Error processing structure file {struc_path}: {error}")
 
-        triples_file = os.path.join(json_path, "triples.json")
-        trees_file = os.path.join(json_path, "trees.json")
+        structures_file = os.path.join(json_path, "structures.json")
 
-        with open(triples_file, "w") as f:
-            json.dump(triples, f, indent=4)
+        with open(structures_file, "w") as f:
+            json.dump(all_structures, f, indent=4)
 
-        with open(trees_file, "w") as f:
-            json.dump(trees, f, indent=4)
-
-        logger.info(f"Extracted {len(triples)} triples and {len(trees)} trees")
-        logger.info(f"Results saved to {triples_file} and {trees_file}")
+        logger.info(f"Extracted {len(all_structures)} structures")
+        logger.info(f"Results saved to {structures_file}")
     except Exception as e:
         logger.error(f"Error during JSON conversion: {e}")
 
