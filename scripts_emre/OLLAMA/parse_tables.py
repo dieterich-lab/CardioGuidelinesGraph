@@ -3,13 +3,10 @@ import glob
 import json
 import logging
 import os
-import pickle
 import sys
 from pathlib import Path
 
 import click
-import fitz
-from baml_client.types import IfElseTree, SemanticTriple
 from baml_py import Image
 
 sys.path.append("..")  # isort:skip
@@ -33,67 +30,50 @@ def ensure_directory_exists(path: str) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-def parse_image(img_path: str) -> tuple[list, list]:
-    """Process a single image and return triples and trees."""
+def parse_image(img_path: str) -> list:
+    """Process a single image and return all extracted structures."""
     with open(img_path, "rb") as image_file:
         img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
     img = Image.from_base64("image/png", img_b64)
     res = b.Image2Table(img=img)
 
-    triples, trees = list(), list()
+    results = []
     for x in res.list:
-        if type(x) is SemanticTriple:
-            triple_data = x.model_dump()
-            triple_data["source_filepath"] = img_path
-            triples.append(triple_data)
-        elif type(x) is IfElseTree:
-            tree_data = x.model_dump()
-            tree_data["source_filepath"] = img_path
-            trees.append(tree_data)
+        result_data = x.model_dump()
+        result_data["source_filepath"] = img_path
+        results.append(result_data)
 
-    return triples, trees
+    return results
 
 
-def parse_markdown(chunk: str) -> tuple[list, list]:
-    """Process a markdown chunk to extract triples and trees."""
+def parse_markdown(chunk: str) -> list:
+    """Process a markdown chunk to extract all structures."""
     try:
-        # Assuming the chunk is a valid markdown table, we can use the baml_client
         res = b.Markdown2Table(markdown=chunk)
 
-        triples, trees = list(), list()
+        results = []
         for x in res.list:
-            if type(x) is SemanticTriple:
-                triple_data = x.model_dump()
-                triple_data["source_markdown_chunk"] = chunk
-                triples.append(triple_data)
-            elif type(x) is IfElseTree:
-                tree_data = x.model_dump()
-                tree_data["source_markdown_chunk"] = chunk
-                trees.append(tree_data)
+            result_data = x.model_dump()
+            result_data["source_markdown_chunk"] = chunk
+            results.append(result_data)
 
-        return triples, trees
+        return results
     except Exception as e:
         logger.error(f"Error processing markdown chunk: {e}")
-        return [], []
+        return []
 
 
-def save_results(
-    triples: list, trees: list, output_dir: str, filename_prefix: str = ""
-) -> None:
-    """Save triples and trees to JSON files."""
+def save_results(results: list, output_dir: str, filename_prefix: str = "") -> None:
+    """Save all results to a single JSON file."""
     ensure_directory_exists(output_dir)
 
     prefix = f"{filename_prefix}_" if filename_prefix else ""
-    triples_file = os.path.join(output_dir, f"{prefix}triples.json")
-    trees_file = os.path.join(output_dir, f"{prefix}trees.json")
+    tables_file = os.path.join(output_dir, f"{prefix}tables.json")
 
-    with open(triples_file, "w") as f:
-        json.dump(triples, f, indent=4)
+    with open(tables_file, "w") as f:
+        json.dump(results, f, indent=4)
 
-    with open(trees_file, "w") as f:
-        json.dump(trees, f, indent=4)
-
-    logger.info(f"Results saved to: {triples_file} and {trees_file}")
+    logger.info(f"Results saved to: {tables_file}")
 
 
 def get_output_directory(
@@ -114,21 +94,20 @@ def get_output_directory(
 
 def process_files(
     file_paths: list[str], source_type: str, is_batch: bool = True
-) -> tuple[list, list]:
+) -> list:
     """Process multiple files and return combined results."""
-    all_triples, all_trees = list(), list()
+    all_results = []
 
     label = f"Parsing {'images' if source_type == 'image' else 'chunks'}"
     with click.progressbar(file_paths, length=len(file_paths), label=label) as progress:
         for file_path in progress:
             if source_type == "image":
-                triples, trees = parse_image(file_path)
+                results = parse_image(file_path)
             else:  # markdown chunk
-                triples, trees = parse_markdown(file_path)
-            all_triples.extend(triples)
-            all_trees.extend(trees)
+                results = parse_markdown(file_path)
+            all_results.extend(results)
 
-    return all_triples, all_trees
+    return all_results
 
 
 @click.group()
@@ -166,7 +145,7 @@ def parse_images(path: str, single: bool) -> None:
                 logger.error(f"Single file expected but got directory: {path}")
                 return
             logger.info(f"Parsing single image: {path}")
-            triples, trees = parse_image(path)
+            results = parse_image(path)
             output_dir = get_output_directory(path, "image", is_batch=False)
         else:
             if not os.path.isdir(path):
@@ -176,11 +155,11 @@ def parse_images(path: str, single: bool) -> None:
             if not file_paths:
                 logger.warning(f"No images found in: {path}")
                 return
-            triples, trees = process_files(file_paths, "image", is_batch=True)
+            results = process_files(file_paths, "image", is_batch=True)
             output_dir = get_output_directory(path, "image", is_batch=True)
 
-        save_results(triples, trees, output_dir, "tables")
-        logger.info(f"Found {len(triples)} triples and {len(trees)} trees")
+        save_results(results, output_dir, "tables")
+        logger.info(f"Found {len(results)} total structures")
 
     except Exception as e:
         logger.error(f"Error during image parsing: {e}")
@@ -215,18 +194,18 @@ def parse_markdown_files(path: str, single: bool) -> None:
 
         if single:
             logger.info(f"Parsing markdown file as single chunk: {path}")
-            triples, trees = parse_markdown(markdown_content)
+            results = parse_markdown(markdown_content)
             output_dir = get_output_directory(path, "markdown", is_batch=False)
         else:
             from langchain_text_splitters import MarkdownTextSplitter
 
             markdown_splitter = MarkdownTextSplitter()
             chunks = markdown_splitter.split_text(markdown_content)
-            triples, trees = process_files(chunks, "markdown", is_batch=True)
+            results = process_files(chunks, "markdown", is_batch=True)
             output_dir = get_output_directory(path, "markdown", is_batch=True)
 
-        save_results(triples, trees, output_dir, "tables")
-        logger.info(f"Found {len(triples)} triples and {len(trees)} trees")
+        save_results(results, output_dir, "tables")
+        logger.info(f"Found {len(results)} total structures")
 
     except Exception as e:
         logger.error(f"Error during markdown parsing: {e}")

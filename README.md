@@ -38,7 +38,7 @@ This script extracts structured information from both images and markdown conten
   - Semantic triples (subject-predicate-object) from medical content
   - If-else decision trees from clinical flowcharts
 - Supports both batch processing and single file processing
-- Saves extracted information as JSON files for downstream processing
+- Saves all extracted information as JSON files for downstream processing
 
 **Usage:**
 
@@ -71,6 +71,10 @@ python parse_tables.py markdown --single
 - Single Image: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/page37_tab6.png`
 - Batch Markdown: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/esc_ccs.md`
 - Single Markdown: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/page37_tab6.md`
+
+**Output:**
+- All extracted structures (semantic triples and if-else trees) are saved to a single `tables_tables.json` file
+- Each structure includes source tracking information (filepath for images, original markdown chunk for markdown)
 
 ### PDF Processing Tools
 
