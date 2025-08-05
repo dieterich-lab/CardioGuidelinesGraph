@@ -26,9 +26,53 @@ gantt
 
 ## Utility Scripts
 
-### PDF Processing Tools
-
 The project includes several utilities to process medical guidelines from PDF documents for knowledge graph construction:
+
+### `parse_tables.py`
+
+This script extracts structured information from both images and markdown content of medical guidelines, transforming them into semantic triples and decision trees for knowledge graph construction.
+
+**Functionality:**
+- Processes images (PNG, JPG) and markdown files containing medical tables and flowcharts
+- Utilizes LLMs to extract structured information including:
+  - Semantic triples (subject-predicate-object) from medical content
+  - If-else decision trees from clinical flowcharts
+- Supports both batch processing and single file processing
+- Saves extracted information as JSON files for downstream processing
+
+**Usage:**
+
+Process multiple images from a directory:
+```bash
+python parse_tables.py images --path /path/to/image/directory/
+```
+
+Process a single image file:
+```bash
+python parse_tables.py images --single --path /path/to/single/image.png
+# Or use default single image:
+python parse_tables.py images --single
+```
+
+Process markdown file with chunking:
+```bash
+python parse_tables.py markdown --path /path/to/markdown/file.md
+```
+
+Process markdown as single chunk:
+```bash
+python parse_tables.py markdown --single --path /path/to/markdown/file.md
+# Or use default single markdown:
+python parse_tables.py markdown --single
+```
+
+**Default Paths:**
+- Batch Images: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/esc_ccs/`
+- Single Image: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/page37_tab6.png`
+- Batch Markdown: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/esc_ccs.md`
+- Single Markdown: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/page37_tab6.md`
+
+### PDF Processing Tools
 
 #### `split_pages.py`
 
