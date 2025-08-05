@@ -10,14 +10,15 @@ function Image2Table(img: image) -> ListOfStructuralData {
     - If the tail contains multiple tail entities, unroll the tail into multiple triples.
     - If a head is empty (an empty cell at the beginning of a row), assume that the head is the same as the previous head.
     Keep the information short and concise as it will be later integrated into a medical knowledge graph,but
-    also take care that the triples convey the overall meaning of the table.
+    also take care that the triples convey the overall meaning of the table. 
+    For this you have to make each triple clearly understandable without additional context.
     {{img}}
     {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
   "#
 }
 
 function Markdown2Table(markdown: string) -> ListOfStructuralData {
-  client Qwen25vl32bG5
+  client Qwen32b5
   prompt #"
     The following markdown document comes from a medical guideline about cardiovascular diseases.
     When you don't see a table, you should return an empty list.
