@@ -43,9 +43,13 @@ def parse_image(img_path: str) -> tuple[list, list]:
     triples, trees = list(), list()
     for x in res.list:
         if type(x) is SemanticTriple:
-            triples.append(x.model_dump())
+            triple_data = x.model_dump()
+            triple_data["source_filepath"] = img_path
+            triples.append(triple_data)
         elif type(x) is IfElseTree:
-            trees.append(x.model_dump())
+            tree_data = x.model_dump()
+            tree_data["source_filepath"] = img_path
+            trees.append(tree_data)
 
     return triples, trees
 
@@ -59,9 +63,13 @@ def parse_markdown(chunk: str) -> tuple[list, list]:
         triples, trees = list(), list()
         for x in res.list:
             if type(x) is SemanticTriple:
-                triples.append(x.model_dump())
+                triple_data = x.model_dump()
+                triple_data["source_markdown_chunk"] = chunk
+                triples.append(triple_data)
             elif type(x) is IfElseTree:
-                trees.append(x.model_dump())
+                tree_data = x.model_dump()
+                tree_data["source_markdown_chunk"] = chunk
+                trees.append(tree_data)
 
         return triples, trees
     except Exception as e:
@@ -227,7 +235,7 @@ def parse_markdown_files(path: str, single: bool) -> None:
 if __name__ == "__main__":
     # Example usage:
     # python parse_tables.py images --single  # Uses default single image
-    # python parse_tables.py markdown --single-chunk  # Uses default single markdown file
+    # python parse_tables.py markdown --single  # Uses default single markdown file
     # python parse_tables.py images  # Processes directory of images
     # python parse_tables.py markdown  # Processes markdown file with chunking
     cli()
