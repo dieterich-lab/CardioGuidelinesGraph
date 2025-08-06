@@ -16,7 +16,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("PDFExtractor")
 
-DEFAULT_PDF_PATH = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/pdf_pages/_37.pdf"
+# DEFAULT_PDF_PATH = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/pdf_pages/_37.pdf"
+DEFAULT_PDF_PATH = (
+    "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf"
+)
 DEFAULT_OUTPUT_DIR = (
     "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/docling/"
 )
@@ -84,7 +87,7 @@ def extract_tables_from_pdf(pdf_path: str, output_dir: str) -> None:
         try:
             table_data = {
                 "table_id": i,
-                "source_file": pdf_name,
+                "source_file": pdf_path,
                 "data": [],
             }
 
@@ -243,243 +246,143 @@ def cli(verbose):
 
 
 @cli.command("text")
-@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to the PDF file.")
+@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
+@click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
 @click.option(
-    "--output-dir", default=DEFAULT_OUTPUT_DIR, help="Directory to save extracted text."
+    "--single", is_flag=True, help="Process single PDF file instead of directory"
 )
-@click.option(
-    "--single", is_flag=True, help="Process single PDF file with detailed output."
-)
-def extract_text(pdf_path: str, output_dir: str, single: bool) -> None:
-    """Extract text content from PDF as markdown."""
-    if not os.path.exists(pdf_path):
-        logger.error(f"PDF file not found: {pdf_path}")
-        return
-
-    pdf_name = Path(pdf_path).stem
-    full_output_dir = Path(output_dir) / pdf_name
-    ensure_directory_exists(str(full_output_dir))
-
-    logger.info(f"Extracting text from: {pdf_path}")
-
-    converter = setup_converter(extract_tables=False)
-    result = converter.convert(pdf_path)
-    doc = result.document
-
-    # Save markdown
-    markdown_path = full_output_dir / f"text.md"
-    try:
-        markdown_content = doc.export_to_markdown()
-        with open(markdown_path, "w", encoding="utf-8") as f:
-            f.write(markdown_content)
-        logger.info(f"Text extracted to: {markdown_path}")
-
-        if single:
-            logger.info(f"Text preview (first 500 chars): {markdown_content[:500]}...")
-    except Exception as e:
-        logger.error(f"Error saving text: {e}")
+def text(pdf_path: str, output_dir: str, single: bool) -> None:
+    """Extract text from PDF."""
+    if single:
+        process_single_pdf(
+            pdf_path,
+            output_dir,
+            extract_text=True,
+            extract_tables=False,
+            extract_images=False,
+        )
+    else:
+        if os.path.isfile(pdf_path):
+            process_single_pdf(
+                pdf_path,
+                output_dir,
+                extract_text=True,
+                extract_tables=False,
+                extract_images=False,
+            )
+        else:
+            process_pdf_directory(
+                pdf_path,
+                output_dir,
+                extract_text=True,
+                extract_tables=False,
+                extract_images=False,
+            )
 
 
 @cli.command("tables")
-@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to the PDF file.")
+@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
+@click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
 @click.option(
-    "--output-dir",
-    default=DEFAULT_OUTPUT_DIR,
-    help="Directory to save extracted tables.",
+    "--single", is_flag=True, help="Process single PDF file instead of directory"
 )
-@click.option(
-    "--single", is_flag=True, help="Process single PDF file with detailed output."
-)
-def extract_tables(pdf_path: str, output_dir: str, single: bool) -> None:
-    """Extract table structures from PDF."""
-    if not os.path.exists(pdf_path):
-        logger.error(f"PDF file not found: {pdf_path}")
-        return
-
-    pdf_name = Path(pdf_path).stem
-    full_output_dir = Path(output_dir) / pdf_name
-    ensure_directory_exists(str(full_output_dir))
-
-    logger.info(f"Extracting tables from: {pdf_path}")
-
-    converter = setup_converter(extract_tables=True)
-    result = converter.convert(pdf_path)
-    doc = result.document
-
-    logger.info(f"Found {len(doc.tables)} tables in the document")
-
-    # Extract tables
-    tables = []
-    tables_dir = full_output_dir / "tables"
-    ensure_directory_exists(str(tables_dir))
-
-    if len(doc.tables) == 0:
-        logger.warning("No tables detected by docling. This could indicate:")
-        logger.warning("1. The PDF doesn't contain tables")
-        logger.warning(
-            "2. Tables are image-based and not detected as structured content"
+def tables(pdf_path: str, output_dir: str, single: bool) -> None:
+    """Extract tables from PDF."""
+    if single:
+        process_single_pdf(
+            pdf_path,
+            output_dir,
+            extract_text=False,
+            extract_tables=True,
+            extract_images=False,
         )
-        logger.warning("3. Docling configuration needs adjustment")
-
-    for i, table in enumerate(doc.tables):
-        try:
-            if single:
-                logger.info(f"Processing table {i}")
-                logger.info(f"Table type: {type(table)}")
-
-            table_data = {
-                "table_id": i,
-                "caption": getattr(table, "caption", ""),
-                "num_rows": 0,
-                "num_cols": 0,
-                "data": [],
-                "raw_table_info": str(type(table)),
-            }
-
-            # Try multiple extraction methods
-            extraction_successful = False
-
-            # Method 1: Try export_to_dataframe
-            if hasattr(table, "export_to_dataframe"):
-                try:
-                    df = table.export_to_dataframe()
-                    if df is not None and not df.empty:
-                        table_data["data"] = df.to_dict("records")
-                        table_data["num_rows"] = len(df)
-                        table_data["num_cols"] = len(df.columns)
-                        logger.info(
-                            f"Extracted data via export_to_dataframe: {len(df)} rows x {len(df.columns)} cols"
-                        )
-                        extraction_successful = True
-                except Exception as e:
-                    if single:
-                        logger.warning(f"export_to_dataframe failed: {e}")
-
-            # Method 2: Try export_to_html
-            if not extraction_successful and hasattr(table, "export_to_html"):
-                try:
-                    html_content = table.export_to_html()
-                    if html_content:
-                        table_data["html_content"] = html_content
-                        logger.info(
-                            f"Extracted HTML content: {len(html_content)} characters"
-                        )
-                        extraction_successful = True
-                except Exception as e:
-                    if single:
-                        logger.warning(f"export_to_html failed: {e}")
-
-            # Method 3: Try export_to_markdown
-            if not extraction_successful and hasattr(table, "export_to_markdown"):
-                try:
-                    md_content = table.export_to_markdown()
-                    if md_content:
-                        table_data["markdown_content"] = md_content
-                        logger.info(
-                            f"Extracted markdown content: {len(md_content)} characters"
-                        )
-                        extraction_successful = True
-                except Exception as e:
-                    if single:
-                        logger.warning(f"export_to_markdown failed: {e}")
-
-            if not extraction_successful:
-                if single:
-                    logger.warning(f"Could not extract data from table {i}")
-                    logger.info(
-                        f"Available attributes: {[attr for attr in dir(table) if not attr.startswith('_')]}"
-                    )
-
-            # Save individual table
-            table_path = tables_dir / f"table_{i:03d}.json"
-            with open(table_path, "w", encoding="utf-8") as f:
-                json.dump(table_data, f, indent=2, ensure_ascii=False, default=str)
-            logger.info(f"Saved table {i} to {table_path}")
-            tables.append(table_data)
-
-        except Exception as e:
-            logger.error(f"Error processing table {i}: {e}")
-
-    # Save summary of all tables
-    summary_path = tables_dir / "tables_summary.json"
-    with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump(
-            {"total_tables": len(tables), "tables": tables},
-            f,
-            indent=2,
-            ensure_ascii=False,
-            default=str,
-        )
-
-    logger.info(f"Saved tables summary to {summary_path}")
+    else:
+        if os.path.isfile(pdf_path):
+            process_single_pdf(
+                pdf_path,
+                output_dir,
+                extract_text=False,
+                extract_tables=True,
+                extract_images=False,
+            )
+        else:
+            process_pdf_directory(
+                pdf_path,
+                output_dir,
+                extract_text=False,
+                extract_tables=True,
+                extract_images=False,
+            )
 
 
 @cli.command("images")
-@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to the PDF file.")
+@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
+@click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
 @click.option(
-    "--output-dir",
-    default=DEFAULT_OUTPUT_DIR,
-    help="Directory to save extracted images.",
+    "--single", is_flag=True, help="Process single PDF file instead of directory"
 )
-@click.option(
-    "--single", is_flag=True, help="Process single PDF file with detailed output."
-)
-def extract_images(pdf_path: str, output_dir: str, single: bool) -> None:
+def images(pdf_path: str, output_dir: str, single: bool) -> None:
     """Extract images from PDF."""
-    if not os.path.exists(pdf_path):
-        logger.error(f"PDF file not found: {pdf_path}")
-        return
-
-    pdf_name = Path(pdf_path).stem
-    full_output_dir = Path(output_dir) / pdf_name
-    ensure_directory_exists(str(full_output_dir))
-
-    logger.info(f"Extracting images from: {pdf_path}")
-
-    converter = setup_converter(extract_tables=False)
-    result = converter.convert(pdf_path)
-    doc = result.document
-
-    # Extract images
-    image_paths = []
-    images_dir = full_output_dir / "images"
-    ensure_directory_exists(str(images_dir))
-
-    for i, image in enumerate(doc.pictures):
-        try:
-            image_path = images_dir / f"image_{i:03d}.png"
-            with open(image_path, "wb") as f:
-                f.write(image.get_bytes())
-            image_paths.append(str(image_path))
-            if single:
-                logger.info(f"Saved image {i}: {image_path}")
-        except Exception as e:
-            logger.error(f"Error saving image {i}: {e}")
-
-    if image_paths:
-        logger.info(f"Extracted {len(image_paths)} images to: {images_dir}")
+    if single:
+        process_single_pdf(
+            pdf_path,
+            output_dir,
+            extract_text=False,
+            extract_tables=False,
+            extract_images=True,
+        )
     else:
-        logger.info("No images found in PDF")
+        if os.path.isfile(pdf_path):
+            process_single_pdf(
+                pdf_path,
+                output_dir,
+                extract_text=False,
+                extract_tables=False,
+                extract_images=True,
+            )
+        else:
+            process_pdf_directory(
+                pdf_path,
+                output_dir,
+                extract_text=False,
+                extract_tables=False,
+                extract_images=True,
+            )
 
 
 @cli.command("all")
-@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to the PDF file.")
+@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
+@click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
 @click.option(
-    "--output-dir",
-    default=DEFAULT_OUTPUT_DIR,
-    help="Directory to save extracted content.",
+    "--single", is_flag=True, help="Process single PDF file instead of directory"
 )
-@click.option(
-    "--single", is_flag=True, help="Process single PDF file with detailed output."
-)
-@click.pass_context
-def extract_all(ctx, pdf_path: str, output_dir: str, single: bool) -> None:
+def all_content(pdf_path: str, output_dir: str, single: bool) -> None:
     """Extract text, tables, and images from PDF."""
-    logger.info("Extracting all content from PDF")
-    ctx.invoke(extract_text, pdf_path=pdf_path, output_dir=output_dir, single=single)
-    ctx.invoke(extract_tables, pdf_path=pdf_path, output_dir=output_dir, single=single)
-    ctx.invoke(extract_images, pdf_path=pdf_path, output_dir=output_dir, single=single)
-    logger.info("All content extraction completed")
+    if single:
+        process_single_pdf(
+            pdf_path,
+            output_dir,
+            extract_text=True,
+            extract_tables=True,
+            extract_images=True,
+        )
+    else:
+        if os.path.isfile(pdf_path):
+            process_single_pdf(
+                pdf_path,
+                output_dir,
+                extract_text=True,
+                extract_tables=True,
+                extract_images=True,
+            )
+        else:
+            process_pdf_directory(
+                pdf_path,
+                output_dir,
+                extract_text=True,
+                extract_tables=True,
+                extract_images=True,
+            )
 
 
 if __name__ == "__main__":
