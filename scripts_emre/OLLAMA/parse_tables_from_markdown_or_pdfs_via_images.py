@@ -273,3 +273,7 @@ def parse_tables_from_pdf(path: str, output_dir: str, verbose: bool) -> None:
 
     except Exception as e:
         logger.error(f"Error during PDF parsing: {e}")
+
+
+if __name__ == "__main__":
+    cli()

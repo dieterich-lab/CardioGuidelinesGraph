@@ -88,7 +88,7 @@ def extract_tables_from_pdf(pdf_path: str, output_dir: str) -> None:
             table_data = {
                 "table_id": i,
                 "source_file": pdf_path,
-                "caption": table.caption.text if table.caption else None,
+                "caption": table.captions,
                 "data": [],
             }
 
