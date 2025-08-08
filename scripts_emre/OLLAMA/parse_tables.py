@@ -30,7 +30,7 @@ def ensure_directory_exists(path: str) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-def parse_image(img_path: str) -> list:
+def parse_table_from_image(img_path: str) -> list:
     """Process a single image and return all extracted structures."""
     with open(img_path, "rb") as image_file:
         img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
@@ -46,7 +46,7 @@ def parse_image(img_path: str) -> list:
     return results
 
 
-def parse_markdown(chunk: str) -> list:
+def parse_table_from_chunk(chunk: str) -> list:
     """Process a markdown chunk to extract all structures."""
     try:
         res = b.Markdown2Table(markdown=chunk)
@@ -85,9 +85,9 @@ def process_files(
     with click.progressbar(file_paths, length=len(file_paths), label=label) as progress:
         for file_path in progress:
             if source_type == "image":
-                results = parse_image(file_path)
+                results = parse_table_from_image(file_path)
             else:  # markdown chunk
-                results = parse_markdown(file_path)
+                results = parse_table_from_chunk(file_path)
             all_results.extend(results)
 
     return all_results
@@ -104,40 +104,26 @@ def cli(verbose):
 @cli.command("images")
 @click.option(
     "--path",
+    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/esc_ccs/",
     help="Path to image directory or single image file.",
 )
-@click.option(
-    "--single", is_flag=True, help="Process single image file instead of directory."
-)
-def parse_images(path: str, single: bool) -> None:
+def parse_tables_from_images(path: str) -> None:
     """Parse images and save extracted structures as JSON files."""
-    # Set default path based on single flag
-    if path is None:
-        if single:
-            path = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/page37_tab6.png"
-        else:
-            path = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/esc_ccs/"
-
     try:
         if not os.path.exists(path):
             logger.error(f"Path not found: {path}")
             return
 
-        if single:
-            if not os.path.isfile(path):
-                logger.error(f"Single file expected but got directory: {path}")
-                return
+        if os.path.isfile(path):
             logger.info(f"Parsing single image: {path}")
-            results = parse_image(path)
+            results = parse_table_from_image(path)
         else:
-            if not os.path.isdir(path):
-                logger.error(f"Directory expected but got file: {path}")
-                return
             file_paths = glob.glob(os.path.join(path, "*"))
             if not file_paths:
                 logger.warning(f"No images found in: {path}")
                 return
             results = process_files(file_paths, "image", is_batch=True)
+
         output_dir = (
             Path(path.replace("images", "table_structures")).parent / "from_images"
         )
@@ -152,39 +138,31 @@ def parse_images(path: str, single: bool) -> None:
 @cli.command("markdown")
 @click.option(
     "--path",
+    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/esc_ccs.md",
     help="Path to markdown file.",
 )
-@click.option(
-    "--single",
-    is_flag=True,
-    help="Parse file as single chunk instead of splitting into multiple chunks.",
-)
-def parse_markdown_files(path: str, single: bool) -> None:
+def parse_markdown_files(path: str) -> None:
     """Parse markdown files and save extracted structures as JSON files."""
-    # Set default path based on single flag
-    if path is None:
-        if single:
-            path = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/page37_tab6.md"
-        else:
-            path = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/esc_ccs.md"
-
     try:
         if not os.path.exists(path):
             logger.error(f"Markdown file not found: {path}")
             return
 
-        with open(path, "r") as f:
-            markdown_content = f.read()
+        if os.path.isfile(path):
+            with open(path, "r") as f:
+                markdown_content = f.read()
 
-        if single:
-            logger.info(f"Parsing markdown file as single chunk: {path}")
-            results = parse_markdown(markdown_content)
-        else:
             from langchain_text_splitters import MarkdownTextSplitter
 
             markdown_splitter = MarkdownTextSplitter()
             chunks = markdown_splitter.split_text(markdown_content)
             results = process_files(chunks, "markdown", is_batch=True)
+        else:
+            logger.error(
+                f"Directory processing not supported for markdown command: {path}"
+            )
+            return
+
         output_dir = (
             Path(path.replace("markdown", "table_structures")).parent / "from_markdown"
         )
@@ -197,9 +175,4 @@ def parse_markdown_files(path: str, single: bool) -> None:
 
 
 if __name__ == "__main__":
-    # Example usage:
-    # python parse_tables.py images --single  # Uses default single image
-    # python parse_tables.py markdown --single  # Uses default single markdown file
-    # python parse_tables.py images  # Processes directory of images
-    # python parse_tables.py markdown  # Processes markdown file with chunking
     cli()

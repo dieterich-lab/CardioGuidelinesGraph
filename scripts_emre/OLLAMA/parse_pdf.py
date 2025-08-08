@@ -16,10 +16,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("PDFExtractor")
 
-# DEFAULT_PDF_PATH = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/pdf_pages/_37.pdf"
-DEFAULT_PDF_PATH = (
-    "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf"
-)
+DEFAULT_PDF_PATH = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/pdf_pages/_37.pdf"
+# DEFAULT_PDF_PATH = (
+#     "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf"
+# )
 DEFAULT_OUTPUT_DIR = (
     "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/docling/"
 )
@@ -88,6 +88,7 @@ def extract_tables_from_pdf(pdf_path: str, output_dir: str) -> None:
             table_data = {
                 "table_id": i,
                 "source_file": pdf_path,
+                "caption": table.caption.text if table.caption else None,
                 "data": [],
             }
 
@@ -248,12 +249,9 @@ def cli(verbose):
 @cli.command("text")
 @click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
 @click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-@click.option(
-    "--single", is_flag=True, help="Process single PDF file instead of directory"
-)
-def text(pdf_path: str, output_dir: str, single: bool) -> None:
+def text(pdf_path: str, output_dir: str) -> None:
     """Extract text from PDF."""
-    if single:
+    if os.path.isfile(pdf_path):
         process_single_pdf(
             pdf_path,
             output_dir,
@@ -262,33 +260,21 @@ def text(pdf_path: str, output_dir: str, single: bool) -> None:
             extract_images=False,
         )
     else:
-        if os.path.isfile(pdf_path):
-            process_single_pdf(
-                pdf_path,
-                output_dir,
-                extract_text=True,
-                extract_tables=False,
-                extract_images=False,
-            )
-        else:
-            process_pdf_directory(
-                pdf_path,
-                output_dir,
-                extract_text=True,
-                extract_tables=False,
-                extract_images=False,
-            )
+        process_pdf_directory(
+            pdf_path,
+            output_dir,
+            extract_text=True,
+            extract_tables=False,
+            extract_images=False,
+        )
 
 
 @cli.command("tables")
 @click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
 @click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-@click.option(
-    "--single", is_flag=True, help="Process single PDF file instead of directory"
-)
-def tables(pdf_path: str, output_dir: str, single: bool) -> None:
+def tables(pdf_path: str, output_dir: str) -> None:
     """Extract tables from PDF."""
-    if single:
+    if os.path.isfile(pdf_path):
         process_single_pdf(
             pdf_path,
             output_dir,
@@ -297,33 +283,21 @@ def tables(pdf_path: str, output_dir: str, single: bool) -> None:
             extract_images=False,
         )
     else:
-        if os.path.isfile(pdf_path):
-            process_single_pdf(
-                pdf_path,
-                output_dir,
-                extract_text=False,
-                extract_tables=True,
-                extract_images=False,
-            )
-        else:
-            process_pdf_directory(
-                pdf_path,
-                output_dir,
-                extract_text=False,
-                extract_tables=True,
-                extract_images=False,
-            )
+        process_pdf_directory(
+            pdf_path,
+            output_dir,
+            extract_text=False,
+            extract_tables=True,
+            extract_images=False,
+        )
 
 
 @cli.command("images")
 @click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
 @click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-@click.option(
-    "--single", is_flag=True, help="Process single PDF file instead of directory"
-)
-def images(pdf_path: str, output_dir: str, single: bool) -> None:
+def images(pdf_path: str, output_dir: str) -> None:
     """Extract images from PDF."""
-    if single:
+    if os.path.isfile(pdf_path):
         process_single_pdf(
             pdf_path,
             output_dir,
@@ -332,33 +306,21 @@ def images(pdf_path: str, output_dir: str, single: bool) -> None:
             extract_images=True,
         )
     else:
-        if os.path.isfile(pdf_path):
-            process_single_pdf(
-                pdf_path,
-                output_dir,
-                extract_text=False,
-                extract_tables=False,
-                extract_images=True,
-            )
-        else:
-            process_pdf_directory(
-                pdf_path,
-                output_dir,
-                extract_text=False,
-                extract_tables=False,
-                extract_images=True,
-            )
+        process_pdf_directory(
+            pdf_path,
+            output_dir,
+            extract_text=False,
+            extract_tables=False,
+            extract_images=True,
+        )
 
 
 @cli.command("all")
 @click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
 @click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-@click.option(
-    "--single", is_flag=True, help="Process single PDF file instead of directory"
-)
-def all_content(pdf_path: str, output_dir: str, single: bool) -> None:
+def all_content(pdf_path: str, output_dir: str) -> None:
     """Extract text, tables, and images from PDF."""
-    if single:
+    if os.path.isfile(pdf_path):
         process_single_pdf(
             pdf_path,
             output_dir,
@@ -367,22 +329,13 @@ def all_content(pdf_path: str, output_dir: str, single: bool) -> None:
             extract_images=True,
         )
     else:
-        if os.path.isfile(pdf_path):
-            process_single_pdf(
-                pdf_path,
-                output_dir,
-                extract_text=True,
-                extract_tables=True,
-                extract_images=True,
-            )
-        else:
-            process_pdf_directory(
-                pdf_path,
-                output_dir,
-                extract_text=True,
-                extract_tables=True,
-                extract_images=True,
-            )
+        process_pdf_directory(
+            pdf_path,
+            output_dir,
+            extract_text=True,
+            extract_tables=True,
+            extract_images=True,
+        )
 
 
 if __name__ == "__main__":
