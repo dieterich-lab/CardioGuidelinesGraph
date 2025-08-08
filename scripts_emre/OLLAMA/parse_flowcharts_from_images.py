@@ -9,7 +9,6 @@ from pathlib import Path
 
 import click
 import fitz
-from baml_client.types import IfElseTree, SemanticTriple
 from baml_py import Image
 
 sys.path.append("..")  # isort:skip
