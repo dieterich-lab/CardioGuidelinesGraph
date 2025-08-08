@@ -9,9 +9,8 @@ function Image2Table(img: image) -> ListOfStructuralData {
     - If the head contains multiple head entities, unroll the head into multiple triples.
     - If the tail contains multiple tail entities, unroll the tail into multiple triples.
     - If a head is empty (an empty cell at the beginning of a row), assume that the head is the same as the previous head.
-    Keep the information short and concise as it will be later integrated into a medical knowledge graph,but
-    also take care that the triples convey the overall meaning of the table. 
-    For this you have to make each triple clearly understandable without additional context.
+    Keep the information short and concise as it will be later integrated into a medical knowledge graph.
+    To convey the overall meaning of the table, you can also incorporate information from the caption.
     {{img}}
     {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
   "#
@@ -28,8 +27,10 @@ function Markdown2Table(markdown: string) -> ListOfStructuralData {
     - If the head contains multiple head entities, unroll the head into multiple triples.
     - If the tail contains multiple tail entities, unroll the tail into multiple triples.
     - If a head is empty (an empty cell at the beginning of a row), assume that the head is the same as the previous head.
-    Keep the information short and concise as it will be later integrated into a medical knowledge graph,but
-    also take care that the triples convey the overall meaning of the table.
+    Keep the information short and concise as it will be later integrated into a medical knowledge graph.
+    To convey the overall meaning of the table, you can also incorporate information from the caption.
+    {{markdown}}
+    {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
     {{markdown}}
     {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
   "#
