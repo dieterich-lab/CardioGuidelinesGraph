@@ -13,7 +13,7 @@ class ListOfStructuralData {
   list (IfElseTree | SemanticTriple)[] @description("A list of if-else-trees and/or semantic triples extracted from the image")
 }
 
-function Image2Tree(img: image) -> ListOfStructuralData {
+function Image2Flowchart(img: image) -> ListOfStructuralData {
   client Qwen25vl32bG5 
   // client Qwen25vl72bG5 
   // client Llava34bG5

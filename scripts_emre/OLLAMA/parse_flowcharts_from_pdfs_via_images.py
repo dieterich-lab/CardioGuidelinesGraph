@@ -66,7 +66,7 @@ def parse_flowchart_from_image(img_path: str) -> list:
     with open(img_path, "rb") as image_file:
         img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
     img = Image.from_base64("image/png", img_b64)
-    res = b.Image2Tree(img=img)
+    res = b.Image2Flowchart(img=img)
 
     results = []
     for x in res.list:
