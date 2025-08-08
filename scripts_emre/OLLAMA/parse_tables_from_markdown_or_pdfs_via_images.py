@@ -1,5 +1,4 @@
 import base64
-import glob
 import json
 import logging
 import os
@@ -51,7 +50,7 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str) -> list[str]:
                 alpha=True,
                 annots=True,
             )
-            img_path = Path(output_dir) / f"{pdf_name}.png"
+            img_path = Path(output_dir) / f"{pdf_name}_page_{page_num:03d}.png"
             pix.save(str(img_path))
             image_paths.append(str(img_path))
         except Exception as e:
@@ -190,11 +189,8 @@ def process_files(
 
 
 @click.group()
-@click.option("--verbose", is_flag=True, help="Enable verbose output")
-def cli(verbose):
+def cli():
     """Process images from PDFs for table extraction and analysis."""
-    if verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
 
 
 @cli.command("markdown")
@@ -203,8 +199,12 @@ def cli(verbose):
     default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/esc_ccs.md",
     help="Path to markdown file.",
 )
-def parse_markdown_files(path: str) -> None:
+@click.option("--verbose", is_flag=True, help="Enable verbose output")
+def parse_tables_from_markdown(path: str, verbose: bool) -> None:
     """Parse markdown files and save extracted structures as JSON files."""
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
     try:
         if not os.path.exists(path):
             logger.error(f"Markdown file not found: {path}")
@@ -245,8 +245,12 @@ def parse_markdown_files(path: str) -> None:
     default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/table_structures/from_pdf_images",
     help="Output directory for results.",
 )
-def parse_tables_from_pdfs(path: str, output_dir: str) -> None:
+@click.option("--verbose", is_flag=True, help="Enable verbose output")
+def parse_tables_from_pdf(path: str, output_dir: str, verbose: bool) -> None:
     """Parse PDFs by extracting images on-demand and save extracted table structures as JSON files."""
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
     try:
         if not os.path.exists(path):
             logger.error(f"Path not found: {path}")
@@ -269,7 +273,3 @@ def parse_tables_from_pdfs(path: str, output_dir: str) -> None:
 
     except Exception as e:
         logger.error(f"Error during PDF parsing: {e}")
-
-
-if __name__ == "__main__":
-    cli()

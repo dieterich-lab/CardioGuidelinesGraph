@@ -1,15 +1,14 @@
 import base64
-import glob
 import json
 import logging
 import os
-import pickle
 import sys
 from pathlib import Path
 
 import click
 import fitz
 from baml_py import Image
+from langchain_text_splitters import MarkdownTextSplitter
 
 sys.path.append("..")  # isort:skip
 
@@ -21,7 +20,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()],
 )
-logger = logging.getLogger("pdf_processor")
+logger = logging.getLogger("StructureExtractor")
 
 
 def ensure_directory_exists(path: str) -> None:
@@ -32,209 +31,172 @@ def ensure_directory_exists(path: str) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-@click.group()
+def extract_images_from_pdf(pdf_path: str, output_dir: str) -> list[str]:
+    """Extract images from PDF using fitz and return list of image paths."""
+    pdf_name = Path(pdf_path).stem
+    ensure_directory_exists(str(output_dir))
+
+    doc = fitz.open(pdf_path)
+    image_paths = []
+
+    for page_num in range(len(doc)):
+        try:
+            page = doc[page_num]
+            pix = page.get_pixmap(
+                matrix=fitz.Identity,
+                dpi=None,
+                colorspace=fitz.csRGB,
+                clip=None,
+                alpha=True,
+                annots=True,
+            )
+            img_path = Path(output_dir) / f"{pdf_name}_page_{page_num:03d}.png"
+            pix.save(str(img_path))
+            image_paths.append(str(img_path))
+        except Exception as e:
+            logger.error(f"Error extracting page {page_num} from {pdf_path}: {e}")
+
+    doc.close()
+    logger.info(f"Extracted {len(image_paths)} images from {pdf_path}")
+    return image_paths
+
+
+def parse_flowchart_from_image(img_path: str) -> list:
+    """Process a single image and return all extracted structures."""
+    with open(img_path, "rb") as image_file:
+        img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
+    img = Image.from_base64("image/png", img_b64)
+    res = b.Image2Tree(img=img)
+
+    results = []
+    for x in res.list:
+        result_data = x.model_dump()
+        result_data["source_filepath"] = img_path
+        results.append(result_data)
+
+    return results
+
+
+def save_results(results: list, output_dir: str, filename: str) -> None:
+    """Save all results to a single JSON file."""
+    ensure_directory_exists(output_dir)
+
+    flowchart_file = os.path.join(output_dir, filename)
+
+    with open(flowchart_file, "w") as f:
+        json.dump(results, f, indent=4)
+
+    logger.info(f"Results saved to: {flowchart_file}")
+
+
+def process_single_pdf(pdf_path: str, output_dir: str) -> list:
+    """Process a single PDF file and return extracted table results."""
+    if not os.path.exists(pdf_path):
+        logger.error(f"PDF file not found: {pdf_path}")
+        return []
+
+    logger.info(f"Processing PDF: {pdf_path}")
+
+    # Extract images from PDF
+    image_paths = extract_images_from_pdf(pdf_path, output_dir)
+
+    if not image_paths:
+        logger.warning(f"No images extracted from {pdf_path}")
+        return []
+
+    # Process each image for table extraction
+    all_results = []
+    with click.progressbar(image_paths, label="Parsing images for tables") as images:
+        for img_path in images:
+            try:
+                results = parse_flowchart_from_image(img_path)
+                all_results.extend(results)
+            except Exception as e:
+                logger.error(f"Error processing image {img_path}: {e}")
+
+    return all_results
+
+
+def process_pdf_directory(pdf_dir: str, output_dir: str) -> list:
+    """Process all PDF files in a directory."""
+    if not os.path.exists(pdf_dir):
+        logger.error(f"Directory not found: {pdf_dir}")
+        return []
+
+    pdf_files = [f for f in os.listdir(pdf_dir) if f.lower().endswith(".pdf")]
+    if not pdf_files:
+        logger.warning(f"No PDF files found in: {pdf_dir}")
+        return []
+
+    logger.info(f"Found {len(pdf_files)} PDF files")
+    all_results = []
+
+    with click.progressbar(pdf_files, label="Processing PDFs") as files:
+        for pdf_file in files:
+            pdf_path = os.path.join(pdf_dir, pdf_file)
+            results = process_single_pdf(pdf_path, output_dir)
+            all_results.extend(results)
+
+    return all_results
+
+
+def process_files(
+    file_paths_or_chunks: list, file_type: str, is_batch: bool = False
+) -> list:
+    """Process a list of files and return all extracted structures."""
+    all_results = []
+
+    with click.progressbar(file_paths_or_chunks, label="Processing images") as items:
+        for file_path in items:
+            try:
+                results = parse_flowchart_from_image(file_path)
+                all_results.extend(results)
+            except Exception as e:
+                logger.error(f"Error processing image {file_path}: {e}")
+
+    return all_results
+
+
+@click.command()
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
-def cli(verbose):
-    """Process images from PDFs for structure extraction and analysis."""
-    if verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-
-
-@cli.command("extract")
 @click.option(
-    "--pdf-path",
+    "--path",
     default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf",
-    help="Path to the PDF file.",
-)
-@click.option(
-    "--img-path",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/esc_ccs/",
-    help="Path to the directory to save images.",
-)
-def extract_images(pdf_path: str, img_path: str) -> None:
-    """Extract images from PDF and save them as PNG files."""
-    try:
-        if not os.path.exists(pdf_path):
-            logger.error(f"PDF file not found: {pdf_path}")
-            return
-
-        ensure_directory_exists(img_path)
-        doc = fitz.open(pdf_path)
-
-        # Temporarily store errors to report after progress bar completes
-        errors = []
-        with click.progressbar(
-            enumerate(doc), length=len(doc), label="Extracting images"
-        ) as pages:
-            for count, page in pages:
-                try:
-                    pix = page.get_pixmap(
-                        matrix=fitz.Identity,
-                        dpi=None,
-                        colorspace=fitz.csRGB,
-                        clip=None,
-                        alpha=True,
-                        annots=True,
-                    )
-                    output_path = os.path.join(img_path, f"{count}.png")
-                    pix.save(output_path)
-                except Exception as e:
-                    errors.append((count + 1, str(e)))
-
-        # Report errors after progress bar completes
-        for page_num, error in errors:
-            logger.error(f"Error processing page {page_num}: {error}")
-
-        logger.info(f"Successfully extracted {len(doc)} pages to {img_path}")
-    except Exception as e:
-        logger.error(f"Error during image extraction: {e}")
-
-
-@cli.command("parse")
-@click.option(
-    "--imgx-path",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/esc_ccs/",
-    help="Path to the directory with images.",
-)
-def parse_image_to_flowchart(imgx_path: str) -> None:
-    """Parse images and save extracted structures as pickle files."""
-    try:
-        if not os.path.exists(imgx_path):
-            logger.error(f"Image directory not found: {imgx_path}")
-            return
-
-        imgx_paths = glob.glob(os.path.join(imgx_path, "*"))
-        if not imgx_paths:
-            logger.warning(f"No images found in: {imgx_path}")
-            return
-
-        # Create output directory for pickle files
-        pkl_path = Path(imgx_path.replace("images", "flowchart_structures"))
-        ensure_directory_exists(str(pkl_path))
-
-        # Temporarily store errors to report after progress bar completes
-        errors = []
-        with click.progressbar(
-            imgx_paths, length=len(imgx_paths), label="Parsing images"
-        ) as images:
-            for img_path in images:
-                try:
-                    with open(img_path, "rb") as image_file:
-                        img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
-                    img = Image.from_base64("image/png", img_b64)
-                    res = b.Image2Tree(img=img)
-
-                    # Add source filepath to all structures
-                    for x in res.list:
-                        structure_data = x.model_dump()
-                        structure_data["source_filepath"] = img_path
-
-                    pkl_name = Path(img_path).stem + ".pkl"
-                    with open(pkl_path / pkl_name, "wb") as pkl_file:
-                        pickle.dump(res, pkl_file)
-                except Exception as e:
-                    errors.append((img_path, str(e)))
-
-        # Report errors after progress bar completes
-        for img_path, error in errors:
-            logger.error(f"Error parsing image {img_path}: {error}")
-
-        logger.info(f"Successfully parsed {len(imgx_paths)} images")
-    except Exception as e:
-        logger.error(f"Error during image parsing: {e}")
-
-
-@cli.command("save_json")
-@click.option(
-    "--imgx-path",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/images/esc_ccs/",
-    help="Path to the directory with images to read structures from.",
-)
-def save_json(imgx_path: str) -> None:
-    """Read structures from pickle files and save as JSON."""
-    try:
-        pkl_path = Path(imgx_path.replace("images", "flowchart_structures"))
-        if not pkl_path.exists():
-            logger.error(f"Pickle directory not found: {pkl_path}")
-            return
-
-        struct_paths = glob.glob(str(pkl_path / "*.pkl"))
-        if not struct_paths:
-            logger.warning(f"No pickle files found in: {pkl_path}")
-            return
-
-        # Create output directory for JSON files
-        json_path = imgx_path.replace("images", "flowchart_structures")
-        ensure_directory_exists(json_path)
-
-        all_structures = list()
-
-        # Temporarily store errors to report after progress bar completes
-        errors = []
-        with click.progressbar(
-            struct_paths, length=len(struct_paths), label="Processing structures"
-        ) as paths:
-            for struc_path in paths:
-                try:
-                    with open(struc_path, "rb") as pkl_file:
-                        res = pickle.load(pkl_file)
-                    for x in res.list:
-                        structure_data = x.model_dump()
-                        # Add source filepath if not already present
-                        if "source_filepath" not in structure_data:
-                            # Derive image path from pickle path
-                            img_name = Path(struc_path).stem + ".png"
-                            img_path = str(Path(imgx_path) / img_name)
-                            structure_data["source_filepath"] = img_path
-                        all_structures.append(structure_data)
-                except Exception as e:
-                    errors.append((struc_path, str(e)))
-
-        # Report errors after progress bar completes
-        for struc_path, error in errors:
-            logger.error(f"Error processing structure file {struc_path}: {error}")
-
-        structures_file = os.path.join(json_path, "structures.json")
-
-        with open(structures_file, "w") as f:
-            json.dump(all_structures, f, indent=4)
-
-        logger.info(f"Extracted {len(all_structures)} structures")
-        logger.info(f"Results saved to {structures_file}")
-    except Exception as e:
-        logger.error(f"Error during JSON conversion: {e}")
-
-
-@cli.command("process_all")
-@click.option(
-    "--pdf-path",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf",
-    help="Path to the PDF file.",
+    help="Path to PDF file or directory containing PDF files.",
 )
 @click.option(
     "--output-dir",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/",
-    help="Base output directory.",
+    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/flowchart_structures",
+    help="Output directory for results.",
 )
-@click.pass_context
-def process_all(ctx, pdf_path: str, output_dir: str) -> None:
-    """Run the entire pipeline: extract images, parse them, and save as JSON."""
-    pdf_name = Path(pdf_path).stem
-    img_path = os.path.join(output_dir, "images", pdf_name) + "/"
+def parse_flowcharts_from_pdf(verbose: bool, path: str, output_dir: str) -> None:
+    """Parse PDFs by extracting images on-demand and save extracted flowchart structures as JSON files."""
+    if verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
 
-    logger.info("Starting full processing pipeline")
+    try:
+        if not os.path.exists(path):
+            logger.error(f"Path not found: {path}")
+            return
 
-    # Extract images from PDF
-    ctx.invoke(extract_images, pdf_path=pdf_path, img_path=img_path)
+        if os.path.isfile(path):
+            logger.info(f"Processing single PDF: {path}")
+            results = process_single_pdf(path, output_dir)
+            filename = f"{Path(path).stem}.json"
+        else:
+            logger.info(f"Processing PDF directory: {path}")
+            results = process_pdf_directory(path, output_dir)
+            filename = f"{Path(path).stem}.json"
 
-    # Parse images
-    ctx.invoke(parse_image_to_flowchart, imgx_path=img_path)
+        if results:
+            save_results(results, output_dir, filename)
+            logger.info(f"Found {len(results)} total flowchart structures")
+        else:
+            logger.warning("No flowchart structures found")
 
-    # Save as JSON
-    ctx.invoke(save_json, imgx_path=img_path)
-
-    logger.info("Complete pipeline execution finished successfully")
+    except Exception as e:
+        logger.error(f"Error during PDF parsing: {e}")
 
 
 if __name__ == "__main__":
-    cli()
+    parse_flowcharts_from_pdf()
