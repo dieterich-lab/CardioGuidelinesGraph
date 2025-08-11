@@ -31,7 +31,5 @@ function Markdown2Table(markdown: string) -> ListOfStructuralData {
     To convey the overall meaning of the table, you can also incorporate information from the caption.
     {{markdown}}
     {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
-    {{markdown}}
-    {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
   "#
 }
