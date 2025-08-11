@@ -24,7 +24,7 @@ function Image2Flowchart(img: image) -> ListOfStructuralData {
     If it's table or nonsensical information, discard it and output an empty list.
     - If you find isolated information, extract it as semantic triple
     - If you identify a flow chart or a decision tree convert it into a string representation of an if-else tree.
-    For easier conversation, also respect the global conetext, especially the caption of the chart.
+    For easier conversion, also respect the global conetext, especially the caption of the chart.
     {{img}}
     {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
   "#
