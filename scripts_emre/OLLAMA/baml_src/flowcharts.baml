@@ -20,8 +20,8 @@ function Image2Flowchart(img: image) -> ListOfStructuralData {
   // client GemmaG5
   prompt #"
     The following image comes from a medical guidelinea about cardiovascular diseases.
-    Decide, if it's a table or something else (like a flow chart). If it's a table, discard it and output an empty list.
-    Otherwise, extract all structural information from the chart:
+    If it's a flow chart or graphics containing structural information process along the below given guidance.
+    If it's table or nonsensical information, discard it and output an empty list.
     - If you find isolated information, extract it as semantic triple
     - If you identify a flow chart or a decision tree convert it into a string representation of an if-else tree.
     For easier conversation, also respect the global conetext, especially the caption of the chart.
