@@ -4,9 +4,11 @@ import os
 from pathlib import Path
 
 import click
+from docling.datamodel import vlm_model_specs
 from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import PdfPipelineOptions, VlmPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.pipeline.vlm_pipeline import VlmPipeline
 
 # Configure logging
 logging.basicConfig(
@@ -30,28 +32,46 @@ def ensure_directory_exists(path: str) -> None:
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
-def setup_converter(extract_tables: bool = True) -> DocumentConverter:
+def setup_converter(
+    extract_tables: bool = True, use_vlm: bool = False
+) -> DocumentConverter:
     """Setup and configure the Docling document converter."""
-    pipeline_options = PdfPipelineOptions()
-    pipeline_options.do_ocr = True
-    pipeline_options.do_table_structure = extract_tables
+    if use_vlm:
+        converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(
+                    pipeline_cls=VlmPipeline,
+                ),
+            }
+        )
+        return converter
 
-    if extract_tables:
-        pipeline_options.table_structure_options.do_cell_matching = True
+    else:
+        # Use standard pipeline
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_ocr = True
+        pipeline_options.do_table_structure = extract_tables
 
-    pdf_format_options = PdfFormatOption(pipeline_options=pipeline_options)
-    return DocumentConverter(format_options={InputFormat.PDF: pdf_format_options})
+        if extract_tables:
+            pipeline_options.table_structure_options.do_cell_matching = True
+
+        pdf_format_options = PdfFormatOption(pipeline_options=pipeline_options)
+        return DocumentConverter(format_options={InputFormat.PDF: pdf_format_options})
 
 
-def extract_text_from_pdf(pdf_path: str, output_dir: str) -> None:
+def extract_text_from_pdf(
+    pdf_path: str, output_dir: str, use_vlm: bool = False
+) -> None:
     """Extract text content from PDF as markdown."""
     pdf_name = Path(pdf_path).stem
     output_path = Path(output_dir) / f"{pdf_name}.md"
     ensure_directory_exists(output_dir)
 
-    logger.info(f"Extracting text from: {pdf_path}")
+    logger.info(
+        f"Extracting text from: {pdf_path}" + (" (using VLM)" if use_vlm else "")
+    )
 
-    converter = setup_converter(extract_tables=False)
+    converter = setup_converter(extract_tables=False, use_vlm=use_vlm)
     result = converter.convert(pdf_path)
     doc = result.document
 
@@ -64,15 +84,19 @@ def extract_text_from_pdf(pdf_path: str, output_dir: str) -> None:
         logger.error(f"Error saving text: {e}")
 
 
-def extract_tables_from_pdf(pdf_path: str, output_dir: str) -> None:
+def extract_tables_from_pdf(
+    pdf_path: str, output_dir: str, use_vlm: bool = False
+) -> None:
     """Extract table structures from PDF."""
     pdf_name = Path(pdf_path).stem
     tables_dir = Path(output_dir) / pdf_name / "tables"
     ensure_directory_exists(str(tables_dir))
 
-    logger.info(f"Extracting tables from: {pdf_path}")
+    logger.info(
+        f"Extracting tables from: {pdf_path}" + (" (using VLM)" if use_vlm else "")
+    )
 
-    converter = setup_converter(extract_tables=True)
+    converter = setup_converter(extract_tables=True, use_vlm=use_vlm)
     result = converter.convert(pdf_path)
     doc = result.document
 
@@ -148,15 +172,19 @@ def extract_tables_from_pdf(pdf_path: str, output_dir: str) -> None:
         logger.info(f"Saved {len(tables)} tables to {tables_dir}")
 
 
-def extract_images_from_pdf(pdf_path: str, output_dir: str) -> None:
+def extract_images_from_pdf(
+    pdf_path: str, output_dir: str, use_vlm: bool = False
+) -> None:
     """Extract images from PDF."""
     pdf_name = Path(pdf_path).stem
     images_dir = Path(output_dir) / pdf_name / "images"
     ensure_directory_exists(str(images_dir))
 
-    logger.info(f"Extracting images from: {pdf_path}")
+    logger.info(
+        f"Extracting images from: {pdf_path}" + (" (using VLM)" if use_vlm else "")
+    )
 
-    converter = setup_converter(extract_tables=False)
+    converter = setup_converter(extract_tables=False, use_vlm=use_vlm)
     result = converter.convert(pdf_path)
     doc = result.document
 
@@ -193,22 +221,25 @@ def process_single_pdf(
     extract_text: bool,
     extract_tables: bool,
     extract_images: bool,
+    use_vlm: bool = False,
 ) -> None:
     """Process a single PDF file."""
     if not os.path.exists(pdf_path):
         logger.error(f"PDF file not found: {pdf_path}")
         return
 
-    logger.info(f"Processing: {pdf_path}")
+    logger.info(
+        f"Processing: {pdf_path}" + (" (using SMOLDOCLING VLM)" if use_vlm else "")
+    )
 
     if extract_text:
-        extract_text_from_pdf(pdf_path, output_dir)
+        extract_text_from_pdf(pdf_path, output_dir, use_vlm)
 
     if extract_tables:
-        extract_tables_from_pdf(pdf_path, output_dir)
+        extract_tables_from_pdf(pdf_path, output_dir, use_vlm)
 
     if extract_images:
-        extract_images_from_pdf(pdf_path, output_dir)
+        extract_images_from_pdf(pdf_path, output_dir, use_vlm)
 
 
 def process_pdf_directory(
@@ -217,6 +248,7 @@ def process_pdf_directory(
     extract_text: bool,
     extract_tables: bool,
     extract_images: bool,
+    use_vlm: bool = False,
 ) -> None:
     """Process all PDF files in a directory."""
     if not os.path.exists(pdf_dir):
@@ -234,7 +266,12 @@ def process_pdf_directory(
         for pdf_file in files:
             pdf_path = os.path.join(pdf_dir, pdf_file)
             process_single_pdf(
-                pdf_path, output_dir, extract_text, extract_tables, extract_images
+                pdf_path,
+                output_dir,
+                extract_text,
+                extract_tables,
+                extract_images,
+                use_vlm,
             )
 
 
@@ -249,7 +286,10 @@ def cli(verbose):
 @cli.command("text")
 @click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
 @click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-def text(pdf_path: str, output_dir: str) -> None:
+@click.option(
+    "--use-vlm", is_flag=True, help="Use SMOLDOCLING VLM for enhanced visual extraction"
+)
+def text(pdf_path: str, output_dir: str, use_vlm: bool) -> None:
     """Extract text from PDF."""
     if os.path.isfile(pdf_path):
         process_single_pdf(
@@ -258,6 +298,7 @@ def text(pdf_path: str, output_dir: str) -> None:
             extract_text=True,
             extract_tables=False,
             extract_images=False,
+            use_vlm=use_vlm,
         )
     else:
         process_pdf_directory(
@@ -266,13 +307,17 @@ def text(pdf_path: str, output_dir: str) -> None:
             extract_text=True,
             extract_tables=False,
             extract_images=False,
+            use_vlm=use_vlm,
         )
 
 
 @cli.command("tables")
 @click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
 @click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-def tables(pdf_path: str, output_dir: str) -> None:
+@click.option(
+    "--use-vlm", is_flag=True, help="Use SMOLDOCLING VLM for enhanced visual extraction"
+)
+def tables(pdf_path: str, output_dir: str, use_vlm: bool) -> None:
     """Extract tables from PDF."""
     if os.path.isfile(pdf_path):
         process_single_pdf(
@@ -281,6 +326,7 @@ def tables(pdf_path: str, output_dir: str) -> None:
             extract_text=False,
             extract_tables=True,
             extract_images=False,
+            use_vlm=use_vlm,
         )
     else:
         process_pdf_directory(
@@ -289,13 +335,17 @@ def tables(pdf_path: str, output_dir: str) -> None:
             extract_text=False,
             extract_tables=True,
             extract_images=False,
+            use_vlm=use_vlm,
         )
 
 
 @cli.command("images")
 @click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
 @click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-def images(pdf_path: str, output_dir: str) -> None:
+@click.option(
+    "--use-vlm", is_flag=True, help="Use SMOLDOCLING VLM for enhanced visual extraction"
+)
+def images(pdf_path: str, output_dir: str, use_vlm: bool) -> None:
     """Extract images from PDF."""
     if os.path.isfile(pdf_path):
         process_single_pdf(
@@ -304,6 +354,7 @@ def images(pdf_path: str, output_dir: str) -> None:
             extract_text=False,
             extract_tables=False,
             extract_images=True,
+            use_vlm=use_vlm,
         )
     else:
         process_pdf_directory(
@@ -312,29 +363,7 @@ def images(pdf_path: str, output_dir: str) -> None:
             extract_text=False,
             extract_tables=False,
             extract_images=True,
-        )
-
-
-@cli.command("all")
-@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
-@click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-def all_content(pdf_path: str, output_dir: str) -> None:
-    """Extract text, tables, and images from PDF."""
-    if os.path.isfile(pdf_path):
-        process_single_pdf(
-            pdf_path,
-            output_dir,
-            extract_text=True,
-            extract_tables=True,
-            extract_images=True,
-        )
-    else:
-        process_pdf_directory(
-            pdf_path,
-            output_dir,
-            extract_text=True,
-            extract_tables=True,
-            extract_images=True,
+            use_vlm=use_vlm,
         )
 
 
