@@ -119,27 +119,38 @@ def process_single_pdf(pdf_path: str, output_dir: str) -> list:
     return all_results
 
 
-def process_pdf_directory(pdf_dir: str, output_dir: str) -> list:
-    """Process all PDF files in a directory."""
+def process_pdf_directory(pdf_dir: str, output_dir: str) -> None:
+    """Process all PDF files in a directory, saving results for each file separately."""
     if not os.path.exists(pdf_dir):
         logger.error(f"Directory not found: {pdf_dir}")
-        return []
+        return None
 
     pdf_files = [f for f in os.listdir(pdf_dir) if f.lower().endswith(".pdf")]
     if not pdf_files:
         logger.warning(f"No PDF files found in: {pdf_dir}")
-        return []
+        return None
+
+    # Create a subdirectory based on input directory name
+    input_dir_name = Path(pdf_dir).name
+    subdir_path = os.path.join(output_dir, input_dir_name)
+    ensure_directory_exists(subdir_path)
 
     logger.info(f"Found {len(pdf_files)} PDF files")
-    all_results = []
 
     with click.progressbar(pdf_files, label="Processing PDFs") as files:
         for pdf_file in files:
             pdf_path = os.path.join(pdf_dir, pdf_file)
-            results = process_single_pdf(pdf_path, output_dir)
-            all_results.extend(results)
+            results = process_single_pdf(pdf_path, subdir_path)
 
-    return all_results
+            if results:
+                # Save results for this specific PDF
+                filename = f"{Path(pdf_file).stem}.json"
+                save_results(results, subdir_path, filename)
+                logger.info(f"Saved {len(results)} flowchart structures for {pdf_file}")
+            else:
+                logger.warning(f"No flowchart structures found in {pdf_file}")
+
+    return None
 
 
 def process_files(
@@ -185,16 +196,17 @@ def parse_flowcharts_from_pdf(verbose: bool, path: str, output_dir: str) -> None
             logger.info(f"Processing single PDF: {path}")
             results = process_single_pdf(path, output_dir)
             filename = f"{Path(path).stem}.json"
+
+            if results:
+                save_results(results, output_dir, filename)
+                logger.info(f"Found {len(results)} total flowchart structures")
+            else:
+                logger.warning("No flowchart structures found")
         else:
             logger.info(f"Processing PDF directory: {path}")
-            results = process_pdf_directory(path, output_dir)
-            filename = f"{Path(path).stem}.json"
-
-        if results:
-            save_results(results, output_dir, filename)
-            logger.info(f"Found {len(results)} total flowchart structures")
-        else:
-            logger.warning("No flowchart structures found")
+            # For directories, results are saved within process_pdf_directory
+            process_pdf_directory(path, output_dir)
+            logger.info(f"Completed processing directory: {path}")
 
     except Exception as e:
         logger.error(f"Error during PDF parsing: {e}")
