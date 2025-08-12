@@ -90,7 +90,7 @@ def save_results(results: list, output_dir: str, filename: str) -> None:
 
 
 def process_single_pdf(pdf_path: str, output_dir: str) -> list:
-    """Process a single PDF file and return extracted table results."""
+    """Process a single PDF file and return extracted structured output results."""
     if not os.path.exists(pdf_path):
         logger.error(f"PDF file not found: {pdf_path}")
         return []
@@ -104,9 +104,11 @@ def process_single_pdf(pdf_path: str, output_dir: str) -> list:
         logger.warning(f"No images extracted from {pdf_path}")
         return []
 
-    # Process each image for table extraction
+    # Process each image for structured output extraction
     all_results = []
-    with click.progressbar(image_paths, label="Parsing images for tables") as images:
+    with click.progressbar(
+        image_paths, label="Parsing images for structured output"
+    ) as images:
         for img_path in images:
             try:
                 results = parse_flowchart_from_image(img_path)
