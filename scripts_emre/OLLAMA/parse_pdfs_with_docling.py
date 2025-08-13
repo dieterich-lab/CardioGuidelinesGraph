@@ -65,7 +65,6 @@ def extract_text_from_pdf(
     """Extract text content from PDF as markdown."""
     pdf_name = Path(pdf_path).stem
     output_path = Path(output_dir) / f"{pdf_name}.md"
-    ensure_directory_exists(output_dir)
 
     logger.info(
         f"Extracting text from: {pdf_path}" + (" (using VLM)" if use_vlm else "")
@@ -77,9 +76,13 @@ def extract_text_from_pdf(
 
     try:
         markdown_content = doc.export_to_markdown()
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(markdown_content)
-        logger.info(f"Text saved to: {output_path}")
+        if markdown_content.strip():  # Only create directory if content exists
+            ensure_directory_exists(output_dir)
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(markdown_content)
+            logger.info(f"Text saved to: {output_path}")
+        else:
+            logger.warning(f"No text content found in: {pdf_path}")
     except Exception as e:
         logger.error(f"Error saving text: {e}")
 
@@ -90,7 +93,6 @@ def extract_tables_from_pdf(
     """Extract table structures from PDF."""
     pdf_name = Path(pdf_path).stem
     tables_dir = Path(output_dir) / pdf_name / "tables"
-    ensure_directory_exists(str(tables_dir))
 
     logger.info(
         f"Extracting tables from: {pdf_path}" + (" (using VLM)" if use_vlm else "")
@@ -105,6 +107,9 @@ def extract_tables_from_pdf(
     if len(doc.tables) == 0:
         logger.warning("No tables detected")
         return
+
+    # Only create directories if tables are found
+    ensure_directory_exists(str(tables_dir))
 
     tables = []
     for i, table in enumerate(doc.tables):
@@ -178,7 +183,6 @@ def extract_images_from_pdf(
     """Extract images from PDF."""
     pdf_name = Path(pdf_path).stem
     images_dir = Path(output_dir) / pdf_name / "images"
-    ensure_directory_exists(str(images_dir))
 
     logger.info(
         f"Extracting images from: {pdf_path}" + (" (using VLM)" if use_vlm else "")
@@ -191,6 +195,9 @@ def extract_images_from_pdf(
     if not doc.pictures:
         logger.info("No images found")
         return
+
+    # Only create directories if images are found
+    ensure_directory_exists(str(images_dir))
 
     image_paths = []
     for i, image in enumerate(doc.pictures):
@@ -250,15 +257,20 @@ def process_pdf_directory(
     extract_images: bool,
     use_vlm: bool = False,
 ) -> None:
-    """Process all PDF files in a directory."""
+    """Process all PDF files in a directory, saving results for each file separately."""
     if not os.path.exists(pdf_dir):
         logger.error(f"Directory not found: {pdf_dir}")
-        return
+        return None
 
     pdf_files = [f for f in os.listdir(pdf_dir) if f.lower().endswith(".pdf")]
     if not pdf_files:
         logger.warning(f"No PDF files found in: {pdf_dir}")
-        return
+        return None
+
+    # Create a subdirectory based on input directory name
+    input_dir_name = Path(pdf_dir).name
+    subdir_path = os.path.join(output_dir, input_dir_name)
+    ensure_directory_exists(subdir_path)
 
     logger.info(f"Found {len(pdf_files)} PDF files")
 
@@ -267,104 +279,93 @@ def process_pdf_directory(
             pdf_path = os.path.join(pdf_dir, pdf_file)
             process_single_pdf(
                 pdf_path,
-                output_dir,
+                subdir_path,
                 extract_text,
                 extract_tables,
                 extract_images,
                 use_vlm,
             )
 
+    return None
 
-@click.group()
+
+def validate_content_types(ctx, param, value):
+    # This will be checked after all parameters are processed
+    if (
+        ctx.params.get("text") is False
+        and ctx.params.get("tables") is False
+        and ctx.params.get("images") is False
+    ):
+        raise click.UsageError(
+            "At least one content type (--text, --tables, or --images) must be specified."
+        )
+    return value
+
+
+@click.command()
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
-def cli(verbose):
-    """Simple PDF extractor for text, tables, and images."""
+@click.option(
+    "--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file or directory"
+)
+@click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
+@click.option("--text", is_flag=True, help="Extract text from PDF")
+@click.option("--tables", is_flag=True, help="Extract tables from PDF")
+@click.option("--images", is_flag=True, help="Extract images from PDF")
+@click.option(
+    "--use-vlm",
+    is_flag=True,
+    help="Use SMOLDOCLING VLM for enhanced visual extraction",
+    callback=validate_content_types,
+)
+def cli(verbose, pdf_path, output_dir, text, tables, images, use_vlm):
+    """
+    PDF content extractor for text, tables, and images.
+
+    Specify which content types to extract using the --text, --tables, and --images flags.
+    At least one content type must be specified.
+
+    Examples:
+      # Extract only tables
+      python parse_pdfs_with_docling.py --tables --pdf-path file.pdf
+
+      # Extract both text and images
+      python parse_pdfs_with_docling.py --text --images --pdf-path file.pdf
+
+      # Extract all content types
+      python parse_pdfs_with_docling.py --text --tables --images --pdf-path file.pdf
+    """
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+        logger.debug("Verbose mode enabled")
 
+    logger.info(f"Extracting content from: {pdf_path}")
+    logger.info(
+        f"Content types: "
+        + f"{'text ' if text else ''}"
+        + f"{'tables ' if tables else ''}"
+        + f"{'images ' if images else ''}"
+    )
 
-@cli.command("text")
-@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
-@click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-@click.option(
-    "--use-vlm", is_flag=True, help="Use SMOLDOCLING VLM for enhanced visual extraction"
-)
-def text(pdf_path: str, output_dir: str, use_vlm: bool) -> None:
-    """Extract text from PDF."""
     if os.path.isfile(pdf_path):
         process_single_pdf(
             pdf_path,
             output_dir,
-            extract_text=True,
-            extract_tables=False,
-            extract_images=False,
+            extract_text=text,
+            extract_tables=tables,
+            extract_images=images,
             use_vlm=use_vlm,
         )
     else:
+        # For directories, results are saved within process_pdf_directory in a subdirectory
         process_pdf_directory(
             pdf_path,
             output_dir,
-            extract_text=True,
-            extract_tables=False,
-            extract_images=False,
+            extract_text=text,
+            extract_tables=tables,
+            extract_images=images,
             use_vlm=use_vlm,
         )
-
-
-@cli.command("tables")
-@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
-@click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-@click.option(
-    "--use-vlm", is_flag=True, help="Use SMOLDOCLING VLM for enhanced visual extraction"
-)
-def tables(pdf_path: str, output_dir: str, use_vlm: bool) -> None:
-    """Extract tables from PDF."""
-    if os.path.isfile(pdf_path):
-        process_single_pdf(
-            pdf_path,
-            output_dir,
-            extract_text=False,
-            extract_tables=True,
-            extract_images=False,
-            use_vlm=use_vlm,
-        )
-    else:
-        process_pdf_directory(
-            pdf_path,
-            output_dir,
-            extract_text=False,
-            extract_tables=True,
-            extract_images=False,
-            use_vlm=use_vlm,
-        )
-
-
-@cli.command("images")
-@click.option("--pdf-path", default=DEFAULT_PDF_PATH, help="Path to PDF file")
-@click.option("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-@click.option(
-    "--use-vlm", is_flag=True, help="Use SMOLDOCLING VLM for enhanced visual extraction"
-)
-def images(pdf_path: str, output_dir: str, use_vlm: bool) -> None:
-    """Extract images from PDF."""
-    if os.path.isfile(pdf_path):
-        process_single_pdf(
-            pdf_path,
-            output_dir,
-            extract_text=False,
-            extract_tables=False,
-            extract_images=True,
-            use_vlm=use_vlm,
-        )
-    else:
-        process_pdf_directory(
-            pdf_path,
-            output_dir,
-            extract_text=False,
-            extract_tables=False,
-            extract_images=True,
-            use_vlm=use_vlm,
-        )
+        logger.info(f"Completed processing directory: {pdf_path}")
 
 
 if __name__ == "__main__":
