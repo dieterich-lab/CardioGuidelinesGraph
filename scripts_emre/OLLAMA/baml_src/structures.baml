@@ -24,7 +24,7 @@ function Image2Structure(img: image) -> ListOfStructuralData {
     - If the tail contains multiple tail entities, unroll the tail into multiple triples.
     - If a head is empty (an empty cell at the beginning of a row), assume that the head is the same as the previous head.
     If you detect a figure:
-    - If you find isolated information, extract it as semantic triple
+    - If you find isolated information, extract it as semantic triple.
     - If you identify a flow chart or a decision tree convert it into a string representation of an if-else tree.
     Keep the information short and concise as it will be later integrated into a medical knowledge graph.
     IMPORTANT: To convey the overall meaning of the structures, you can also incorporate information from the caption.
