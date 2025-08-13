@@ -31,13 +31,13 @@ def ensure_directory_exists(path: str) -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
-def extract_images_from_pdf(pdf_path: str, output_dir: str) -> list[str]:
-    """Extract images from PDF using fitz and return list of image paths."""
+def extract_images_from_pdf(pdf_path: str, output_dir: str) -> list[tuple]:
+    """Extract images from PDF using fitz and return list of image data and paths."""
     pdf_name = Path(pdf_path).stem
     ensure_directory_exists(str(output_dir))
 
     doc = fitz.open(pdf_path)
-    image_paths = []
+    image_data = []
 
     for page_num in range(len(doc)):
         try:
@@ -51,36 +51,54 @@ def extract_images_from_pdf(pdf_path: str, output_dir: str) -> list[str]:
                 annots=True,
             )
             img_path = Path(output_dir) / f"{pdf_name}_page_{page_num:03d}.png"
-            pix.save(str(img_path))
-            image_paths.append(str(img_path))
+
+            # Store image data and path instead of saving immediately
+            image_data.append((pix, str(img_path), page_num))
+
         except Exception as e:
             logger.error(f"Error extracting page {page_num} from {pdf_path}: {e}")
 
     doc.close()
-    logger.info(f"Extracted {len(image_paths)} images from {pdf_path}")
-    return image_paths
+    logger.info(f"Extracted {len(image_data)} images from {pdf_path}")
+    return image_data
 
 
-def parse_table_from_image(img_path: str) -> list:
-    """Process a single image and return all extracted structures."""
-    with open(img_path, "rb") as image_file:
-        img_b64 = base64.b64encode(image_file.read()).decode("utf-8")
-    img = Image.from_base64("image/png", img_b64)
-    res = b.Image2Table(img=img)
+def parse_structures_from_image(pix, img_path: str) -> list:
+    """
+    Process an in-memory image and return all extracted structures.
 
-    results = []
-    for x in res.list:
-        result_data = x.model_dump()
-        result_data["source_filepath"] = img_path
-        results.append(result_data)
+    Args:
+        pix: A pixmap object (in-memory image from PDF)
+        img_path: Path where the image would be saved (for metadata only)
 
-    return results
+    Returns:
+        List of extracted structures
+    """
+    try:
+        # Convert pixmap to base64
+        img_bytes = pix.tobytes("png")
+        img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+
+        # Process the image to extract structures
+        img = Image.from_base64("image/png", img_b64)
+        res = b.Image2Structure(img=img)
+
+        results = []
+        for x in res.list:
+            result_data = x.model_dump()
+            result_data["source_filepath"] = img_path
+            results.append(result_data)
+
+        return results
+    except Exception as e:
+        logger.error(f"Error processing image for {img_path}: {e}")
+        return []
 
 
-def parse_table_from_chunk(chunk: str) -> list:
+def parse_structures_from_chunk(chunk: str) -> list:
     """Process a markdown chunk to extract all structures."""
     try:
-        res = b.Markdown2Table(markdown=chunk)
+        res = b.Markdown2Structure(markdown=chunk)
 
         results = []
         for x in res.list:
@@ -98,39 +116,51 @@ def save_results(results: list, output_dir: str, filename: str) -> None:
     """Save all results to a single JSON file."""
     ensure_directory_exists(output_dir)
 
-    tables_file = os.path.join(output_dir, filename)
+    structures_file = os.path.join(output_dir, filename)
 
-    with open(tables_file, "w") as f:
+    with open(structures_file, "w") as f:
         json.dump(results, f, indent=4)
 
-    logger.info(f"Results saved to: {tables_file}")
+    logger.info(f"Results saved to: {structures_file}")
 
 
 def process_single_pdf(pdf_path: str, output_dir: str) -> list:
-    """Process a single PDF file and return extracted table results."""
+    """Process a single PDF file and return extracted structure results."""
     if not os.path.exists(pdf_path):
         logger.error(f"PDF file not found: {pdf_path}")
         return []
 
     logger.info(f"Processing PDF: {pdf_path}")
 
-    # Extract images from PDF
-    image_paths = extract_images_from_pdf(pdf_path, output_dir)
+    # Extract images from PDF but don't save them yet
+    image_data = extract_images_from_pdf(pdf_path, output_dir)
 
-    if not image_paths:
+    if not image_data:
         logger.warning(f"No images extracted from {pdf_path}")
         return []
 
-    # Process each image for table extraction
+    # Process each image for structure extraction
     all_results = []
-    with click.progressbar(image_paths, label="Parsing images for tables") as images:
-        for img_path in images:
-            try:
-                results = parse_table_from_image(img_path)
-                all_results.extend(results)
-            except Exception as e:
-                logger.error(f"Error processing image {img_path}: {e}")
+    saved_images_count = 0
 
+    with click.progressbar(image_data, label="Parsing images for structures") as images:
+        for pix, img_path, page_num in images:
+            try:
+                # Process the image to find structures using unified function
+                results = parse_structures_from_image(pix, img_path)
+
+                # Only save the image if structures were found
+                if results:
+                    # Save the image to disk
+                    pix.save(img_path)
+                    all_results.extend(results)
+                    saved_images_count += 1
+            except Exception as e:
+                logger.error(f"Error processing image for page {page_num}: {e}")
+
+    logger.info(
+        f"Found structures in {saved_images_count} out of {len(image_data)} images"
+    )
     return all_results
 
 
@@ -161,47 +191,31 @@ def process_pdf_directory(pdf_dir: str, output_dir: str) -> None:
                 # Save results for this specific PDF
                 filename = f"{Path(pdf_file).stem}.json"
                 save_results(results, subdir_path, filename)
-                logger.info(f"Saved {len(results)} table structures for {pdf_file}")
+                logger.info(f"Saved {len(results)} structures for {pdf_file}")
             else:
-                logger.warning(f"No table structures found in {pdf_file}")
+                logger.warning(f"No structures found in {pdf_file}")
 
     return None
 
 
-def process_files(
-    file_paths_or_chunks: list, file_type: str, is_batch: bool = False
-) -> list:
-    """Process a list of files or chunks and return all extracted structures."""
+def process_files(chunks: list) -> list:
+    """Process a list of markdown chunks and return all extracted structures."""
     all_results = []
 
-    if file_type == "image":
-        with click.progressbar(
-            file_paths_or_chunks, label="Processing images"
-        ) as items:
-            for file_path in items:
-                try:
-                    results = parse_table_from_image(file_path)
-                    all_results.extend(results)
-                except Exception as e:
-                    logger.error(f"Error processing image {file_path}: {e}")
-
-    elif file_type == "markdown":
-        with click.progressbar(
-            file_paths_or_chunks, label="Processing markdown chunks"
-        ) as items:
-            for chunk in items:
-                try:
-                    results = parse_table_from_chunk(chunk)
-                    all_results.extend(results)
-                except Exception as e:
-                    logger.error(f"Error processing markdown chunk: {e}")
+    with click.progressbar(chunks, label="Processing markdown chunks") as items:
+        for chunk in items:
+            try:
+                results = parse_structures_from_chunk(chunk)
+                all_results.extend(results)
+            except Exception as e:
+                logger.error(f"Error processing markdown chunk: {e}")
 
     return all_results
 
 
 @click.group()
 def cli():
-    """Process images from PDFs for table extraction and analysis."""
+    """Process PDFs and markdown files for structure extraction and analysis."""
 
 
 @cli.command("markdown")
@@ -211,7 +225,7 @@ def cli():
     help="Path to markdown file.",
 )
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
-def parse_tables_from_markdown(path: str, verbose: bool) -> None:
+def parse_structures_from_markdown(path: str, verbose: bool) -> None:
     """Parse markdown files and save extracted structures as JSON files."""
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -227,7 +241,7 @@ def parse_tables_from_markdown(path: str, verbose: bool) -> None:
 
             markdown_splitter = MarkdownTextSplitter()
             chunks = markdown_splitter.split_text(markdown_content)
-            results = process_files(chunks, "markdown", is_batch=True)
+            results = process_files(chunks)
         else:
             logger.error(
                 f"Directory processing not supported for markdown command: {path}"
@@ -235,7 +249,7 @@ def parse_tables_from_markdown(path: str, verbose: bool) -> None:
             return
 
         output_dir = (
-            Path(path.replace("markdown", "table_structures")).parent / "from_markdown"
+            Path(path.replace("markdown", "structures")).parent / "from_markdown"
         )
 
         save_results(results, str(output_dir), f"{Path(path).stem}.json")
@@ -253,12 +267,12 @@ def parse_tables_from_markdown(path: str, verbose: bool) -> None:
 )
 @click.option(
     "--output-dir",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/table_structures/from_pdf_images",
+    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/structures/from_pdf_images",
     help="Output directory for results.",
 )
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
-def parse_tables_from_pdf(path: str, output_dir: str, verbose: bool) -> None:
-    """Parse PDFs by extracting images on-demand and save extracted table structures as JSON files."""
+def parse_structures_from_pdf(path: str, output_dir: str, verbose: bool) -> None:
+    """Parse PDFs by extracting images on-demand and save extracted structures as JSON files."""
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
@@ -274,9 +288,9 @@ def parse_tables_from_pdf(path: str, output_dir: str, verbose: bool) -> None:
 
             if results:
                 save_results(results, output_dir, filename)
-                logger.info(f"Found {len(results)} total table structures")
+                logger.info(f"Found {len(results)} total structures")
             else:
-                logger.warning("No table structures found")
+                logger.warning("No structures found")
         else:
             logger.info(f"Processing PDF directory: {path}")
             # For directories, results are saved within process_pdf_directory
