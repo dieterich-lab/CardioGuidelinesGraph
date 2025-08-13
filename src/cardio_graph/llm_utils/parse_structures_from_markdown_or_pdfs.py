@@ -221,7 +221,7 @@ def cli():
 @cli.command("markdown")
 @click.option(
     "--path",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/esc_ccs.md",
+    default="/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/markdown/esc_ccs.md",
     help="Path to markdown file.",
 )
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
@@ -262,12 +262,12 @@ def parse_structures_from_markdown(path: str, verbose: bool) -> None:
 @cli.command("pdf")
 @click.option(
     "--path",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf",
+    default="/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/esc_ccs.pdf",
     help="Path to PDF file or directory containing PDF files.",
 )
 @click.option(
     "--output-dir",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/structures/from_pdf_images",
+    default="/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/structures/from_pdf_images",
     help="Output directory for results.",
 )
 @click.option("--verbose", is_flag=True, help="Enable verbose output")

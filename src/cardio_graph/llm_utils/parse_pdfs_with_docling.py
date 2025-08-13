@@ -18,12 +18,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger("PDFExtractor")
 
-DEFAULT_PDF_PATH = "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/pdf_pages/_37.pdf"
-# DEFAULT_PDF_PATH = (
-#     "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf"
-# )
+DEFAULT_PDF_PATH = (
+    "/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/pdf_pages/_37.pdf"
+)
 DEFAULT_OUTPUT_DIR = (
-    "/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/docling/"
+    "/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/docling/"
 )
 
 
