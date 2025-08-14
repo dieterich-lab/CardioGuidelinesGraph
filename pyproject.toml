@@ -30,9 +30,15 @@ ollama = "^0.1.7"
 
 # PDF processing
 pypdf2 = "^3.0.1"
+pypdf = "^3.15.1"  # Used by parse_pdf_as_markdown.py
+pymupdf = "^1.23.7"  # Better PDF extraction with tables support
+pymupdf4llm = "*"  # Markdown conversion for LLM-focused workflows
+pdfplumber = "^0.10.3"  # PDF data extraction focused on tables
 docling = "^0.4.0"
 pdf2image = "^1.16.3"
 pillow = "^10.2.0"
+tqdm = "^4.66.1"  # Progress bar utility
+tabulate = "^0.9.0"  # Table formatting for markdown
 
 # Data processing and analysis
 numpy = "^1.26.3"
@@ -66,6 +72,7 @@ sphinx-rtd-theme = "^2.0.0"
 parse-pdfs = "cardio_graph.pdf_utils.parse_pdfs_with_docling:cli"
 parse-structures = "cardio_graph.extraction_utils.parse_structures_from_markdown_or_pdfs:cli"
 split-pages = "cardio_graph.pdf_utils.split_pages:cli"
+pdf-to-markdown = "cardio_graph.pdf_utils.parse_pdf_as_markdown:main"
 feed-neo4j = "cardio_graph.neo4j_utils.feedneo4jdb:main"
 extract = "cardio_graph.extraction_utils.extract:main"
 generate-graph = "cardio_graph.extraction_utils.generate_graph:main"

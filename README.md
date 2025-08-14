@@ -90,6 +90,28 @@ Split a PDF document into individual page files for detailed analysis.
 poetry run split-pages --input-path /path/to/guideline.pdf --output-path /path/to/output/directory/
 ```
 
+#### Convert PDF to Markdown (`pdf-to-markdown`)
+
+Convert PDF files to markdown format for easier text analysis.
+
+```bash
+# Convert PDFs with default settings (uses Docling for better quality)
+poetry run pdf-to-markdown
+
+# Use custom input and output directories
+poetry run pdf-to-markdown --input-dir /path/to/pdfs --output-dir /path/to/output
+
+# Use simpler, faster conversion with PyPDF
+poetry run pdf-to-markdown --use-pypdf
+
+# Enable verbose logging
+poetry run pdf-to-markdown --verbose
+```
+
+Default paths:
+- Input Directory: `/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/pdf/pages`
+- Output Directory: `/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/markdown/pages`
+
 ### Extraction Utilities
 
 #### Parse Structures from Markdown or PDFs (`parse-structures`)
