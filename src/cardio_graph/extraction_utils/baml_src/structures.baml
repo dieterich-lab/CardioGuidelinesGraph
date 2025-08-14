@@ -55,14 +55,12 @@ function Markdown2Structure(markdown: string) -> ListOfStructuralData {
 }
 
 class Coverage {
-  true_positives int @description("A true positive is when the model correctly predicts a positive case")
-  false_positives int @description("a false positive is when it incorrectly predicts a positive case (when it's actually negative)")
-  true_negatives int @description("a true negative is when it correctly predicts a negative case")
-  false_negatives int @description("a false negative is when it incorrectly predicts a negative case (when it's actually positive)")
-  precision float @description("Precision measures the accuracy of positive predictions. It answers the question: 'Of all the instances predicted as positive, how many were actually positive?'")
-  recall float @description("(also known as sensitivity) measures the model's ability to find all positive instances. It answers the question: 'Of all the actual positive instances, how many were correctly identified?' ")
-  accuracy float @description("Measures the overall correctness of the model's predictions, calculated as the ratio of correctly classified instances to the total number of instances")
-  f1 float @description("F1-score is the harmonic mean of precision and recall. It provides a balanced measure that considers both false positives and false negatives, making it useful when there's a trade-off between precision and recall")
+  true_positives int @description("A true positive is when a sample in the baml json is also in the docling json.")
+  false_positives int @description("A false positive is when a sample in the baml json is not in the docling json.")
+  false_negatives int @description("A false negative is when a sample in the docling json is not in the baml json.")
+  precision float @description("Precision measures the accuracy of positive predictions. It answers the question: 'Of all the instances in the baml file, how many were actually in the docling json?'")
+  recall float @description("Recall measures the ability to find all relevant instances. It answers the question: 'Of all the instances in the docling json, how many were correctly predicted in the baml json?'")
+  f1 float @description("F1-score is the harmonic mean of precision and recall.")
   overall_judgement string @description("A qualitative judgement of the overall quality of the baml json compared to the docling json. It can be 'good', 'bad' or 'neutral'.")
   reasoning string @description("A brief explanation of the reasoning behind the overall judgement.")
   missing_information string[] @description("A list of missing information in the baml json compared to the docling json. It should be a comma-separated list of missing information.")
