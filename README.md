@@ -33,6 +33,20 @@ gantt
    
 ```
 
+## Project Structure
+
+```
+src/
+  cardio_graph/           # Main package
+    extraction_utils/     # Extraction and graph generation utilities
+    neo4j_utils/          # Neo4j database interactions
+    ollama_utils/         # Ollama LLM interfaces
+    pdf_utils/            # PDF processing tools
+    rag_utils/            # Retrieval augmented generation tools
+    snomedct_utils/       # SNOMED CT utilities
+    other/                # Miscellaneous utilities
+```
+
 ## Utility Scripts
 
 The project includes several utilities to process medical guidelines from PDF documents for knowledge graph construction. All scripts can be run either using Poetry's CLI scripts or directly with Python.
@@ -76,9 +90,7 @@ Split a PDF document into individual page files for detailed analysis.
 poetry run split-pages --input-path /path/to/guideline.pdf --output-path /path/to/output/directory/
 ```
 
-Default paths:
-- Input Path: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf`
-- Output Path: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/pages/`
+### Extraction Utilities
 
 #### Parse Structures from Markdown or PDFs (`parse-structures`)
 
@@ -98,17 +110,7 @@ poetry run parse-structures markdown --path /path/to/file.md
 poetry run parse-structures pdf --verbose --path /path/to/file.pdf
 ```
 
-Default paths:
-- PDF Input: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/esc_ccs.pdf`
-- PDF Output: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/structures/from_pdf_images`
-- Markdown Input: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/markdown/esc_ccs.md`
-- Markdown Output: `/home/pwiesenbach/CardioGuidelinesGraph/scripts_emre/data/guidelines/structures/from_markdown`
-
-#### Additional Utilities
-
-The project includes several other utilities accessible through Poetry:
-
-##### Text Extraction (`extract`)
+#### Text Extraction (`extract`)
 
 Extract structured information from text.
 
@@ -117,7 +119,7 @@ Extract structured information from text.
 poetry run extract "Your text here"
 ```
 
-##### Knowledge Graph Generation (`generate-graph`)
+#### Knowledge Graph Generation (`generate-graph`)
 
 Generate a knowledge graph from text content.
 
@@ -126,7 +128,7 @@ Generate a knowledge graph from text content.
 poetry run generate-graph "Your text here"
 ```
 
-##### Query Interpretation (`query`)
+#### Query Interpretation (`query`)
 
 Use the query interpreter to interact with the knowledge graph.
 
@@ -144,9 +146,6 @@ Load Cypher files into a Neo4j database.
 ```bash
 # Run with default settings
 poetry run feed-neo4j
-
-# Or run Python file directly
-poetry run python src/cardio_graph/neo4j_utils/feedneo4jdb.py
 ```
 
 Default configuration:
@@ -162,19 +161,18 @@ Convert Draw.io diagrams to Cypher queries for Neo4j.
 poetry run python src/cardio_graph/neo4j_utils/drawio_to_cypher.py
 ```
 
-Default settings:
-- Input Folder: '/prj/doctoral_letters/guide/data2/drawio'
-- Output Folder: '/prj/doctoral_letters/guide/outputs2/cypher'
-
 ### LLM Utilities
 
-#### Run Ollama
+#### Run Ollama (`run-ollama`)
 
 Interact with Ollama models for text generation tasks.
 
 ```bash
-# Run the Ollama client
-poetry run python src/cardio_graph/llm_utils/runollama.py
+# Run the Ollama client with a custom prompt
+poetry run run-ollama "Your prompt here"
+
+# Using the default prompt
+poetry run run-ollama
 ```
 
 Default configuration:
@@ -190,13 +188,13 @@ All scripts can also be run directly using Python after activating the Poetry en
 poetry shell
 
 # Then run scripts directly
-python src/cardio_graph/llm_utils/parse_pdfs_with_docling.py --text --structures --pdf-path /path/to/file.pdf
+python src/cardio_graph/pdf_utils/parse_pdfs_with_docling.py --text --structures --pdf-path /path/to/file.pdf
 python src/cardio_graph/neo4j_utils/feedneo4jdb.py
 ```
 
 ### BAML Utilities
 
-The project includes BAML definitions in `src/cardio_graph/llm_utils/baml_src/` for:
+The project includes BAML definitions in `src/cardio_graph/extraction_utils/baml_src/` for:
 - Client configurations (`clients.baml`)
 - Knowledge graph generators (`kg_generator.baml`)
 - Query tools (`query.baml`)
@@ -207,4 +205,4 @@ These BAML files define the interfaces and prompts used for the LLM interactions
 ## ToDos
 
 - User credentials via dotenv
-- Restructuring project
+- Continue restructuring project

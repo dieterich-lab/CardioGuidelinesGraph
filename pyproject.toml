@@ -63,13 +63,14 @@ sphinx = "^7.2.6"
 sphinx-rtd-theme = "^2.0.0"
 
 [tool.poetry.scripts]
-parse-pdfs = "cardio_graph.llm_utils.parse_pdfs_with_docling:cli"
-parse-structures = "cardio_graph.llm_utils.parse_structures_from_markdown_or_pdfs:cli"
-split-pages = "cardio_graph.llm_utils.split_pages:cli"
+parse-pdfs = "cardio_graph.pdf_utils.parse_pdfs_with_docling:cli"
+parse-structures = "cardio_graph.extraction_utils.parse_structures_from_markdown_or_pdfs:cli"
+split-pages = "cardio_graph.pdf_utils.split_pages:cli"
 feed-neo4j = "cardio_graph.neo4j_utils.feedneo4jdb:main"
-extract = "cardio_graph.llm_utils.extract:main"
-generate-graph = "cardio_graph.llm_utils.generate_graph:main"
-query = "cardio_graph.llm_utils.query_interpreter:main"
+extract = "cardio_graph.extraction_utils.extract:main"
+generate-graph = "cardio_graph.extraction_utils.generate_graph:main"
+query = "cardio_graph.extraction_utils.query_interpreter:main"
+run-ollama = "cardio_graph.ollama_utils.runollama:main"
 
 [build-system]
 requires = ["poetry-core"]
