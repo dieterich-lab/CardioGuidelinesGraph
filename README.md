@@ -229,6 +229,34 @@ Default connection settings:
 - User: 'test_user'
 - Database: 'snomedct'
 
+#### Cardiovascular Ontology Generator (`generate-cardio-ontology`)
+
+Generate an OWL/RDF ontology for cardiovascular guidelines based on SNOMED CT concepts.
+
+```bash
+# Generate the ontology with default settings
+poetry run generate-cardio-ontology
+
+# Specify a custom output file
+poetry run generate-cardio-ontology --output my_cardio_ontology.owl
+
+# Use custom database connection
+poetry run generate-cardio-ontology --host myhost.example.com --port 3306 --user myuser --password mypassword
+
+# Set custom base URI and version
+poetry run generate-cardio-ontology --base-uri "http://example.org/ontologies/cardio/" --version "1.0.0"
+```
+
+The generator creates an OWL ontology with:
+
+1. **Core Classes**: ClinicalWorkflow, WorkflowStep, ClinicalAction, Purpose, LogicalJunction, etc.
+2. **Core Properties**: hasStep, hasAction, hasPurpose, requiresCondition, hasOperand, etc.
+3. **SNOMED CT Integration**: Imports relevant cardiovascular concepts from SNOMED CT
+4. **Example Patterns**: Creates example workflow patterns for cardiovascular care
+5. **Evidence Structure**: Supports evidence levels and guideline recommendations
+
+Default output file: `cardio_ontology.owl` in the current directory
+
 ### Running Scripts Directly
 
 All scripts can also be run directly using Python after activating the Poetry environment:
@@ -251,8 +279,3 @@ The project includes BAML definitions in `src/cardio_graph/extraction_utils/baml
 - Structure definitions (`structures.baml`)
 
 These BAML files define the interfaces and prompts used for the LLM interactions.
-
-## ToDos
-
-- User credentials via dotenv
-- Continue restructuring project

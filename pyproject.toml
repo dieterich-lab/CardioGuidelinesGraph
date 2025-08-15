@@ -60,6 +60,7 @@ jupyter = "^1.0.0"
 ipykernel = "^6.27.1"
 baml-py = "0.203.1"
 mysql-connector-python = "^9.4.0"
+rdflib = "^7.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
@@ -83,6 +84,7 @@ generate-graph = "cardio_graph.extraction_utils.generate_graph:main"
 query = "cardio_graph.extraction_utils.query_interpreter:main"
 run-ollama = "cardio_graph.ollama_utils.runollama:main"
 snomed-explorer = "cardio_graph.snomedct_utils.snomed_query:main"
+generate-cardio-ontology = "cardio_graph.snomedct_utils.generate_cardio_ontology:main"
 
 [build-system]
 requires = ["poetry-core"]
