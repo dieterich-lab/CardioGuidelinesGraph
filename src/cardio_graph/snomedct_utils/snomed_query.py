@@ -374,13 +374,18 @@ class SnomedExplorer:
 
     def find_cardiovascular_guidelines_concepts(self) -> List[Dict[str, Any]]:
         """
-        Find concepts specifically related to cardiovascular guidelines
+        Find concepts specifically related to cardiovascular guidelines.
+        
+        This method searches for cardiovascular guideline concepts using both direct SQL queries
+        and iterative term searches. It returns a comprehensive list of relevant concepts for
+        building a cardiovascular ontology.
         """
         if not self.conn or not self.cursor:
             self.connect()
 
         # First try a direct table query for cardiovascular guideline concepts
         try:
+            # Increased limit from 100 to 200 for more comprehensive results
             direct_query = """
             SELECT * 
             FROM snap_fsn
@@ -388,7 +393,7 @@ class SnomedExplorer:
                 term LIKE '%cardio%' AND (term LIKE '%guideline%' OR term LIKE '%recommendation%')
                 OR term LIKE '%heart%' AND (term LIKE '%guideline%' OR term LIKE '%recommendation%')
                 OR term LIKE '%vascular%' AND (term LIKE '%guideline%' OR term LIKE '%recommendation%')
-            LIMIT 100
+            LIMIT 200
             """
             self.cursor.execute(direct_query)
             direct_results = self.cursor.fetchall()
@@ -425,8 +430,8 @@ class SnomedExplorer:
             try:
                 print(f"Searching for term: {term}")
                 concepts = self.search_concepts_by_term(
-                    term, 10
-                )  # Reduced to 10 per term
+                    term, 50
+                )  # Increased from 10 to 50 per term for more comprehensive coverage
                 if concepts:
                     print(f"Found {len(concepts)} concepts matching '{term}'")
                     results.extend(concepts)
