@@ -82,6 +82,7 @@ extract = "cardio_graph.extraction_utils.extract:main"
 generate-graph = "cardio_graph.extraction_utils.generate_graph:main"
 query = "cardio_graph.extraction_utils.query_interpreter:main"
 run-ollama = "cardio_graph.ollama_utils.runollama:main"
+snomed-explorer = "cardio_graph.snomedct_utils.snomed_query:main"
 
 [build-system]
 requires = ["poetry-core"]

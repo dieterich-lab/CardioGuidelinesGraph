@@ -201,6 +201,34 @@ Default configuration:
 - Model: 'qwen3:32b'
 - Host: 'http://10.250.135.153:11430'
 
+### SNOMED CT Utilities
+
+#### SNOMED CT Explorer (`snomed-explorer`)
+
+Explore the SNOMED CT database to extract concepts related to cardiovascular guidelines for ontology creation.
+
+```bash
+# Run the interactive SNOMED CT explorer
+poetry run snomed-explorer
+```
+
+The SNOMED CT Explorer provides an interactive menu with the following options:
+
+1. **Explore database structure**: View all tables and their columns in the SNOMED CT database
+2. **Show sample data**: View sample records from any specified table
+3. **Search cardiovascular concepts**: Find concepts related to cardiovascular medicine
+4. **Search concepts by term**: Search for any concept using a keyword
+5. **Find concepts related to cardiovascular guidelines**: Targeted search for guideline-relevant concepts
+6. **Get relationships for a concept**: Find all relationships for a specified concept ID
+7. **Execute custom query**: Run custom SQL queries against the database
+8. **Export results to CSV/JSON**: Export search results for further analysis or ontology creation
+
+Default connection settings:
+- Host: '10.250.135.23'
+- Port: '3306'
+- User: 'test_user'
+- Database: 'snomedct'
+
 ### Running Scripts Directly
 
 All scripts can also be run directly using Python after activating the Poetry environment:
