@@ -70,11 +70,14 @@ function TableEvaluation(docling_json: string, baml_json: string) -> Coverage {
   client Qwen32b5_35
   prompt #"
     You are given two sets of json files that extracted information from a table in a medical guideline about cardiovascular diseases.
-    1) The first one is from the "docling" libraray and contains the extracted information in a structured format.
-    2) The second one is from the "baml" library and contains the same information but in a more semantic format, namely in the form of triples.
-    We will consider the first (docling) json as ground truth.
-    You have to judge the quality of the second (baml) json based on the first (docling) json.
-    IMPORTANT: Be aware that the baml json may have rephrased some of the information, so don't expect an exact match. Rather, focus on the overall meaning and intent of the information presented.
+    1) The first one is from the "docling" libraray and contains the exact rows and columns of the original table ('the table serialized').
+    2) The second one is from the "baml" library and contains semantic triples extracted from the table by "unrolling" the table.
+    So a triple might be `head: row one / column one, relation: the column header, tail: row one column/ column two` and so on...
+    You have to judge the quality of the second (baml) json based on the first (docling) json. 
+    Do this by comparing the triples from the baml json against the information you find in the docling json.
+    IMPORTANT: 
+    * Be aware that the baml json may have rephrased, or split some of the information, for better integration into triple form.
+    So don't expect an exact match. Rather, focus on the overall meaning and intent of the information presented.
 
     {{docling_json}}
     {{baml_json}}
