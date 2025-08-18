@@ -4,8 +4,11 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-import mysql.connector
+from sqlalchemy import create_engine, text, or_, and_
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import sessionmaker
 import pandas as pd
+from .models import SnapFSN, SnapPref, SnapDescription, SnapRelDefFSN
 
 
 class SnomedExplorer:
@@ -31,55 +34,57 @@ class SnomedExplorer:
             "password": password,
             "database": database,
         }
-        self.conn = None
-        self.cursor = None
+        self.engine = None
+        self.Session = None
+        self.session = None
 
     def connect(self) -> None:
-        """Establish connection to the database"""
+        """Establish connection to the database using SQLAlchemy ORM"""
         try:
-            self.conn = mysql.connector.connect(**self.connection_params)
-            self.cursor = self.conn.cursor(dictionary=True)
-            print(
-                f"Connected to {self.connection_params['database']} database on {self.connection_params['host']}"
-            )
-        except mysql.connector.Error as err:
+            user = self.connection_params["user"]
+            password = self.connection_params["password"]
+            host = self.connection_params["host"]
+            port = self.connection_params["port"]
+            database = self.connection_params["database"]
+            url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+            self.engine = create_engine(url)
+            self.Session = sessionmaker(bind=self.engine)
+            self.session = self.Session()
+            # Test connection
+            with self.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            print(f"Connected to {database} database on {host}")
+        except SQLAlchemyError as err:
             print(f"Error connecting to database: {err}")
             raise
 
     def disconnect(self) -> None:
-        """Close database connection"""
-        if self.cursor:
-            self.cursor.close()
-        if self.conn:
-            self.conn.close()
+        """Dispose SQLAlchemy engine and close session"""
+        if self.session:
+            self.session.close()
+        if self.engine:
+            self.engine.dispose()
             print("Database connection closed")
 
     def explore_database_structure(self) -> Dict[str, List[str]]:
         """Get database structure - tables and their columns"""
-        if not self.conn or not self.cursor:
+        if not self.engine:
             self.connect()
 
-        # Get tables
-        self.cursor.execute("SHOW TABLES")
-        tables = [
-            table["Tables_in_" + self.connection_params["database"]]
-            for table in self.cursor.fetchall()
-        ]
-
         structure = {}
-
-        # Get columns for each table
-        for table in tables:
-            self.cursor.execute(f"DESCRIBE {table}")
-            columns = [col["Field"] for col in self.cursor.fetchall()]
-            structure[table] = columns
-
+        db_name = self.connection_params["database"]
+        with self.engine.connect() as conn:
+            tables = conn.execute(text("SHOW TABLES")).fetchall()
+            table_names = [row[0] for row in tables]
+            for table in table_names:
+                columns = conn.execute(text(f"DESCRIBE {table}")).fetchall()
+                col_names = [col[0] for col in columns]
+                structure[table] = col_names
         return structure
 
     def print_database_structure(self) -> None:
         """Print database structure in a readable format"""
         structure = self.explore_database_structure()
-
         print("=== SNOMED CT DATABASE STRUCTURE ===")
         for table, columns in structure.items():
             print(f"\n📋 TABLE: {table}")
@@ -89,232 +94,90 @@ class SnomedExplorer:
 
     def search_cardiovascular_concepts(self, limit: int = 100) -> List[Dict[str, Any]]:
         """
-        Search for concepts related to cardiovascular domain
-
-        This is just an example - you may need to adjust the query based on the actual database schema
+        Search for concepts related to cardiovascular domain using ORM models
         """
-        if not self.conn or not self.cursor:
+        if not self.session:
             self.connect()
 
-        # Based on the database structure we observed, let's try different tables
-        possible_queries = [
-            # Try using snap_fsn table (Fully Specified Names)
-            """
-            SELECT * 
-            FROM snap_fsn
-            WHERE 
-                term LIKE '%cardio%' OR 
-                term LIKE '%heart%' OR 
-                term LIKE '%vascular%' OR 
-                term LIKE '%coronary%' OR
-                term LIKE '%atrial%' OR
-                term LIKE '%ventricul%' OR
-                term LIKE '%ischemi%' OR
-                term LIKE '%ischaemi%' OR
-                term LIKE '%hypertens%'
-            LIMIT %s
-            """,
-            # Try using snap_pref table (Preferred Terms)
-            """
-            SELECT * 
-            FROM snap_pref
-            WHERE 
-                term LIKE '%cardio%' OR 
-                term LIKE '%heart%' OR 
-                term LIKE '%vascular%' OR 
-                term LIKE '%coronary%' OR
-                term LIKE '%atrial%' OR
-                term LIKE '%ventricul%' OR
-                term LIKE '%ischemi%' OR
-                term LIKE '%ischaemi%' OR
-                term LIKE '%hypertens%'
-            LIMIT %s
-            """,
-            # Try using snap_description table
-            """
-            SELECT * 
-            FROM snap_description
-            WHERE 
-                term LIKE '%cardio%' OR 
-                term LIKE '%heart%' OR 
-                term LIKE '%vascular%' OR 
-                term LIKE '%coronary%' OR
-                term LIKE '%atrial%' OR
-                term LIKE '%ventricul%' OR
-                term LIKE '%ischemi%' OR
-                term LIKE '%ischaemi%' OR
-                term LIKE '%hypertens%'
-            LIMIT %s
-            """,
-        ]
+        filters = or_(
+            SnapFSN.term.ilike('%cardio%'),
+            SnapFSN.term.ilike('%heart%'),
+            SnapFSN.term.ilike('%vascular%'),
+            SnapFSN.term.ilike('%coronary%'),
+            SnapFSN.term.ilike('%atrial%'),
+            SnapFSN.term.ilike('%ventricul%'),
+            SnapFSN.term.ilike('%ischemi%'),
+            SnapFSN.term.ilike('%ischaemi%'),
+            SnapFSN.term.ilike('%hypertens%')
+        )
+        results = self.session.query(SnapFSN).filter(filters).limit(limit).all()
+        if results:
+            print(f"Successfully found cardiovascular concepts in snap_fsn table")
+            return [r.__dict__ for r in results]
 
-        # Try each query until one works
-        for query in possible_queries:
-            try:
-                self.cursor.execute(query, (limit,))
-                results = self.cursor.fetchall()
-                if results:
-                    print(
-                        f"Successfully found cardiovascular concepts using query: {query}"
-                    )
-                    return results
-            except mysql.connector.Error as err:
-                print(f"Error executing cardiovascular query: {err}")
-                continue
+        # Fallback to snap_pref
+        results = self.session.query(SnapPref).filter(filters).limit(limit).all()
+        if results:
+            print(f"Successfully found cardiovascular concepts in snap_pref table")
+            return [r.__dict__ for r in results]
 
-        # If we get here, try a more targeted approach with a specific table we know exists
-        try:
-            # Based on what we saw in the database structure, try querying a relationship-based view
-            targeted_query = """
-            SELECT * 
-            FROM snap_rel_def_fsn
-            WHERE 
-                sourceTerm LIKE '%cardio%' OR 
-                sourceTerm LIKE '%heart%' OR
-                destinationTerm LIKE '%cardio%' OR
-                destinationTerm LIKE '%heart%'
-            LIMIT %s
-            """
-            self.cursor.execute(targeted_query, (limit,))
-            return self.cursor.fetchall()
-        except mysql.connector.Error as err:
-            print(f"Final fallback query failed: {err}")
-            return []
+        # Fallback to snap_description
+        results = self.session.query(SnapDescription).filter(filters).limit(limit).all()
+        if results:
+            print(f"Successfully found cardiovascular concepts in snap_description table")
+            return [r.__dict__ for r in results]
+
+        # Fallback to snap_rel_def_fsn
+        rel_filters = or_(
+            SnapRelDefFSN.sourceTerm.ilike('%cardio%'),
+            SnapRelDefFSN.sourceTerm.ilike('%heart%'),
+            SnapRelDefFSN.destinationTerm.ilike('%cardio%'),
+            SnapRelDefFSN.destinationTerm.ilike('%heart%')
+        )
+        results = self.session.query(SnapRelDefFSN).filter(rel_filters).limit(limit).all()
+        if results:
+            print(f"Successfully found cardiovascular concepts in snap_rel_def_fsn table")
+            return [r.__dict__ for r in results]
+        return []
 
     def get_relationships(self, concept_id: str) -> List[Dict[str, Any]]:
         """
-        Get relationships for a specific concept
+        Get relationships for a specific concept using ORM models
         """
-        if not self.conn or not self.cursor:
+        if not self.session:
             self.connect()
 
-        # Based on the database structure we observed, try different relationship tables
-        possible_tables = [
-            # Try using snap_relationship table
-            """
-            SELECT * 
-            FROM snap_relationship 
-            WHERE sourceId = %s OR destinationId = %s
-            LIMIT 200
-            """,
-            # Try using snap_rel_def_fsn table (definition relationships with fully specified names)
-            """
-            SELECT * 
-            FROM snap_rel_def_fsn 
-            WHERE sourceId = %s OR destinationId = %s
-            LIMIT 200
-            """,
-            # Try using snap_rel_def_pref table (definition relationships with preferred terms)
-            """
-            SELECT * 
-            FROM snap_rel_def_pref 
-            WHERE sourceId = %s OR destinationId = %s
-            LIMIT 200
-            """,
-            # Try using parent-child relationships
-            """
-            SELECT * 
-            FROM snap_rel_child_fsn
-            WHERE conceptId = %s
-            LIMIT 200
-            """,
-        ]
-
-        # Try each possible table
-        for query in possible_tables:
-            try:
-                self.cursor.execute(query, (concept_id, concept_id))
-                results = self.cursor.fetchall()
-                if results:
-                    return results
-            except mysql.connector.Error as err:
-                print(f"Error finding relationships: {err}")
-                continue
-
-        # If all specific queries failed, try a broader approach using transitive closure
-        try:
-            tc_query = """
-            SELECT * 
-            FROM snap_transclose 
-            WHERE subtypeId = %s OR supertypeId = %s
-            LIMIT 200
-            """
-            self.cursor.execute(tc_query, (concept_id, concept_id))
-            results = self.cursor.fetchall()
-            if results:
-                return results
-        except mysql.connector.Error as err:
-            print(f"Error with transitive closure query: {err}")
-
+        # Try snap_rel_def_fsn
+        results = self.session.query(SnapRelDefFSN).filter(
+            or_(SnapRelDefFSN.sourceId == concept_id, SnapRelDefFSN.destinationId == concept_id)
+        ).limit(200).all()
+        if results:
+            return [r.__dict__ for r in results]
         return []
 
     def search_concepts_by_term(
         self, search_term: str, limit: int = 100
     ) -> List[Dict[str, Any]]:
         """
-        Search concepts by term
+        Search concepts by term using ORM models
         """
-        if not self.conn or not self.cursor:
+        if not self.session:
             self.connect()
 
-        # Try multiple possible table names based on SNOMED CT database structure
-        possible_tables = [
-            # Try using snap_fsn (Fully Specified Name) table
-            """
-            SELECT * 
-            FROM snap_fsn
-            WHERE term LIKE %s
-            LIMIT %s
-            """,
-            # Try using snap_pref (Preferred Term) table
-            """
-            SELECT * 
-            FROM snap_pref
-            WHERE term LIKE %s
-            LIMIT %s
-            """,
-            # Try using snap_description table
-            """
-            SELECT * 
-            FROM snap_description
-            WHERE term LIKE %s
-            LIMIT %s
-            """,
-            # Try using snap1_syn (Synonyms) table
-            """
-            SELECT *
-            FROM snap_syn
-            WHERE term LIKE %s
-            LIMIT %s
-            """,
-        ]
-
-        # Try each query until one works
-        for query in possible_tables:
-            try:
-                self.cursor.execute(query, (f"%{search_term}%", limit))
-                results = self.cursor.fetchall()
-                if results:
-                    return results
-            except mysql.connector.Error as err:
-                print(f"Error searching concepts with query {query}: {err}")
-                continue
-
-        # If we reach here, none of the standard queries worked
-        # Try one final approach using a more complex join if available
-        try:
-            complex_query = """
-            SELECT d.*, c.active as concept_active
-            FROM snap_description d
-            JOIN snap_concept c ON d.conceptId = c.id
-            WHERE d.term LIKE %s AND c.active = 1
-            LIMIT %s
-            """
-            self.cursor.execute(complex_query, (f"%{search_term}%", limit))
-            return self.cursor.fetchall()
-        except mysql.connector.Error as err:
-            print(f"Error searching with complex query: {err}")
-            return []
+        term_like = f"%{search_term}%"
+        # Try snap_fsn
+        results = self.session.query(SnapFSN).filter(SnapFSN.term.ilike(term_like)).limit(limit).all()
+        if results:
+            return [r.__dict__ for r in results]
+        # Try snap_pref
+        results = self.session.query(SnapPref).filter(SnapPref.term.ilike(term_like)).limit(limit).all()
+        if results:
+            return [r.__dict__ for r in results]
+        # Try snap_description
+        results = self.session.query(SnapDescription).filter(SnapDescription.term.ilike(term_like)).limit(limit).all()
+        if results:
+            return [r.__dict__ for r in results]
+        return []
 
     def export_to_csv(self, data: List[Dict[str, Any]], filename: str) -> str:
         """
@@ -360,17 +223,24 @@ class SnomedExplorer:
 
     def explore_table(self, table_name: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Explore a specific table with sample data
+        Explore a specific table with sample data using ORM models
         """
-        if not self.conn or not self.cursor:
+        if not self.session:
             self.connect()
 
-        try:
-            self.cursor.execute(f"SELECT * FROM {table_name} LIMIT {limit}")
-            return self.cursor.fetchall()
-        except mysql.connector.Error as err:
-            print(f"Error exploring table {table_name}: {err}")
+        # Map table name to model
+        model_map = {
+            'snap_fsn': SnapFSN,
+            'snap_pref': SnapPref,
+            'snap_description': SnapDescription,
+            'snap_rel_def_fsn': SnapRelDefFSN
+        }
+        model = model_map.get(table_name)
+        if not model:
+            print(f"No ORM model defined for table {table_name}")
             return []
+        results = self.session.query(model).limit(limit).all()
+        return [r.__dict__ for r in results]
 
     def find_cardiovascular_guidelines_concepts(self) -> List[Dict[str, Any]]:
         """
@@ -380,58 +250,45 @@ class SnomedExplorer:
         and iterative term searches. It returns a comprehensive list of relevant concepts for
         building a cardiovascular ontology.
         """
-        if not self.conn or not self.cursor:
+        if not self.session:
             self.connect()
 
-        # First try a direct table query for cardiovascular guideline concepts
-        try:
-            # Increased limit from 100 to 200 for more comprehensive results
-            direct_query = """
-            SELECT * 
-            FROM snap_fsn
-            WHERE 
-                term LIKE '%cardio%' AND (term LIKE '%guideline%' OR term LIKE '%recommendation%')
-                OR term LIKE '%heart%' AND (term LIKE '%guideline%' OR term LIKE '%recommendation%')
-                OR term LIKE '%vascular%' AND (term LIKE '%guideline%' OR term LIKE '%recommendation%')
-            LIMIT 200
-            """
-            self.cursor.execute(direct_query)
-            direct_results = self.cursor.fetchall()
-            if direct_results and len(direct_results) > 0:
-                print(
-                    f"Found {len(direct_results)} cardiovascular guideline concepts with direct query"
-                )
-                return direct_results
-        except mysql.connector.Error as err:
-            print(f"Direct query for cardiovascular guidelines failed: {err}")
+        # Direct ORM query for cardiovascular guideline concepts
+        filters = or_(
+            and_(SnapFSN.term.ilike('%cardio%'), or_(SnapFSN.term.ilike('%guideline%'), SnapFSN.term.ilike('%recommendation%'))),
+            and_(SnapFSN.term.ilike('%heart%'), or_(SnapFSN.term.ilike('%guideline%'), SnapFSN.term.ilike('%recommendation%'))),
+            and_(SnapFSN.term.ilike('%vascular%'), or_(SnapFSN.term.ilike('%guideline%'), SnapFSN.term.ilike('%recommendation%')))
+        )
+        direct_results = self.session.query(SnapFSN).filter(filters).limit(200).all()
+        if direct_results and len(direct_results) > 0:
+            print(f"Found {len(direct_results)} cardiovascular guideline concepts with direct query")
+            return [r.__dict__ for r in direct_results]
 
-        # If direct query doesn't work or returns no results, try our search terms approach
+        # Search terms approach
         query_terms = [
-            "%guideline%",
-            "%recommendation%",
-            "%protocol%",
-            "%cardiac%",
-            "%coronary%",
-            "%heart%",
-            "%vascular%",
-            "%hypertension%",
-            "%arrhythmia%",
-            "%fibrillation%",
-            "%angina%",
-            "%infarction%",
-            "%myocardial%",
-            "%stroke%",
-            "%thrombosis%",
-            "%embolism%",
+            "guideline",
+            "recommendation",
+            "protocol",
+            "cardiac",
+            "coronary",
+            "heart",
+            "vascular",
+            "hypertension",
+            "arrhythmia",
+            "fibrillation",
+            "angina",
+            "infarction",
+            "myocardial",
+            "stroke",
+            "thrombosis",
+            "embolism",
         ]
 
         results = []
         for term in query_terms:
             try:
                 print(f"Searching for term: {term}")
-                concepts = self.search_concepts_by_term(
-                    term, 50
-                )  # Increased from 10 to 50 per term for more comprehensive coverage
+                concepts = self.search_concepts_by_term(term, 50)
                 if concepts:
                     print(f"Found {len(concepts)} concepts matching '{term}'")
                     results.extend(concepts)
@@ -440,41 +297,30 @@ class SnomedExplorer:
                 continue
 
         if not results:
-            # Try a different approach using relationship tables
-            try:
-                rel_query = """
-                SELECT DISTINCT sourceId, sourceTerm 
-                FROM snap_rel_def_fsn
-                WHERE 
-                    sourceTerm LIKE '%cardio%' OR 
-                    sourceTerm LIKE '%heart%' OR
-                    sourceTerm LIKE '%vascular%'
-                LIMIT 50
-                """
-                self.cursor.execute(rel_query)
-                return self.cursor.fetchall()
-            except mysql.connector.Error as err:
-                print(f"Relationship query failed: {err}")
-                return []
+            # Relationship table fallback
+            rel_filters = or_(
+                SnapRelDefFSN.sourceTerm.ilike('%cardio%'),
+                SnapRelDefFSN.sourceTerm.ilike('%heart%'),
+                SnapRelDefFSN.sourceTerm.ilike('%vascular%')
+            )
+            rel_results = self.session.query(SnapRelDefFSN).filter(rel_filters).limit(50).all()
+            return [r.__dict__ for r in rel_results]
 
         # Remove duplicates based on id if it exists
         unique_results = []
         seen_ids = set()
-
         for item in results:
             id_field = None
             if "conceptId" in item:
                 id_field = "conceptId"
             elif "id" in item:
                 id_field = "id"
-
             if id_field:
                 if item[id_field] not in seen_ids:
                     seen_ids.add(item[id_field])
                     unique_results.append(item)
             else:
-                unique_results.append(item)  # Keep items without id
-
+                unique_results.append(item)
         return unique_results
 
     def execute_custom_query(
@@ -483,15 +329,16 @@ class SnomedExplorer:
         """
         Execute a custom SQL query
         """
-        if not self.conn or not self.cursor:
+        if not self.engine:
             self.connect()
 
-        try:
-            self.cursor.execute(query, params)
-            return self.cursor.fetchall()
-        except mysql.connector.Error as err:
-            print(f"Error executing query: {err}")
-            return []
+        with self.engine.connect() as conn:
+            try:
+                result = conn.execute(text(query), params).mappings().all()
+                return [dict(row) for row in result]
+            except SQLAlchemyError as err:
+                print(f"Error executing query: {err}")
+                return []
 
 
 def main():

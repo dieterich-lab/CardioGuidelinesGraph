@@ -5164,6 +5164,22 @@ files = [
 pymupdf = ">=1.26.3"
 
 [[package]]
+name = "pymysql"
+version = "1.1.1"
+description = "Pure Python MySQL Driver"
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "PyMySQL-1.1.1-py3-none-any.whl", hash = "sha256:4de15da4c61dc132f4fb9ab763063e693d521a80fd0e87943b9a453dd4c19d6c"},
+    {file = "pymysql-1.1.1.tar.gz", hash = "sha256:e127611aaf2b417403c60bf4dc570124aeb4a57f5f37b8e95ae399a42f904cd0"},
+]
+
+[package.extras]
+ed25519 = ["PyNaCl (>=1.4.0)"]
+rsa = ["cryptography"]
+
+[[package]]
 name = "pyparsing"
 version = "3.2.3"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
@@ -7446,4 +7462,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.12"
-content-hash = "0996474e4f8b28b00c22887b8ad455f380405fbaf4d5e9ed7458a948f342a631"
+content-hash = "71645387928e6b4a5876eafcd6c704bf7d3c1e8959ea43942b860c821b95b28c"
