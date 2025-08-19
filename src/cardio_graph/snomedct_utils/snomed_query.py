@@ -4,11 +4,20 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from sqlalchemy import create_engine, text, or_, and_
+import pandas as pd
+from sqlalchemy import and_, create_engine, or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
-import pandas as pd
-from .models import SnapFSN, SnapPref, SnapDescription, SnapRelDefFSN
+
+from cardio_graph.snomedct_utils.models import (
+    SnapDescription,
+    SnapFSN,
+    SnapPref,
+    SnapRelationship,
+    SnapRelChildFSN,
+    SnapRelDefFSN,
+    SnapRelDefPref,
+)
 
 
 class SnomedExplorer:
@@ -100,15 +109,15 @@ class SnomedExplorer:
             self.connect()
 
         filters = or_(
-            SnapFSN.term.ilike('%cardio%'),
-            SnapFSN.term.ilike('%heart%'),
-            SnapFSN.term.ilike('%vascular%'),
-            SnapFSN.term.ilike('%coronary%'),
-            SnapFSN.term.ilike('%atrial%'),
-            SnapFSN.term.ilike('%ventricul%'),
-            SnapFSN.term.ilike('%ischemi%'),
-            SnapFSN.term.ilike('%ischaemi%'),
-            SnapFSN.term.ilike('%hypertens%')
+            SnapFSN.term.ilike("%cardio%"),
+            SnapFSN.term.ilike("%heart%"),
+            SnapFSN.term.ilike("%vascular%"),
+            SnapFSN.term.ilike("%coronary%"),
+            SnapFSN.term.ilike("%atrial%"),
+            SnapFSN.term.ilike("%ventricul%"),
+            SnapFSN.term.ilike("%ischemi%"),
+            SnapFSN.term.ilike("%ischaemi%"),
+            SnapFSN.term.ilike("%hypertens%"),
         )
         results = self.session.query(SnapFSN).filter(filters).limit(limit).all()
         if results:
@@ -124,33 +133,42 @@ class SnomedExplorer:
         # Fallback to snap_description
         results = self.session.query(SnapDescription).filter(filters).limit(limit).all()
         if results:
-            print(f"Successfully found cardiovascular concepts in snap_description table")
+            print(
+                f"Successfully found cardiovascular concepts in snap_description table"
+            )
             return [r.__dict__ for r in results]
 
         # Fallback to snap_rel_def_fsn
         rel_filters = or_(
-            SnapRelDefFSN.sourceTerm.ilike('%cardio%'),
-            SnapRelDefFSN.sourceTerm.ilike('%heart%'),
-            SnapRelDefFSN.destinationTerm.ilike('%cardio%'),
-            SnapRelDefFSN.destinationTerm.ilike('%heart%')
+            SnapRelDefFSN.sourceTerm.ilike("%cardio%"),
+            SnapRelDefFSN.sourceTerm.ilike("%heart%"),
+            SnapRelDefFSN.destinationTerm.ilike("%cardio%"),
+            SnapRelDefFSN.destinationTerm.ilike("%heart%"),
         )
-        results = self.session.query(SnapRelDefFSN).filter(rel_filters).limit(limit).all()
+        results = (
+            self.session.query(SnapRelDefFSN).filter(rel_filters).limit(limit).all()
+        )
         if results:
-            print(f"Successfully found cardiovascular concepts in snap_rel_def_fsn table")
+            print(
+                f"Successfully found cardiovascular concepts in snap_rel_def_fsn table"
+            )
             return [r.__dict__ for r in results]
         return []
 
     def get_relationships(self, concept_id: str) -> List[Dict[str, Any]]:
         """
-        Get relationships for a specific concept using ORM models
+        Get relationships for a specific concept using snap_relationship table only.
+        Returns list of dicts with keys: typeId, destinationId, sourceId, id, active
         """
         if not self.session:
             self.connect()
 
-        # Try snap_rel_def_fsn
-        results = self.session.query(SnapRelDefFSN).filter(
-            or_(SnapRelDefFSN.sourceId == concept_id, SnapRelDefFSN.destinationId == concept_id)
-        ).limit(200).all()
+        results = (
+            self.session.query(SnapRelationship)
+            .filter(SnapRelationship.sourceId == concept_id)
+            .limit(200)
+            .all()
+        )
         if results:
             return [r.__dict__ for r in results]
         return []
@@ -166,15 +184,30 @@ class SnomedExplorer:
 
         term_like = f"%{search_term}%"
         # Try snap_fsn
-        results = self.session.query(SnapFSN).filter(SnapFSN.term.ilike(term_like)).limit(limit).all()
+        results = (
+            self.session.query(SnapFSN)
+            .filter(SnapFSN.term.ilike(term_like))
+            .limit(limit)
+            .all()
+        )
         if results:
             return [r.__dict__ for r in results]
         # Try snap_pref
-        results = self.session.query(SnapPref).filter(SnapPref.term.ilike(term_like)).limit(limit).all()
+        results = (
+            self.session.query(SnapPref)
+            .filter(SnapPref.term.ilike(term_like))
+            .limit(limit)
+            .all()
+        )
         if results:
             return [r.__dict__ for r in results]
         # Try snap_description
-        results = self.session.query(SnapDescription).filter(SnapDescription.term.ilike(term_like)).limit(limit).all()
+        results = (
+            self.session.query(SnapDescription)
+            .filter(SnapDescription.term.ilike(term_like))
+            .limit(limit)
+            .all()
+        )
         if results:
             return [r.__dict__ for r in results]
         return []
@@ -230,10 +263,13 @@ class SnomedExplorer:
 
         # Map table name to model
         model_map = {
-            'snap_fsn': SnapFSN,
-            'snap_pref': SnapPref,
-            'snap_description': SnapDescription,
-            'snap_rel_def_fsn': SnapRelDefFSN
+            "snap_fsn": SnapFSN,
+            "snap_pref": SnapPref,
+            "snap_description": SnapDescription,
+            "snap_rel_def_fsn": SnapRelDefFSN,
+            "snap_relationship": SnapRelationship,
+            "snap_rel_def_pref": SnapRelDefPref,
+            "snap_rel_child_fsn": SnapRelChildFSN,
         }
         model = model_map.get(table_name)
         if not model:
@@ -245,7 +281,7 @@ class SnomedExplorer:
     def find_cardiovascular_guidelines_concepts(self) -> List[Dict[str, Any]]:
         """
         Find concepts specifically related to cardiovascular guidelines.
-        
+
         This method searches for cardiovascular guideline concepts using both direct SQL queries
         and iterative term searches. It returns a comprehensive list of relevant concepts for
         building a cardiovascular ontology.
@@ -255,13 +291,33 @@ class SnomedExplorer:
 
         # Direct ORM query for cardiovascular guideline concepts
         filters = or_(
-            and_(SnapFSN.term.ilike('%cardio%'), or_(SnapFSN.term.ilike('%guideline%'), SnapFSN.term.ilike('%recommendation%'))),
-            and_(SnapFSN.term.ilike('%heart%'), or_(SnapFSN.term.ilike('%guideline%'), SnapFSN.term.ilike('%recommendation%'))),
-            and_(SnapFSN.term.ilike('%vascular%'), or_(SnapFSN.term.ilike('%guideline%'), SnapFSN.term.ilike('%recommendation%')))
+            and_(
+                SnapFSN.term.ilike("%cardio%"),
+                or_(
+                    SnapFSN.term.ilike("%guideline%"),
+                    SnapFSN.term.ilike("%recommendation%"),
+                ),
+            ),
+            and_(
+                SnapFSN.term.ilike("%heart%"),
+                or_(
+                    SnapFSN.term.ilike("%guideline%"),
+                    SnapFSN.term.ilike("%recommendation%"),
+                ),
+            ),
+            and_(
+                SnapFSN.term.ilike("%vascular%"),
+                or_(
+                    SnapFSN.term.ilike("%guideline%"),
+                    SnapFSN.term.ilike("%recommendation%"),
+                ),
+            ),
         )
         direct_results = self.session.query(SnapFSN).filter(filters).limit(200).all()
         if direct_results and len(direct_results) > 0:
-            print(f"Found {len(direct_results)} cardiovascular guideline concepts with direct query")
+            print(
+                f"Found {len(direct_results)} cardiovascular guideline concepts with direct query"
+            )
             return [r.__dict__ for r in direct_results]
 
         # Search terms approach
@@ -299,11 +355,13 @@ class SnomedExplorer:
         if not results:
             # Relationship table fallback
             rel_filters = or_(
-                SnapRelDefFSN.sourceTerm.ilike('%cardio%'),
-                SnapRelDefFSN.sourceTerm.ilike('%heart%'),
-                SnapRelDefFSN.sourceTerm.ilike('%vascular%')
+                SnapRelDefFSN.sourceTerm.ilike("%cardio%"),
+                SnapRelDefFSN.sourceTerm.ilike("%heart%"),
+                SnapRelDefFSN.sourceTerm.ilike("%vascular%"),
             )
-            rel_results = self.session.query(SnapRelDefFSN).filter(rel_filters).limit(50).all()
+            rel_results = (
+                self.session.query(SnapRelDefFSN).filter(rel_filters).limit(50).all()
+            )
             return [r.__dict__ for r in rel_results]
 
         # Remove duplicates based on id if it exists

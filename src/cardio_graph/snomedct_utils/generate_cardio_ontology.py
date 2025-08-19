@@ -17,11 +17,38 @@ import pandas as pd
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
+from cardio_graph.snomedct_utils.models import SnapDescription, SnapFSN, SnapPref
+
 # Import SnomedExplorer from snomed_query.py
 from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 
 
 class CardioOntologyGenerator:
+    def get_type_label(self, type_id: str) -> str:
+        """Lookup human-readable label for a SNOMED CT typeId."""
+        result = (
+            self.snomed_explorer.session.query(SnapFSN)
+            .filter_by(conceptId=type_id)
+            .first()
+        )
+        if result and hasattr(result, "term"):
+            return result.term
+        result = (
+            self.snomed_explorer.session.query(SnapPref)
+            .filter_by(conceptId=type_id)
+            .first()
+        )
+        if result and hasattr(result, "term"):
+            return result.term
+        result = (
+            self.snomed_explorer.session.query(SnapDescription)
+            .filter_by(conceptId=type_id)
+            .first()
+        )
+        if result and hasattr(result, "term"):
+            return result.term
+        return f"snomedRelationship_{type_id}"
+
     """Generate a cardiovascular ontology from SNOMED CT data"""
 
     def __init__(
@@ -696,12 +723,9 @@ class CardioOntologyGenerator:
                 concept_id = concept["id"]
 
             if concept_id:
-                try:
-                    rels = self.snomed_explorer.get_relationships(str(concept_id))
-                    if rels:
-                        relationships[concept_id] = rels
-                except Exception as e:
-                    print(f"Error getting relationships for concept {concept_id}: {e}")
+                rels = self.snomed_explorer.get_relationships(str(concept_id))
+                if rels:
+                    relationships[concept_id] = rels
 
             processed += 1
             if processed % batch_size == 0 or processed == concept_count:
@@ -759,61 +783,35 @@ class CardioOntologyGenerator:
         source_uri = self.snomed_concepts[concept_id]
 
         for rel in relationships:
-            # Process each relationship based on type
-            rel_type = None
-            target_id = None
-
-            # Extract relationship type and target based on available fields
-            if "typeId" in rel:
-                rel_type = rel["typeId"]
-
-            if "destinationId" in rel:
-                target_id = rel["destinationId"]
-            elif "supertypeId" in rel and rel["subtypeId"] == concept_id:
-                target_id = rel["supertypeId"]
-            elif "conceptId" in rel and rel["conceptId"] != concept_id:
-                target_id = rel["conceptId"]
+            rel_type = rel.get("typeId")
+            target_id = rel.get("destinationId")
 
             if not rel_type or not target_id:
                 continue
 
-            # Create target URI
             target_uri = self.snomed[str(target_id)]
 
-            # IS-A relationship (116680003 is the SNOMED CT ID for IS-A)
+            # Always create a relationship property and label
+            rel_prop_uri = self.cgo[f"snomed_rel_{rel_type}"]
+            if rel_prop_uri not in self.properties:
+                self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
+                rel_name = self.get_type_label(str(rel_type))
+                self.g.add((rel_prop_uri, RDFS.label, Literal(rel_name)))
+                self.properties.add(rel_prop_uri)
+
+            # Add the relationship triple
+            self.g.add((source_uri, rel_prop_uri, target_uri))
+
+            # For IS-A, also add subClassOf
             if str(rel_type) == "116680003":
                 self.g.add((source_uri, RDFS.subClassOf, target_uri))
 
-                # Ensure the target class exists in the ontology
-                if target_id not in self.snomed_concepts:
-                    term = None
-                    if "destinationTerm" in rel:
-                        term = rel["destinationTerm"]
-                    elif "term" in rel:
-                        term = rel["term"]
-                    else:
-                        term = f"SNOMED Concept {target_id}"
-
-                    self.g.add((target_uri, RDF.type, OWL.Class))
-                    self.g.add((target_uri, RDFS.label, Literal(term)))
-                    self.snomed_concepts[target_id] = target_uri
-            else:
-                # Create a relationship property if it doesn't exist
-                rel_prop_uri = self.cgo[f"snomed_rel_{rel_type}"]
-
-                if rel_prop_uri not in self.properties:
-                    self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
-
-                    # Try to get a name for the relationship
-                    rel_name = f"snomedRelationship_{rel_type}"
-                    if "typeTerm" in rel:
-                        rel_name = rel["typeTerm"].replace(" ", "_")
-
-                    self.g.add((rel_prop_uri, RDFS.label, Literal(rel_name)))
-                    self.properties.add(rel_prop_uri)
-
-                # Add the relationship to the graph
-                self.g.add((source_uri, rel_prop_uri, target_uri))
+            # Ensure the target class exists in the ontology
+            if target_id not in self.snomed_concepts:
+                term = f"SNOMED Concept {target_id}"
+                self.g.add((target_uri, RDF.type, OWL.Class))
+                self.g.add((target_uri, RDFS.label, Literal(term)))
+                self.snomed_concepts[target_id] = target_uri
 
     def categorize_concepts(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
         """Categorize SNOMED concepts into ontology categories"""
