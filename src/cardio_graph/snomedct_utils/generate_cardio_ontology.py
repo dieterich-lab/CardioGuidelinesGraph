@@ -24,6 +24,20 @@ from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 
 
 class CardioOntologyGenerator:
+    # Static ontology categories used for concept categorization
+    ONTOLOGY_CATEGORIES = [
+        "ClinicalAction",
+        "PatientPhenotype",
+        "Purpose",
+        "WorkflowStep",
+        "Guideline",
+        "EvidenceSource",
+        "Medication",
+        "Condition",
+        "GuidelineRecommendation",
+        "GuidelineSource",
+    ]
+
     def categorize_concepts_llm(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
         """
         Categorize SNOMED concepts using an LLM via BAML.
@@ -31,8 +45,7 @@ class CardioOntologyGenerator:
         """
         from cardio_graph.baml_client.sync_client import b
 
-        # Get ontology categories from self.cgo
-        ontology_categories = [k for k in self.cgo.keys()]
+        ontology_categories = self.ONTOLOGY_CATEGORIES
         categories_map = {cat: [] for cat in ontology_categories}
 
         for concept in concepts:
@@ -841,153 +854,17 @@ class CardioOntologyGenerator:
                 self.snomed_concepts[target_id] = target_uri
 
     def categorize_concepts(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
-        """Categorize SNOMED concepts into ontology categories"""
-        categories = {
-            "ClinicalAction": [],
-            "PatientPhenotype": [],
-            "Purpose": [],
-            "WorkflowStep": [],
-            "Guideline": [],
-            "EvidenceSource": [],
-            "Medication": [],
-            "Condition": [],
-            "GuidelineRecommendation": [],
-            "GuidelineSource": [],
-        }
-
-        # Define keyword lists for each category
-        keywords = {
-            "ClinicalAction": [
-                "procedure",
-                "therapy",
-                "treatment",
-                "examination",
-                "assessment",
-                "monitoring",
-                "administration",
-                "prescription",
-                "intervention",
-            ],
-            "PatientPhenotype": [
-                "finding",
-                "disorder",
-                "disease",
-                "syndrome",
-                "condition",
-                "symptom",
-                "sign",
-                "observation",
-                "measurement",
-                "test result",
-            ],
-            "Purpose": [
-                "goal",
-                "target",
-                "objective",
-                "purpose",
-                "aim",
-                "intended",
-                "indication",
-            ],
-            "WorkflowStep": [
-                "protocol",
-                "step",
-                "stage",
-                "phase",
-                "pathway",
-                "regimen",
-                "algorithm",
-            ],
-            "Guideline": [
-                "guideline",
-                "recommendation",
-                "protocol",
-                "consensus",
-                "standard",
-                "best practice",
-                "statement",
-            ],
-            "EvidenceSource": [
-                "trial",
-                "study",
-                "evidence",
-                "publication",
-                "literature",
-                "research",
-                "meta-analysis",
-            ],
-            "Medication": [
-                "medication",
-                "drug",
-                "pharmaceutical",
-                "pill",
-                "tablet",
-                "capsule",
-                "injection",
-                "infusion",
-                "anticoagulant",
-                "statin",
-                "beta blocker",
-                "ace inhibitor",
-                "antiplatelet",
-                "diuretic",
-            ],
-            "Condition": [
-                "disease",
-                "disorder",
-                "syndrome",
-                "condition",
-                "pathology",
-                "abnormality",
-                "deficiency",
-                "stenosis",
-                "insufficiency",
-                "failure",
-            ],
-            "GuidelineRecommendation": [
-                "recommendation",
-                "guidance",
-                "advised",
-                "suggested",
-                "should",
-                "must",
-                "consider",
-                "class i",
-                "class ii",
-                "class iii",
-                "level of evidence",
-                "grade",
-                "strength",
-            ],
-            "GuidelineSource": [
-                "guideline",
-                "consensus document",
-                "position paper",
-                "statement",
-                "expert consensus",
-                "scientific statement",
-                "task force",
-                "working group",
-                "committee",
-            ],
-        }
+        """Categorize SNOMED concepts into ontology categories using keywords from YAML config"""
+        categories = {cat: [] for cat in self.ONTOLOGY_CATEGORIES}
+        keywords = self.CATEGORY_KEYWORDS
 
         for concept in concepts:
-            # Get the concept URI (add it if not already in the ontology)
             concept_uri = self.add_snomed_concept(concept)
-
-            # Extract term for categorization
-            term = ""
-            if "term" in concept:
-                term = concept["term"].lower()
-
-            # Assign to categories based on keywords
+            term = concept.get("term", "").lower()
             for category, keyword_list in keywords.items():
                 if any(keyword in term for keyword in keyword_list):
                     categories[category].append(concept_uri)
-                    # Make it a subclass of the category
                     self.g.add((concept_uri, RDFS.subClassOf, self.cgo[category]))
-
         return categories
 
     def generate_ontology(self, categorization_method: str = "keyword"):

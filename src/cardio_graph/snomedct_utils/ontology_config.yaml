@@ -1,0 +1,117 @@
+# Ontology categories for cardiovascular guideline ontology
+ontology_categories:
+  - ClinicalAction
+  - PatientPhenotype
+  - Purpose
+  - WorkflowStep
+  - Guideline
+  - EvidenceSource
+  - Medication
+  - Condition
+  - GuidelineRecommendation
+  - GuidelineSource
+
+category_keywords:
+  ClinicalAction:
+    - procedure
+    - therapy
+    - treatment
+    - examination
+    - assessment
+    - monitoring
+    - administration
+    - prescription
+    - intervention
+  PatientPhenotype:
+    - finding
+    - disorder
+    - disease
+    - syndrome
+    - condition
+    - symptom
+    - sign
+    - observation
+    - measurement
+    - test result
+  Purpose:
+    - goal
+    - target
+    - objective
+    - purpose
+    - aim
+    - intended
+    - indication
+  WorkflowStep:
+    - protocol
+    - step
+    - stage
+    - phase
+    - pathway
+    - regimen
+    - algorithm
+  Guideline:
+    - guideline
+    - recommendation
+    - protocol
+    - consensus
+    - standard
+    - best practice
+    - statement
+  EvidenceSource:
+    - trial
+    - study
+    - evidence
+    - publication
+    - literature
+    - research
+    - meta-analysis
+  Medication:
+    - medication
+    - drug
+    - pharmaceutical
+    - pill
+    - tablet
+    - capsule
+    - injection
+    - infusion
+    - anticoagulant
+    - statin
+    - beta blocker
+    - ace inhibitor
+    - antiplatelet
+    - diuretic
+  Condition:
+    - disease
+    - disorder
+    - syndrome
+    - condition
+    - pathology
+    - abnormality
+    - deficiency
+    - stenosis
+    - insufficiency
+    - failure
+  GuidelineRecommendation:
+    - recommendation
+    - guidance
+    - advised
+    - suggested
+    - should
+    - must
+    - consider
+    - class i
+    - class ii
+    - class iii
+    - level of evidence
+    - grade
+    - strength
+  GuidelineSource:
+    - guideline
+    - consensus document
+    - position paper
+    - statement
+    - expert consensus
+    - scientific statement
+    - task force
+    - working group
+    - committee
