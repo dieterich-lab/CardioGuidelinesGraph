@@ -990,7 +990,7 @@ class CardioOntologyGenerator:
 
         return categories
 
-    def generate_ontology(self):
+    def generate_ontology(self, categorization_method: str = "keyword"):
         """Generate the complete cardiovascular guidelines ontology"""
         print("Generating cardiovascular guidelines ontology...")
 
@@ -1013,7 +1013,12 @@ class CardioOntologyGenerator:
                 self.add_snomed_concept(concept)
 
             # Categorize concepts
-            categories = self.categorize_concepts(concepts)
+            if categorization_method == "llm":
+                print("Using LLM-based concept categorization...")
+                categories = self.categorize_concepts_llm(concepts)
+            else:
+                print("Using keyword-based concept categorization...")
+                categories = self.categorize_concepts(concepts)
 
             # Print category statistics
             for category, uris in categories.items():
@@ -1078,6 +1083,13 @@ def main():
     )
     parser.add_argument("-v", "--version", default="0.1.0", help="Ontology version")
 
+    parser.add_argument(
+        "--categorization-method",
+        choices=["keyword", "llm"],
+        default="llm",
+        help="Concept categorization method: 'keyword' (default) or 'llm' (large language model)",
+    )
+
     args = parser.parse_args()
 
     generator = CardioOntologyGenerator(
@@ -1091,7 +1103,9 @@ def main():
         version=args.version,
     )
 
-    success = generator.generate_ontology()
+    success = generator.generate_ontology(
+        categorization_method=args.categorization_method
+    )
     return 0 if success else 1
 
 
