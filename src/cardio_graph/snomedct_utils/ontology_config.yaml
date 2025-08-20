@@ -37,7 +37,38 @@ snomed_keywords:
     - observation
     - measurement
     - test result
-  # ... (rest of the keywords as before, keeping it for fallback)
+  Purpose:
+    - goal
+    - target
+    - objective
+    - purpose
+    - aim
+    - intended
+    - indication
+  WorkflowStep:
+    - protocol
+    - step
+    - stage
+    - phase
+    - pathway
+    - regimen
+    - algorithm
+  Guideline:
+    - guideline
+    - recommendation
+    - protocol
+    - consensus
+    - standard
+    - best practice
+    - statement
+  EvidenceSource:
+    - trial
+    - study
+    - evidence
+    - publication
+    - literature
+    - research
+    - meta-analysis
   Medication:
     - medication
     - drug

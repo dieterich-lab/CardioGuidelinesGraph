@@ -393,8 +393,6 @@ class CardioOntologyGenerator:
                 for concept in concepts_for_term:
                     concept_id = concept.get("conceptId") or concept.get("id")
                     if concept_id and concept_id not in seen_ids:
-                        # OPTIONAL BUT POWERFUL: You can add the "source class" here
-                        # to help the categorization step later.
                         concept["_source_class"] = class_name
                         all_concepts.append(concept)
                         seen_ids.add(concept_id)
