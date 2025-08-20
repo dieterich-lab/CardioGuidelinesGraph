@@ -1,5 +1,5 @@
 # Ontology categories for cardiovascular guideline ontology
-ontology_categories:
+snomed_categories:
   - ClinicalAction
   - PatientPhenotype
   - Purpose
@@ -11,7 +11,7 @@ ontology_categories:
   - GuidelineRecommendation
   - GuidelineSource
 
-category_keywords:
+snomed_keywords:
   ClinicalAction:
     - procedure
     - therapy

@@ -26,8 +26,8 @@ from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "ontology_config.yaml")
 with open(CONFIG_PATH, "r") as f:
     _config = yaml.safe_load(f)
-ONTOLOGY_CATEGORIES = _config.get("ontology_categories", [])
-CATEGORY_KEYWORDS = _config.get("category_keywords", {})
+SNOMED_CATEGORIES = _config.get("snomed_categories", [])
+SNOMED_KEYWORDS = _config.get("snomed_keywords", {})
 
 
 class CardioOntologyGenerator:
@@ -39,14 +39,14 @@ class CardioOntologyGenerator:
         """
         from cardio_graph.baml_client.sync_client import b
 
-        categories_map = {cat: [] for cat in ONTOLOGY_CATEGORIES}
+        categories_map = {cat: [] for cat in SNOMED_CATEGORIES}
 
         for concept in concepts:
             term = concept.get("term", "")
             description = concept.get("description", "")
             try:
                 result = b.CategorizeConcept(
-                    {"term": term, "description": description}, ONTOLOGY_CATEGORIES
+                    {"term": term, "description": description}, SNOMED_CATEGORIES
                 )
                 assigned = result.categories
                 concept_uri = self.add_snomed_concept(concept)
@@ -60,12 +60,12 @@ class CardioOntologyGenerator:
         return categories_map
 
     def categorize_concepts(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
-        """Categorize SNOMED concepts into ontology categories using keywords from YAML config"""
-        categories = {cat: [] for cat in ONTOLOGY_CATEGORIES}
+        """Categorize SNOMED concepts into snomed categories using keywords from YAML config"""
+        categories = {cat: [] for cat in SNOMED_CATEGORIES}
         for concept in concepts:
             concept_uri = self.add_snomed_concept(concept)
             term = concept.get("term", "").lower()
-            for category, keyword_list in CATEGORY_KEYWORDS.items():
+            for category, keyword_list in SNOMED_KEYWORDS.items():
                 if any(keyword in term for keyword in keyword_list):
                     categories[category].append(concept_uri)
                     self.g.add((concept_uri, RDFS.subClassOf, self.cgo[category]))
@@ -286,7 +286,13 @@ class CardioOntologyGenerator:
         evidence_class = self.cgo["EvidenceLevel"]
         self.g.add((evidence_class, RDF.type, OWL.Class))
         self.g.add((evidence_class, RDFS.label, Literal("Evidence Level")))
-        self.g.add((evidence_class, RDFS.comment, Literal("Classification of evidence strength in guidelines")))
+        self.g.add(
+            (
+                evidence_class,
+                RDFS.comment,
+                Literal("Classification of evidence strength in guidelines"),
+            )
+        )
 
         # Create subclasses for recommendation classification and evidence quality
         recommendation_class = self.cgo["RecommendationClass"]
@@ -294,11 +300,23 @@ class CardioOntologyGenerator:
 
         self.g.add((recommendation_class, RDF.type, OWL.Class))
         self.g.add((recommendation_class, RDFS.label, Literal("Recommendation Class")))
-        self.g.add((recommendation_class, RDFS.comment, Literal("Classification of recommendation strength")))
+        self.g.add(
+            (
+                recommendation_class,
+                RDFS.comment,
+                Literal("Classification of recommendation strength"),
+            )
+        )
 
         self.g.add((evidence_quality_class, RDF.type, OWL.Class))
         self.g.add((evidence_quality_class, RDFS.label, Literal("Evidence Quality")))
-        self.g.add((evidence_quality_class, RDFS.comment, Literal("Classification of evidence quality/level")))
+        self.g.add(
+            (
+                evidence_quality_class,
+                RDFS.comment,
+                Literal("Classification of evidence quality/level"),
+            )
+        )
 
         # Add recommendation class individuals from YAML
         for entry in _config.get("recommendation_levels", []):
@@ -331,8 +349,12 @@ class CardioOntologyGenerator:
             level_uri = self.cgo[level_id]
             self.g.add((level_uri, RDF.type, evidence_class))
             self.g.add((level_uri, RDFS.label, Literal(label)))
-            self.g.add((level_uri, self.cgo["hasRecommendationClass"], self.cgo[rec_class]))
-            self.g.add((level_uri, self.cgo["hasEvidenceQuality"], self.cgo[evidence_quality]))
+            self.g.add(
+                (level_uri, self.cgo["hasRecommendationClass"], self.cgo[rec_class])
+            )
+            self.g.add(
+                (level_uri, self.cgo["hasEvidenceQuality"], self.cgo[evidence_quality])
+            )
 
         # Add specialized evidence level types for different guideline systems from YAML
         for entry in _config.get("guideline_systems", []):
