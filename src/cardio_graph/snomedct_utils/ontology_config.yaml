@@ -108,223 +108,223 @@ category_keywords:
   GuidelineSource:
     - guideline
 
-  core_classes:
-    - name: ClinicalWorkflow
-      description: Represents a multi-step clinical process from guidelines
-    - name: WorkflowStep
-      description: Represents a single step in a clinical workflow
-    - name: ClinicalAction
-      description: A specific clinical action to be taken
-    - name: Purpose
-      description: The reason or goal for a clinical action
-    - name: LogicalJunction
-      description: Abstract node to represent logical groupings
-    - name: Conjunction
-      description: Logical AND grouping of conditions
-    - name: Disjunction
-      description: Logical OR grouping of conditions
-    - name: QuantitativePhenotype
-      description: A structured way to represent values with operators
-    - name: EvidenceStatement
-      description: Reified node representing a claim or recommendation
-    - name: EvidenceSource
-      description: Source of clinical evidence
-    - name: ContrastingStatement
-      description: Special type of evidence statement used for contrasting patterns
-    - name: PatientPhenotype
-      description: Observable characteristic of a patient
-    - name: Guideline
-      description: A clinical guideline document
-    - name: Recommendation
-      description: A specific recommendation within a guideline
-    - name: Medication
-      description: Pharmaceutical treatment or therapy
-    - name: Condition
-      description: Medical condition or disease state
-    - name: GuidelineRecommendation
-      description: Formal recommendation from a clinical guideline
-    - name: GuidelineSource
-      description: Source of a clinical guideline or recommendation
-    - name: CardiovascularDisease
-      description: Diseases affecting the heart and blood vessels
-    - name: CardiacImaging
-      description: Diagnostic imaging procedures for the heart
-    - name: CardiacBiomarker
-      description: Laboratory tests used to diagnose cardiac conditions
-    - name: CardiacRiskFactor
-      description: Factors that increase risk of cardiovascular disease
-    - name: RiskStratification
-      description: Method for categorizing patient risk levels
-    - name: CardiacDevice
-      description: Medical devices used in cardiovascular care
-    - name: CardiacProcedure
-      description: Interventional procedures on the heart
-    - name: AnticoagulationTherapy
-      description: Therapy to prevent blood clotting
-    - name: AntiplateletTherapy
-      description: Therapy to prevent platelet aggregation
-    - name: LipidLoweringTherapy
-      description: Therapy to reduce lipid levels
-    - name: AntihypertensiveTherapy
-      description: Therapy to reduce blood pressure
-    - name: HeartFailureTherapy
-      description: Therapy specific to heart failure
-    - name: EmergencyCardiacCare
-      description: Immediate interventions for cardiac emergencies
-    - name: CardiacRehabilitation
-      description: Structured program for cardiac recovery
-    - name: PreventiveCardiology
-      description: Approaches to prevent cardiovascular disease
+core_classes:
+  - name: ClinicalWorkflow
+    description: Represents a multi-step clinical process from guidelines
+  - name: WorkflowStep
+    description: Represents a single step in a clinical workflow
+  - name: ClinicalAction
+    description: A specific clinical action to be taken
+  - name: Purpose
+    description: The reason or goal for a clinical action
+  - name: LogicalJunction
+    description: Abstract node to represent logical groupings
+  - name: Conjunction
+    description: Logical AND grouping of conditions
+  - name: Disjunction
+    description: Logical OR grouping of conditions
+  - name: QuantitativePhenotype
+    description: A structured way to represent values with operators
+  - name: EvidenceStatement
+    description: Reified node representing a claim or recommendation
+  - name: EvidenceSource
+    description: Source of clinical evidence
+  - name: ContrastingStatement
+    description: Special type of evidence statement used for contrasting patterns
+  - name: PatientPhenotype
+    description: Observable characteristic of a patient
+  - name: Guideline
+    description: A clinical guideline document
+  - name: Recommendation
+    description: A specific recommendation within a guideline
+  - name: Medication
+    description: Pharmaceutical treatment or therapy
+  - name: Condition
+    description: Medical condition or disease state
+  - name: GuidelineRecommendation
+    description: Formal recommendation from a clinical guideline
+  - name: GuidelineSource
+    description: Source of a clinical guideline or recommendation
+  - name: CardiovascularDisease
+    description: Diseases affecting the heart and blood vessels
+  - name: CardiacImaging
+    description: Diagnostic imaging procedures for the heart
+  - name: CardiacBiomarker
+    description: Laboratory tests used to diagnose cardiac conditions
+  - name: CardiacRiskFactor
+    description: Factors that increase risk of cardiovascular disease
+  - name: RiskStratification
+    description: Method for categorizing patient risk levels
+  - name: CardiacDevice
+    description: Medical devices used in cardiovascular care
+  - name: CardiacProcedure
+    description: Interventional procedures on the heart
+  - name: AnticoagulationTherapy
+    description: Therapy to prevent blood clotting
+  - name: AntiplateletTherapy
+    description: Therapy to prevent platelet aggregation
+  - name: LipidLoweringTherapy
+    description: Therapy to reduce lipid levels
+  - name: AntihypertensiveTherapy
+    description: Therapy to reduce blood pressure
+  - name: HeartFailureTherapy
+    description: Therapy specific to heart failure
+  - name: EmergencyCardiacCare
+    description: Immediate interventions for cardiac emergencies
+  - name: CardiacRehabilitation
+    description: Structured program for cardiac recovery
+  - name: PreventiveCardiology
+    description: Approaches to prevent cardiovascular disease
 
-  core_properties:
-      domain: ClinicalWorkflow
-      range: WorkflowStep
-      description: Relates a clinical workflow to its constituent steps
-    - name: hasAction
-      domain: WorkflowStep
-      range: ClinicalAction
-      description: Relates a workflow step to the actions to be performed
-    - name: hasPurpose
-      domain: ClinicalAction
-      range: Purpose
-      description: Relates a clinical action to its intended purpose
-    - name: requiresCondition
-      domain: ClinicalAction
-      range: null
-      description: Links an action to a condition that must be met
-    - name: hasOperand
-      domain: LogicalJunction
-      range: null
-      description: Links a logical junction to its operands
-    - name: contrastsWith
-      domain: EvidenceStatement
-      range: ContrastingStatement
-      description: Links an evidence statement to a contrasting statement
-    - name: isSupportedBy
-      domain: EvidenceStatement
-      range: EvidenceSource
-      description: Links an evidence statement to its supporting source
-    - name: isRecommendedIn
-      domain: ClinicalAction
-      range: Guideline
-      description: Indicates the guideline in which an action is recommended
-    - name: hasRecommendation
-      domain: Guideline
-      range: Recommendation
-      description: Links a guideline to its recommendations
-    - name: hasEvidenceLevel
-      domain: Recommendation
-      range: EvidenceLevel
-      description: Specifies the evidence level for a recommendation
-    - name: hasIndication
-      domain: Medication
-      range: Condition
-      description: Links a medication to a condition it is indicated for
-    - name: isRecommendedFor
-      domain: Medication
-      range: PatientPhenotype
-      description: Links a medication to a patient phenotype for which it is recommended
-    - name: isContraindicatedIn
-      domain: Medication
-      range: Condition
-      description: Links a medication to a condition in which it is contraindicated
-    - name: hasSource
-      domain: GuidelineRecommendation
-      range: GuidelineSource
-      description: Links a guideline recommendation to its source
-    - name: makesRecommendation
-      domain: GuidelineSource
-      range: GuidelineRecommendation
-      description: Links a guideline source to a recommendation it makes
-    - name: interactsWith
-      domain: Medication
-      range: Medication
-      description: Indicates that two medications have a drug interaction
-    - name: hasInteractionSeverity
-      domain: interactsWith
-      range: null
-      description: Severity level of a drug interaction (property of a property)
-    - name: treats
-      domain: ClinicalAction
-      range: Condition
-      description: Indicates that a clinical action treats a condition
-    - name: prevents
-      domain: ClinicalAction
-      range: Condition
-      description: Indicates that a clinical action prevents a condition
-    - name: diagnoses
-      domain: ClinicalAction
-      range: Condition
-      description: Indicates that a clinical action diagnoses a condition
-    - name: hasAlternative
-      domain: Medication
-      range: Medication
-      description: Indicates an alternative medication that can be used
-    - name: hasPrecondition
-      domain: ClinicalAction
-      range: PatientPhenotype
-      description: Patient condition that must be present before the action
-    - name: hasFollowUp
-      domain: ClinicalAction
-      range: ClinicalAction
-      description: Indicates a follow-up action that should be performed
-    - name: isAdministeredWith
-      domain: Medication
-      range: Medication
-      description: Medications that are typically administered together
-    - name: isContraryTo
-      domain: Recommendation
-      range: Recommendation
-      description: Indicates that two recommendations contradict each other
-    - name: supersedes
-      domain: Guideline
-      range: Guideline
-      description: Indicates that a guideline supersedes an older one
-    - name: hasSnomedId
-      domain: null
-      range: string
-      description: SNOMED CT identifier for a concept
-    - name: hasRxNormId
-      domain: Medication
-      range: string
-      description: RxNorm identifier for a medication
-    - name: hasDosage
-      domain: Medication
-      range: string
-      description: Dosage information for a medication
-    - name: hasEvidenceLevelString
-      domain: Recommendation
-      range: string
-      description: Evidence level as a string (e.g., 'Class I, Level A')
-    - name: pageNumber
-      domain: null
-      range: integer
-      description: Page number where content appears in a guideline document
-    - name: hasFrequency
-      domain: ClinicalAction
-      range: string
-      description: Frequency of a clinical action (e.g., 'daily', 'twice daily')
-    - name: hasAdverseEffect
-      domain: Medication
-      range: string
-      description: Common adverse effect of a medication
-    - name: hasConcentration
-      domain: Medication
-      range: string
-      description: Concentration or strength of a medication
-    - name: hasPrevalence
-      domain: Condition
-      range: string
-      description: Prevalence of a condition in the population
-    - name: hasPriority
-      domain: ClinicalAction
-      range: integer
-      description: Priority level of a clinical action (1=highest)
-    - name: hasEffectiveDate
-      domain: Guideline
-      range: date
-      description: Date when the guideline became effective
-    - name: hasReference
-      domain: EvidenceStatement
-      range: string
-      description: Bibliographic reference for an evidence statement
+core_properties:
+    domain: ClinicalWorkflow
+    range: WorkflowStep
+    description: Relates a clinical workflow to its constituent steps
+  - name: hasAction
+    domain: WorkflowStep
+    range: ClinicalAction
+    description: Relates a workflow step to the actions to be performed
+  - name: hasPurpose
+    domain: ClinicalAction
+    range: Purpose
+    description: Relates a clinical action to its intended purpose
+  - name: requiresCondition
+    domain: ClinicalAction
+    range: null
+    description: Links an action to a condition that must be met
+  - name: hasOperand
+    domain: LogicalJunction
+    range: null
+    description: Links a logical junction to its operands
+  - name: contrastsWith
+    domain: EvidenceStatement
+    range: ContrastingStatement
+    description: Links an evidence statement to a contrasting statement
+  - name: isSupportedBy
+    domain: EvidenceStatement
+    range: EvidenceSource
+    description: Links an evidence statement to its supporting source
+  - name: isRecommendedIn
+    domain: ClinicalAction
+    range: Guideline
+    description: Indicates the guideline in which an action is recommended
+  - name: hasRecommendation
+    domain: Guideline
+    range: Recommendation
+    description: Links a guideline to its recommendations
+  - name: hasEvidenceLevel
+    domain: Recommendation
+    range: EvidenceLevel
+    description: Specifies the evidence level for a recommendation
+  - name: hasIndication
+    domain: Medication
+    range: Condition
+    description: Links a medication to a condition it is indicated for
+  - name: isRecommendedFor
+    domain: Medication
+    range: PatientPhenotype
+    description: Links a medication to a patient phenotype for which it is recommended
+  - name: isContraindicatedIn
+    domain: Medication
+    range: Condition
+    description: Links a medication to a condition in which it is contraindicated
+  - name: hasSource
+    domain: GuidelineRecommendation
+    range: GuidelineSource
+    description: Links a guideline recommendation to its source
+  - name: makesRecommendation
+    domain: GuidelineSource
+    range: GuidelineRecommendation
+    description: Links a guideline source to a recommendation it makes
+  - name: interactsWith
+    domain: Medication
+    range: Medication
+    description: Indicates that two medications have a drug interaction
+  - name: hasInteractionSeverity
+    domain: interactsWith
+    range: null
+    description: Severity level of a drug interaction (property of a property)
+  - name: treats
+    domain: ClinicalAction
+    range: Condition
+    description: Indicates that a clinical action treats a condition
+  - name: prevents
+    domain: ClinicalAction
+    range: Condition
+    description: Indicates that a clinical action prevents a condition
+  - name: diagnoses
+    domain: ClinicalAction
+    range: Condition
+    description: Indicates that a clinical action diagnoses a condition
+  - name: hasAlternative
+    domain: Medication
+    range: Medication
+    description: Indicates an alternative medication that can be used
+  - name: hasPrecondition
+    domain: ClinicalAction
+    range: PatientPhenotype
+    description: Patient condition that must be present before the action
+  - name: hasFollowUp
+    domain: ClinicalAction
+    range: ClinicalAction
+    description: Indicates a follow-up action that should be performed
+  - name: isAdministeredWith
+    domain: Medication
+    range: Medication
+    description: Medications that are typically administered together
+  - name: isContraryTo
+    domain: Recommendation
+    range: Recommendation
+    description: Indicates that two recommendations contradict each other
+  - name: supersedes
+    domain: Guideline
+    range: Guideline
+    description: Indicates that a guideline supersedes an older one
+  - name: hasSnomedId
+    domain: null
+    range: string
+    description: SNOMED CT identifier for a concept
+  - name: hasRxNormId
+    domain: Medication
+    range: string
+    description: RxNorm identifier for a medication
+  - name: hasDosage
+    domain: Medication
+    range: string
+    description: Dosage information for a medication
+  - name: hasEvidenceLevelString
+    domain: Recommendation
+    range: string
+    description: Evidence level as a string (e.g., 'Class I, Level A')
+  - name: pageNumber
+    domain: null
+    range: integer
+    description: Page number where content appears in a guideline document
+  - name: hasFrequency
+    domain: ClinicalAction
+    range: string
+    description: Frequency of a clinical action (e.g., 'daily', 'twice daily')
+  - name: hasAdverseEffect
+    domain: Medication
+    range: string
+    description: Common adverse effect of a medication
+  - name: hasConcentration
+    domain: Medication
+    range: string
+    description: Concentration or strength of a medication
+  - name: hasPrevalence
+    domain: Condition
+    range: string
+    description: Prevalence of a condition in the population
+  - name: hasPriority
+    domain: ClinicalAction
+    range: integer
+    description: Priority level of a clinical action (1=highest)
+  - name: hasEffectiveDate
+    domain: Guideline
+    range: date
+    description: Date when the guideline became effective
+  - name: hasReference
+    domain: EvidenceStatement
+    range: string
+    description: Bibliographic reference for an evidence statement
