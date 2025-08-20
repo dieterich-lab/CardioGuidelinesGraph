@@ -24,6 +24,35 @@ from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 
 
 class CardioOntologyGenerator:
+    def categorize_concepts_llm(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
+        """
+        Categorize SNOMED concepts using an LLM via BAML.
+        Returns: Dict mapping category name to list of concept URIs.
+        """
+        from cardio_graph.baml_client.sync_client import b
+
+        # Get ontology categories from self.cgo
+        ontology_categories = [k for k in self.cgo.keys()]
+        categories_map = {cat: [] for cat in ontology_categories}
+
+        for concept in concepts:
+            term = concept.get("term", "")
+            description = concept.get("description", "")
+            try:
+                result = b.CategorizeConcept(
+                    {"term": term, "description": description}, ontology_categories
+                )
+                assigned = result.categories
+                concept_uri = self.add_snomed_concept(concept)
+                for cat in assigned:
+                    if cat in categories_map:
+                        categories_map[cat].append(concept_uri)
+                        self.g.add((concept_uri, RDFS.subClassOf, self.cgo[cat]))
+            except Exception as e:
+                print(f"Error categorizing concept '{term}': {e}")
+                continue
+        return categories_map
+
     def get_type_label(self, type_id: str) -> str:
         """Lookup human-readable label for a SNOMED CT typeId."""
         result = (
@@ -152,7 +181,6 @@ class CardioOntologyGenerator:
             ("PatientPhenotype", "Observable characteristic of a patient"),
             ("Guideline", "A clinical guideline document"),
             ("Recommendation", "A specific recommendation within a guideline"),
-            # Additional core classes
             ("Medication", "Pharmaceutical treatment or therapy"),
             ("Condition", "Medical condition or disease state"),
             (
@@ -160,7 +188,6 @@ class CardioOntologyGenerator:
                 "Formal recommendation from a clinical guideline",
             ),
             ("GuidelineSource", "Source of a clinical guideline or recommendation"),
-            # Enhanced cardiovascular domain classes
             ("CardiovascularDisease", "Diseases affecting the heart and blood vessels"),
             ("CardiacImaging", "Diagnostic imaging procedures for the heart"),
             (
