@@ -10,10 +10,9 @@ import glob
 import json
 import logging
 import os
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from baml_client.sync_client import b
+from cardio_graph.baml_client.sync_client import b
 
 # Configure logging
 logging.basicConfig(

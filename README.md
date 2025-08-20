@@ -46,13 +46,21 @@ src/
     snomedct_utils/       # SNOMED CT utilities
     other/                # Miscellaneous utilities
 ```
+
 ## Utility Scripts
+
 The project includes several utilities to process medical guidelines from PDF documents for knowledge graph construction. All scripts can be run either using Poetry's CLI scripts or directly with Python.
+
 ### PDF Processing Tools
+
 #### Parse PDFs with Docling (`parse-pdfs`)
+
 Extract structured content from PDFs using the Docling library.
+
 ```bash
+# Extract text from a PDF
 poetry run parse-pdfs --text --pdf-path /path/to/file.pdf
+
 # Extract structures from a PDF
 poetry run parse-pdfs --structures --pdf-path /path/to/file.pdf
 
@@ -244,7 +252,8 @@ The generator creates an OWL ontology with:
 1. **Core Classes**: ClinicalWorkflow, WorkflowStep, ClinicalAction, Purpose, LogicalJunction, etc.
 2. **Core Properties**: hasStep, hasAction, hasPurpose, requiresCondition, hasOperand, etc.
 3. **SNOMED CT Integration**: Imports relevant cardiovascular concepts from SNOMED CT
-4. **Evidence Structure**: Defines evidence level and recommendation classes, but real-world examples and workflow patterns are expected to be filled in by downstream applications or data sources.
+4. **Example Patterns**: Creates example workflow patterns for cardiovascular care
+5. **Evidence Structure**: Supports evidence levels and guideline recommendations
 
 Default output file: `cardio_ontology.owl` in the current directory
 
