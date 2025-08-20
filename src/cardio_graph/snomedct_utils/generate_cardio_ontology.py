@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Set, Tuple
 
 import pandas as pd
+import yaml
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
@@ -22,21 +23,14 @@ from cardio_graph.snomedct_utils.models import SnapDescription, SnapFSN, SnapPre
 # Import SnomedExplorer from snomed_query.py
 from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "ontology_config.yaml")
+with open(CONFIG_PATH, "r") as f:
+    _config = yaml.safe_load(f)
+ONTOLOGY_CATEGORIES = _config.get("ontology_categories", [])
+CATEGORY_KEYWORDS = _config.get("category_keywords", {})
+
 
 class CardioOntologyGenerator:
-    # Static ontology categories used for concept categorization
-    ONTOLOGY_CATEGORIES = [
-        "ClinicalAction",
-        "PatientPhenotype",
-        "Purpose",
-        "WorkflowStep",
-        "Guideline",
-        "EvidenceSource",
-        "Medication",
-        "Condition",
-        "GuidelineRecommendation",
-        "GuidelineSource",
-    ]
 
     def categorize_concepts_llm(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
         """
@@ -45,15 +39,14 @@ class CardioOntologyGenerator:
         """
         from cardio_graph.baml_client.sync_client import b
 
-        ontology_categories = self.ONTOLOGY_CATEGORIES
-        categories_map = {cat: [] for cat in ontology_categories}
+        categories_map = {cat: [] for cat in ONTOLOGY_CATEGORIES}
 
         for concept in concepts:
             term = concept.get("term", "")
             description = concept.get("description", "")
             try:
                 result = b.CategorizeConcept(
-                    {"term": term, "description": description}, ontology_categories
+                    {"term": term, "description": description}, ONTOLOGY_CATEGORIES
                 )
                 assigned = result.categories
                 concept_uri = self.add_snomed_concept(concept)
@@ -65,6 +58,18 @@ class CardioOntologyGenerator:
                 print(f"Error categorizing concept '{term}': {e}")
                 continue
         return categories_map
+
+    def categorize_concepts(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
+        """Categorize SNOMED concepts into ontology categories using keywords from YAML config"""
+        categories = {cat: [] for cat in ONTOLOGY_CATEGORIES}
+        for concept in concepts:
+            concept_uri = self.add_snomed_concept(concept)
+            term = concept.get("term", "").lower()
+            for category, keyword_list in CATEGORY_KEYWORDS.items():
+                if any(keyword in term for keyword in keyword_list):
+                    categories[category].append(concept_uri)
+                    self.g.add((concept_uri, RDFS.subClassOf, self.cgo[category]))
+        return categories
 
     def get_type_label(self, type_id: str) -> str:
         """Lookup human-readable label for a SNOMED CT typeId."""
@@ -852,20 +857,6 @@ class CardioOntologyGenerator:
                 self.g.add((target_uri, RDF.type, OWL.Class))
                 self.g.add((target_uri, RDFS.label, Literal(term)))
                 self.snomed_concepts[target_id] = target_uri
-
-    def categorize_concepts(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
-        """Categorize SNOMED concepts into ontology categories using keywords from YAML config"""
-        categories = {cat: [] for cat in self.ONTOLOGY_CATEGORIES}
-        keywords = self.CATEGORY_KEYWORDS
-
-        for concept in concepts:
-            concept_uri = self.add_snomed_concept(concept)
-            term = concept.get("term", "").lower()
-            for category, keyword_list in keywords.items():
-                if any(keyword in term for keyword in keyword_list):
-                    categories[category].append(concept_uri)
-                    self.g.add((concept_uri, RDFS.subClassOf, self.cgo[category]))
-        return categories
 
     def generate_ontology(self, categorization_method: str = "keyword"):
         """Generate the complete cardiovascular guidelines ontology"""
