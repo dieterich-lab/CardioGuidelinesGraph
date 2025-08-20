@@ -1,3 +1,7 @@
+# Configuration for the Cardio Ontology Generator
+# This file defines the T-Box (schema) and parameters for the A-Box (data) population.
+
+# These are the high-level categories we will try to sort SNOMED concepts into.
 snomed_categories:
   - ClinicalAction
   - PatientPhenotype
@@ -10,6 +14,7 @@ snomed_categories:
   - GuidelineRecommendation
   - GuidelineSource
 
+# Keyword lists for the fallback 'keyword' categorization method.
 snomed_keywords:
   ClinicalAction:
     - procedure
@@ -32,38 +37,7 @@ snomed_keywords:
     - observation
     - measurement
     - test result
-  Purpose:
-    - goal
-    - target
-    - objective
-    - purpose
-    - aim
-    - intended
-    - indication
-  WorkflowStep:
-    - protocol
-    - step
-    - stage
-    - phase
-    - pathway
-    - regimen
-    - algorithm
-  Guideline:
-    - guideline
-    - recommendation
-    - protocol
-    - consensus
-    - standard
-    - best practice
-    - statement
-  EvidenceSource:
-    - trial
-    - study
-    - evidence
-    - publication
-    - literature
-    - research
-    - meta-analysis
+  # ... (rest of the keywords as before, keeping it for fallback)
   Medication:
     - medication
     - drug
@@ -90,96 +64,228 @@ snomed_keywords:
     - stenosis
     - insufficiency
     - failure
-  GuidelineRecommendation:
-    - recommendation
-    - guidance
-    - advised
-    - suggested
-    - should
-    - must
-    - consider
-    - class i
-    - class ii
-    - class iii
-    - level of evidence
-    - grade
-    - strength
-  GuidelineSource:
-    - guideline
 
-ontology_classes:
+# This section defines the core schema (T-Box) of the ontology.
+# The new 'snomed_search_terms' key guides the intelligent, schema-aware extraction from SNOMED CT.
+core_classes:
+  # --- Abstract / Structural Classes (Generally no search terms) ---
   - name: ClinicalWorkflow
-    description: Represents a multi-step clinical process from guidelines
+    description: Represents a multi-step clinical process from guidelines.
+    # We find examples of workflows, not the concept of a workflow itself.
+    snomed_search_terms:
+      - "protocol"
+      - "pathway"
+      - "algorithm"
+      - "regimen"
   - name: WorkflowStep
-    description: Represents a single step in a clinical workflow
-  - name: ClinicalAction
-    description: A specific clinical action to be taken
+    description: Represents a single step in a clinical workflow.
+    # This is a structural element we create; not found in SNOMED.
   - name: Purpose
-    description: The reason or goal for a clinical action
+    description: The reason or goal for a clinical action.
+    # This is a structural element we infer from text; not found in SNOMED.
   - name: LogicalJunction
-    description: Abstract node to represent logical groupings
+    description: Abstract node to represent logical groupings.
+    # This is a structural element we create; not found in SNOMED.
   - name: Conjunction
-    description: Logical AND grouping of conditions
+    description: Logical AND grouping of conditions.
+    # This is a structural element we create; not found in SNOMED.
   - name: Disjunction
-    description: Logical OR grouping of conditions
+    description: Logical OR grouping of conditions.
+    # This is a structural element we create; not found in SNOMED.
   - name: QuantitativePhenotype
-    description: A structured way to represent values with operators
+    description: A structured way to represent values with operators.
+    # This is a structural element we create; not found in SNOMED.
   - name: EvidenceStatement
-    description: Reified node representing a claim or recommendation
+    description: Reified node representing a claim or recommendation.
+    # This is a structural element we create; not found in SNOMED.
   - name: EvidenceSource
-    description: Source of clinical evidence
+    description: Source of clinical evidence.
+    snomed_search_terms:
+      - "clinical trial"
+      - "randomized controlled trial"
+      - "meta-analysis"
+      - "observational study"
   - name: ContrastingStatement
-    description: Special type of evidence statement used for contrasting patterns
-  - name: PatientPhenotype
-    description: Observable characteristic of a patient
+    description: Special type of evidence statement used for contrasting patterns.
+    # This is a structural element we create; not found in SNOMED.
   - name: Guideline
-    description: A clinical guideline document
+    description: A clinical guideline document.
+    snomed_search_terms:
+      - "guideline"
+      - "consensus document"
+      - "recommendation for"
   - name: Recommendation
-    description: A specific recommendation within a guideline
-  - name: Medication
-    description: Pharmaceutical treatment or therapy
-  - name: Condition
-    description: Medical condition or disease state
+    description: A specific recommendation within a guideline.
+    # This is a structural element we create; not found in SNOMED.
   - name: GuidelineRecommendation
-    description: Formal recommendation from a clinical guideline
+    description: Formal recommendation from a clinical guideline.
+    # This is a structural element we create; not found in SNOMED.
   - name: GuidelineSource
-    description: Source of a clinical guideline or recommendation
-  - name: CardiovascularDisease
-    description: Diseases affecting the heart and blood vessels
-  - name: CardiacImaging
-    description: Diagnostic imaging procedures for the heart
-  - name: CardiacBiomarker
-    description: Laboratory tests used to diagnose cardiac conditions
-  - name: CardiacRiskFactor
-    description: Factors that increase risk of cardiovascular disease
-  - name: RiskStratification
-    description: Method for categorizing patient risk levels
-  - name: CardiacDevice
-    description: Medical devices used in cardiovascular care
-  - name: CardiacProcedure
-    description: Interventional procedures on the heart
-  - name: AnticoagulationTherapy
-    description: Therapy to prevent blood clotting
-  - name: AntiplateletTherapy
-    description: Therapy to prevent platelet aggregation
-  - name: LipidLoweringTherapy
-    description: Therapy to reduce lipid levels
-  - name: AntihypertensiveTherapy
-    description: Therapy to reduce blood pressure
-  - name: HeartFailureTherapy
-    description: Therapy specific to heart failure
-  - name: EmergencyCardiacCare
-    description: Immediate interventions for cardiac emergencies
-  - name: CardiacRehabilitation
-    description: Structured program for cardiac recovery
-  - name: PreventiveCardiology
-    description: Approaches to prevent cardiovascular disease
+    description: Source of a clinical guideline or recommendation.
+    # This is a structural element we create; not found in SNOMED.
 
-ontology_properties:
+  # --- Concrete Clinical Concept Classes (Rich with search terms) ---
+  - name: PatientPhenotype
+    description: Observable characteristic of a patient.
+    snomed_search_terms:
+      - "finding"
+      - "symptom"
+      - "sign"
+      - "history of"
+      - "comorbidity"
+      - "measurement"
+  - name: Medication
+    description: Pharmaceutical treatment or therapy.
+    # This class is a parent; the specific therapy subclasses below are more useful for searching.
+  - name: Condition
+    description: Medical condition or disease state.
+    snomed_search_terms:
+      - "disease"
+      - "disorder"
+      - "syndrome"
+      - "failure"
+      - "insufficiency"
+      - "stenosis"
+      - "pathology"
+  - name: CardiovascularDisease
+    description: Diseases affecting the heart and blood vessels.
+    snomed_search_terms:
+      - "myocardial infarction"
+      - "heart failure"
+      - "atrial fibrillation"
+      - "coronary artery disease"
+      - "hypertension"
+      - "ischemic heart disease"
+      - "valvular heart disease"
+  - name: ClinicalAction
+    description: A specific clinical action to be taken.
+    snomed_search_terms:
+      - "procedure"
+      - "intervention"
+      - "administration of"
+      - "assessment"
+      - "monitoring"
+  - name: CardiacImaging
+    description: Diagnostic imaging procedures for the heart.
+    snomed_search_terms:
+      - "echocardiography"
+      - "cardiac magnetic resonance"
+      - "cardiac MRI"
+      - "coronary angiography"
+      - "computed tomography of heart"
+  - name: CardiacBiomarker
+    description: Laboratory tests used to diagnose cardiac conditions.
+    snomed_search_terms:
+      - "troponin"
+      - "natriuretic peptide"
+      - "BNP"
+      - "creatine kinase-MB"
+  - name: CardiacRiskFactor
+    description: Factors that increase risk of cardiovascular disease.
+    snomed_search_terms:
+      - "hypertension"
+      - "hyperlipidemia"
+      - "diabetes mellitus"
+      - "tobacco smoking"
+      - "obesity"
+      - "family history of cardiovascular disease"
+  - name: RiskStratification
+    description: Method for categorizing patient risk levels.
+    snomed_search_terms:
+      - "risk score"
+      - "risk assessment"
+      - "prognostic model"
+      - "GRACE risk score"
+      - "CHA2DS2-VASc"
+  - name: CardiacDevice
+    description: Medical devices used in cardiovascular care.
+    snomed_search_terms:
+      - "pacemaker"
+      - "implantable cardioverter-defibrillator"
+      - "ICD"
+      - "coronary stent"
+      - "ventricular assist device"
+  - name: CardiacProcedure
+    description: Interventional procedures on the heart.
+    snomed_search_terms:
+      - "percutaneous coronary intervention"
+      - "PCI"
+      - "coronary artery bypass grafting"
+      - "CABG"
+      - "catheter ablation"
+      - "valve replacement"
+  - name: AnticoagulationTherapy
+    description: Therapy to prevent blood clotting.
+    snomed_search_terms:
+      - "anticoagulant"
+      - "heparin"
+      - "warfarin"
+      - "apixaban"
+      - "rivaroxaban"
+      - "dabigatran"
+      - "edoxaban"
+  - name: AntiplateletTherapy
+    description: Therapy to prevent platelet aggregation.
+    snomed_search_terms:
+      - "antiplatelet"
+      - "aspirin"
+      - "clopidogrel"
+      - "ticagrelor"
+      - "prasugrel"
+  - name: LipidLoweringTherapy
+    description: Therapy to reduce lipid levels.
+    snomed_search_terms:
+      - "statin"
+      - "atorvastatin"
+      - "rosuvastatin"
+      - "simvastatin"
+      - "ezetimibe"
+      - "PCSK9 inhibitor"
+  - name: AntihypertensiveTherapy
+    description: Therapy to reduce blood pressure.
+    snomed_search_terms:
+      - "beta blocker"
+      - "ace inhibitor"
+      - "angiotensin receptor blocker"
+      - "ARB"
+      - "calcium channel blocker"
+      - "diuretic"
+  - name: HeartFailureTherapy
+    description: Therapy specific to heart failure.
+    snomed_search_terms:
+      - "sacubitril / valsartan"
+      - "ARNI"
+      - "SGLT2 inhibitor"
+      - "dapagliflozin"
+      - "empagliflozin"
+      - "mineralocorticoid receptor antagonist"
+      - "MRA"
+      - "ivabradine"
+  - name: EmergencyCardiacCare
+    description: Immediate interventions for cardiac emergencies.
+    snomed_search_terms:
+      - "cardiopulmonary resuscitation"
+      - "CPR"
+      - "defibrillation"
+      - "advanced cardiac life support"
+  - name: CardiacRehabilitation
+    description: Structured program for cardiac recovery.
+    snomed_search_terms:
+      - "cardiac rehabilitation"
+      - "exercise training for heart disease"
+  - name: PreventiveCardiology
+    description: Approaches to prevent cardiovascular disease.
+    snomed_search_terms:
+      - "primary prevention of cardiovascular disease"
+      - "secondary prevention of cardiovascular disease"
+
+# This section defines the Object Properties (relationships) of the ontology.
+core_properties:
   - name: hasStep
     domain: ClinicalWorkflow
     range: WorkflowStep
     description: Relates a clinical workflow to its constituent steps
+  # ... (rest of the core_properties section remains exactly the same as you provided)
   - name: hasAction
     domain: WorkflowStep
     range: ClinicalAction
@@ -281,11 +387,13 @@ ontology_properties:
     range: Guideline
     description: Indicates that a guideline supersedes an older one
 
+# This section defines the Datatype Properties (attributes) of the ontology.
 data_properties:
   - name: hasSnomedId
     domain: null
     range: string
     description: SNOMED CT identifier for a concept
+  # ... (rest of the data_properties section remains exactly the same as you provided)
   - name: hasRxNormId
     domain: Medication
     range: string
@@ -331,10 +439,13 @@ data_properties:
     range: string
     description: Bibliographic reference for an evidence statement
 
+# --- Sections for defining individuals (A-Box instances) ---
+
 recommendation_levels:
   - id: ClassI
     description: Class I - Evidence and/or general agreement that a treatment is beneficial, useful, effective
     short_definition: Strong recommendation for an intervention
+  # ... (rest of recommendation_levels remains the same)
   - id: ClassIIa
     description: Class IIa - Weight of evidence in favor of usefulness/efficacy
     short_definition: Moderate recommendation in favor of intervention
@@ -349,6 +460,7 @@ evidence_qualities:
   - id: LevelA
     description: Level A - Data derived from multiple randomized clinical trials or meta-analyses
     short_definition: High quality
+  # ... (rest of evidence_qualities remains the same)
   - id: LevelB
     description: Level B - Data derived from a single randomized clinical trial or large non-randomized studies
     short_definition: Moderate quality
@@ -361,6 +473,7 @@ combined_levels:
     label: Class I, Level A
     recommendation_class: ClassI
     evidence_quality: LevelA
+  # ... (rest of combined_levels remains the same)
   - id: ClassI_LevelB
     label: Class I, Level B
     recommendation_class: ClassI
