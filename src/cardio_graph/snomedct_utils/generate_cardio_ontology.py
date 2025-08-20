@@ -170,74 +170,22 @@ class CardioOntologyGenerator:
         self._init_core_structure()
 
     def _init_core_structure(self):
-        """Initialize the core ontology structure with specified classes and properties"""
-        # Add core classes
-        core_classes = [
-            (
-                "ClinicalWorkflow",
-                "Represents a multi-step clinical process from guidelines",
-            ),
-            ("WorkflowStep", "Represents a single step in a clinical workflow"),
-            ("ClinicalAction", "A specific clinical action to be taken"),
-            ("Purpose", "The reason or goal for a clinical action"),
-            ("LogicalJunction", "Abstract node to represent logical groupings"),
-            ("Conjunction", "Logical AND grouping of conditions"),
-            ("Disjunction", "Logical OR grouping of conditions"),
-            (
-                "QuantitativePhenotype",
-                "A structured way to represent values with operators",
-            ),
-            (
-                "EvidenceStatement",
-                "Reified node representing a claim or recommendation",
-            ),
-            ("EvidenceSource", "Source of clinical evidence"),
-            (
-                "ContrastingStatement",
-                "Special type of evidence statement used for contrasting patterns",
-            ),
-            ("PatientPhenotype", "Observable characteristic of a patient"),
-            ("Guideline", "A clinical guideline document"),
-            ("Recommendation", "A specific recommendation within a guideline"),
-            ("Medication", "Pharmaceutical treatment or therapy"),
-            ("Condition", "Medical condition or disease state"),
-            (
-                "GuidelineRecommendation",
-                "Formal recommendation from a clinical guideline",
-            ),
-            ("GuidelineSource", "Source of a clinical guideline or recommendation"),
-            ("CardiovascularDisease", "Diseases affecting the heart and blood vessels"),
-            ("CardiacImaging", "Diagnostic imaging procedures for the heart"),
-            (
-                "CardiacBiomarker",
-                "Laboratory tests used to diagnose cardiac conditions",
-            ),
-            (
-                "CardiacRiskFactor",
-                "Factors that increase risk of cardiovascular disease",
-            ),
-            ("RiskStratification", "Method for categorizing patient risk levels"),
-            ("CardiacDevice", "Medical devices used in cardiovascular care"),
-            ("CardiacProcedure", "Interventional procedures on the heart"),
-            ("AnticoagulationTherapy", "Therapy to prevent blood clotting"),
-            ("AntiplateletTherapy", "Therapy to prevent platelet aggregation"),
-            ("LipidLoweringTherapy", "Therapy to reduce lipid levels"),
-            ("AntihypertensiveTherapy", "Therapy to reduce blood pressure"),
-            ("HeartFailureTherapy", "Therapy specific to heart failure"),
-            ("EmergencyCardiacCare", "Immediate interventions for cardiac emergencies"),
-            ("CardiacRehabilitation", "Structured program for cardiac recovery"),
-            ("PreventiveCardiology", "Approaches to prevent cardiovascular disease"),
-        ]
+        """Initialize the core ontology structure with specified classes and properties from YAML config"""
+        import yaml
+        from rdflib.namespace import XSD
 
-        # Add each class to the ontology
-        for class_name, description in core_classes:
+        config = _config
+        # Add core classes
+        for class_entry in config.get("core_classes", []):
+            class_name = class_entry["name"]
+            description = class_entry.get("description", "")
             class_uri = self.cgo[class_name]
             self.g.add((class_uri, RDF.type, OWL.Class))
             self.g.add((class_uri, RDFS.label, Literal(class_name)))
             self.g.add((class_uri, RDFS.comment, Literal(description)))
             self.classes.add(class_name)
 
-        # Add subclass relationships
+        # Add subclass relationships (hardcoded for now, can be moved to YAML if needed)
         self.g.add(
             (self.cgo["Conjunction"], RDFS.subClassOf, self.cgo["LogicalJunction"])
         )
@@ -251,8 +199,6 @@ class CardioOntologyGenerator:
                 self.cgo["EvidenceStatement"],
             )
         )
-
-        # Add enhanced class hierarchies for cardiovascular domain
         self.g.add(
             (self.cgo["CardiovascularDisease"], RDFS.subClassOf, self.cgo["Condition"])
         )
@@ -269,22 +215,16 @@ class CardioOntologyGenerator:
                 self.cgo["PatientPhenotype"],
             )
         )
-
-        # Add therapy class hierarchies
-        therapy_classes = [
+        for therapy_class in [
             "AnticoagulationTherapy",
             "AntiplateletTherapy",
             "LipidLoweringTherapy",
             "AntihypertensiveTherapy",
             "HeartFailureTherapy",
-        ]
-
-        for therapy_class in therapy_classes:
+        ]:
             self.g.add(
                 (self.cgo[therapy_class], RDFS.subClassOf, self.cgo["ClinicalAction"])
             )
-
-        # Add additional subclass relations
         self.g.add(
             (
                 self.cgo["EmergencyCardiacCare"],
@@ -308,263 +248,36 @@ class CardioOntologyGenerator:
         )
 
         # Add core object properties
-        core_properties = [
-            (
-                "hasStep",
-                "ClinicalWorkflow",
-                "WorkflowStep",
-                "Relates a clinical workflow to its constituent steps",
-            ),
-            (
-                "hasAction",
-                "WorkflowStep",
-                "ClinicalAction",
-                "Relates a workflow step to the actions to be performed",
-            ),
-            (
-                "hasPurpose",
-                "ClinicalAction",
-                "Purpose",
-                "Relates a clinical action to its intended purpose",
-            ),
-            (
-                "requiresCondition",
-                "ClinicalAction",
-                None,
-                "Links an action to a condition that must be met",
-            ),
-            (
-                "hasOperand",
-                "LogicalJunction",
-                None,
-                "Links a logical junction to its operands",
-            ),
-            (
-                "contrastsWith",
-                "EvidenceStatement",
-                "ContrastingStatement",
-                "Links an evidence statement to a contrasting statement",
-            ),
-            (
-                "isSupportedBy",
-                "EvidenceStatement",
-                "EvidenceSource",
-                "Links an evidence statement to its supporting source",
-            ),
-            (
-                "isRecommendedIn",
-                "ClinicalAction",
-                "Guideline",
-                "Indicates the guideline in which an action is recommended",
-            ),
-            (
-                "hasRecommendation",
-                "Guideline",
-                "Recommendation",
-                "Links a guideline to its recommendations",
-            ),
-            (
-                "hasEvidenceLevel",
-                "Recommendation",
-                "EvidenceLevel",
-                "Specifies the evidence level for a recommendation",
-            ),
-            # Additional object properties
-            (
-                "hasIndication",
-                "Medication",
-                "Condition",
-                "Links a medication to a condition it is indicated for",
-            ),
-            (
-                "isRecommendedFor",
-                "Medication",
-                "PatientPhenotype",
-                "Links a medication to a patient phenotype for which it is recommended",
-            ),
-            (
-                "isContraindicatedIn",
-                "Medication",
-                "Condition",
-                "Links a medication to a condition in which it is contraindicated",
-            ),
-            (
-                "hasSource",
-                "GuidelineRecommendation",
-                "GuidelineSource",
-                "Links a guideline recommendation to its source",
-            ),
-            (
-                "makesRecommendation",
-                "GuidelineSource",
-                "GuidelineRecommendation",
-                "Links a guideline source to a recommendation it makes",
-            ),
-            # Enhanced clinical relationships
-            (
-                "interactsWith",
-                "Medication",
-                "Medication",
-                "Indicates that two medications have a drug interaction",
-            ),
-            (
-                "hasInteractionSeverity",
-                "interactsWith",
-                None,
-                "Severity level of a drug interaction (property of a property)",
-            ),
-            (
-                "treats",
-                "ClinicalAction",
-                "Condition",
-                "Indicates that a clinical action treats a condition",
-            ),
-            (
-                "prevents",
-                "ClinicalAction",
-                "Condition",
-                "Indicates that a clinical action prevents a condition",
-            ),
-            (
-                "diagnoses",
-                "ClinicalAction",
-                "Condition",
-                "Indicates that a clinical action diagnoses a condition",
-            ),
-            (
-                "hasAlternative",
-                "Medication",
-                "Medication",
-                "Indicates an alternative medication that can be used",
-            ),
-            (
-                "hasPrecondition",
-                "ClinicalAction",
-                "PatientPhenotype",
-                "Patient condition that must be present before the action",
-            ),
-            (
-                "hasFollowUp",
-                "ClinicalAction",
-                "ClinicalAction",
-                "Indicates a follow-up action that should be performed",
-            ),
-            (
-                "isAdministeredWith",
-                "Medication",
-                "Medication",
-                "Medications that are typically administered together",
-            ),
-            (
-                "isContraryTo",
-                "Recommendation",
-                "Recommendation",
-                "Indicates that two recommendations contradict each other",
-            ),
-            (
-                "supersedes",
-                "Guideline",
-                "Guideline",
-                "Indicates that a guideline supersedes an older one",
-            ),
-        ]
-
-        # Add each property to the ontology
-        for prop_name, domain, range_name, description in core_properties:
+        for prop_entry in config.get("core_properties", []):
+            prop_name = prop_entry["name"]
+            domain = prop_entry.get("domain")
+            range_name = prop_entry.get("range")
+            description = prop_entry.get("description", "")
             prop_uri = self.cgo[prop_name]
             self.g.add((prop_uri, RDF.type, OWL.ObjectProperty))
             self.g.add((prop_uri, RDFS.label, Literal(prop_name)))
             self.g.add((prop_uri, RDFS.comment, Literal(description)))
-
             if domain:
                 self.g.add((prop_uri, RDFS.domain, self.cgo[domain]))
-            if range_name:
+            if range_name and range_name != "null":
                 self.g.add((prop_uri, RDFS.range, self.cgo[range_name]))
-
             self.properties.add(prop_name)
 
-        # Add data properties (owl:DatatypeProperty)
-        data_properties = [
-            ("hasSnomedId", None, XSD.string, "SNOMED CT identifier for a concept"),
-            (
-                "hasRxNormId",
-                "Medication",
-                XSD.string,
-                "RxNorm identifier for a medication",
-            ),
-            (
-                "hasDosage",
-                "Medication",
-                XSD.string,
-                "Dosage information for a medication",
-            ),
-            (
-                "hasEvidenceLevelString",
-                "Recommendation",
-                XSD.string,
-                "Evidence level as a string (e.g., 'Class I, Level A')",
-            ),
-            (
-                "pageNumber",
-                None,
-                XSD.integer,
-                "Page number where content appears in a guideline document",
-            ),
-            (
-                "hasFrequency",
-                "ClinicalAction",
-                XSD.string,
-                "Frequency of a clinical action (e.g., 'daily', 'twice daily')",
-            ),
-            (
-                "hasAdverseEffect",
-                "Medication",
-                XSD.string,
-                "Common adverse effect of a medication",
-            ),
-            (
-                "hasConcentration",
-                "Medication",
-                XSD.string,
-                "Concentration or strength of a medication",
-            ),
-            (
-                "hasPrevalence",
-                "Condition",
-                XSD.string,
-                "Prevalence of a condition in the population",
-            ),
-            (
-                "hasPriority",
-                "ClinicalAction",
-                XSD.integer,
-                "Priority level of a clinical action (1=highest)",
-            ),
-            (
-                "hasEffectiveDate",
-                "Guideline",
-                XSD.date,
-                "Date when the guideline became effective",
-            ),
-            (
-                "hasReference",
-                "EvidenceStatement",
-                XSD.string,
-                "Bibliographic reference for an evidence statement",
-            ),
-        ]
-
-        # Add each data property to the ontology
-        for prop_name, domain, range_type, description in data_properties:
+        # Add data properties
+        for data_entry in config.get("data_properties", []):
+            prop_name = data_entry["name"]
+            domain = data_entry.get("domain")
+            range_type = data_entry.get("range")
+            description = data_entry.get("description", "")
             prop_uri = self.cgo[prop_name]
             self.g.add((prop_uri, RDF.type, OWL.DatatypeProperty))
             self.g.add((prop_uri, RDFS.label, Literal(prop_name)))
             self.g.add((prop_uri, RDFS.comment, Literal(description)))
-
-            if domain:
+            if domain and domain != "null":
                 self.g.add((prop_uri, RDFS.domain, self.cgo[domain]))
-            self.g.add((prop_uri, RDFS.range, range_type))
-
+            # Map YAML type string to rdflib XSD type
+            xsd_map = {"string": XSD.string, "integer": XSD.integer, "date": XSD.date}
+            self.g.add((prop_uri, RDFS.range, xsd_map.get(range_type, XSD.string)))
             self.properties.add(prop_name)
 
         # Create hierarchical evidence level structure
@@ -573,13 +286,7 @@ class CardioOntologyGenerator:
         evidence_class = self.cgo["EvidenceLevel"]
         self.g.add((evidence_class, RDF.type, OWL.Class))
         self.g.add((evidence_class, RDFS.label, Literal("Evidence Level")))
-        self.g.add(
-            (
-                evidence_class,
-                RDFS.comment,
-                Literal("Classification of evidence strength in guidelines"),
-            )
-        )
+        self.g.add((evidence_class, RDFS.comment, Literal("Classification of evidence strength in guidelines")))
 
         # Create subclasses for recommendation classification and evidence quality
         recommendation_class = self.cgo["RecommendationClass"]
@@ -587,119 +294,50 @@ class CardioOntologyGenerator:
 
         self.g.add((recommendation_class, RDF.type, OWL.Class))
         self.g.add((recommendation_class, RDFS.label, Literal("Recommendation Class")))
-        self.g.add(
-            (
-                recommendation_class,
-                RDFS.comment,
-                Literal("Classification of recommendation strength"),
-            )
-        )
+        self.g.add((recommendation_class, RDFS.comment, Literal("Classification of recommendation strength")))
 
         self.g.add((evidence_quality_class, RDF.type, OWL.Class))
         self.g.add((evidence_quality_class, RDFS.label, Literal("Evidence Quality")))
-        self.g.add(
-            (
-                evidence_quality_class,
-                RDFS.comment,
-                Literal("Classification of evidence quality/level"),
-            )
-        )
+        self.g.add((evidence_quality_class, RDFS.comment, Literal("Classification of evidence quality/level")))
 
-        # Define recommendation classes (ESC/AHA style)
-        recommendation_levels = [
-            (
-                "ClassI",
-                "Class I - Evidence and/or general agreement that a treatment is beneficial, useful, effective",
-                "Strong recommendation for an intervention",
-            ),
-            (
-                "ClassIIa",
-                "Class IIa - Weight of evidence in favor of usefulness/efficacy",
-                "Moderate recommendation in favor of intervention",
-            ),
-            (
-                "ClassIIb",
-                "Class IIb - Usefulness/efficacy less well established",
-                "Weak recommendation in favor of intervention",
-            ),
-            (
-                "ClassIII",
-                "Class III - Evidence that treatment is not useful/effective and may be harmful",
-                "Recommendation against intervention",
-            ),
-        ]
-
-        # Add recommendation class individuals
-        for level_id, description, short_def in recommendation_levels:
+        # Add recommendation class individuals from YAML
+        for entry in _config.get("recommendation_levels", []):
+            level_id = entry["id"]
+            description = entry.get("description", "")
+            short_def = entry.get("short_definition", "")
             level_uri = self.cgo[level_id]
             self.g.add((level_uri, RDF.type, recommendation_class))
             self.g.add((level_uri, RDFS.label, Literal(level_id)))
             self.g.add((level_uri, RDFS.comment, Literal(description)))
             self.g.add((level_uri, self.cgo["shortDefinition"], Literal(short_def)))
 
-        # Define evidence quality levels (ESC/AHA style)
-        evidence_qualities = [
-            (
-                "LevelA",
-                "Level A - Data derived from multiple randomized clinical trials or meta-analyses",
-                "High quality",
-            ),
-            (
-                "LevelB",
-                "Level B - Data derived from a single randomized clinical trial or large non-randomized studies",
-                "Moderate quality",
-            ),
-            (
-                "LevelC",
-                "Level C - Consensus of opinion of the experts and/or small studies, retrospective studies, registries",
-                "Low quality",
-            ),
-        ]
-
-        # Add evidence quality individuals
-        for level_id, description, short_def in evidence_qualities:
+        # Add evidence quality individuals from YAML
+        for entry in _config.get("evidence_qualities", []):
+            level_id = entry["id"]
+            description = entry.get("description", "")
+            short_def = entry.get("short_definition", "")
             level_uri = self.cgo[level_id]
             self.g.add((level_uri, RDF.type, evidence_quality_class))
             self.g.add((level_uri, RDFS.label, Literal(level_id)))
             self.g.add((level_uri, RDFS.comment, Literal(description)))
             self.g.add((level_uri, self.cgo["shortDefinition"], Literal(short_def)))
 
-        # Create combined evidence levels (as they often appear in guidelines)
-        combined_levels = [
-            ("ClassI_LevelA", "Class I, Level A", "ClassI", "LevelA"),
-            ("ClassI_LevelB", "Class I, Level B", "ClassI", "LevelB"),
-            ("ClassI_LevelC", "Class I, Level C", "ClassI", "LevelC"),
-            ("ClassIIa_LevelA", "Class IIa, Level A", "ClassIIa", "LevelA"),
-            ("ClassIIa_LevelB", "Class IIa, Level B", "ClassIIa", "LevelB"),
-            ("ClassIIa_LevelC", "Class IIa, Level C", "ClassIIa", "LevelC"),
-            ("ClassIIb_LevelA", "Class IIb, Level A", "ClassIIb", "LevelA"),
-            ("ClassIIb_LevelB", "Class IIb, Level B", "ClassIIb", "LevelB"),
-            ("ClassIIb_LevelC", "Class IIb, Level C", "ClassIIb", "LevelC"),
-            ("ClassIII_LevelA", "Class III, Level A", "ClassIII", "LevelA"),
-            ("ClassIII_LevelB", "Class III, Level B", "ClassIII", "LevelB"),
-            ("ClassIII_LevelC", "Class III, Level C", "ClassIII", "LevelC"),
-        ]
-
-        # Add combined evidence level individuals
-        for level_id, label, rec_class, evidence_quality in combined_levels:
+        # Add combined evidence level individuals from YAML
+        for entry in _config.get("combined_levels", []):
+            level_id = entry["id"]
+            label = entry.get("label", "")
+            rec_class = entry.get("recommendation_class", "")
+            evidence_quality = entry.get("evidence_quality", "")
             level_uri = self.cgo[level_id]
             self.g.add((level_uri, RDF.type, evidence_class))
             self.g.add((level_uri, RDFS.label, Literal(label)))
-            self.g.add(
-                (level_uri, self.cgo["hasRecommendationClass"], self.cgo[rec_class])
-            )
-            self.g.add(
-                (level_uri, self.cgo["hasEvidenceQuality"], self.cgo[evidence_quality])
-            )
+            self.g.add((level_uri, self.cgo["hasRecommendationClass"], self.cgo[rec_class]))
+            self.g.add((level_uri, self.cgo["hasEvidenceQuality"], self.cgo[evidence_quality]))
 
-        # Add specialized evidence level types for different guideline systems
-        guideline_systems = [
-            ("ESC", "European Society of Cardiology"),
-            ("AHA_ACC", "American Heart Association / American College of Cardiology"),
-            ("NICE", "National Institute for Health and Care Excellence"),
-        ]
-
-        for system_id, label in guideline_systems:
+        # Add specialized evidence level types for different guideline systems from YAML
+        for entry in _config.get("guideline_systems", []):
+            system_id = entry["id"]
+            label = entry.get("label", "")
             system_uri = self.cgo[f"GuidelineSystem_{system_id}"]
             self.g.add((system_uri, RDF.type, self.cgo["GuidelineSystem"]))
             self.g.add((system_uri, RDFS.label, Literal(label)))
