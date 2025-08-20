@@ -1,4 +1,3 @@
-# Ontology categories for cardiovascular guideline ontology
 snomed_categories:
   - ClinicalAction
   - PatientPhenotype
@@ -108,7 +107,7 @@ snomed_keywords:
   GuidelineSource:
     - guideline
 
-core_classes:
+ontology_classes:
   - name: ClinicalWorkflow
     description: Represents a multi-step clinical process from guidelines
   - name: WorkflowStep
@@ -176,7 +175,8 @@ core_classes:
   - name: PreventiveCardiology
     description: Approaches to prevent cardiovascular disease
 
-core_properties:
+ontology_properties:
+  - name: hasStep
     domain: ClinicalWorkflow
     range: WorkflowStep
     description: Relates a clinical workflow to its constituent steps
@@ -280,6 +280,8 @@ core_properties:
     domain: Guideline
     range: Guideline
     description: Indicates that a guideline supersedes an older one
+
+data_properties:
   - name: hasSnomedId
     domain: null
     range: string
@@ -328,3 +330,78 @@ core_properties:
     domain: EvidenceStatement
     range: string
     description: Bibliographic reference for an evidence statement
+
+recommendation_levels:
+  - id: ClassI
+    description: Class I - Evidence and/or general agreement that a treatment is beneficial, useful, effective
+    short_definition: Strong recommendation for an intervention
+  - id: ClassIIa
+    description: Class IIa - Weight of evidence in favor of usefulness/efficacy
+    short_definition: Moderate recommendation in favor of intervention
+  - id: ClassIIb
+    description: Class IIb - Usefulness/efficacy less well established
+    short_definition: Weak recommendation in favor of intervention
+  - id: ClassIII
+    description: Class III - Evidence that treatment is not useful/effective and may be harmful
+    short_definition: Recommendation against intervention
+
+evidence_qualities:
+  - id: LevelA
+    description: Level A - Data derived from multiple randomized clinical trials or meta-analyses
+    short_definition: High quality
+  - id: LevelB
+    description: Level B - Data derived from a single randomized clinical trial or large non-randomized studies
+    short_definition: Moderate quality
+  - id: LevelC
+    description: Level C - Consensus of opinion of the experts and/or small studies, retrospective studies, registries
+    short_definition: Low quality
+
+combined_levels:
+  - id: ClassI_LevelA
+    label: Class I, Level A
+    recommendation_class: ClassI
+    evidence_quality: LevelA
+  - id: ClassI_LevelB
+    label: Class I, Level B
+    recommendation_class: ClassI
+    evidence_quality: LevelB
+  - id: ClassI_LevelC
+    label: Class I, Level C
+    recommendation_class: ClassI
+    evidence_quality: LevelC
+  - id: ClassIIa_LevelA
+    label: Class IIa, Level A
+    recommendation_class: ClassIIa
+    evidence_quality: LevelA
+  - id: ClassIIa_LevelB
+    label: Class IIa, Level B
+    recommendation_class: ClassIIa
+    evidence_quality: LevelB
+  - id: ClassIIa_LevelC
+    label: Class IIa, Level C
+    recommendation_class: ClassIIa
+    evidence_quality: LevelC
+  - id: ClassIIb_LevelA
+    label: Class IIb, Level A
+    recommendation_class: ClassIIb
+    evidence_quality: LevelA
+  - id: ClassIIb_LevelB
+    label: Class IIb, Level B
+    recommendation_class: ClassIIb
+    evidence_quality: LevelB
+  - id: ClassIIb_LevelC
+    label: Class IIb, Level C
+    recommendation_class: ClassIIb
+    evidence_quality: LevelC
+  - id: ClassIII_LevelA
+    label: Class III, Level A
+    recommendation_class: ClassIII
+    evidence_quality: LevelA
+  - id: ClassIII_LevelB
+    label: Class III, Level B
+    recommendation_class: ClassIII
+    evidence_quality: LevelB
+  - id: ClassIII_LevelC
+    label: Class III, Level C
+    recommendation_class: ClassIII
+    evidence_quality: LevelC
