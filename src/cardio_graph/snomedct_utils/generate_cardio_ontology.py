@@ -43,10 +43,11 @@ class CardioOntologyGenerator:
 
         for concept in concepts:
             term = concept.get("term", "")
-            description = concept.get("description", "")
+            source_class_hint = concept.get("_source_class")
             try:
                 result = b.CategorizeConcept(
-                    {"term": term, "description": description}, SNOMED_CATEGORIES
+                    concept={"term": term, "source_class_hint": source_class_hint},
+                    ontology_categories=SNOMED_CATEGORIES,
                 )
                 assigned = result.categories
                 concept_uri = self.add_snomed_concept(concept)
@@ -174,9 +175,8 @@ class CardioOntologyGenerator:
         import yaml
         from rdflib.namespace import XSD
 
-        config = _config
         # Add core classes
-        for class_entry in config.get("core_classes", []):
+        for class_entry in _config.get("core_classes", []):
             class_name = class_entry["name"]
             description = class_entry.get("description", "")
             class_uri = self.cgo[class_name]
@@ -248,7 +248,7 @@ class CardioOntologyGenerator:
         )
 
         # Add core object properties
-        for prop_entry in config.get("core_properties", []):
+        for prop_entry in _config.get("core_properties", []):
             prop_name = prop_entry["name"]
             domain = prop_entry.get("domain")
             range_name = prop_entry.get("range")
@@ -264,7 +264,7 @@ class CardioOntologyGenerator:
             self.properties.add(prop_name)
 
         # Add data properties
-        for data_entry in config.get("data_properties", []):
+        for data_entry in _config.get("data_properties", []):
             prop_name = data_entry["name"]
             domain = data_entry.get("domain")
             range_type = data_entry.get("range")
@@ -365,49 +365,44 @@ class CardioOntologyGenerator:
             self.g.add((system_uri, RDFS.label, Literal(label)))
 
     def extract_cardiovascular_concepts(self, limit: int = 1000) -> List[Dict]:
-        """Extract cardiovascular concepts from SNOMED CT"""
-        print("Extracting cardiovascular concepts from SNOMED CT...")
+        """
+        Extracts cardiovascular concepts from SNOMED CT by running targeted searches
+        based on the snomed_search_terms defined in the ontology_config.yaml.
+        """
+        print("Extracting cardiovascular concepts using a schema-aware approach...")
 
-        # Extract concepts related to cardiovascular conditions - increased limit
-        cardio_concepts = self.snomed_explorer.search_cardiovascular_concepts(limit)
-
-        # Extract concepts specifically related to guidelines
-        # This now returns more concepts per term (50 instead of 10)
-        guideline_concepts = (
-            self.snomed_explorer.find_cardiovascular_guidelines_concepts()
-        )
-
-        # Combine and remove duplicates efficiently
-        all_concepts = cardio_concepts + guideline_concepts
-        print(
-            f"Found {len(cardio_concepts)} general cardiovascular concepts and {len(guideline_concepts)} guideline-related concepts"
-        )
-
-        # Filter and clean concepts using a more efficient approach with sets
-        filtered_concepts = []
+        all_concepts = []
         seen_ids = set()
 
-        for concept in all_concepts:
-            # Extract concept ID based on available fields
-            concept_id = None
-            if "conceptId" in concept:
-                concept_id = concept["conceptId"]
-            elif "id" in concept:
-                concept_id = concept["id"]
+        # Iterate through each core class that has search terms defined
+        for class_entry in _config.get("core_classes", []):
+            class_name = class_entry["name"]
+            search_terms = class_entry.get("snomed_search_terms")
 
-            if concept_id and concept_id not in seen_ids:
-                seen_ids.add(concept_id)
+            if not search_terms:
+                continue
 
-                # Only include active concepts if that information is available
-                if "active" in concept and concept["active"] == 0:
-                    continue
+            print(f"--> Searching for concepts related to class: {class_name}")
+            for term in search_terms:
+                # You might want to create a more specific search function in SnomedExplorer
+                # For now, we can reuse the existing one.
+                concepts_for_term = self.snomed_explorer.search_concepts_by_term(
+                    term, limit=200
+                )  # Increased limit for broader search
 
-                filtered_concepts.append(concept)
+                for concept in concepts_for_term:
+                    concept_id = concept.get("conceptId") or concept.get("id")
+                    if concept_id and concept_id not in seen_ids:
+                        # OPTIONAL BUT POWERFUL: You can add the "source class" here
+                        # to help the categorization step later.
+                        concept["_source_class"] = class_name
+                        all_concepts.append(concept)
+                        seen_ids.add(concept_id)
 
         print(
-            f"Extracted {len(filtered_concepts)} unique cardiovascular concepts after filtering"
+            f"Extracted {len(all_concepts)} unique concepts using schema-aware search."
         )
-        return filtered_concepts
+        return all_concepts
 
     def get_concept_relationships(self, concepts: List[Dict]) -> Dict[str, List[Dict]]:
         """Get relationships for the extracted concepts"""
