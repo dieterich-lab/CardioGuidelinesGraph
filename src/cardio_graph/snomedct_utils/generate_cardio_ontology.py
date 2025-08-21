@@ -34,7 +34,7 @@ class CardioOntologyGenerator:
 
     def categorize_concepts_llm(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
         """
-        Categorize SNOMED concepts using an LLM via BAML, now with full description context.
+        Categorize SNOMED concepts using an LLM via BAML, with full description context.
         """
         from cardio_graph.baml_client.sync_client import b
 
@@ -50,39 +50,58 @@ class CardioOntologyGenerator:
                 concept_id
             )
 
-            # Find the FSN for best context, and collect other synonyms
+            # --- KEY IMPROVEMENT ---
+            # Explicitly find the preferred term, FSN, and synonyms from the full list.
+            # This removes the assumption from the previous version.
+            preferred_term = ""
             fsn = ""
             synonyms = []
-            preferred_term = concept.get(
-                "term", ""
-            )  # Assume the initial term is preferred
 
+            # Find the preferred term first (based on your get_descriptions_for_concept logic)
+            for desc in all_descriptions:
+                if desc.get(
+                    "is_preferred"
+                ):  # Assumes get_descriptions is updated to provide this
+                    preferred_term = desc["term"]
+                    break
+
+            # If not found via refset, fall back to the initial term
+            if not preferred_term:
+                preferred_term = concept.get("term", "")
+
+            # Now collect FSN and synonyms
             for desc in all_descriptions:
                 if desc["type"] == "FSN":
                     fsn = desc["term"]
-                # Avoid duplicating the preferred term in the synonym list
+                # Add to synonyms if it's not the preferred term
                 elif desc["term"].lower() != preferred_term.lower():
                     synonyms.append(desc["term"])
 
-            # Prepare the input for the BAML client
+            # Make sure FSN isn't also in the synonym list
+            if fsn and fsn.lower() != preferred_term.lower():
+                synonyms = [s for s in synonyms if s.lower() != fsn.lower()]
+
             baml_input = {
                 "term": preferred_term,
-                "description": fsn,  # Use the FSN as the primary description for the LLM
-                "synonyms": ", ".join(synonyms),
+                "description": fsn,
+                "synonyms": ", ".join(
+                    sorted(list(set(synonyms)))
+                ),  # Ensure unique, sorted synonyms
             }
 
             try:
-                # Assuming your BAML function can take this richer input
                 result = b.CategorizeConcept(baml_input, SNOMED_CATEGORIES)
-                assigned = result.categories
+                # The 'add_snomed_concept' function will now handle setting the correct label
+                # so we just need to pass the original concept dict to it.
                 concept_uri = self.add_snomed_concept(concept)
-                for cat in assigned:
+                for cat in result.categories:
                     if cat in categories_map:
                         categories_map[cat].append(concept_uri)
                         self.g.add((concept_uri, RDFS.subClassOf, self.cgo[cat]))
             except Exception as e:
                 print(f"Error categorizing concept '{preferred_term}': {e}")
                 continue
+
         return categories_map
 
     def categorize_concepts(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
@@ -464,41 +483,39 @@ class CardioOntologyGenerator:
         return relationships
 
     def add_snomed_concept(self, concept: Dict) -> URIRef:
-        """Add a SNOMED CT concept to the ontology"""
-        # Extract concept ID and term
-        concept_id = None
-        term = None
+        """
+        Adds a SNOMED CT concept to the ontology, ensuring its rdfs:label
+        is always the canonical Preferred Term.
+        """
+        concept_id = concept.get("conceptId") or concept.get("id")
+        if not concept_id:
+            concept_id = str(uuid.uuid4())  # Handle concepts without IDs
 
-        if "conceptId" in concept:
-            concept_id = concept["conceptId"]
-        elif "id" in concept:
-            concept_id = concept["id"]
-
-        if "term" in concept:
-            term = concept["term"]
-
-        if not concept_id or not term:
-            # Generate a random UUID for concepts without IDs
-            concept_id = str(uuid.uuid4())
-            if not term:
-                term = f"Unknown Concept {concept_id}"
-
-        # Check if we already have this concept
         if concept_id in self.snomed_concepts:
             return self.snomed_concepts[concept_id]
 
-        # Create a URI for the concept
+        # --- KEY IMPROVEMENT ---
+        # Fetch the canonical preferred term directly from the explorer.
+        # Do not trust the 'term' field from the initial search result.
+        preferred_term = self.snomed_explorer.get_preferred_term(concept_id)
+
+        # If we can't find a preferred term, fall back to the term from the search,
+        # but log a warning.
+        if not preferred_term:
+            preferred_term = concept.get("term", f"Unknown Concept {concept_id}")
+            print(
+                f"Warning: No preferred term found for {concept_id}. Using '{preferred_term}'."
+            )
+
         concept_uri = self.snomed[str(concept_id)]
-
-        # Add the concept as a class
         self.g.add((concept_uri, RDF.type, OWL.Class))
-        self.g.add((concept_uri, RDFS.label, Literal(term)))
 
-        # Add additional metadata if available
-        if "active" in concept and concept["active"] == 1:
+        # Always use the fetched preferred_term for the official label.
+        self.g.add((concept_uri, RDFS.label, Literal(preferred_term)))
+
+        if concept.get("active") == 1:
             self.g.add((concept_uri, self.cgo["isActive"], Literal(True)))
 
-        # Store the URI for future reference
         self.snomed_concepts[concept_id] = concept_uri
         return concept_uri
 

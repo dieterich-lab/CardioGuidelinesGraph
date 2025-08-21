@@ -1,15 +1,22 @@
 import csv
 import json
 import os
-import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
-from sqlalchemy import and_, create_engine, or_, text
+from sqlalchemy import and_, create_engine, distinct, or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-from cardio_graph.snomedct_utils.models import SnapDescription, SnapRelationship
+from cardio_graph.snomedct_utils.models import (
+    SnapDescription,
+    SnapRefsetLanguage,
+    SnapRelationship,
+)
+
+# The SNOMED CT concept ID for "Preferred" in the US English language refset.
+# You might need to change this if you are using a different language refset (e.g., for German).
+PREFERRED_ACCEPTABILITY_ID = 900000000000548007
 
 
 class SnomedExplorer:
@@ -95,29 +102,57 @@ class SnomedExplorer:
 
     def search_cardiovascular_concepts(self, limit: int = 100) -> List[Dict[str, Any]]:
         """
-        Search for concepts related to cardiovascular domain using SnapDescription only.
+        Searches for unique concepts related to the cardiovascular domain using a comprehensive query.
         """
         if not self.session:
             self.connect()
 
+        # Define all search keywords in a single list
+        search_keywords = [
+            "%cardio%",
+            "%heart%",
+            "%vascular%",
+            "%coronary%",
+            "%atrial%",
+            "%ventricul%",
+            "%ischemi%",
+            "%ischaemi%",
+            "%hypertens%",
+        ]
+
+        # Create a single, powerful OR filter
         filters = or_(
-            SnapDescription.term.ilike("%cardio%"),
-            SnapDescription.term.ilike("%heart%"),
-            SnapDescription.term.ilike("%vascular%"),
-            SnapDescription.term.ilike("%coronary%"),
-            SnapDescription.term.ilike("%atrial%"),
-            SnapDescription.term.ilike("%ventricul%"),
-            SnapDescription.term.ilike("%ischemi%"),
-            SnapDescription.term.ilike("%ischaemi%"),
-            SnapDescription.term.ilike("%hypertens%"),
+            *[SnapDescription.term.ilike(keyword) for keyword in search_keywords]
         )
-        results = self.session.query(SnapDescription).filter(filters).limit(limit).all()
-        if results:
-            print(
-                f"Successfully found cardiovascular concepts in snap_description table"
-            )
-            return [r.__dict__ for r in results]
-        return []
+
+        # Query the master description table once
+        matching_descriptions = (
+            self.session.query(SnapDescription)
+            .filter(filters, SnapDescription.active == 1)
+            .limit(limit * 5)  # Fetch more to get a good pool of unique concepts
+            .all()
+        )
+
+        if not matching_descriptions:
+            print("No cardiovascular concepts found in snap_description table.")
+            return []
+
+        # Post-process to return unique concepts, same as before
+        unique_concepts = []
+        seen_concept_ids = set()
+
+        for description in matching_descriptions:
+            if len(unique_concepts) >= limit:
+                break
+
+            if description.conceptId not in seen_concept_ids:
+                unique_concepts.append(description.__dict__)
+                seen_concept_ids.add(description.conceptId)
+
+        print(
+            f"Successfully found {len(unique_concepts)} unique cardiovascular concepts."
+        )
+        return unique_concepts
 
     def get_relationships(self, concept_id: str) -> List[Dict[str, Any]]:
         """
@@ -141,40 +176,66 @@ class SnomedExplorer:
         self, search_term: str, limit: int = 100
     ) -> List[Dict[str, Any]]:
         """
-        Search concepts by term using ORM models
+        Searches for unique concepts by a given term and returns them with their
+        canonical Preferred Term as the primary label.
         """
         if not self.session:
             self.connect()
 
         term_like = f"%{search_term}%"
-        # Try snap_fsn
+
+        # --- Step 1: Find all unique concept IDs that match the search term ---
+        # This subquery finds all descriptions that match and returns just their conceptId.
+        matching_concept_ids_subquery = (
+            self.session.query(distinct(SnapDescription.conceptId))
+            .filter(SnapDescription.term.ilike(term_like), SnapDescription.active == 1)
+            .limit(limit)
+            .subquery()
+        )
+
+        # --- Step 2: Fetch the Preferred Term for each of those concepts ---
+        # We join the Description table with the Language Refset table to find the
+        # description for each concept that is marked as "Preferred".
         results = (
             self.session.query(SnapDescription)
-            .filter(SnapDescription.term.ilike(term_like))
-            .limit(limit)
+            .join(
+                matching_concept_ids_subquery,
+                SnapDescription.conceptId == matching_concept_ids_subquery.c.conceptId,
+            )
+            .join(
+                SnapRefsetLanguage,
+                SnapDescription.id == SnapRefsetLanguage.referencedComponentId,
+            )
+            .filter(
+                SnapDescription.active == 1,
+                SnapRefsetLanguage.active == 1,
+                SnapRefsetLanguage.acceptabilityId == PREFERRED_ACCEPTABILITY_ID,
+            )
             .all()
         )
-        if results:
-            return [r.__dict__ for r in results]
-        # Try snap_pref
-        results = (
-            self.session.query(SnapDescription)
-            .filter(SnapDescription.term.ilike(term_like))
-            .limit(limit)
-            .all()
-        )
-        if results:
-            return [r.__dict__ for r in results]
-        # Try snap_description
-        results = (
-            self.session.query(SnapDescription)
-            .filter(SnapDescription.term.ilike(term_like))
-            .limit(limit)
-            .all()
-        )
-        if results:
-            return [r.__dict__ for r in results]
-        return []
+
+        if not results:
+            return []
+
+        # The query now returns description objects that are guaranteed to be the preferred terms.
+        # The __dict__ conversion might include SQLAlchemy internal state, so we'll build a clean dict.
+        clean_results = []
+        for res in results:
+            clean_results.append(
+                {
+                    "id": res.id,
+                    "effectiveTime": res.effectiveTime,
+                    "active": res.active,
+                    "moduleId": res.moduleId,
+                    "conceptId": res.conceptId,
+                    "languageCode": res.languageCode,
+                    "typeId": res.typeId,
+                    "term": res.term,
+                    "caseSignificanceId": res.caseSignificanceId,
+                }
+            )
+
+        return clean_results
 
     def export_to_csv(self, data: List[Dict[str, Any]], filename: str) -> str:
         """
@@ -404,6 +465,33 @@ class SnomedExplorer:
         except Exception as e:
             print(f"Error fetching descriptions for concept {concept_id}: {e}")
             return []
+
+    def get_preferred_term(self, concept_id: str) -> Optional[str]:
+        """
+        Fetches the single, canonical Preferred Term for a given concept ID.
+        """
+        if not self.session:
+            self.connect()
+
+        try:
+            result = (
+                self.session.query(SnapDescription.term)
+                .join(
+                    SnapRefsetLanguage,
+                    SnapDescription.id == SnapRefsetLanguage.referencedComponentId,
+                )
+                .filter(
+                    SnapDescription.conceptId == concept_id,
+                    SnapDescription.active == 1,
+                    SnapRefsetLanguage.active == 1,
+                    SnapRefsetLanguage.acceptabilityId == PREFERRED_ACCEPTABILITY_ID,
+                )
+                .first()  # We only expect one preferred term
+            )
+            return result[0] if result else None
+        except Exception as e:
+            print(f"Warning: Could not fetch preferred term for {concept_id}: {e}")
+            return None
 
 
 def main():
