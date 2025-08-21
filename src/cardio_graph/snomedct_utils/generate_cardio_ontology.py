@@ -49,9 +49,6 @@ class CardioOntologyGenerator:
                 concept_id
             )
 
-            # --- KEY IMPROVEMENT ---
-            # Explicitly find the preferred term, FSN, and synonyms from the full list.
-            # This removes the assumption from the previous version.
             preferred_term = ""
             fsn = ""
             synonyms = []
