@@ -18,7 +18,7 @@ import yaml
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
-from cardio_graph.snomedct_utils.models import SnapDescription, SnapFSN, SnapPref
+from cardio_graph.snomedct_utils.models import SnapDescription
 
 # Import SnomedExplorer from snomed_query.py
 from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
@@ -34,21 +34,46 @@ class CardioOntologyGenerator:
 
     def categorize_concepts_llm(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
         """
-        Categorize SNOMED concepts using an LLM via BAML.
-        Returns: Dict mapping category name to list of concept URIs.
+        Categorize SNOMED concepts using an LLM via BAML, now with full description context.
         """
         from cardio_graph.baml_client.sync_client import b
 
         categories_map = {cat: [] for cat in SNOMED_CATEGORIES}
 
         for concept in concepts:
-            term = concept.get("term", "")
-            source_class_hint = concept.get("_source_class")
+            concept_id = concept.get("conceptId") or concept.get("id")
+            if not concept_id:
+                continue
+
+            # Fetch all descriptions for the concept
+            all_descriptions = self.snomed_explorer.get_descriptions_for_concept(
+                concept_id
+            )
+
+            # Find the FSN for best context, and collect other synonyms
+            fsn = ""
+            synonyms = []
+            preferred_term = concept.get(
+                "term", ""
+            )  # Assume the initial term is preferred
+
+            for desc in all_descriptions:
+                if desc["type"] == "FSN":
+                    fsn = desc["term"]
+                # Avoid duplicating the preferred term in the synonym list
+                elif desc["term"].lower() != preferred_term.lower():
+                    synonyms.append(desc["term"])
+
+            # Prepare the input for the BAML client
+            baml_input = {
+                "term": preferred_term,
+                "description": fsn,  # Use the FSN as the primary description for the LLM
+                "synonyms": ", ".join(synonyms),
+            }
+
             try:
-                result = b.CategorizeConcept(
-                    concept={"term": term, "source_class_hint": source_class_hint},
-                    ontology_categories=SNOMED_CATEGORIES,
-                )
+                # Assuming your BAML function can take this richer input
+                result = b.CategorizeConcept(baml_input, SNOMED_CATEGORIES)
                 assigned = result.categories
                 concept_uri = self.add_snomed_concept(concept)
                 for cat in assigned:
@@ -56,7 +81,7 @@ class CardioOntologyGenerator:
                         categories_map[cat].append(concept_uri)
                         self.g.add((concept_uri, RDFS.subClassOf, self.cgo[cat]))
             except Exception as e:
-                print(f"Error categorizing concept '{term}': {e}")
+                print(f"Error categorizing concept '{preferred_term}': {e}")
                 continue
         return categories_map
 
@@ -74,20 +99,6 @@ class CardioOntologyGenerator:
 
     def get_type_label(self, type_id: str) -> str:
         """Lookup human-readable label for a SNOMED CT typeId."""
-        result = (
-            self.snomed_explorer.session.query(SnapFSN)
-            .filter_by(conceptId=type_id)
-            .first()
-        )
-        if result and hasattr(result, "term"):
-            return result.term
-        result = (
-            self.snomed_explorer.session.query(SnapPref)
-            .filter_by(conceptId=type_id)
-            .first()
-        )
-        if result and hasattr(result, "term"):
-            return result.term
         result = (
             self.snomed_explorer.session.query(SnapDescription)
             .filter_by(conceptId=type_id)
@@ -109,6 +120,7 @@ class CardioOntologyGenerator:
         snomed_database: str = "snomedct",
         base_uri: str = "http://dieterich-lab.org/ontologies/cardioguidelinesonto/",
         version: str = "0.1.0",
+        debug_mode: bool = False,
     ):
         """Initialize the ontology generator"""
         self.output_path = output_path
@@ -119,6 +131,7 @@ class CardioOntologyGenerator:
             password=snomed_password,
             database=snomed_database,
         )
+        self.debug_mode = debug_mode
 
         # Initialize RDF graph and namespaces
         self.g = Graph()
@@ -375,7 +388,17 @@ class CardioOntologyGenerator:
         seen_ids = set()
 
         # Iterate through each core class that has search terms defined
-        for class_entry in _config.get("core_classes", []):
+        debug = getattr(self, "debug_mode", False)
+        use_limit = 2 if debug else 200
+        max_classes = 2 if debug else None
+        max_terms = 2 if debug else None
+        max_concepts = 10 if debug else None
+
+        core_classes = _config.get("core_classes", [])
+        if max_classes:
+            core_classes = core_classes[:max_classes]
+
+        for class_entry in core_classes:
             class_name = class_entry["name"]
             search_terms = class_entry.get("snomed_search_terms")
 
@@ -383,19 +406,25 @@ class CardioOntologyGenerator:
                 continue
 
             print(f"--> Searching for concepts related to class: {class_name}")
-            for term in search_terms:
-                # You might want to create a more specific search function in SnomedExplorer
-                # For now, we can reuse the existing one.
+            terms = search_terms[:max_terms] if max_terms else search_terms
+            for term in terms:
                 concepts_for_term = self.snomed_explorer.search_concepts_by_term(
-                    term, limit=200
-                )  # Increased limit for broader search
-
+                    term, limit=use_limit
+                )
                 for concept in concepts_for_term:
                     concept_id = concept.get("conceptId") or concept.get("id")
                     if concept_id and concept_id not in seen_ids:
                         concept["_source_class"] = class_name
                         all_concepts.append(concept)
                         seen_ids.add(concept_id)
+                        if max_concepts and len(all_concepts) >= max_concepts:
+                            print(
+                                f"[DEBUG] Reached max_concepts={max_concepts}, stopping early."
+                            )
+                            print(
+                                f"Extracted {len(all_concepts)} unique concepts using schema-aware search."
+                            )
+                            return all_concepts
 
         print(
             f"Extracted {len(all_concepts)} unique concepts using schema-aware search."
@@ -611,6 +640,14 @@ def main():
         help="Concept categorization method: 'keyword' (default) or 'llm' (large language model)",
     )
 
+    parser.add_argument(
+        "--dev",
+        "--debug",
+        action="store_true",
+        dest="debug_mode",
+        help="Run in dev/debug mode (limit=2 for all queries)",
+    )
+
     args = parser.parse_args()
 
     generator = CardioOntologyGenerator(
@@ -622,6 +659,7 @@ def main():
         snomed_database=args.database,
         base_uri=args.base_uri,
         version=args.version,
+        debug_mode=args.debug_mode,
     )
 
     success = generator.generate_ontology(

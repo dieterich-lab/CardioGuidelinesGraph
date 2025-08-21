@@ -1,6 +1,7 @@
 class Concept {
   term string @description("The main term or label of the SNOMED concept")
-  source_class_hint string? @description("Optional: a longer description or definition of the concept")
+  description string? @description("Optional: a longer description or definition of the concept")
+  synonyms string? @description("Optional: a list of synonyms for the concept")
 }
 
 class CategorizationResult {
@@ -19,7 +20,8 @@ function CategorizeConcept(concept: Concept, ontology_categories: string[]) -> C
     - Provide a brief reasoning for your choices.
 
     Concept term: {{concept.term}}
-    It was found while searching for concepts related to: {{concept.source_class_hint}}
+    Description: {{concept.description}}
+    Synonyms: {{concept.synonyms}}
     Ontology categories: {{ontology_categories | join(', ')}}
 
     {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}

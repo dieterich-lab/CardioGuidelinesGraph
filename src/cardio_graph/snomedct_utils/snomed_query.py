@@ -9,15 +9,7 @@ from sqlalchemy import and_, create_engine, or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-from cardio_graph.snomedct_utils.models import (
-    SnapDescription,
-    SnapFSN,
-    SnapPref,
-    SnapRelationship,
-    SnapRelChildFSN,
-    SnapRelDefFSN,
-    SnapRelDefPref,
-)
+from cardio_graph.snomedct_utils.models import SnapDescription, SnapRelationship
 
 
 class SnomedExplorer:
@@ -103,54 +95,26 @@ class SnomedExplorer:
 
     def search_cardiovascular_concepts(self, limit: int = 100) -> List[Dict[str, Any]]:
         """
-        Search for concepts related to cardiovascular domain using ORM models
+        Search for concepts related to cardiovascular domain using SnapDescription only.
         """
         if not self.session:
             self.connect()
 
         filters = or_(
-            SnapFSN.term.ilike("%cardio%"),
-            SnapFSN.term.ilike("%heart%"),
-            SnapFSN.term.ilike("%vascular%"),
-            SnapFSN.term.ilike("%coronary%"),
-            SnapFSN.term.ilike("%atrial%"),
-            SnapFSN.term.ilike("%ventricul%"),
-            SnapFSN.term.ilike("%ischemi%"),
-            SnapFSN.term.ilike("%ischaemi%"),
-            SnapFSN.term.ilike("%hypertens%"),
+            SnapDescription.term.ilike("%cardio%"),
+            SnapDescription.term.ilike("%heart%"),
+            SnapDescription.term.ilike("%vascular%"),
+            SnapDescription.term.ilike("%coronary%"),
+            SnapDescription.term.ilike("%atrial%"),
+            SnapDescription.term.ilike("%ventricul%"),
+            SnapDescription.term.ilike("%ischemi%"),
+            SnapDescription.term.ilike("%ischaemi%"),
+            SnapDescription.term.ilike("%hypertens%"),
         )
-        results = self.session.query(SnapFSN).filter(filters).limit(limit).all()
-        if results:
-            print(f"Successfully found cardiovascular concepts in snap_fsn table")
-            return [r.__dict__ for r in results]
-
-        # Fallback to snap_pref
-        results = self.session.query(SnapPref).filter(filters).limit(limit).all()
-        if results:
-            print(f"Successfully found cardiovascular concepts in snap_pref table")
-            return [r.__dict__ for r in results]
-
-        # Fallback to snap_description
         results = self.session.query(SnapDescription).filter(filters).limit(limit).all()
         if results:
             print(
                 f"Successfully found cardiovascular concepts in snap_description table"
-            )
-            return [r.__dict__ for r in results]
-
-        # Fallback to snap_rel_def_fsn
-        rel_filters = or_(
-            SnapRelDefFSN.sourceTerm.ilike("%cardio%"),
-            SnapRelDefFSN.sourceTerm.ilike("%heart%"),
-            SnapRelDefFSN.destinationTerm.ilike("%cardio%"),
-            SnapRelDefFSN.destinationTerm.ilike("%heart%"),
-        )
-        results = (
-            self.session.query(SnapRelDefFSN).filter(rel_filters).limit(limit).all()
-        )
-        if results:
-            print(
-                f"Successfully found cardiovascular concepts in snap_rel_def_fsn table"
             )
             return [r.__dict__ for r in results]
         return []
@@ -185,8 +149,8 @@ class SnomedExplorer:
         term_like = f"%{search_term}%"
         # Try snap_fsn
         results = (
-            self.session.query(SnapFSN)
-            .filter(SnapFSN.term.ilike(term_like))
+            self.session.query(SnapDescription)
+            .filter(SnapDescription.term.ilike(term_like))
             .limit(limit)
             .all()
         )
@@ -194,8 +158,8 @@ class SnomedExplorer:
             return [r.__dict__ for r in results]
         # Try snap_pref
         results = (
-            self.session.query(SnapPref)
-            .filter(SnapPref.term.ilike(term_like))
+            self.session.query(SnapDescription)
+            .filter(SnapDescription.term.ilike(term_like))
             .limit(limit)
             .all()
         )
@@ -261,15 +225,10 @@ class SnomedExplorer:
         if not self.session:
             self.connect()
 
-        # Map table name to model
+        # Map table name to model (only available models)
         model_map = {
-            "snap_fsn": SnapFSN,
-            "snap_pref": SnapPref,
             "snap_description": SnapDescription,
-            "snap_rel_def_fsn": SnapRelDefFSN,
             "snap_relationship": SnapRelationship,
-            "snap_rel_def_pref": SnapRelDefPref,
-            "snap_rel_child_fsn": SnapRelChildFSN,
         }
         model = model_map.get(table_name)
         if not model:
@@ -289,31 +248,33 @@ class SnomedExplorer:
         if not self.session:
             self.connect()
 
-        # Direct ORM query for cardiovascular guideline concepts
+        # Direct ORM query for cardiovascular guideline concepts (SnapDescription only)
         filters = or_(
             and_(
-                SnapFSN.term.ilike("%cardio%"),
+                SnapDescription.term.ilike("%cardio%"),
                 or_(
-                    SnapFSN.term.ilike("%guideline%"),
-                    SnapFSN.term.ilike("%recommendation%"),
+                    SnapDescription.term.ilike("%guideline%"),
+                    SnapDescription.term.ilike("%recommendation%"),
                 ),
             ),
             and_(
-                SnapFSN.term.ilike("%heart%"),
+                SnapDescription.term.ilike("%heart%"),
                 or_(
-                    SnapFSN.term.ilike("%guideline%"),
-                    SnapFSN.term.ilike("%recommendation%"),
+                    SnapDescription.term.ilike("%guideline%"),
+                    SnapDescription.term.ilike("%recommendation%"),
                 ),
             ),
             and_(
-                SnapFSN.term.ilike("%vascular%"),
+                SnapDescription.term.ilike("%vascular%"),
                 or_(
-                    SnapFSN.term.ilike("%guideline%"),
-                    SnapFSN.term.ilike("%recommendation%"),
+                    SnapDescription.term.ilike("%guideline%"),
+                    SnapDescription.term.ilike("%recommendation%"),
                 ),
             ),
         )
-        direct_results = self.session.query(SnapFSN).filter(filters).limit(200).all()
+        direct_results = (
+            self.session.query(SnapDescription).filter(filters).limit(200).all()
+        )
         if direct_results and len(direct_results) > 0:
             print(
                 f"Found {len(direct_results)} cardiovascular guideline concepts with direct query"
@@ -352,17 +313,9 @@ class SnomedExplorer:
                 print(f"Error searching for term {term}: {e}")
                 continue
 
+        # No results fallback: return empty list (no SnapRelDefFSN available)
         if not results:
-            # Relationship table fallback
-            rel_filters = or_(
-                SnapRelDefFSN.sourceTerm.ilike("%cardio%"),
-                SnapRelDefFSN.sourceTerm.ilike("%heart%"),
-                SnapRelDefFSN.sourceTerm.ilike("%vascular%"),
-            )
-            rel_results = (
-                self.session.query(SnapRelDefFSN).filter(rel_filters).limit(50).all()
-            )
-            return [r.__dict__ for r in rel_results]
+            return []
 
         # Remove duplicates based on id if it exists
         unique_results = []
@@ -397,6 +350,60 @@ class SnomedExplorer:
             except SQLAlchemyError as err:
                 print(f"Error executing query: {err}")
                 return []
+
+    def get_descriptions_for_concept(
+        self, concept_id: str, lang: str = "en"
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieves all active descriptions (FSN, Synonyms, etc.) for a given concept ID.
+
+        Args:
+            concept_id: The SNOMED CT concept ID to look up.
+            lang: The language code to search for (e.g., 'en', 'de').
+
+        Returns:
+            A list of dictionaries, where each dictionary represents a description.
+        """
+        if not self.session:
+            self.connect()
+
+        # The typeId for Fully Specified Name (FSN) and Synonym
+        FSN_TYPE_ID = 900000000000003001
+        SYNONYM_TYPE_ID = 900000000000013009
+
+        try:
+            results = (
+                self.session.query(SnapDescription)
+                .filter(
+                    SnapDescription.conceptId == concept_id,
+                    SnapDescription.active == 1,
+                    # Optional: Add language filter if your DB has multiple languages
+                    # SnapDescription.languageCode == lang
+                )
+                .all()
+            )
+
+            descriptions = []
+            for r in results:
+                desc_type = "Other"
+                if r.typeId == FSN_TYPE_ID:
+                    desc_type = "FSN"
+                elif r.typeId == SYNONYM_TYPE_ID:
+                    desc_type = "Synonym"
+
+                # We don't know the preferred term just from this table,
+                # but we can assume the non-FSN/non-Synonym is likely preferred.
+                # A more robust way involves checking the language refset, but this is a good start.
+                if desc_type == "Other":
+                    desc_type = "PreferredTerm/Other"
+
+                descriptions.append(
+                    {"term": r.term, "type": desc_type, "typeId": r.typeId}
+                )
+            return descriptions
+        except Exception as e:
+            print(f"Error fetching descriptions for concept {concept_id}: {e}")
+            return []
 
 
 def main():
