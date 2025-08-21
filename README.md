@@ -257,6 +257,66 @@ The generator creates an OWL ontology with:
 
 Default output file: `cardio_ontology.owl` in the current directory
 
+###### Purpose
+
+The goal of this tool is to automate the creation of a rich, domain-specific, and standardized ontology (.owl file). This ontology serves two critical purposes:
+
+- The Blueprint (T-Box): It formally defines the high-level classes (e.g., ClinicalAction, PatientPhenotype) and properties (e.g., isRecommendedFor) that we use to model the complex reasoning found in clinical guidelines.
+
+- The Foundational Vocabulary (A-Box): It pre-populates the ontology with thousands of relevant cardiovascular concepts (e.g., "Atrial fibrillation," "ACE inhibitor therapy") extracted directly from the SNOMED CT international terminology, grounding our knowledge graph in a clinical standard.
+
+How It Works: A Refinement Funnel
+
+The generator avoids the pitfalls of manual ontology creation by following a robust, semi-automated, three-step process. This process is a refinement funnel, designed to move from broad retrieval to high-precision classification.
+Step 1: Schema Definition (The Human-Designed Blueprint)
+
+The entire process is driven by the ontology_config.yaml file. Here, we define our target schema—the handful of high-level classes and properties that are meaningful for modeling guideline logic. This is the "top-down" human intelligence that guides the system.
+Step 2: Schema-Aware Concept Retrieval (High Recall)
+
+Instead of blindly searching SNOMED CT, the script uses the snomed_search_terms defined in the YAML config to perform dozens of targeted searches. This step acts as a wide net, retrieving a large set of candidate concepts that are highly relevant to our schema. The goal here is high recall—to ensure we don't miss any important concepts.
+Step 3: Intelligent Categorization (High Precision)
+
+This is the crucial refinement step. Each candidate concept retrieved from SNOMED is individually examined by a Large Language Model (LLM). The LLM is provided with the concept's full context (its Fully Specified Name, synonyms, etc.) and is tasked with mapping it to the single best category from our predefined schema. This step ensures high precision, correctly classifying a diverse set of SNOMED concepts (procedures, disorders, findings) into our clean, high-level buckets.
+
+This two-stage process (broad retrieval followed by precise classification) ensures that the final ontology is both comprehensive and accurately structured according to our specific modeling needs.
+Visual Workflow
+
+```    
++---------------------------+
+|    ontology_config.yaml   |
+|   (The Guiding Schema)    |
++-------------+-------------+
+              |
+              v
++-------------+-------------+      +------------------------+
+|   Step 2: Schema-Aware    |----->|   SNOMED CT Database   |
+|     Concept Retrieval     |      | (The Source Vocabulary)|
++-------------+-------------+      +------------------------+
+              |
+              v (Broad set of candidate concepts)
++-------------+-------------+
+|    Step 3: Intelligent    |<----- (LLM Categorization Logic)
+|      Categorization       |
++-------------+-------------+
+              |
+              v (Clean, classified concepts & schema)
++-------------+-------------+
+| cardio_ontology.owl       |
+|  (The Final Ontology)     |
++---------------------------+
+```
+  
+
+Key Features
+
+- Configuration-Driven: The entire ontology schema is managed in a single, easy-to-edit YAML file.
+
+- SNOMED CT Grounded: Ensures our knowledge graph is built on standardized, internationally recognized clinical terminology.
+
+- AI-Powered Precision: Leverages LLMs to perform nuanced, context-aware classification, far surpassing brittle keyword-based methods.
+
+- Formal & Standardized Output: Generates a valid OWL/RDF file, ensuring interoperability with standard ontology tools (like Protégé) and graph databases.
+
 ### Running Scripts Directly
 
 All scripts can also be run directly using Python after activating the Poetry environment:
