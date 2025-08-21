@@ -329,13 +329,3 @@ poetry shell
 python src/cardio_graph/pdf_utils/parse_pdfs_with_docling.py --text --structures --pdf-path /path/to/file.pdf
 python src/cardio_graph/neo4j_utils/feedneo4jdb.py
 ```
-
-### BAML Utilities
-
-The project includes BAML definitions in `src/cardio_graph/extraction_utils/baml_src/` for:
-- Client configurations (`clients.baml`)
-- Knowledge graph generators (`kg_generator.baml`)
-- Query tools (`query.baml`)
-- Structure definitions (`structures.baml`)
-
-These BAML files define the interfaces and prompts used for the LLM interactions.
