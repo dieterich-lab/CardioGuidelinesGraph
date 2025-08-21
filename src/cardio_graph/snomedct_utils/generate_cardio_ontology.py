@@ -8,14 +8,12 @@ and generates an OWL/RDF ontology for use with cardiovascular guidelines.
 
 import argparse
 import os
-import sys
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Set, Tuple
+from typing import Dict, List
 
-import pandas as pd
 import yaml
-from rdflib import BNode, Graph, Literal, Namespace, URIRef
+from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
 from cardio_graph.snomedct_utils.models import SnapDescription
