@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -172,6 +173,28 @@ class SnomedExplorer:
             return [r.__dict__ for r in results]
         return []
 
+    def get_relationships_in_batch(
+        self, concept_ids: List[Dict]
+    ) -> Dict[str, List[Dict]]:
+        """
+        Efficiently fetches all relationships for a list of concept IDs in a single query.
+        """
+        if not self.session or not concept_ids:
+            return {}
+
+        results = (
+            self.session.query(SnapRelationship)
+            .filter(SnapRelationship.sourceId.in_(concept_ids))
+            .all()
+        )
+
+        # Group the results by sourceId
+        relationships_map = defaultdict(list)
+        for rel in results:
+            relationships_map[str(rel.sourceId)].append(rel.__dict__)
+
+        return relationships_map
+
     def search_concepts_by_term(
         self, search_term: str, limit: int = 100
     ) -> List[Dict[str, Any]]:
@@ -185,17 +208,16 @@ class SnomedExplorer:
         term_like = f"%{search_term}%"
 
         # --- Step 1: Find all unique concept IDs that match the search term ---
-        # This subquery finds all descriptions that match and returns just their conceptId.
+        # THE FIX: We use .label('conceptId') to explicitly name the column in the subquery.
         matching_concept_ids_subquery = (
-            self.session.query(distinct(SnapDescription.conceptId))
+            self.session.query(distinct(SnapDescription.conceptId).label("conceptId"))
             .filter(SnapDescription.term.ilike(term_like), SnapDescription.active == 1)
             .limit(limit)
             .subquery()
         )
 
         # --- Step 2: Fetch the Preferred Term for each of those concepts ---
-        # We join the Description table with the Language Refset table to find the
-        # description for each concept that is marked as "Preferred".
+        # This join will now work correctly because matching_concept_ids_subquery.c.conceptId is guaranteed to exist.
         results = (
             self.session.query(SnapDescription)
             .join(
@@ -218,7 +240,7 @@ class SnomedExplorer:
             return []
 
         # The query now returns description objects that are guaranteed to be the preferred terms.
-        # The __dict__ conversion might include SQLAlchemy internal state, so we'll build a clean dict.
+        # Build clean dictionaries to avoid passing around SQLAlchemy internal state.
         clean_results = []
         for res in results:
             clean_results.append(

@@ -14,6 +14,24 @@ snomed_categories:
   - GuidelineRecommendation
   - GuidelineSource
 
+retrieval_filters:
+  # List of keywords that, if present in a SNOMED term, will cause the concept to be
+  # automatically excluded before being sent to the LLM. This helps filter out
+  # concepts from irrelevant domains (e.g., biochemistry, genetics).
+  negative_keywords:
+    - "biochemical"
+    - "molecular"
+    - "enzyme"
+    - "precursor"
+    - "protein"
+    - "gene"
+    - "dna"
+    - "rna"
+    - "antigen"
+    - "antibody"
+    - "receptor"
+    - "pathway"  # Keep this general, but refine search terms below
+
 # Keyword lists for the fallback 'keyword' categorization method.
 snomed_keywords:
   ClinicalAction:
@@ -46,11 +64,11 @@ snomed_keywords:
     - intended
     - indication
   WorkflowStep:
-    - protocol
+    - treatment protocol
     - step
     - stage
     - phase
-    - pathway
+    - clinical pathway
     - regimen
     - algorithm
   Guideline:

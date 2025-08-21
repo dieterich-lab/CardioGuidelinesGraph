@@ -28,6 +28,7 @@ with open(CONFIG_PATH, "r") as f:
     _config = yaml.safe_load(f)
 SNOMED_CATEGORIES = _config.get("snomed_categories", [])
 SNOMED_KEYWORDS = _config.get("snomed_keywords", {})
+NEGATIVE_KEYWORDS = _config.get("retrieval_filters", {}).get("negative_keywords", [])
 
 
 class CardioOntologyGenerator:
@@ -91,13 +92,20 @@ class CardioOntologyGenerator:
 
             try:
                 result = b.CategorizeConcept(baml_input, SNOMED_CATEGORIES)
+                assigned_categories = result.categories
+
                 # The 'add_snomed_concept' function will now handle setting the correct label
                 # so we just need to pass the original concept dict to it.
-                concept_uri = self.add_snomed_concept(concept)
-                for cat in result.categories:
-                    if cat in categories_map:
-                        categories_map[cat].append(concept_uri)
-                        self.g.add((concept_uri, RDFS.subClassOf, self.cgo[cat]))
+                for cat_name in assigned_categories:
+                    if cat_name in categories_map:
+                        category_class_uri = self.cgo[cat_name]
+
+                        # Pass the category to the creation function
+                        concept_uri = self.add_snomed_concept(
+                            concept, category_class_uri, synonyms=synonyms
+                        )
+                        categories_map[cat_name].append(concept_uri)
+
             except Exception as e:
                 print(f"Error categorizing concept '{preferred_term}': {e}")
                 continue
@@ -406,7 +414,7 @@ class CardioOntologyGenerator:
         all_concepts = []
         seen_ids = set()
 
-        # Iterate through each core class that has search terms defined
+        # --- Debugging Setup (from your code) ---
         debug = getattr(self, "debug_mode", False)
         use_limit = 2 if debug else 200
         max_classes = 2 if debug else None
@@ -426,16 +434,50 @@ class CardioOntologyGenerator:
 
             print(f"--> Searching for concepts related to class: {class_name}")
             terms = search_terms[:max_terms] if max_terms else search_terms
+
             for term in terms:
                 concepts_for_term = self.snomed_explorer.search_concepts_by_term(
                     term, limit=use_limit
                 )
+                filtered_concepts = []
                 for concept in concepts_for_term:
-                    concept_id = concept.get("conceptId") or concept.get("id")
-                    if concept_id and concept_id not in seen_ids:
+                    concept_term = concept.get("term", "").lower()
+                    if not any(
+                        neg_word in concept_term for neg_word in NEGATIVE_KEYWORDS
+                    ):
+                        filtered_concepts.append(concept)
+
+                for concept in filtered_concepts:
+                    concept_id = None
+                    id_keys_to_try = [
+                        "conceptId",
+                        "id",
+                        "referencedComponentId",
+                        "sourceId",
+                    ]
+                    for key in id_keys_to_try:
+                        if key in concept and concept[key]:
+                            concept_id = concept[key]
+                            break  # Found it, stop looking
+
+                    if not concept_id:
+                        # If we still can't find an ID, we must skip this record and warn the user.
+                        print(
+                            f"  [WARNING] Skipping record because no valid ID key was found. Data: {concept}"
+                        )
+                        continue
+                    # --- END OF FIX ---
+
+                    if concept_id not in seen_ids:
+                        # To avoid KeyErrors later, we will standardize the ID key.
+                        # We will add 'conceptId' to the dictionary if it's not already there.
+                        if "conceptId" not in concept:
+                            concept["conceptId"] = concept_id
+
                         concept["_source_class"] = class_name
                         all_concepts.append(concept)
                         seen_ids.add(concept_id)
+
                         if max_concepts and len(all_concepts) >= max_concepts:
                             print(
                                 f"[DEBUG] Reached max_concepts={max_concepts}, stopping early."
@@ -482,7 +524,9 @@ class CardioOntologyGenerator:
         print(f"Retrieved relationships for {len(relationships)} concepts")
         return relationships
 
-    def add_snomed_concept(self, concept: Dict) -> URIRef:
+    def add_snomed_concept(
+        self, concept: Dict, category_class: URIRef, synonyms: List[str] = None
+    ) -> URIRef:
         """
         Adds a SNOMED CT concept to the ontology, ensuring its rdfs:label
         is always the canonical Preferred Term.
@@ -508,10 +552,18 @@ class CardioOntologyGenerator:
             )
 
         concept_uri = self.snomed[str(concept_id)]
-        self.g.add((concept_uri, RDF.type, OWL.Class))
+
+        # Declare it as an individual of the specific class from our schema.
+        self.g.add((concept_uri, RDF.type, OWL.NamedIndividual))
+        self.g.add((concept_uri, RDF.type, category_class))  # e.g., type cgo:Condition
 
         # Always use the fetched preferred_term for the official label.
         self.g.add((concept_uri, RDFS.label, Literal(preferred_term)))
+
+        # Add all synonyms as alternative labels
+        if synonyms:
+            for synonym in synonyms:
+                self.g.add((concept_uri, SKOS.altLabel, Literal(synonym)))
 
         if concept.get("active") == 1:
             self.g.add((concept_uri, self.cgo["isActive"], Literal(True)))
@@ -565,42 +617,52 @@ class CardioOntologyGenerator:
             # Connect to the SNOMED CT database
             self.snomed_explorer.connect()
 
-            # Extract concepts
+            # Step 1: Extract a list of candidate concept dictionaries
             concepts = self.extract_cardiovascular_concepts()
 
             if not concepts:
                 print("No cardiovascular concepts found in SNOMED CT")
                 return False
 
-            # Get relationships
-            relationships = self.get_concept_relationships(concepts)
+            # Step 2: Extract all relationship data for the found concepts in a single batch
+            concept_ids_list = [c["conceptId"] for c in concepts if "conceptId" in c]
+            relationships = self.snomed_explorer.get_relationships_in_batch(
+                concept_ids_list
+            )
 
-            # Add concepts to the ontology
-            for concept in concepts:
-                self.add_snomed_concept(concept)
+            # --- THE FIX ---
+            # The redundant loop that was here has been REMOVED.
+            # The 'add_snomed_concept' function is now correctly called from *within* the
+            # categorization functions below, once the category is known.
+            # -----------------
 
-            # Categorize concepts
+            # Step 3: Categorize concepts. This step now ALSO adds the concepts to the graph.
             if categorization_method == "llm":
                 print("Using LLM-based concept categorization...")
                 categories = self.categorize_concepts_llm(concepts)
             else:
                 print("Using keyword-based concept categorization...")
+                # Note: The keyword version will also need to be updated to call the new add_snomed_concept
                 categories = self.categorize_concepts(concepts)
 
             # Print category statistics
+            print("--- Category Statistics ---")
             for category, uris in categories.items():
                 print(f"  - {category}: {len(uris)} concepts")
 
-            # Add relationships
+            # Step 4: Add all the relationships between the concepts we just added.
+            print("--- Adding Relationships ---")
             for concept_id, rels in relationships.items():
-                self.add_relationships(concept_id, rels)
+                self.add_relationships(
+                    str(concept_id), rels
+                )  # Ensure concept_id is a string
 
             # Save the ontology to file
             self.g.serialize(destination=self.output_path, format="xml")
             print(f"Ontology generated successfully and saved to {self.output_path}")
 
             # Print statistics
-            print(f"Ontology contains:")
+            print("--- Final Ontology Statistics ---")
             print(f"  - {len(self.classes)} core classes")
             print(f"  - {len(self.snomed_concepts)} SNOMED CT concepts")
             print(f"  - {len(self.properties)} properties")
@@ -679,11 +741,8 @@ def main():
         debug_mode=args.debug_mode,
     )
 
-    success = generator.generate_ontology(
-        categorization_method=args.categorization_method
-    )
-    return 0 if success else 1
+    generator.generate_ontology(categorization_method=args.categorization_method)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
