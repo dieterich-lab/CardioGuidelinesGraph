@@ -26,7 +26,6 @@ with open(CONFIG_PATH, "r") as f:
     _config = yaml.safe_load(f)
 SNOMED_CATEGORIES = _config.get("snomed_categories", [])
 SNOMED_KEYWORDS = _config.get("snomed_keywords", {})
-NEGATIVE_KEYWORDS = _config.get("retrieval_filters", {}).get("negative_keywords", [])
 
 
 class CardioOntologyGenerator:
@@ -351,15 +350,8 @@ class CardioOntologyGenerator:
                 concepts_for_term = self.snomed_explorer.search_concepts_by_term(
                     term, limit=use_limit
                 )
-                filtered_concepts = []
-                for concept in concepts_for_term:
-                    concept_term = concept.get("term", "").lower()
-                    if not any(
-                        neg_word in concept_term for neg_word in NEGATIVE_KEYWORDS
-                    ):
-                        filtered_concepts.append(concept)
 
-                for concept in filtered_concepts:
+                for concept in concepts_for_term:
                     concept_id = None
                     id_keys_to_try = [
                         "conceptId",
