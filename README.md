@@ -12,6 +12,9 @@ poetry install
 
 # Activate the virtual environment
 poetry shell
+
+# Download the spaCy model for Named Entity Recognition
+poetry run python -m spacy download en_core_web_sm
 ```
 
 ## Gantt chart
