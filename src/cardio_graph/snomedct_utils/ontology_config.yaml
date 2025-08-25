@@ -116,112 +116,110 @@ snomed_keywords:
 
 # This section defines the core schema (T-Box) of the ontology.
 # The new 'snomed_search_terms' key guides the intelligent, schema-aware extraction from SNOMED CT.
-core_classes:
-  # --- Abstract / Structural Classes (Generally no search terms) ---
+ontology_classes:
+  # --- Abstract / Structural Classes ---
   - name: ClinicalWorkflow
     description: Represents a multi-step clinical process from guidelines.
-    # We find examples of workflows, not the concept of a workflow itself.
     snomed_search_terms:
-      - "protocol"
-      - "pathway"
-      - "algorithm"
-      - "regimen"
+      - "treatment protocol"
+      - "clinical pathway"
+      - "management algorithm"
   - name: WorkflowStep
     description: Represents a single step in a clinical workflow.
-    # This is a structural element we create; not found in SNOMED.
   - name: Purpose
     description: The reason or goal for a clinical action.
-    # This is a structural element we infer from text; not found in SNOMED.
   - name: LogicalJunction
     description: Abstract node to represent logical groupings.
-    # This is a structural element we create; not found in SNOMED.
   - name: Conjunction
     description: Logical AND grouping of conditions.
-    # This is a structural element we create; not found in SNOMED.
   - name: Disjunction
     description: Logical OR grouping of conditions.
-    # This is a structural element we create; not found in SNOMED.
   - name: QuantitativePhenotype
-    description: A structured way to represent values with operators.
-    # This is a structural element we create; not found in SNOMED.
+    description: A structured way to represent a clinical value with an operator (e.g., LVEF < 40%).
   - name: EvidenceStatement
-    description: Reified node representing a claim or recommendation.
-    # This is a structural element we create; not found in SNOMED.
+    description: The parent class for any claim, finding, or statement made in a text. This is the core node for reification.
+    snomed_search_terms:
+      - "finding"
+      - "evidence"
+      - "observation"
+  - name: GuidelineRecommendation
+    ## REFINEMENT: This is now a more specific *type* of EvidenceStatement, not a separate top-level concept.
+    ## This makes the model more logical. A recommendation IS a type of statement.
+    description: A formal recommendation from a clinical guideline. A subclass of EvidenceStatement.
+  - name: ContrastingStatement
+    description: An evidence statement used to present contrasting or nuanced findings. A subclass of EvidenceStatement.
   - name: EvidenceSource
-    description: Source of clinical evidence.
+    description: Source of clinical evidence, like a clinical trial or meta-analysis.
     snomed_search_terms:
       - "clinical trial"
-      - "randomized controlled trial"
       - "meta-analysis"
       - "observational study"
-  - name: ContrastingStatement
-    description: Special type of evidence statement used for contrasting patterns.
-    # This is a structural element we create; not found in SNOMED.
-  - name: Guideline
-    description: A clinical guideline document.
+  - name: GuidelineSource
+    description: The guideline document itself.
     snomed_search_terms:
       - "guideline"
       - "consensus document"
-      - "recommendation for"
-  - name: Recommendation
-    description: A specific recommendation within a guideline.
-    # This is a structural element we create; not found in SNOMED.
-  - name: GuidelineRecommendation
-    description: Formal recommendation from a clinical guideline.
-    # This is a structural element we create; not found in SNOMED.
-  - name: GuidelineSource
-    description: Source of a clinical guideline or recommendation.
-    # This is a structural element we create; not found in SNOMED.
-
-  # --- Concrete Clinical Concept Classes (Rich with search terms) ---
+  - name: DosageInstruction
+    description: A structured representation of medication dosage, including titration and adjustments.
+    snomed_search_terms:
+      - "dosage"
+      - "dosing"
+      - "titration"
+  - name: TreatmentGoal
+    description: A specific therapeutic target or goal for a patient or condition (e.g., target blood pressure).
+    snomed_search_terms:
+      - "target"
+      - "goal"
+      - "therapeutic objective"
   - name: PatientPhenotype
-    description: Observable characteristic of a patient.
+    description: An observable characteristic of a patient (e.g., a symptom, sign, comorbidity).
     snomed_search_terms:
       - "finding"
       - "symptom"
       - "sign"
       - "history of"
-      - "comorbidity"
-      - "measurement"
   - name: Medication
-    description: Pharmaceutical treatment or therapy.
-    # This class is a parent; the specific therapy subclasses below are more useful for searching.
+    description: A specific drug or a class of drugs.
+    # The subclasses below provide more specific search terms.
   - name: Condition
-    description: Medical condition or disease state.
+    description: A medical disease, disorder, or diagnosis.
     snomed_search_terms:
       - "disease"
       - "disorder"
       - "syndrome"
       - "failure"
-      - "insufficiency"
-      - "stenosis"
-      - "pathology"
   - name: CardiovascularDisease
-    description: Diseases affecting the heart and blood vessels.
+    description: Diseases affecting the heart and blood vessels. A subclass of Condition.
     snomed_search_terms:
       - "myocardial infarction"
       - "heart failure"
       - "atrial fibrillation"
       - "coronary artery disease"
-      - "hypertension"
-      - "ischemic heart disease"
-      - "valvular heart disease"
   - name: ClinicalAction
-    description: A specific clinical action to be taken.
+    description: A specific action to be taken (e.g., a procedure, test, or therapy administration).
     snomed_search_terms:
       - "procedure"
       - "intervention"
-      - "administration of"
       - "assessment"
       - "monitoring"
   - name: CardiacImaging
-    description: Diagnostic imaging procedures for the heart.
+    description: Diagnostic imaging procedures for the heart. A subclass of ClinicalAction.
     snomed_search_terms:
       - "echocardiography"
       - "cardiac magnetic resonance"
-      - "cardiac MRI"
       - "coronary angiography"
-      - "computed tomography of heart"
+  # ... (The rest of your excellent, detailed clinical classes remain the same) ...
+  - name: CardiacBiomarker
+    description: Laboratory tests used to diagnose cardiac conditions.
+    snomed_search_terms:
+      - "troponin"
+      - "natriuretic peptide"
+  - name: CardiacRiskFactor
+    description: Factors that increase risk of cardiovascular disease. A subclass of PatientPhenotype.
+    snomed_search_terms:
+      - "hypertension"
+      - "hyperlipidemia"
+      - "diabetes mellitus"
   - name: CardiacBiomarker
     description: Laboratory tests used to diagnose cardiac conditions.
     snomed_search_terms:
@@ -330,240 +328,145 @@ core_classes:
 
 # This section defines the Object Properties (relationships) of the ontology.
 core_properties:
+  # --- Workflow & Action Properties ---
   - name: hasStep
     domain: ClinicalWorkflow
     range: WorkflowStep
-    description: Relates a clinical workflow to its constituent steps
-  # ... (rest of the core_properties section remains exactly the same as you provided)
+    description: Relates a clinical workflow to its constituent steps.
   - name: hasAction
     domain: WorkflowStep
     range: ClinicalAction
-    description: Relates a workflow step to the actions to be performed
+    description: Relates a workflow step to the actions to be performed.
   - name: hasPurpose
     domain: ClinicalAction
     range: Purpose
-    description: Relates a clinical action to its intended purpose
-  - name: requiresCondition
-    domain: ClinicalAction
-    range: null
-    description: Links an action to a condition that must be met
-  - name: hasOperand
-    domain: LogicalJunction
-    range: null
-    description: Links a logical junction to its operands
-  - name: contrastsWith
-    domain: EvidenceStatement
-    range: ContrastingStatement
-    description: Links an evidence statement to a contrasting statement
-  - name: isSupportedBy
-    domain: EvidenceStatement
-    range: EvidenceSource
-    description: Links an evidence statement to its supporting source
-  - name: isRecommendedIn
-    domain: ClinicalAction
-    range: Guideline
-    description: Indicates the guideline in which an action is recommended
-  - name: hasRecommendation
-    domain: Guideline
-    range: Recommendation
-    description: Links a guideline to its recommendations
-  - name: hasEvidenceLevel
-    domain: Recommendation
-    range: EvidenceLevel
-    description: Specifies the evidence level for a recommendation
-  - name: hasIndication
-    domain: Medication
-    range: Condition
-    description: Links a medication to a condition it is indicated for
-  - name: isRecommendedFor
-    domain: Medication
-    range: PatientPhenotype
-    description: Links a medication to a patient phenotype for which it is recommended
-  - name: isContraindicatedIn
-    domain: Medication
-    range: Condition
-    description: Links a medication to a condition in which it is contraindicated
-  - name: hasSource
-    domain: GuidelineRecommendation
-    range: GuidelineSource
-    description: Links a guideline recommendation to its source
-  - name: makesRecommendation
-    domain: GuidelineSource
-    range: GuidelineRecommendation
-    description: Links a guideline source to a recommendation it makes
-  - name: interactsWith
-    domain: Medication
-    range: Medication
-    description: Indicates that two medications have a drug interaction
-  - name: hasInteractionSeverity
-    domain: interactsWith
-    range: null
-    description: Severity level of a drug interaction (property of a property)
-  - name: treats
-    domain: ClinicalAction
-    range: Condition
-    description: Indicates that a clinical action treats a condition
-  - name: prevents
-    domain: ClinicalAction
-    range: Condition
-    description: Indicates that a clinical action prevents a condition
-  - name: diagnoses
-    domain: ClinicalAction
-    range: Condition
-    description: Indicates that a clinical action diagnoses a condition
-  - name: hasAlternative
-    domain: Medication
-    range: Medication
-    description: Indicates an alternative medication that can be used
-  - name: hasPrecondition
-    domain: ClinicalAction
-    range: PatientPhenotype
-    description: Patient condition that must be present before the action
+    description: Relates a clinical action to its intended purpose.
   - name: hasFollowUp
     domain: ClinicalAction
     range: ClinicalAction
-    description: Indicates a follow-up action that should be performed
+    description: Indicates a follow-up action that should be performed.
+
+  # --- Logical & Conditional Properties ---
+  - name: appliesWhen
+    domain: EvidenceStatement # Actions and Recommendations are now Statements
+    range: null # Can be PatientPhenotype or LogicalJunction
+    description: Links a statement or action to the condition(s) under which it applies.
+  - name: hasOperand
+    domain: LogicalJunction
+    range: PatientPhenotype # Making the range more specific
+    description: Links a logical junction to its constituent patient phenotypes or conditions.
+
+  # --- Evidence & Provenance Properties ---
+  - name: isSupportedBy
+    domain: EvidenceStatement
+    range: EvidenceSource
+    description: Links a statement to its supporting evidence source (e.g., a trial).
+  - name: isStatedIn
+    domain: EvidenceStatement
+    range: GuidelineSource
+    description: Links a statement to the guideline document it comes from.
+  - name: contrastsWith
+    domain: EvidenceStatement
+    range: ContrastingStatement
+    description: Links an evidence statement to a contrasting or nuanced finding.
+
+  # --- Recommendation & Treatment Properties ---
+  - name: recommends
+    domain: GuidelineRecommendation
+    range: ClinicalAction
+    description: Indicates the action or treatment that is being recommended.
+  - name: hasIndication
+    domain: Medication
+    range: Condition
+    description: Links a medication to a condition it is officially indicated for.
+  - name: isContraindicatedIn
+    domain: Medication
+    range: Condition
+    description: Links a medication to a condition in which it is contraindicated.
+  - name: hasAlternative
+    domain: ClinicalAction # Generalizing from Medication to any Action
+    range: ClinicalAction
+    description: Indicates an alternative action or medication that can be used.
+  - name: hasTreatmentGoal
+    ## REFINEMENT: New property to link a recommendation to our new TreatmentGoal class.
+    domain: GuidelineRecommendation
+    range: TreatmentGoal
+    description: Specifies the therapeutic target or goal of a recommendation.
+
+  # --- Medication-Specific Properties ---
+  - name: hasDosageInstruction
+    domain: Medication
+    range: DosageInstruction
+    description: Links a medication to its structured dosage instructions.
+  - name: interactsWith
+    domain: Medication
+    range: Medication
+    description: Indicates that two medications have a drug interaction.
   - name: isAdministeredWith
     domain: Medication
     range: Medication
-    description: Medications that are typically administered together
-  - name: isContraryTo
-    domain: Recommendation
-    range: Recommendation
-    description: Indicates that two recommendations contradict each other
-  - name: supersedes
-    domain: Guideline
-    range: Guideline
-    description: Indicates that a guideline supersedes an older one
+    description: Indicates that two medications are typically administered together.
 
 # This section defines the Datatype Properties (attributes) of the ontology.
 data_properties:
+  # --- General Metadata ---
   - name: hasSnomedId
-    domain: null
+    domain: null # Applies to any individual linked to SNOMED
     range: string
-    description: SNOMED CT identifier for a concept
-  # ... (rest of the data_properties section remains exactly the same as you provided)
-  - name: hasRxNormId
-    domain: Medication
+    description: SNOMED CT identifier for a concept.
+  - name: hasSourceText
+    ## REFINEMENT: Renamed from 'hasReference' for clarity. Stores the direct text snippet.
+    domain: EvidenceStatement
     range: string
-    description: RxNorm identifier for a medication
-  - name: hasDosage
-    domain: Medication
-    range: string
-    description: Dosage information for a medication
-  - name: hasEvidenceLevelString
-    domain: Recommendation
-    range: string
-    description: Evidence level as a string (e.g., 'Class I, Level A')
+    description: The literal text snippet from the guideline that supports the statement.
   - name: pageNumber
-    domain: null
+    domain: GuidelineSource
     range: integer
-    description: Page number where content appears in a guideline document
+    description: Page number where content appears in a guideline document.
+  - name: hasEvidenceLevel
+    ## REFINEMENT: This is an attribute of a recommendation, linking to a literal string.
+    domain: GuidelineRecommendation
+    range: string
+    description: Evidence level as a string (e.g., 'Class I, Level A').
+
+  # --- DosageInstruction Attributes (used by our new class) ---
+  - name: hasInitialDose
+    domain: DosageInstruction
+    range: string
+    description: The starting dose of a medication (e.g., '2.5 mg daily').
+  - name: hasTargetDose
+    domain: DosageInstruction
+    range: string
+    description: The target or maximum dose of a medication (e.g., '10 mg daily').
+  - name: hasTitrationSchedule
+    domain: DosageInstruction
+    range: string
+    description: Instructions for how to increase the dose over time (e.g., 'double dose every 2 weeks').
+  - name: hasAdjustmentInstruction
+    domain: DosageInstruction
+    range: string
+    description: Instructions for dose adjustments based on conditions (e.g., 'reduce by 50% if eGFR < 30').
+
+  # --- TreatmentGoal Attributes (used by our new class) ---
+  - name: hasTargetValue
+    domain: TreatmentGoal
+    range: string # Could also be float/integer depending on desired complexity
+    description: The target value for a clinical measurement (e.g., '130' for systolic BP).
+  - name: hasTargetOperator
+    domain: TreatmentGoal
+    range: string
+    description: The operator for the target (e.g., '<', '<=').
+  - name: hasTargetUnit
+    domain: TreatmentGoal
+    range: string
+    description: The unit for the target value (e.g., 'mmHg', 'mg/dL').
+
+  # --- Other Clinical Attributes ---
   - name: hasFrequency
     domain: ClinicalAction
     range: string
-    description: Frequency of a clinical action (e.g., 'daily', 'twice daily')
+    description: Frequency of a clinical action (e.g., 'daily', 'twice daily').
   - name: hasAdverseEffect
     domain: Medication
     range: string
-    description: Common adverse effect of a medication
-  - name: hasConcentration
-    domain: Medication
-    range: string
-    description: Concentration or strength of a medication
-  - name: hasPrevalence
-    domain: Condition
-    range: string
-    description: Prevalence of a condition in the population
-  - name: hasPriority
-    domain: ClinicalAction
-    range: integer
-    description: Priority level of a clinical action (1=highest)
-  - name: hasEffectiveDate
-    domain: Guideline
-    range: date
-    description: Date when the guideline became effective
-  - name: hasReference
-    domain: EvidenceStatement
-    range: string
-    description: Bibliographic reference for an evidence statement
-
-# --- Sections for defining individuals (A-Box instances) ---
-
-recommendation_levels:
-  - id: ClassI
-    description: Class I - Evidence and/or general agreement that a treatment is beneficial, useful, effective
-    short_definition: Strong recommendation for an intervention
-  # ... (rest of recommendation_levels remains the same)
-  - id: ClassIIa
-    description: Class IIa - Weight of evidence in favor of usefulness/efficacy
-    short_definition: Moderate recommendation in favor of intervention
-  - id: ClassIIb
-    description: Class IIb - Usefulness/efficacy less well established
-    short_definition: Weak recommendation in favor of intervention
-  - id: ClassIII
-    description: Class III - Evidence that treatment is not useful/effective and may be harmful
-    short_definition: Recommendation against intervention
-
-evidence_qualities:
-  - id: LevelA
-    description: Level A - Data derived from multiple randomized clinical trials or meta-analyses
-    short_definition: High quality
-  # ... (rest of evidence_qualities remains the same)
-  - id: LevelB
-    description: Level B - Data derived from a single randomized clinical trial or large non-randomized studies
-    short_definition: Moderate quality
-  - id: LevelC
-    description: Level C - Consensus of opinion of the experts and/or small studies, retrospective studies, registries
-    short_definition: Low quality
-
-combined_levels:
-  - id: ClassI_LevelA
-    label: Class I, Level A
-    recommendation_class: ClassI
-    evidence_quality: LevelA
-  # ... (rest of combined_levels remains the same)
-  - id: ClassI_LevelB
-    label: Class I, Level B
-    recommendation_class: ClassI
-    evidence_quality: LevelB
-  - id: ClassI_LevelC
-    label: Class I, Level C
-    recommendation_class: ClassI
-    evidence_quality: LevelC
-  - id: ClassIIa_LevelA
-    label: Class IIa, Level A
-    recommendation_class: ClassIIa
-    evidence_quality: LevelA
-  - id: ClassIIa_LevelB
-    label: Class IIa, Level B
-    recommendation_class: ClassIIa
-    evidence_quality: LevelB
-  - id: ClassIIa_LevelC
-    label: Class IIa, Level C
-    recommendation_class: ClassIIa
-    evidence_quality: LevelC
-  - id: ClassIIb_LevelA
-    label: Class IIb, Level A
-    recommendation_class: ClassIIb
-    evidence_quality: LevelA
-  - id: ClassIIb_LevelB
-    label: Class IIb, Level B
-    recommendation_class: ClassIIb
-    evidence_quality: LevelB
-  - id: ClassIIb_LevelC
-    label: Class IIb, Level C
-    recommendation_class: ClassIIb
-    evidence_quality: LevelC
-  - id: ClassIII_LevelA
-    label: Class III, Level A
-    recommendation_class: ClassIII
-    evidence_quality: LevelA
-  - id: ClassIII_LevelB
-    label: Class III, Level B
-    recommendation_class: ClassIII
-    evidence_quality: LevelB
-  - id: ClassIII_LevelC
-    label: Class III, Level C
-    recommendation_class: ClassIII
-    evidence_quality: LevelC
+    description: A common adverse effect of a medication.

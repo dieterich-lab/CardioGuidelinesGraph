@@ -111,12 +111,14 @@ class CardioOntologyGenerator:
         """Categorize SNOMED concepts into snomed categories using keywords from YAML config"""
         categories = {cat: [] for cat in SNOMED_CATEGORIES}
         for concept in concepts:
-            concept_uri = self.add_snomed_concept(concept)
             term = concept.get("term", "").lower()
-            for category, keyword_list in SNOMED_KEYWORDS.items():
+            for category_name, keyword_list in SNOMED_KEYWORDS.items():
                 if any(keyword in term for keyword in keyword_list):
-                    categories[category].append(concept_uri)
-                    self.g.add((concept_uri, RDFS.subClassOf, self.cgo[category]))
+                    category_class_uri = self.cgo[category_name]
+                    concept_uri = self.add_snomed_concept(
+                        concept, category_class_uri, synonyms=None
+                    )
+                    categories[category_name].append(concept_uri)
         return categories
 
     def get_type_label(self, type_id: str) -> str:
@@ -207,11 +209,10 @@ class CardioOntologyGenerator:
 
     def _init_core_structure(self):
         """Initialize the core ontology structure with specified classes and properties from YAML config"""
-        import yaml
         from rdflib.namespace import XSD
 
         # Add core classes
-        for class_entry in _config.get("core_classes", []):
+        for class_entry in _config.get("ontology_classes", []):
             class_name = class_entry["name"]
             description = class_entry.get("description", "")
             class_uri = self.cgo[class_name]
@@ -283,7 +284,7 @@ class CardioOntologyGenerator:
         )
 
         # Add core object properties
-        for prop_entry in _config.get("core_properties", []):
+        for prop_entry in _config.get("ontology_properties", []):
             prop_name = prop_entry["name"]
             domain = prop_entry.get("domain")
             range_name = prop_entry.get("range")
@@ -315,90 +316,6 @@ class CardioOntologyGenerator:
             self.g.add((prop_uri, RDFS.range, xsd_map.get(range_type, XSD.string)))
             self.properties.add(prop_name)
 
-        # Create hierarchical evidence level structure
-
-        # Create Recommendation Class structure
-        evidence_class = self.cgo["EvidenceLevel"]
-        self.g.add((evidence_class, RDF.type, OWL.Class))
-        self.g.add((evidence_class, RDFS.label, Literal("Evidence Level")))
-        self.g.add(
-            (
-                evidence_class,
-                RDFS.comment,
-                Literal("Classification of evidence strength in guidelines"),
-            )
-        )
-
-        # Create subclasses for recommendation classification and evidence quality
-        recommendation_class = self.cgo["RecommendationClass"]
-        evidence_quality_class = self.cgo["EvidenceQuality"]
-
-        self.g.add((recommendation_class, RDF.type, OWL.Class))
-        self.g.add((recommendation_class, RDFS.label, Literal("Recommendation Class")))
-        self.g.add(
-            (
-                recommendation_class,
-                RDFS.comment,
-                Literal("Classification of recommendation strength"),
-            )
-        )
-
-        self.g.add((evidence_quality_class, RDF.type, OWL.Class))
-        self.g.add((evidence_quality_class, RDFS.label, Literal("Evidence Quality")))
-        self.g.add(
-            (
-                evidence_quality_class,
-                RDFS.comment,
-                Literal("Classification of evidence quality/level"),
-            )
-        )
-
-        # Add recommendation class individuals from YAML
-        for entry in _config.get("recommendation_levels", []):
-            level_id = entry["id"]
-            description = entry.get("description", "")
-            short_def = entry.get("short_definition", "")
-            level_uri = self.cgo[level_id]
-            self.g.add((level_uri, RDF.type, recommendation_class))
-            self.g.add((level_uri, RDFS.label, Literal(level_id)))
-            self.g.add((level_uri, RDFS.comment, Literal(description)))
-            self.g.add((level_uri, self.cgo["shortDefinition"], Literal(short_def)))
-
-        # Add evidence quality individuals from YAML
-        for entry in _config.get("evidence_qualities", []):
-            level_id = entry["id"]
-            description = entry.get("description", "")
-            short_def = entry.get("short_definition", "")
-            level_uri = self.cgo[level_id]
-            self.g.add((level_uri, RDF.type, evidence_quality_class))
-            self.g.add((level_uri, RDFS.label, Literal(level_id)))
-            self.g.add((level_uri, RDFS.comment, Literal(description)))
-            self.g.add((level_uri, self.cgo["shortDefinition"], Literal(short_def)))
-
-        # Add combined evidence level individuals from YAML
-        for entry in _config.get("combined_levels", []):
-            level_id = entry["id"]
-            label = entry.get("label", "")
-            rec_class = entry.get("recommendation_class", "")
-            evidence_quality = entry.get("evidence_quality", "")
-            level_uri = self.cgo[level_id]
-            self.g.add((level_uri, RDF.type, evidence_class))
-            self.g.add((level_uri, RDFS.label, Literal(label)))
-            self.g.add(
-                (level_uri, self.cgo["hasRecommendationClass"], self.cgo[rec_class])
-            )
-            self.g.add(
-                (level_uri, self.cgo["hasEvidenceQuality"], self.cgo[evidence_quality])
-            )
-
-        # Add specialized evidence level types for different guideline systems from YAML
-        for entry in _config.get("guideline_systems", []):
-            system_id = entry["id"]
-            label = entry.get("label", "")
-            system_uri = self.cgo[f"GuidelineSystem_{system_id}"]
-            self.g.add((system_uri, RDF.type, self.cgo["GuidelineSystem"]))
-            self.g.add((system_uri, RDFS.label, Literal(label)))
-
     def extract_cardiovascular_concepts(self, limit: int = 1000) -> List[Dict]:
         """
         Extracts cardiovascular concepts from SNOMED CT by running targeted searches
@@ -416,11 +333,11 @@ class CardioOntologyGenerator:
         max_terms = 2 if debug else None
         max_concepts = 10 if debug else None
 
-        core_classes = _config.get("core_classes", [])
+        ontology_classes = _config.get("ontology_classes", [])
         if max_classes:
-            core_classes = core_classes[:max_classes]
+            ontology_classes = ontology_classes[:max_classes]
 
-        for class_entry in core_classes:
+        for class_entry in ontology_classes:
             class_name = class_entry["name"]
             search_terms = class_entry.get("snomed_search_terms")
 
@@ -486,38 +403,6 @@ class CardioOntologyGenerator:
             f"Extracted {len(all_concepts)} unique concepts using schema-aware search."
         )
         return all_concepts
-
-    def get_concept_relationships(self, concepts: List[Dict]) -> Dict[str, List[Dict]]:
-        """Get relationships for the extracted concepts"""
-        print("Retrieving concept relationships...")
-        relationships = {}
-        concept_count = len(concepts)
-        processed = 0
-
-        # Process concepts in batches to show progress
-        batch_size = 100
-
-        for i, concept in enumerate(concepts):
-            # Extract concept ID based on available fields
-            concept_id = None
-            if "conceptId" in concept:
-                concept_id = concept["conceptId"]
-            elif "id" in concept:
-                concept_id = concept["id"]
-
-            if concept_id:
-                rels = self.snomed_explorer.get_relationships(str(concept_id))
-                if rels:
-                    relationships[concept_id] = rels
-
-            processed += 1
-            if processed % batch_size == 0 or processed == concept_count:
-                print(
-                    f"Processed {processed}/{concept_count} concepts ({int(processed/concept_count*100)}%)"
-                )
-
-        print(f"Retrieved relationships for {len(relationships)} concepts")
-        return relationships
 
     def add_snomed_concept(
         self, concept: Dict, category_class: URIRef, synonyms: List[str] = None
@@ -594,6 +479,8 @@ class CardioOntologyGenerator:
             self.g.add((source_uri, rel_prop_uri, target_uri))
 
             # For IS-A, also add subClassOf
+            # Not 100% correct as individuals (in owl-terms)
+            # should not be able to sub-class themselves.
             if str(rel_type) == "116680003":
                 self.g.add((source_uri, RDFS.subClassOf, target_uri))
 
@@ -624,12 +511,6 @@ class CardioOntologyGenerator:
             relationships = self.snomed_explorer.get_relationships_in_batch(
                 concept_ids_list
             )
-
-            # --- THE FIX ---
-            # The redundant loop that was here has been REMOVED.
-            # The 'add_snomed_concept' function is now correctly called from *within* the
-            # categorization functions below, once the category is known.
-            # -----------------
 
             # Step 3: Categorize concepts. This step now ALSO adds the concepts to the graph.
             if categorization_method == "llm":
