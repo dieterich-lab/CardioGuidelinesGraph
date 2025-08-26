@@ -106,6 +106,16 @@ client<llm> Qwen25vl32bG5 {
   }
 }
 
+client<llm> Qwen8bG4_37 {
+  provider "openai-generic"
+  options {
+    base_url "http://10.250.135.153:11437/v1"
+    model qwen3:latest
+    max_tokens 10000
+    temperature 0.0
+  }
+}
+
 client<llm> Llama4 {
   provider "openai-generic"
   options {

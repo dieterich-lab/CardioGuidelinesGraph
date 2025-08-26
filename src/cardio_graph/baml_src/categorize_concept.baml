@@ -10,7 +10,7 @@ class CategorizationResult {
 }
 
 function CategorizeConcept(concept: Concept, ontology_categories: string[]) -> CategorizationResult {
-  client Qwen32b5_36
+  client Qwen8bG4_37
   prompt #"
     You are a medical ontology expert. Given the following SNOMED CT concept, assign it to one or more categories from the provided ontology category list.
     - Use your medical knowledge and the concept's term and a source class hint.
