@@ -210,80 +210,45 @@ class CardioOntologyGenerator:
         """Initialize the core ontology structure with specified classes and properties from YAML config"""
         from rdflib.namespace import XSD
 
-        # Add core classes
+        # Add core classes (first pass) & collect subclass axioms declared via YAML 'subclass_of'
+        pending_subclasses = []  # (child_name, parent_name)
+        seen = set()
         for class_entry in _config.get("ontology_classes", []):
             class_name = class_entry["name"]
+            if class_name in seen:
+                print(
+                    f"[WARN] Duplicate class definition for '{class_name}' in YAML; keeping first occurrence."
+                )
+                continue
+            seen.add(class_name)
             description = class_entry.get("description", "")
             class_uri = self.cgo[class_name]
             self.g.add((class_uri, RDF.type, OWL.Class))
             self.g.add((class_uri, RDFS.label, Literal(class_name)))
-            self.g.add((class_uri, RDFS.comment, Literal(description)))
+            if description:
+                self.g.add((class_uri, RDFS.comment, Literal(description)))
+            # Optionally treat search terms as alternative labels (synonyms)
+            for term in class_entry.get("snomed_search_terms", []) or []:
+                self.g.add((class_uri, SKOS.altLabel, Literal(term)))
+            parent = class_entry.get("subclass_of")
+            if parent:
+                pending_subclasses.append((class_name, parent))
             self.classes.add(class_name)
 
-        # Add subclass relationships (hardcoded for now, can be moved to YAML if needed)
-        self.g.add(
-            (self.cgo["Conjunction"], RDFS.subClassOf, self.cgo["LogicalJunction"])
-        )
-        self.g.add(
-            (self.cgo["Disjunction"], RDFS.subClassOf, self.cgo["LogicalJunction"])
-        )
-        self.g.add(
-            (
-                self.cgo["ContrastingStatement"],
-                RDFS.subClassOf,
-                self.cgo["EvidenceStatement"],
-            )
-        )
-        self.g.add(
-            (self.cgo["CardiovascularDisease"], RDFS.subClassOf, self.cgo["Condition"])
-        )
-        self.g.add(
-            (self.cgo["CardiacImaging"], RDFS.subClassOf, self.cgo["ClinicalAction"])
-        )
-        self.g.add(
-            (self.cgo["CardiacProcedure"], RDFS.subClassOf, self.cgo["ClinicalAction"])
-        )
-        self.g.add(
-            (
-                self.cgo["CardiacRiskFactor"],
-                RDFS.subClassOf,
-                self.cgo["PatientPhenotype"],
-            )
-        )
-        for therapy_class in [
-            "AnticoagulationTherapy",
-            "AntiplateletTherapy",
-            "LipidLoweringTherapy",
-            "AntihypertensiveTherapy",
-            "HeartFailureTherapy",
-        ]:
-            self.g.add(
-                (self.cgo[therapy_class], RDFS.subClassOf, self.cgo["ClinicalAction"])
-            )
-        self.g.add(
-            (
-                self.cgo["EmergencyCardiacCare"],
-                RDFS.subClassOf,
-                self.cgo["ClinicalWorkflow"],
-            )
-        )
-        self.g.add(
-            (
-                self.cgo["CardiacRehabilitation"],
-                RDFS.subClassOf,
-                self.cgo["ClinicalWorkflow"],
-            )
-        )
-        self.g.add(
-            (
-                self.cgo["PreventiveCardiology"],
-                RDFS.subClassOf,
-                self.cgo["ClinicalWorkflow"],
-            )
-        )
+        # Second pass: Add subclass axioms from YAML
+        for child, parent in pending_subclasses:
+            if parent not in seen:
+                print(
+                    f"[WARN] subclass_of parent '{parent}' for '{child}' not defined as a class; skipping."
+                )
+                continue
+            self.g.add((self.cgo[child], RDFS.subClassOf, self.cgo[parent]))
 
         # Add core object properties
-        for prop_entry in _config.get("ontology_properties", []):
+        object_props = (
+            _config.get("ontology_properties") or _config.get("core_properties") or []
+        )
+        for prop_entry in object_props:
             prop_name = prop_entry["name"]
             domain = prop_entry.get("domain")
             range_name = prop_entry.get("range")
