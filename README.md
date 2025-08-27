@@ -258,6 +258,20 @@ The generator creates an OWL ontology with:
 4. **Example Patterns**: Creates example workflow patterns for cardiovascular care
 5. **Evidence Structure**: Supports evidence levels and guideline recommendations
 
+Preflight validation (quick schema sanity check):
+By default a schema preflight report runs before concept extraction. It lists how many core classes, object properties, and data properties were declared vs. expected and warns about any missing subclass parents.
+
+Disable it if you need a minimal run:
+```bash
+poetry run generate-cardio-ontology --no-preflight
+```
+
+Data & datatype properties:
+Datatype properties defined in `ontology_config.yaml` under `data_properties` are now emitted as OWL DatatypeProperties with XSD ranges (string/integer/float/date/dateTime/boolean). Unknown ranges default to `xsd:string` with a warning.
+
+Dynamic SNOMED relationship properties:
+Each distinct SNOMED CT relationship type encountered is converted to an object property `cgo:snomed_rel_<typeId>` with its human‑readable label when available.
+
 Default output file: `cardio_ontology.owl` in the current directory
 
 ###### Purpose

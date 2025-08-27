@@ -198,9 +198,10 @@ class CardioOntologyGenerator:
         )
         self.g.add((self.ont_uri, OWL.versionInfo, Literal(version)))
 
-        # Track classes and properties to avoid duplicates
+        # Track classes and properties to avoid duplicates (initialize once)
         self.classes = set()
-        self.properties = set()
+        self.properties = set()  # Object properties (store URIs)
+        self.data_properties = set()  # Datatype properties (store URIs)
         self.snomed_concepts = {}  # Map from SNOMED concept ID to URI
 
         # Initialize core classes and properties
@@ -262,7 +263,49 @@ class CardioOntologyGenerator:
             rng = prop_entry.get("range")
             if rng and rng != "null" and rng in self.classes:
                 self.g.add((prop_uri, RDFS.range, self.cgo[rng]))
-            self.properties.add(prop_name)
+            self.properties.add(prop_uri)
+
+        # Datatype properties
+        datatype_map = {
+            "string": XSD.string,
+            "integer": XSD.integer,
+            "float": XSD.float,
+            "date": XSD.date,
+            "dateTime": XSD.dateTime,
+            "boolean": XSD.boolean,
+        }
+        for dprop in _config.get("data_properties", []) or []:
+            name = dprop.get("name")
+            if not name:
+                continue
+            uri = self.cgo[name]
+            self.g.add((uri, RDF.type, OWL.DatatypeProperty))
+            self.g.add((uri, RDFS.label, Literal(name)))
+            desc = dprop.get("description")
+            if desc:
+                self.g.add((uri, RDFS.comment, Literal(desc)))
+            domain = dprop.get("domain")
+            if domain and domain != "null" and domain in self.classes:
+                self.g.add((uri, RDFS.domain, self.cgo[domain]))
+            rng = dprop.get("range")
+            if rng and rng != "null":
+                rng_lower = str(rng).lower()
+                # If the range names a class, we skip because this should be an object property.
+                if rng in self.classes:
+                    print(
+                        f"[WARN] Datatype property '{name}' has class range '{rng}' – skipping range assertion (did you intend an object property?)"
+                    )
+                else:
+                    dt = datatype_map.get(rng_lower)
+                    if dt:
+                        self.g.add((uri, RDFS.range, dt))
+                    else:
+                        # Fallback: treat as string if unknown
+                        print(
+                            f"[WARN] Unknown datatype '{rng}' for data property '{name}', defaulting to xsd:string"
+                        )
+                        self.g.add((uri, RDFS.range, XSD.string))
+            self.data_properties.add(uri)
 
     def preflight_report(self):
         """Print a validation report comparing YAML schema to what was loaded into the graph."""
@@ -311,6 +354,17 @@ class CardioOntologyGenerator:
         else:
             print("All SNOMED categories have corresponding classes.")
         print("--------------------------------")
+        return {
+            "core_classes_yaml": len(cfg_classes),
+            "core_classes_loaded": len(self.classes),
+            "object_properties_yaml": len(_config.get("core_properties", [])),
+            "object_properties_loaded": len(obj_props),
+            "data_properties_yaml": len(_config.get("data_properties", [])),
+            "data_properties_loaded": len(data_props),
+            "subclass_issues": subclass_issues,
+            "missing_classes": missing,
+            "missing_categories": missing_categories,
+        }
 
     # (No mutations performed in preflight beyond report; data property declaration occurs earlier in init)
 
@@ -526,7 +580,10 @@ class CardioOntologyGenerator:
             print("--- Final Ontology Statistics ---")
             print(f"  - {len(self.classes)} core classes")
             print(f"  - {len(self.snomed_concepts)} SNOMED CT concepts")
-            print(f"  - {len(self.properties)} properties")
+            print(
+                f"  - {len(self.properties)} object properties (incl. dynamic SNOMED rel props)"
+            )
+            print(f"  - {len(self.data_properties)} data properties")
             print(f"  - {len(self.g)} total RDF triples")
 
             return True
@@ -587,8 +644,47 @@ def main():
         dest="debug_mode",
         help="Run in dev/debug mode (limit=2 for all queries)",
     )
+    parser.add_argument(
+        "--no-preflight",
+        action="store_true",
+        help="Skip preflight schema validation report.",
+    )
+    # Native BAML logging control (see BAML docs: BAML_LOG env var)
+    parser.add_argument(
+        "--baml-log-level",
+        choices=["off", "error", "warn", "info", "debug", "trace"],
+        help="Set BAML logging verbosity (native). 'warn' hides normal thinking output; 'off' hides all BAML logs.",
+    )
+    parser.add_argument(
+        "--baml-log-truncate",
+        type=int,
+        help="Truncate each BAML log chunk to N characters (sets BOUNDARY_MAX_LOG_CHUNK_CHARS).",
+    )
+    parser.add_argument(
+        "--quiet-llm",
+        action="store_true",
+        help="Convenience: equivalent to --baml-log-level warn (hide thinking, keep warnings).",
+    )
+    parser.add_argument(
+        "--silent-llm",
+        action="store_true",
+        help="Convenience: equivalent to --baml-log-level off (suppress all BAML LLM logs).",
+    )
 
     args = parser.parse_args()
+
+    # Resolve BAML logging preferences (precedence: --silent-llm > --quiet-llm > explicit level)
+    chosen_level = None
+    if args.silent_llm:
+        chosen_level = "off"
+    elif args.quiet_llm:
+        chosen_level = "warn"
+    elif args.baml_log_level:
+        chosen_level = args.baml_log_level
+    if chosen_level:
+        os.environ["BAML_LOG"] = chosen_level
+    if args.baml_log_truncate is not None:
+        os.environ["BOUNDARY_MAX_LOG_CHUNK_CHARS"] = str(args.baml_log_truncate)
 
     generator = CardioOntologyGenerator(
         output_path=args.output,
@@ -602,6 +698,8 @@ def main():
         debug_mode=args.debug_mode,
     )
 
+    if not args.no_preflight:
+        generator.preflight_report()
     generator.generate_ontology(categorization_method=args.categorization_method)
 
 
