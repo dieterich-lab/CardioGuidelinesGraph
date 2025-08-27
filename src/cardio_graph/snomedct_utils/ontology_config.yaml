@@ -98,7 +98,7 @@ snomed_keywords:
 
 # This section defines the core schema (T-Box) of the ontology.
 # The new 'snomed_search_terms' key guides the intelligent, schema-aware extraction from SNOMED CT.
-ontology_classes:
+core_classes:
   # --- Abstract / Structural Classes ---
   - name: ClinicalWorkflow
     description: Represents a multi-step clinical process from guidelines.
@@ -113,11 +113,11 @@ ontology_classes:
   - name: LogicalJunction
     description: Abstract node to represent logical groupings.
   - name: Conjunction
-  description: Logical AND grouping of conditions.
-  subclass_of: LogicalJunction
+    description: Logical AND grouping of conditions.
+    subclass_of: LogicalJunction
   - name: Disjunction
-  description: Logical OR grouping of conditions.
-  subclass_of: LogicalJunction
+    description: Logical OR grouping of conditions.
+    subclass_of: LogicalJunction
   - name: QuantitativePhenotype
     description: A structured way to represent a clinical value with an operator (e.g., LVEF < 40%).
   - name: EvidenceStatement
@@ -127,13 +127,11 @@ ontology_classes:
       - "evidence"
       - "observation"
   - name: GuidelineRecommendation
-    ## REFINEMENT: This is now a more specific *type* of EvidenceStatement, not a separate top-level concept.
-    ## This makes the model more logical. A recommendation IS a type of statement.
-  description: A formal recommendation from a clinical guideline. A subclass of EvidenceStatement.
-  subclass_of: EvidenceStatement
+    description: A formal recommendation from a clinical guideline.
+    subclass_of: EvidenceStatement
   - name: ContrastingStatement
-  description: An evidence statement used to present contrasting or nuanced findings. A subclass of EvidenceStatement.
-  subclass_of: EvidenceStatement
+    description: An evidence statement used to present contrasting or nuanced findings.
+    subclass_of: EvidenceStatement
   - name: EvidenceSource
     description: Source of clinical evidence, like a clinical trial or meta-analysis.
     snomed_search_terms:
@@ -145,6 +143,8 @@ ontology_classes:
     snomed_search_terms:
       - "guideline"
       - "consensus document"
+  - name: Guideline
+    description: A high-level clinical practice guideline entity (category for SNOMED mapping).
   - name: DosageInstruction
     description: A structured representation of medication dosage, including titration and adjustments.
     snomed_search_terms:
@@ -166,7 +166,6 @@ ontology_classes:
       - "history of"
   - name: Medication
     description: A specific drug or a class of drugs.
-    # The subclasses below provide more specific search terms.
   - name: Condition
     description: A medical disease, disorder, or diagnosis.
     snomed_search_terms:
@@ -175,8 +174,8 @@ ontology_classes:
       - "syndrome"
       - "failure"
   - name: CardiovascularDisease
-  description: Diseases affecting the heart and blood vessels. A subclass of Condition.
-  subclass_of: Condition
+    description: Diseases affecting the heart and blood vessels.
+    subclass_of: Condition
     snomed_search_terms:
       - "myocardial infarction"
       - "heart failure"
@@ -190,25 +189,12 @@ ontology_classes:
       - "assessment"
       - "monitoring"
   - name: CardiacImaging
-  description: Diagnostic imaging procedures for the heart. A subclass of ClinicalAction.
-  subclass_of: ClinicalAction
+    description: Diagnostic imaging procedures for the heart.
+    subclass_of: ClinicalAction
     snomed_search_terms:
       - "echocardiography"
       - "cardiac magnetic resonance"
       - "coronary angiography"
-  # ... (The rest of your excellent, detailed clinical classes remain the same) ...
-  - name: CardiacBiomarker
-    description: Laboratory tests used to diagnose cardiac conditions.
-    snomed_search_terms:
-      - "troponin"
-      - "natriuretic peptide"
-  - name: CardiacRiskFactor
-  description: Factors that increase risk of cardiovascular disease. A subclass of PatientPhenotype.
-  subclass_of: PatientPhenotype
-    snomed_search_terms:
-      - "hypertension"
-      - "hyperlipidemia"
-      - "diabetes mellitus"
   - name: CardiacBiomarker
     description: Laboratory tests used to diagnose cardiac conditions.
     snomed_search_terms:
@@ -217,9 +203,8 @@ ontology_classes:
       - "BNP"
       - "creatine kinase-MB"
   - name: CardiacRiskFactor
-  # DUPLICATE WARNING: This second definition duplicates 'CardiacRiskFactor'. Consider removing.
-  description: Factors that increase risk of cardiovascular disease.
-  subclass_of: PatientPhenotype
+    description: Factors that increase risk of cardiovascular disease.
+    subclass_of: PatientPhenotype
     snomed_search_terms:
       - "hypertension"
       - "hyperlipidemia"
@@ -245,7 +230,7 @@ ontology_classes:
       - "ventricular assist device"
   - name: CardiacProcedure
     description: Interventional procedures on the heart.
-  subclass_of: ClinicalAction
+    subclass_of: ClinicalAction
     snomed_search_terms:
       - "percutaneous coronary intervention"
       - "PCI"
@@ -255,7 +240,7 @@ ontology_classes:
       - "valve replacement"
   - name: AnticoagulationTherapy
     description: Therapy to prevent blood clotting.
-  subclass_of: ClinicalAction
+    subclass_of: ClinicalAction
     snomed_search_terms:
       - "anticoagulant"
       - "heparin"
@@ -266,7 +251,7 @@ ontology_classes:
       - "edoxaban"
   - name: AntiplateletTherapy
     description: Therapy to prevent platelet aggregation.
-  subclass_of: ClinicalAction
+    subclass_of: ClinicalAction
     snomed_search_terms:
       - "antiplatelet"
       - "aspirin"
@@ -275,7 +260,7 @@ ontology_classes:
       - "prasugrel"
   - name: LipidLoweringTherapy
     description: Therapy to reduce lipid levels.
-  subclass_of: ClinicalAction
+    subclass_of: ClinicalAction
     snomed_search_terms:
       - "statin"
       - "atorvastatin"
@@ -285,7 +270,7 @@ ontology_classes:
       - "PCSK9 inhibitor"
   - name: AntihypertensiveTherapy
     description: Therapy to reduce blood pressure.
-  subclass_of: ClinicalAction
+    subclass_of: ClinicalAction
     snomed_search_terms:
       - "beta blocker"
       - "ace inhibitor"
@@ -295,7 +280,7 @@ ontology_classes:
       - "diuretic"
   - name: HeartFailureTherapy
     description: Therapy specific to heart failure.
-  subclass_of: ClinicalAction
+    subclass_of: ClinicalAction
     snomed_search_terms:
       - "sacubitril / valsartan"
       - "ARNI"
@@ -307,7 +292,7 @@ ontology_classes:
       - "ivabradine"
   - name: EmergencyCardiacCare
     description: Immediate interventions for cardiac emergencies.
-  subclass_of: ClinicalWorkflow
+    subclass_of: ClinicalWorkflow
     snomed_search_terms:
       - "cardiopulmonary resuscitation"
       - "CPR"
@@ -315,13 +300,13 @@ ontology_classes:
       - "advanced cardiac life support"
   - name: CardiacRehabilitation
     description: Structured program for cardiac recovery.
-  subclass_of: ClinicalWorkflow
+    subclass_of: ClinicalWorkflow
     snomed_search_terms:
       - "cardiac rehabilitation"
       - "exercise training for heart disease"
   - name: PreventiveCardiology
     description: Approaches to prevent cardiovascular disease.
-  subclass_of: ClinicalWorkflow
+    subclass_of: ClinicalWorkflow
     snomed_search_terms:
       - "primary prevention of cardiovascular disease"
       - "secondary prevention of cardiovascular disease"

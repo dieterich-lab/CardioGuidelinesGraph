@@ -207,27 +207,28 @@ class CardioOntologyGenerator:
         self._init_core_structure()
 
     def _init_core_structure(self):
-        """Initialize the core ontology structure with specified classes and properties from YAML config"""
+        """Initialize the core ontology structure from YAML (core_classes, core_properties, data_properties)."""
         from rdflib.namespace import XSD
 
-        # Add core classes (first pass) & collect subclass axioms declared via YAML 'subclass_of'
-        pending_subclasses = []  # (child_name, parent_name)
-        seen = set()
-        for class_entry in _config.get("ontology_classes", []):
-            class_name = class_entry["name"]
+        # First pass: declare classes & collect subclass axioms
+        pending_subclasses = []  # (child, parent)
+        seen: set[str] = set()
+        for class_entry in _config.get("core_classes", []) or []:
+            class_name = class_entry.get("name")
+            if not class_name:
+                continue
             if class_name in seen:
                 print(
-                    f"[WARN] Duplicate class definition for '{class_name}' in YAML; keeping first occurrence."
+                    f"[WARN] Duplicate class definition for '{class_name}' ignored (keeping first)."
                 )
                 continue
             seen.add(class_name)
-            description = class_entry.get("description", "")
             class_uri = self.cgo[class_name]
             self.g.add((class_uri, RDF.type, OWL.Class))
             self.g.add((class_uri, RDFS.label, Literal(class_name)))
-            if description:
-                self.g.add((class_uri, RDFS.comment, Literal(description)))
-            # Optionally treat search terms as alternative labels (synonyms)
+            desc = class_entry.get("description")
+            if desc:
+                self.g.add((class_uri, RDFS.comment, Literal(desc)))
             for term in class_entry.get("snomed_search_terms", []) or []:
                 self.g.add((class_uri, SKOS.altLabel, Literal(term)))
             parent = class_entry.get("subclass_of")
@@ -235,50 +236,83 @@ class CardioOntologyGenerator:
                 pending_subclasses.append((class_name, parent))
             self.classes.add(class_name)
 
-        # Second pass: Add subclass axioms from YAML
+        # Second pass: subclass axioms
         for child, parent in pending_subclasses:
             if parent not in seen:
                 print(
-                    f"[WARN] subclass_of parent '{parent}' for '{child}' not defined as a class; skipping."
+                    f"[WARN] subclass_of parent '{parent}' for '{child}' not defined; skipping."
                 )
                 continue
             self.g.add((self.cgo[child], RDFS.subClassOf, self.cgo[parent]))
 
-        # Add core object properties
-        object_props = (
-            _config.get("ontology_properties") or _config.get("core_properties") or []
-        )
-        for prop_entry in object_props:
-            prop_name = prop_entry["name"]
-            domain = prop_entry.get("domain")
-            range_name = prop_entry.get("range")
-            description = prop_entry.get("description", "")
+        # Object properties
+        for prop_entry in _config.get("core_properties", []) or []:
+            prop_name = prop_entry.get("name")
+            if not prop_name:
+                continue
             prop_uri = self.cgo[prop_name]
             self.g.add((prop_uri, RDF.type, OWL.ObjectProperty))
             self.g.add((prop_uri, RDFS.label, Literal(prop_name)))
-            self.g.add((prop_uri, RDFS.comment, Literal(description)))
-            if domain:
+            desc = prop_entry.get("description")
+            if desc:
+                self.g.add((prop_uri, RDFS.comment, Literal(desc)))
+            domain = prop_entry.get("domain")
+            if domain and domain in self.classes:
                 self.g.add((prop_uri, RDFS.domain, self.cgo[domain]))
-            if range_name and range_name != "null":
-                self.g.add((prop_uri, RDFS.range, self.cgo[range_name]))
+            rng = prop_entry.get("range")
+            if rng and rng != "null" and rng in self.classes:
+                self.g.add((prop_uri, RDFS.range, self.cgo[rng]))
             self.properties.add(prop_name)
 
-        # Add data properties
-        for data_entry in _config.get("data_properties", []):
-            prop_name = data_entry["name"]
-            domain = data_entry.get("domain")
-            range_type = data_entry.get("range")
-            description = data_entry.get("description", "")
-            prop_uri = self.cgo[prop_name]
-            self.g.add((prop_uri, RDF.type, OWL.DatatypeProperty))
-            self.g.add((prop_uri, RDFS.label, Literal(prop_name)))
-            self.g.add((prop_uri, RDFS.comment, Literal(description)))
-            if domain and domain != "null":
-                self.g.add((prop_uri, RDFS.domain, self.cgo[domain]))
-            # Map YAML type string to rdflib XSD type
-            xsd_map = {"string": XSD.string, "integer": XSD.integer, "date": XSD.date}
-            self.g.add((prop_uri, RDFS.range, xsd_map.get(range_type, XSD.string)))
-            self.properties.add(prop_name)
+    def preflight_report(self):
+        """Print a validation report comparing YAML schema to what was loaded into the graph."""
+        cfg_classes = {
+            c.get("name") for c in _config.get("core_classes", []) if c.get("name")
+        }
+        missing = [
+            c
+            for c in cfg_classes
+            if self.cgo[c]
+            not in [s for s, _, _ in self.g.triples((None, RDF.type, OWL.Class))]
+        ]
+        subclass_issues = []
+        for c in _config.get("core_classes", []) or []:
+            parent = c.get("subclass_of")
+            if parent and parent not in cfg_classes:
+                subclass_issues.append((c["name"], parent))
+        from rdflib.namespace import OWL as _OWL
+
+        obj_props = {
+            s for s, _, _ in self.g.triples((None, RDF.type, _OWL.ObjectProperty))
+        }
+        data_props = {
+            s for s, _, _ in self.g.triples((None, RDF.type, _OWL.DatatypeProperty))
+        }
+        print("--- Preflight Schema Report ---")
+        print(f"Core classes in YAML: {len(cfg_classes)} | Loaded: {len(self.classes)}")
+        if missing:
+            print(f"[WARN] Missing class declarations for: {missing}")
+        else:
+            print("All YAML core_classes declared.")
+        if subclass_issues:
+            print("[WARN] subclass_of references missing parents:", subclass_issues)
+        print(
+            f"Object properties (core_properties): expected {len(_config.get('core_properties', []))} | Declared: {len(obj_props)}"
+        )
+        print(
+            f"Data properties: expected {len(_config.get('data_properties', []))} | Declared: {len(data_props)}"
+        )
+        # SNOMED category coverage
+        missing_categories = [c for c in SNOMED_CATEGORIES if c not in cfg_classes]
+        if missing_categories:
+            print(
+                f"[WARN] SNOMED categories not defined as classes: {missing_categories}"
+            )
+        else:
+            print("All SNOMED categories have corresponding classes.")
+        print("--------------------------------")
+
+    # (No mutations performed in preflight beyond report; data property declaration occurs earlier in init)
 
     def extract_cardiovascular_concepts(self, limit: int = 1000) -> List[Dict]:
         """
@@ -297,7 +331,7 @@ class CardioOntologyGenerator:
         max_terms = 2 if debug else None
         max_concepts = 10 if debug else None
 
-        ontology_classes = _config.get("ontology_classes", [])
+        ontology_classes = _config.get("core_classes", [])
         if max_classes:
             ontology_classes = ontology_classes[:max_classes]
 
@@ -434,12 +468,6 @@ class CardioOntologyGenerator:
 
             # Add the relationship triple
             self.g.add((source_uri, rel_prop_uri, target_uri))
-
-            # For IS-A, also add subClassOf
-            # Not 100% correct as individuals (in owl-terms)
-            # should not be able to sub-class themselves.
-            if str(rel_type) == "116680003":
-                self.g.add((source_uri, RDFS.subClassOf, target_uri))
 
             # Ensure the target class exists in the ontology
             if target_id not in self.snomed_concepts:
