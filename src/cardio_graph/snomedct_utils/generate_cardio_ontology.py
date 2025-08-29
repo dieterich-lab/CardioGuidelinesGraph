@@ -44,9 +44,21 @@ class CardioOntologyGenerator:
                 continue
 
             # Fetch all descriptions for the concept
-            all_descriptions = self.snomed_explorer.get_descriptions_for_concept(
-                concept_id
-            )
+            all_descriptions = []
+            if isinstance(concept_id, int):
+                # Only call get_descriptions_for_concept for actual SNOMED CT concept IDs
+                all_descriptions = self.snomed_explorer.get_descriptions_for_concept(
+                    concept_id
+                )
+            else:
+                # For UUID concepts, just use the term from the concept dict
+                all_descriptions = [
+                    {
+                        "term": concept.get("term", ""),
+                        "type": "PreferredTerm",
+                        "typeId": None,
+                    }
+                ]
 
             preferred_term = ""
             fsn = ""
@@ -120,7 +132,7 @@ class CardioOntologyGenerator:
                     categories[category_name].append(concept_uri)
         return categories
 
-    def get_type_label(self, type_id: str) -> str:
+    def get_type_label(self, type_id: int) -> str:
         """Lookup human-readable label for a SNOMED CT typeId."""
         result = (
             self.snomed_explorer.session.query(SnapDescription)
@@ -380,8 +392,8 @@ class CardioOntologyGenerator:
 
         # --- Debugging Setup (from your code) ---
         debug = getattr(self, "debug_mode", False)
-        use_limit = 2 if debug else 200
-        max_classes = 2 if debug else None
+        use_limit = 10 if debug else 200
+        max_classes = 10 if debug else None
         max_terms = 2 if debug else None
         max_concepts = 10 if debug else None
 
@@ -466,21 +478,26 @@ class CardioOntologyGenerator:
         # --- KEY IMPROVEMENT ---
         # Fetch the canonical preferred term directly from the explorer.
         # Do not trust the 'term' field from the initial search result.
-        preferred_term = self.snomed_explorer.get_preferred_term(concept_id)
+        preferred_term = None
+        if isinstance(concept_id, int):
+            # Only call get_preferred_term for actual SNOMED CT concept IDs
+            preferred_term = self.snomed_explorer.get_preferred_term(concept_id)
 
         # If we can't find a preferred term, fall back to the term from the search,
         # but log a warning.
         if not preferred_term:
             preferred_term = concept.get("term", f"Unknown Concept {concept_id}")
-            print(
-                f"Warning: No preferred term found for {concept_id}. Using '{preferred_term}'."
-            )
+            if isinstance(concept_id, int):
+                print(
+                    f"Warning: No preferred term found for {concept_id}. Using '{preferred_term}'."
+                )
 
         concept_uri = self.snomed[str(concept_id)]
 
-        # Declare it as an individual of the specific class from our schema.
-        self.g.add((concept_uri, RDF.type, OWL.NamedIndividual))
-        self.g.add((concept_uri, RDF.type, category_class))  # e.g., type cgo:Condition
+        # Add the concept as a Class, and make it a subclass of the given category
+        self.g.add((concept_uri, RDF.type, OWL.Class))
+        if category_class:
+            self.g.add((concept_uri, RDFS.subClassOf, category_class))
 
         # Always use the fetched preferred_term for the official label.
         self.g.add((concept_uri, RDFS.label, Literal(preferred_term)))
@@ -496,7 +513,7 @@ class CardioOntologyGenerator:
         self.snomed_concepts[concept_id] = concept_uri
         return concept_uri
 
-    def add_relationships(self, concept_id: str, relationships: List[Dict]):
+    def add_relationships(self, concept_id: int, relationships: List[Dict]):
         """Add relationships for a concept to the ontology"""
         if concept_id not in self.snomed_concepts:
             return
@@ -516,7 +533,7 @@ class CardioOntologyGenerator:
             rel_prop_uri = self.cgo[f"snomed_rel_{rel_type}"]
             if rel_prop_uri not in self.properties:
                 self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
-                rel_name = self.get_type_label(str(rel_type))
+                rel_name = self.get_type_label(rel_type)
                 self.g.add((rel_prop_uri, RDFS.label, Literal(rel_name)))
                 self.properties.add(rel_prop_uri)
 
@@ -547,9 +564,6 @@ class CardioOntologyGenerator:
 
             # Step 2: Extract all relationship data for the found concepts in a single batch
             concept_ids_list = [c["conceptId"] for c in concepts if "conceptId" in c]
-            relationships = self.snomed_explorer.get_relationships_in_batch(
-                concept_ids_list
-            )
 
             # Step 3: Categorize concepts. This step now ALSO adds the concepts to the graph.
             if categorization_method == "llm":
@@ -565,12 +579,31 @@ class CardioOntologyGenerator:
             for category, uris in categories.items():
                 print(f"  - {category}: {len(uris)} concepts")
 
-            # Step 4: Add all the relationships between the concepts we just added.
-            print("--- Adding Relationships ---")
-            for concept_id, rels in relationships.items():
-                self.add_relationships(
-                    str(concept_id), rels
-                )  # Ensure concept_id is a string
+            # Step 3: Extract all relationship data for the found concepts
+            concept_ids_list = [c["conceptId"] for c in concepts if "conceptId" in c]
+
+            print("--- Fetching Outgoing Relationships ---")
+            outgoing_relationships = (
+                self.snomed_explorer.get_outgoing_relationships_in_batch(
+                    concept_ids_list
+                )
+            )
+            print("--- Fetching Incoming Relationships ---")
+            incoming_relationships = (
+                self.snomed_explorer.get_incoming_relationships_in_batch(
+                    concept_ids_list
+                )
+            )
+
+            # Merge the two dictionaries into a single, unified structure
+            all_relationships = outgoing_relationships.copy()
+            for source_id, rels in incoming_relationships.items():
+                all_relationships[source_id].extend(rels)
+
+            # Step 4: Add all relationships using a single, simple loop
+            print("--- Adding All Relationships ---")
+            for concept_id, rels in all_relationships.items():
+                self.add_relationships(concept_id, rels)
 
             # Save the ontology to file
             self.g.serialize(destination=self.output_path, format="xml")

@@ -155,7 +155,7 @@ class SnomedExplorer:
         )
         return unique_concepts
 
-    def get_relationships(self, concept_id: str) -> List[Dict[str, Any]]:
+    def get_relationships(self, concept_id: int) -> List[Dict[str, Any]]:
         """
         Get relationships for a specific concept using snap_relationship table only.
         Returns list of dicts with keys: typeId, destinationId, sourceId, id, active
@@ -173,11 +173,12 @@ class SnomedExplorer:
             return [r.__dict__ for r in results]
         return []
 
-    def get_relationships_in_batch(
-        self, concept_ids: List[Dict]
-    ) -> Dict[str, List[Dict]]:
+    def get_outgoing_relationships_in_batch(
+        self, concept_ids: List[int]
+    ) -> Dict[int, List[Dict]]:
         """
-        Efficiently fetches all relationships for a list of concept IDs in a single query.
+        Efficiently fetches all outgoing relationships for a list of concept IDs in a single query.
+        This finds all triples where the given concepts are the *source* (subject).
         """
         if not self.session or not concept_ids:
             return {}
@@ -191,7 +192,30 @@ class SnomedExplorer:
         # Group the results by sourceId
         relationships_map = defaultdict(list)
         for rel in results:
-            relationships_map[str(rel.sourceId)].append(rel.__dict__)
+            relationships_map[rel.sourceId].append(rel.__dict__)
+
+        return relationships_map
+
+    def get_incoming_relationships_in_batch(
+        self, concept_ids: List[int]
+    ) -> Dict[int, List[Dict]]:
+        """
+        Efficiently fetches all *incoming* relationships for a list of concept IDs,
+        but groups them by their SOURCE ID to allow for easy merging.
+        """
+        if not self.session or not concept_ids:
+            return {}
+
+        results = (
+            self.session.query(SnapRelationship)
+            .filter(SnapRelationship.destinationId.in_(concept_ids))
+            .all()
+        )
+
+        # Group the results by sourceId to create a unified structure
+        relationships_map = defaultdict(list)
+        for rel in results:
+            relationships_map[rel.sourceId].append(rel.__dict__)
 
         return relationships_map
 
@@ -435,7 +459,7 @@ class SnomedExplorer:
                 return []
 
     def get_descriptions_for_concept(
-        self, concept_id: str, lang: str = "en"
+        self, concept_id: int, lang: str = "en"
     ) -> List[Dict[str, Any]]:
         """
         Retrieves all active descriptions (FSN, Synonyms, etc.) for a given concept ID.
@@ -488,7 +512,7 @@ class SnomedExplorer:
             print(f"Error fetching descriptions for concept {concept_id}: {e}")
             return []
 
-    def get_preferred_term(self, concept_id: str) -> Optional[str]:
+    def get_preferred_term(self, concept_id: int) -> Optional[str]:
         """
         Fetches the single, canonical Preferred Term for a given concept ID.
         """
@@ -592,8 +616,15 @@ def main():
                     print("No cardiovascular guideline concepts found")
 
             elif choice == "6":
-                concept_id = input("Enter concept ID: ")
-                results = explorer.get_relationships(concept_id)
+                concept_id_str = input("Enter concept ID: ")
+                try:
+                    concept_id = int(concept_id_str)
+                    results = explorer.get_relationships(concept_id)
+                except ValueError:
+                    print(
+                        f"Invalid concept ID: {concept_id_str}. Please enter a valid integer."
+                    )
+                    continue
 
                 if results:
                     df = pd.DataFrame(results)
