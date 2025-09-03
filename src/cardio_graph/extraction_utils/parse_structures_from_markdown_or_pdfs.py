@@ -12,7 +12,7 @@ from langchain_text_splitters import MarkdownTextSplitter
 
 sys.path.append("..")  # isort:skip
 
-from baml_client.sync_client import b  # isort:skip
+from cardio_graph.baml_client.sync_client import b  # isort:skip
 
 # Configure logging
 logging.basicConfig(
@@ -198,6 +198,61 @@ def process_pdf_directory(pdf_dir: str, output_dir: str) -> None:
     return None
 
 
+def process_markdown_directory(markdown_dir: str, output_dir: str, tables: bool) -> None:
+    """Process all markdown files in a directory, saving results for each file separately."""
+    if not os.path.exists(markdown_dir):
+        logger.error(f"Directory not found: {markdown_dir}")
+        return None
+
+    markdown_files = [f for f in os.listdir(markdown_dir) if f.lower().endswith(".md")]
+    if not markdown_files:
+        logger.warning(f"No markdown files found in: {markdown_dir}")
+        return None
+
+    # Create a subdirectory based on input directory name
+    input_dir_name = Path(markdown_dir).name
+    subdir_path = os.path.join(output_dir, input_dir_name)
+    ensure_directory_exists(subdir_path)
+
+    logger.info(f"Found {len(markdown_files)} markdown files")
+
+    with click.progressbar(markdown_files, label="Processing markdown files") as files:
+        for md_file in files:
+            md_path = os.path.join(markdown_dir, md_file)
+            results = process_single_markdown(md_path, tables)
+
+            if results:
+                # Save results for this specific markdown file
+                filename = f"{Path(md_file).stem}.json"
+                save_results(results, subdir_path, filename)
+                logger.info(f"Saved {len(results)} structures for {md_file}")
+            else:
+                logger.warning(f"No structures found in {md_file}")
+
+    return None
+
+
+def process_single_markdown(md_path: str, tables: bool) -> list:
+    """Process a single markdown file and return extracted structure results."""
+    if not os.path.exists(md_path):
+        logger.error(f"Markdown file not found: {md_path}")
+        return []
+
+    logger.info(f"Processing markdown: {md_path}")
+
+    with open(md_path, "r") as f:
+        markdown_content = f.read()
+
+    if not tables:
+        markdown_splitter = MarkdownTextSplitter()
+        chunks = markdown_splitter.split_text(markdown_content)
+        results = process_files(chunks)
+    else:
+        results = parse_structures_from_chunk(markdown_content)
+
+    return results
+
+
 def process_files(chunks: list) -> list:
     """Process a list of markdown chunks and return all extracted structures."""
     all_results = []
@@ -224,8 +279,17 @@ def cli():
     default="/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/markdown/esc_ccs.md",
     help="Path to markdown file.",
 )
+@click.option(
+    "--output-dir",
+    help="Output directory for results.",
+)
 @click.option("--verbose", is_flag=True, help="Enable verbose output")
-def parse_structures_from_markdown(path: str, verbose: bool) -> None:
+@click.option(
+    "--tables", is_flag=True, help="If these are tables extracted from docling"
+)
+def parse_structures_from_markdown(
+    path: str, output_dir: str, verbose: bool, tables: bool
+) -> None:
     """Parse markdown files and save extracted structures as JSON files."""
     if verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -239,21 +303,26 @@ def parse_structures_from_markdown(path: str, verbose: bool) -> None:
             with open(path, "r") as f:
                 markdown_content = f.read()
 
-            markdown_splitter = MarkdownTextSplitter()
-            chunks = markdown_splitter.split_text(markdown_content)
-            results = process_files(chunks)
+            if not tables:
+                markdown_splitter = MarkdownTextSplitter()
+                chunks = markdown_splitter.split_text(markdown_content)
+                results = process_files(chunks)
+            else:
+                results = parse_structures_from_chunk(markdown_content)
+
+            if not output_dir:
+                output_dir = (
+                    Path(path.replace("markdown", "structures")).parent / "from_markdown"
+                )
+
+            save_results(results, str(output_dir), f"{Path(path).stem}.json")
+            logger.info(f"Found {len(results)} total structures")
         else:
-            logger.error(
-                f"Directory processing not supported for markdown command: {path}"
-            )
-            return
-
-        output_dir = (
-            Path(path.replace("markdown", "structures")).parent / "from_markdown"
-        )
-
-        save_results(results, str(output_dir), f"{Path(path).stem}.json")
-        logger.info(f"Found {len(results)} total structures")
+            if not output_dir:
+                output_dir = str(
+                    Path(path.replace("markdown", "structures")).parent / "from_markdown"
+                )
+            process_markdown_directory(path, output_dir, tables)
 
     except Exception as e:
         logger.error(f"Error during markdown parsing: {e}")
