@@ -198,7 +198,9 @@ def process_pdf_directory(pdf_dir: str, output_dir: str) -> None:
     return None
 
 
-def process_markdown_directory(markdown_dir: str, output_dir: str, tables: bool) -> None:
+def process_markdown_directory(
+    markdown_dir: str, output_dir: str, tables: bool
+) -> None:
     """Process all markdown files in a directory, saving results for each file separately."""
     if not os.path.exists(markdown_dir):
         logger.error(f"Directory not found: {markdown_dir}")
@@ -312,7 +314,8 @@ def parse_structures_from_markdown(
 
             if not output_dir:
                 output_dir = (
-                    Path(path.replace("markdown", "structures")).parent / "from_markdown"
+                    Path(path.replace("markdown", "structures")).parent
+                    / "from_markdown"
                 )
 
             save_results(results, str(output_dir), f"{Path(path).stem}.json")
@@ -320,7 +323,8 @@ def parse_structures_from_markdown(
         else:
             if not output_dir:
                 output_dir = str(
-                    Path(path.replace("markdown", "structures")).parent / "from_markdown"
+                    Path(path.replace("markdown", "structures")).parent
+                    / "from_markdown"
                 )
             process_markdown_directory(path, output_dir, tables)
 
@@ -331,12 +335,12 @@ def parse_structures_from_markdown(
 @cli.command("pdf")
 @click.option(
     "--path",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/esc_ccs.pdf",
+    default="/prj/doctoral_letters/guide/data/guidelines/pdf/pages",
     help="Path to PDF file or directory containing PDF files.",
 )
 @click.option(
     "--output-dir",
-    default="/home/pwiesenbach/CardioGuidelinesGraph/src/data/guidelines/structures/from_pdf_images",
+    default="/prj/doctoral_letters/guide/data/guidelines/structures/from_pdf_images",
     help="Output directory for results.",
 )
 @click.option("--verbose", is_flag=True, help="Enable verbose output")

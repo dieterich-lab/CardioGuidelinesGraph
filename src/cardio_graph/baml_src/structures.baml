@@ -13,7 +13,8 @@ class ListOfStructuralData {
 }
 
 function Image2Structure(img: image) -> ListOfStructuralData {
-  client Qwen25vl32bG5 // will be switched for Qwen25vl72 when 3 x A100 are ready 
+  // client Qwen25vl32bG5
+  client Qwen25vl72bG5
   prompt #"
     The following image comes from a medical guideline about cardiovascular diseases.
     If you detect a table:
