@@ -1,10 +1,18 @@
 // Learn more about clients at https://docs.boundaryml.com/docs/snippets/clients/overview
 
-client<llm> CustomGPT4o {
+client<llm> GPT41Nano {
   provider openai
   options {
-    model "gpt-4o"
-    api_key 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
+    model "gpt-4.1-nano"
+    api_key env.KG_GENERATOR_API_KEY_FIRST
+  }
+}
+
+client<llm> GPT5 {
+  provider openai
+  options {
+    model "gpt-5"
+    api_key env.KG_GENERATOR_API_KEY_FIRST
   }
 }
 
