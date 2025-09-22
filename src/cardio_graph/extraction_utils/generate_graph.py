@@ -1,4 +1,4 @@
-from baml_client.sync_client import b  # isort:skip
+from cardio_graph.baml_client.sync_client import b  # isort:skip
 import os
 
 output_path = "/prj/doctoral_letters/guide/outputs2/baml_output"
@@ -35,9 +35,9 @@ def test(text):
 def main(text):
     # response = b.EasyFormatting(text)
     response = b.FormattedFacts(text)
-    nested = b.PrototypeNester(sentences=response, original=text)
-    triples = b.Hypergrapher(nested)
-    print(triples)
+    # nested = b.PrototypeNester(sentences=response, original=text)
+    # triples = b.Hypergrapher(nested)
+    # print(triples)
 
 
 if __name__ == "__main__":
