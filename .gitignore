@@ -3,12 +3,14 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,linux
 data2/
 data/
+outputs/
 outputs2/
 baml_client/
 slurm/
 .ipynb_checkpoints/
 .mypy_cache/
 
+*.log
 *.drawio
 *.txt
 *.faiss
