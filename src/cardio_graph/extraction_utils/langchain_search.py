@@ -10,13 +10,13 @@ from query_copy import (
     UnReificator,
     pretty_print_logic_analysis,
 )
-from vectorrag import (
+from rag_utils.vectorrag import (
     initialize_vector_rag,
     v_rag_query,
     print_v_rag_list,
     strip_thinking,
 )
-from baml_client.sync_client import b
+from cardio_graph.baml_client.sync_client import b
 from baml_py import ClientRegistry
 
 
