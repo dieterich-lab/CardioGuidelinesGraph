@@ -32,7 +32,8 @@ gantt
     KG Construction:crit, m3, 2025-04-30, 100d
     Evaluation and RAG(if possible at this point):crit, m3, 2025-06-30, 40d
     Progress meeting with Prof.Dieterich:milestone, crit, 2025-08-01, 1d
-    Prototype Full ESC CCS Guidelines KG:crit, m3, 2025-08-01, 30d
+    Prototype Full ESC CCS Guidelines KG:crit, m3, 2025-08-01, 54d
+    Table, Flowchart, Ontology and SNOMED inclusive KG:crit, m3, 2025-09-23, 50d
    
 ```
 
