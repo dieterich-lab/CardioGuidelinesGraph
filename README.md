@@ -206,6 +206,29 @@ Generate a knowledge graph from text content.
 poetry run generate-graph "Your text here"
 ```
 
+#### API BAML Scripts (`api-baml-scripts`)
+
+Process markdown files in batches to extract triples and generate Cypher statements for Neo4j using configurable LLM models.
+
+**Command Line Usage:**
+```bash
+# Use default model (Qwen32b5 on g5)
+poetry run python src/cardio_graph/extraction_utils/api_baml_scripts.py
+
+# Specify custom model and node
+poetry run python src/cardio_graph/extraction_utils/api_baml_scripts.py --model Qwen14b5 --node g4
+
+# Use custom directories
+poetry run python src/cardio_graph/extraction_utils/api_baml_scripts.py --model Gemma --input-dir /path/to/input --output-dir /path/to/output
+```
+
+**Features:**
+- Batch processing of markdown files
+- Automatic Cypher generation from extracted triples
+- Direct Neo4j database insertion
+- Configurable model selection via ClientRegistry
+- Error handling and retry logic
+
 #### Query Interpretation (`query`)
 
 Use the query interpreter to interact with the knowledge graph.

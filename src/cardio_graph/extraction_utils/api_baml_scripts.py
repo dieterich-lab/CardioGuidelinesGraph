@@ -1,10 +1,18 @@
-import os, time, logging
+import logging
+import os
+import time
 from pathlib import Path
-from cardio_graph.baml_client.sync_client import b  # isort:skip
+from typing import Optional
+
+import click
+
+from cardio_graph.extraction_utils.clients import create_client_registry
 from cardio_graph.neo4j_utils.baml_to_cypher import (
-    triples_to_cypher,
     execute_baml_cypher_dev1,
+    triples_to_cypher,
 )
+
+from cardio_graph.baml_client.sync_client import b  # isort:skip
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,12 +72,15 @@ def main(text):
     return
 
 
-def safe_call_APITotalConverter(text, retries=3, delay=2):
+def safe_call_APITotalConverter(text: str, client_registry=None, retries=3, delay=2):
     for attempt in range(1, retries + 1):
         start = time.time()
         try:
             logging.info(f"Attempt {attempt} - calling APITotalConverter")
-            result = b.APITotalConverter(text)
+            baml_options = (
+                {"client_registry": client_registry} if client_registry else {}
+            )
+            result = b.APITotalConverter(text, baml_options=baml_options)
             duration = time.time() - start
             logging.info(f"Attempt {attempt} succeeded in {duration:.2f} seconds")
             return result
@@ -86,7 +97,7 @@ def safe_call_APITotalConverter(text, retries=3, delay=2):
             time.sleep(delay)
 
 
-def OneFunction(text, file_id=None, output_path=output_path):
+def OneFunction(text, file_id=None, output_path=output_path, client_registry=None):
     """
     This function takes a text input, processes it to extract triples using the BAML OPEN-AI-API,
     Then converts these triples into Cypher statements, writes them to a file,
@@ -97,7 +108,7 @@ def OneFunction(text, file_id=None, output_path=output_path):
 
     logging.info(f"Calling LLM for text ID: {file_id}")
 
-    triples = safe_call_APITotalConverter(text=text)
+    triples = safe_call_APITotalConverter(text=text, client_registry=client_registry)
 
     print("Extracted Triples \ngenerating cypher statements")
     logging.info(f"Extracted triples. Generating Cypher statements.")
@@ -117,7 +128,7 @@ def OneFunction(text, file_id=None, output_path=output_path):
     return
 
 
-def chunk_md_folder_wrapper(md_dir: Path, out_dir: Path):
+def chunk_md_folder_wrapper(md_dir: Path, out_dir: Path, client_registry=None):
     out_dir.mkdir(parents=True, exist_ok=True)
     counter = 1
     for md_file in sorted(md_dir.glob("*.md")):
@@ -130,7 +141,12 @@ def chunk_md_folder_wrapper(md_dir: Path, out_dir: Path):
             print(text)
             print("LLM processing")
             logging.info(f"Processing file {md_file.name} (#{counter})")
-            OneFunction(text, file_id=f"{counter:03d}", output_path=out_dir)
+            OneFunction(
+                text,
+                file_id=f"{counter:03d}",
+                output_path=str(out_dir),
+                client_registry=client_registry,
+            )
             logging.info(f"Completed file {md_file.name} (#{counter})")
             print(counter)
         counter += 1
@@ -141,21 +157,54 @@ def ChunkAndRoll():
     return
 
 
+@click.command()
+@click.option(
+    "--model",
+    default="Qwen32b5",
+    help="Model name to use for processing (e.g., Qwen32b5, Gemma, GPT4oMini)",
+)
+@click.option(
+    "--node",
+    type=click.Choice(["g2", "g3", "g4", "g5"]),
+    default="g5",
+    help="Node identifier for Ollama models",
+)
+@click.option(
+    "--port",
+    type=int,
+    help="Custom port number (overrides default node port)",
+)
+@click.option(
+    "--input-dir",
+    default="/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/chunks/text_chunks",
+    help="Input directory containing markdown files",
+)
+@click.option(
+    "--output-dir",
+    default="/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/md_to_cypher",
+    help="Output directory for generated Cypher files",
+)
+def process_markdown_files(model, node, port, input_dir, output_dir):
+    """Process markdown files in batches to extract triples and generate Cypher statements."""
+    try:
+        # Create client registry
+        cr = create_client_registry(model, node, port)
+        click.echo(f"Using model: {model} on node: {node}")
+
+        md_dir = Path(input_dir)
+        out_dir = Path(output_dir)
+
+        # Process files with client registry
+        chunk_md_folder_wrapper(md_dir=md_dir, out_dir=out_dir, client_registry=cr)
+        click.echo("Processing completed successfully!")
+
+    except ValueError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise click.Abort()
+    except Exception as e:
+        click.echo(f"Unexpected error: {e}", err=True)
+        raise click.Abort()
+
+
 if __name__ == "__main__":
-    md_dir = Path(
-        "/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/chunks/text_chunks"
-    )
-    out_dir = Path(
-        "/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/md_to_cypher"
-    )
-    # print(medium_text)
-    # OneFunction(paragraph)
-    # OneFunction(medium_text)
-    # execute_baml_cypher_dev1(
-    #     os.path.join(output_path, f"baml_cypher_output{paragraph[0:4]}.txt")
-    # )
-    chunk_md_folder_wrapper(
-        md_dir=md_dir,
-        out_dir=out_dir,
-    )
-    print(" Done ")
+    process_markdown_files()
