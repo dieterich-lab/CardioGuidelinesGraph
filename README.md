@@ -15,6 +15,10 @@ poetry shell
 
 # Download the spaCy model for Named Entity Recognition
 poetry run python -m spacy download en_core_web_sm
+
+# Download the scispaCy biomedical models for sentence splitting and entity grounding
+poetry run pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_lg-0.5.4.tar.gz
+poetry run pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_ner_bc5cdr_md-0.5.4.tar.gz
 ```
 
 ## Gantt chart
@@ -134,6 +138,54 @@ poetry run parse-structures markdown --path /path/to/file.md
 
 # Enable verbose output
 poetry run parse-structures pdf --verbose --path /path/to/file.pdf
+```
+
+#### Entity Grounding Service (`entity-grounding-service`)
+
+Ground entities in text to SNOMED CT ontology concepts using Whoosh indexing and scispaCy biomedical NER.
+
+**Programmatic Usage:**
+```python
+from src.cardio_graph.extraction_utils.entity_grounding_service import EntityGroundingService
+
+# Initialize with default paths
+egs = EntityGroundingService()
+
+# Or specify custom paths
+egs = EntityGroundingService(
+    ontology_path="/prj/doctoral_letters/guide/data/ontologies/cardio_ontology.owl",
+    index_path="/prj/doctoral_letters/guide/data/egs_index"
+)
+
+# Ground entities in text
+entities = egs.ground("HFrEF patients need SGLT2 inhibitors")
+```
+
+**Command Line Usage:**
+```bash
+# Ground entities in text
+poetry run python src/cardio_graph/extraction_utils/entity_grounding_service.py --ontology-path data/ontologies/cardio_ontology.owl ground "Text to ground"
+
+# Use different ontology
+poetry run python src/cardio_graph/extraction_utils/entity_grounding_service.py --ontology-path /path/to/other.owl ground "Text to ground"
+
+# Enable verbose logging
+poetry run python src/cardio_graph/extraction_utils/entity_grounding_service.py --verbose --ontology-path data/ontologies/cardio_ontology.owl ground "Text to ground"
+```
+
+#### Sentence Splitter (`sentence-splitter`)
+
+Split text into sentences or chunks using ScispaCy or LangChain for biomedical text processing.
+
+```bash
+# Split text into sentences using ScispaCy (default)
+poetry run python src/cardio_graph/parsing_utils/sentence_splitter.py --input-file /path/to/text.txt --output-dir /path/to/output
+
+# Use LangChain chunking instead
+poetry run python src/cardio_graph/parsing_utils/sentence_splitter.py --splitter langchain --chunk-size 500 --chunk-overlap 50 --input-file /path/to/text.txt --output-dir /path/to/output
+
+# Use custom input/output paths
+poetry run python src/cardio_graph/parsing_utils/sentence_splitter.py --input-file data/guidelines/text/esc_ccs.txt --output-dir data/guidelines/sentences
 ```
 
 #### Text Extraction (`extract`)
