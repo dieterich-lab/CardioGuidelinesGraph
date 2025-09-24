@@ -10,22 +10,19 @@ This service performs the following steps:
     spaCy, and links them to the concepts in the ontology via the search index.
 
 Installation:
-pip install rdflib spacy whoosh
+pip install rdflib spacy whoosh scispacy
 python -m spacy download en_core_web_sm
+pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_ner_bc5cdr_md-0.5.4.tar.gz
 """
 
 import os
 from dataclasses import dataclass, field
 from typing import Dict, Iterator, List, Tuple
 
-# RDF and Ontology Parsing
+import click
 import rdflib
-
-# Named Entity Recognition
 import spacy
 from rdflib.namespace import OWL, RDF, RDFS, SKOS
-
-# Full-Text Search Indexing
 from whoosh import index
 from whoosh.fields import STORED, TEXT, Schema
 from whoosh.qparser import OrGroup, QueryParser
@@ -44,13 +41,19 @@ class GroundedEntity:
 
 
 class EntityGroundingService:
-    def __init__(self, ontology_path: str, index_path: str = "egs_index"):
+    def __init__(
+        self,
+        ontology_path: str = "/prj/doctoral_letters/guide/data/ontologies/cardio_ontology.owl",
+        index_path: str = "/prj/doctoral_letters/guide/data/egs_index",
+        rebuild_index: bool = False,
+    ):
         """
         Initializes the Entity Grounding Service.
 
         Args:
-            ontology_path: Path to the .owl ontology file.
-            index_path: Directory where the Whoosh search index will be stored.
+            ontology_path: Path to the .owl ontology file. Defaults to the cardio ontology.
+            index_path: Directory where the Whoosh search index will be stored. Defaults to egs_index.
+            rebuild_index: If True, force rebuild the index even if it exists.
         """
         if not os.path.exists(ontology_path):
             raise FileNotFoundError(f"Ontology file not found at: {ontology_path}")
@@ -58,12 +61,16 @@ class EntityGroundingService:
         self.ontology_path = ontology_path
         self.index_path = index_path
 
-        print("Loading spaCy NER model...")
-        # Using a small, efficient model. For higher accuracy, 'en_core_web_trf' could be used.
-        self.nlp = spacy.load("en_core_web_sm")
+        print("Loading spaCy NER model (scispaCy biomedical model)...")
+        # Using a biomedical NER model for better medical entity recognition
+        self.nlp = spacy.load("en_ner_bc5cdr_md")
 
-        if not os.path.exists(self.index_path) or not index.exists_in(self.index_path):
-            print(f"Index not found at '{self.index_path}'. Building a new one...")
+        if (
+            rebuild_index
+            or not os.path.exists(self.index_path)
+            or not index.exists_in(self.index_path)
+        ):
+            print(f"Building/rebuilding index at '{self.index_path}'...")
             self._build_index()
         else:
             print(f"Loading existing index from '{self.index_path}'...")
@@ -73,10 +80,18 @@ class EntityGroundingService:
     def _parse_ontology(self) -> Iterator[Dict]:
         """
         Parses the OWL file and yields a dictionary for each named individual.
+        Includes validation to ensure the ontology has expected structure.
         """
         print(f"Parsing ontology file: {self.ontology_path}...")
         g = rdflib.Graph()
         g.parse(self.ontology_path)
+
+        # Validate ontology structure
+        individuals = list(g.subjects(RDF.type, OWL.NamedIndividual))
+        if not individuals:
+            raise ValueError(
+                "Ontology does not contain any NamedIndividuals. Check the ontology file."
+            )
 
         # This SPARQL query is the heart of the parsing step. It finds all individuals
         # and gathers their label, type, and all alternative labels (synonyms).
@@ -98,6 +113,11 @@ class EntityGroundingService:
 
         results = g.query(query)
         print(f"Found {len(results)} individuals in the ontology.")
+
+        if len(results) == 0:
+            print(
+                "Warning: No individuals with labels and types found. Ontology may be incomplete."
+            )
 
         for row in results:
             yield {
@@ -141,6 +161,8 @@ class EntityGroundingService:
                 content=content_string,
             )
             count += 1
+            if count % 100 == 0:
+                print(f"Processed {count} concepts...")
 
         print(f"Committing {count} documents to the index...")
         writer.commit()
@@ -152,6 +174,8 @@ class EntityGroundingService:
         """
         grounded_entities = []
         doc = self.nlp(text)
+
+        print(f"Processing text with {len(doc.ents)} detected entities...")
 
         with self.ix.searcher() as searcher:
             # We parse queries against the 'content' field, which has all text
@@ -177,48 +201,122 @@ class EntityGroundingService:
                         score=top_hit.score,
                     )
                     grounded_entities.append(grounded)
+                    print(
+                        f"Grounded '{ent.text}' to '{top_hit['label']}' (score: {top_hit.score:.2f})"
+                    )
+                else:
+                    print(f"No match found for entity '{ent.text}'")
 
+        print(f"Grounding complete. Found {len(grounded_entities)} grounded entities.")
         return grounded_entities
 
 
-# --- Main block to demonstrate and test the service ---
-if __name__ == "__main__":
+# --- CLI using Click ---
+@click.group()
+@click.option(
+    "--ontology-path",
+    default="/prj/doctoral_letters/guide/data/ontologies/cardio_ontology.owl",
+    help="Path to the OWL ontology file.",
+)
+@click.option(
+    "--index-path",
+    default="egs_index",
+    help="Directory where the Whoosh search index will be stored.",
+)
+@click.option(
+    "--rebuild-index",
+    is_flag=True,
+    help="Force rebuild the search index even if it exists.",
+)
+@click.option(
+    "--verbose",
+    is_flag=True,
+    help="Enable verbose logging.",
+)
+@click.pass_context
+def cli(ctx, ontology_path, index_path, rebuild_index, verbose):
+    """Entity Grounding Service CLI."""
+    ctx.ensure_object(dict)
+    ctx.obj["ontology_path"] = ontology_path
+    ctx.obj["index_path"] = index_path
+    ctx.obj["rebuild_index"] = rebuild_index
+    ctx.obj["verbose"] = verbose
+
+
+@cli.command()
+@click.argument("text")
+@click.pass_context
+def ground(ctx, text):
+    """Ground entities in the provided text."""
+    try:
+        egs = EntityGroundingService(
+            ontology_path=ctx.obj["ontology_path"],
+            index_path=ctx.obj["index_path"],
+            rebuild_index=ctx.obj["rebuild_index"],
+        )
+        found_entities = egs.ground(text)
+
+        if not found_entities:
+            click.echo("No entities were grounded.")
+        else:
+            for entity in found_entities:
+                click.echo(
+                    f"Mention: '{entity.mention}' -> ID: {entity.id}, Label: '{entity.label}', Type: {entity.type}, Score: {entity.score:.2f}"
+                )
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
+
+def demo():
+    """Demo/Main Block: Provides a working example with sample text, making it easy to test. It checks for the ontology file and handles missing files gracefully."""
     # Define paths to your files
-    ONTOLOGY_FILE = "cardio_ontology.owl"
-    INDEX_DIR = "egs_index"
+    ONTOLOGY_FILE = "/prj/doctoral_letters/guide/data/ontologies/cardio_ontology.owl"
+    INDEX_DIR = "/prj/doctoral_letters/guide/data/egs_index"
 
     # Check if the ontology file exists
     if not os.path.exists(ONTOLOGY_FILE):
         print(f"ERROR: Ontology file '{ONTOLOGY_FILE}' not found.")
         print("Please run the ontology generator script first to create it.")
+        return
+
+    # 1. Initialize the service. This will build the index if it doesn't exist.
+    egs = EntityGroundingService(
+        ontology_path=ONTOLOGY_FILE, index_path=INDEX_DIR, rebuild_index=True
+    )
+
+    # 2. Define a sample text chunk from a clinical guideline
+    sample_text = (
+        "For patients with HFrEF and an LVEF below 40%, SGLT2 inhibitors are "
+        "recommended as a foundational therapy. This recommendation is based on the "
+        "DAPA-HF trial. Beta-blockers should also be considered to reduce the "
+        "risk of myocardial infarction."
+    )
+
+    print("\n--- Grounding Sample Text ---")
+    print(f'Input Text: "{sample_text}"')
+
+    # 3. Call the ground() method to perform entity linking
+    found_entities = egs.ground(sample_text)
+
+    # 4. Print the results
+    print("\n--- Found Entities ---")
+    if not found_entities:
+        print("No entities were grounded.")
     else:
-        # 1. Initialize the service. This will build the index if it doesn't exist.
-        egs = EntityGroundingService(ontology_path=ONTOLOGY_FILE, index_path=INDEX_DIR)
+        for entity in found_entities:
+            print(
+                f"  Mention: '{entity.mention}'\n"
+                f"    -> ID: {entity.id}\n"
+                f"    -> Label: '{entity.label}'\n"
+                f"    -> Type: {entity.type}\n"
+                f"    -> Score: {entity.score:.2f}\n"
+            )
 
-        # 2. Define a sample text chunk from a clinical guideline
-        sample_text = (
-            "For patients with HFrEF and an LVEF below 40%, SGLT2 inhibitors are "
-            "recommended as a foundational therapy. This recommendation is based on the "
-            "DAPA-HF trial. Beta-blockers should also be considered to reduce the "
-            "risk of myocardial infarction."
-        )
 
-        print("\n--- Grounding Sample Text ---")
-        print(f'Input Text: "{sample_text}"')
+if __name__ == "__main__":
+    import sys
 
-        # 3. Call the ground() method to perform entity linking
-        found_entities = egs.ground(sample_text)
-
-        # 4. Print the results
-        print("\n--- Found Entities ---")
-        if not found_entities:
-            print("No entities were grounded.")
-        else:
-            for entity in found_entities:
-                print(
-                    f"  Mention: '{entity.mention}'\n"
-                    f"    -> ID: {entity.id}\n"
-                    f"    -> Label: '{entity.label}'\n"
-                    f"    -> Type: {entity.type}\n"
-                    f"    -> Score: {entity.score:.2f}\n"
-                )
+    if len(sys.argv) == 1:
+        demo()
+    else:
+        cli()
