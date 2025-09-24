@@ -91,6 +91,7 @@ query = "cardio_graph.extraction_utils.query_interpreter:main"
 run-ollama = "cardio_graph.ollama_utils.runollama:main"
 snomed-explorer = "cardio_graph.snomedct_utils.snomed_query:main"
 generate-cardio-ontology = "cardio_graph.snomedct_utils.generate_cardio_ontology:main"
+ground-entities = "cardio_graph.extraction_utils.entity_grounding_service:cli"
 
 [build-system]
 requires = ["poetry-core"]
