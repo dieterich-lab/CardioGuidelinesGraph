@@ -87,12 +87,8 @@ def create_client_registry(
         actual_port = port
         actual_node = node
     elif node:
-        actual_port = port_dict.get(node, 30)
+        actual_port = port_dict.get(node, 34)
         actual_node = node
-    else:
-        # Default fallback
-        actual_node = "g5"
-        actual_port = 35
 
     # Add Ollama models for the specified node
     base_url = f"http://{ip_dict[actual_node]}:114{actual_port}/v1"
