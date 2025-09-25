@@ -38,7 +38,47 @@ def pretty_print_triples(
     #                     )
 
 
-def triples_to_cypher(triples: Triples) -> str:
+import json
+import os
+
+from neo4j import GraphDatabase
+
+from cardio_graph.baml_client.types import APITriples
+from cardio_graph.neo4j_utils.feedneo4jdb import execute_cypher_file
+
+URI = "bolt://neo4j-dev1.internal:7687"
+AUTH = ("neo4j", "KWCeoHhkJYAiFa3XTZZZLC77bHiZ5xzj")
+
+
+def pretty_print_triples(
+    triples, visited_nodes=None, found_relations=None, zero_nodes=True
+):
+    for i, t in enumerate(triples.triples, 1):
+        print(
+            f"{i:2d}. {t.head_node_value} (ID: {t.head_node_id}) --[{t.relation}]--> {t.tail_node_value} (ID: {t.tail_node_id})"
+        )
+    # if visited_nodes is not None:
+    #     print("\nVisited nodes:")
+    #     for node in visited_nodes:
+    #         print(node[1])
+    # if zero_nodes is not None:
+    #     print("\nZero nodes:")
+    #     for node in zero_nodes:
+    #         print(node[1])
+    # if found_relations is not None:
+    #     print("\nFound relations:")
+    #     triples = []
+    #     for rel in found_relations:
+    #         print(
+    #             rel[1][-3:],
+    #             rel[2],
+    #             rel[0],
+    #             rel[3][-3:],
+    #             rel[4]
+    #                     )
+
+
+def triples_to_cypher(triples: APITriples) -> str:
     cypher_statements = []
     for i, t in enumerate(triples.triples, 1):
         head_node_label = t.head_node_label
