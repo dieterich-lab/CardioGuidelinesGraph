@@ -1,7 +1,9 @@
-from cardio_graph.baml_client.types import APITriples
-from neo4j import GraphDatabase
-import os
 import json
+import os
+
+from neo4j import GraphDatabase
+
+from cardio_graph.baml_client.types import Triples
 from cardio_graph.neo4j_utils.feedneo4jdb import execute_cypher_file
 
 URI = "bolt://neo4j-dev1.internal:7687"
@@ -36,7 +38,7 @@ def pretty_print_triples(
     #                     )
 
 
-def triples_to_cypher(triples: APITriples) -> str:
+def triples_to_cypher(triples: Triples) -> str:
     cypher_statements = []
     for i, t in enumerate(triples.triples, 1):
         head_node_label = t.head_node_label

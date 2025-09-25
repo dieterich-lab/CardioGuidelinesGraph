@@ -16,36 +16,17 @@ port_dict = {
     "g5": 35,
 }
 
-# Available Ollama models and their configurations from clients.baml
-ollama_models = [
-    # Gemma models
-    ("Gemma", "gemma3", "g3"),
-    ("GemmaG2", "gemma3", "g2"),
-    ("GemmaG4", "gemma3", "g4"),
-    ("GemmaG5", "gemma3", "g5"),
-    # Llava models
-    ("Llava34bG5", "llava:34b", "g5"),
-    # Qwen models
-    ("Qwen32b5_35", "qwen3:32b", "g5"),
-    ("Qwen32b5_36", "qwen3:32b", "g5"),
-    ("Qwen25vl72bG5", "qwen2.5vl:72b", "g5"),
-    ("Qwen25vl32bG5", "qwen2.5vl:32b", "g5"),
-    ("Qwen8bG4_37", "qwen3:latest", "g4"),
-    ("Qwen4", "qwen3:32b", "g4"),
-    ("Qwen8b4", "qwen3:latest", "g4"),
-    ("Qwen8b2", "qwen3:latest", "g2"),
-    ("Qwen4b2", "qwen3:4b", "g2"),
-    ("Qwen14b4", "qwen3:14b", "g4"),
-    ("Qwen14b5", "qwen3:14b", "g5"),
-    ("Qwen30b4", "qwen3:30b", "g4"),
-    ("Qwen30b5", "qwen3:30b", "g5"),
-    ("Qwen32b5", "qwen3:32b", "g5"),
-    ("Qwen14b3", "qwen3:14b", "g3"),
-    ("Qwen4b3", "qwen3:4b", "g3"),
-    # Llama models
-    ("Llama4", "llama4", "g4"),
-    ("Llama3", "llama3.3:70b", "g4"),
-]
+# Available Ollama models and their model strings from clients.baml
+ollama_models = {
+    "Qwen25vl72b": "qwen2.5vl:72b",
+    "Qwen25vl32b": "qwen2.5vl:32b",
+    "Qwen8b": "qwen3:latest",
+    "Qwen4b": "qwen3:4b",
+    "Qwen14b": "qwen3:14b",
+    "Qwen30b": "qwen3:30b",
+    "Qwen32b": "qwen3:32b",
+    "Qwen235b": "qwen3:235b",
+}
 
 # OpenAI models
 openai_models = [
@@ -109,37 +90,32 @@ def create_client_registry(
         actual_port = port_dict.get(node, 30)
         actual_node = node
     else:
-        # Try to infer from model name
-        for ollama_name, _, model_node in ollama_models:
-            if ollama_name.lower() == model_name.lower():
-                actual_node = model_node
-                actual_port = port_dict.get(model_node, 30)
-                break
-        else:
-            # Default fallback
-            actual_node = "g5"
-            actual_port = 35
+        # Default fallback
+        actual_node = "g5"
+        actual_port = 35
 
     # Add Ollama models for the specified node
     base_url = f"http://{ip_dict[actual_node]}:114{actual_port}/v1"
 
-    for name, model, model_node in ollama_models:
-        if model_node == actual_node:
-            cr.add_llm_client(
-                name=name,
-                provider="openai-generic",
-                options={
-                    "base_url": base_url,
-                    "model": model,
-                    "max_tokens": (
-                        10000
-                        if "qwen3:32b" not in model and "qwen3:30b" not in model
-                        else 100000
-                    ),
-                    "temperature": 0.0,
-                },
-            )
-            clients_added.append(name)
+    # Add the requested Ollama model if it exists
+    if model_name in ollama_models:
+        model_string = ollama_models[model_name]
+        cr.add_llm_client(
+            name=model_name,
+            provider="openai-generic",
+            options={
+                "base_url": base_url,
+                "model": model_string,
+                "max_tokens": (
+                    10000
+                    if "qwen3:32b" not in model_string
+                    and "qwen3:30b" not in model_string
+                    else 100000
+                ),
+                "temperature": 0.0,
+            },
+        )
+        clients_added.append(model_name)
 
     # Set primary model
     if model_name in clients_added:
