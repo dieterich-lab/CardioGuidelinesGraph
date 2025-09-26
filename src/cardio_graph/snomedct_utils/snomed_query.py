@@ -27,11 +27,13 @@ class SnomedExplorer:
 
     def __init__(
         self,
-        host: str = "10.250.135.23",
-        port: str = "3306",
-        user: str = "test_user",
-        password: str = "medicaldatabase",
-        database: str = "snomedct",
+        host: str = "snomed-ct2.internal",
+        port: str = "5432",
+        user: str = "readonly",
+        password: str = "readonly",
+        database: str = "snomed",
+        sslrootcert: str = "/etc/ssl/certs/DieterichLab_CA.pem",
+        sslmode: str = "verify-full",
     ):
         """
         Initialize connection to the SNOMED CT database
@@ -42,6 +44,8 @@ class SnomedExplorer:
             "user": user,
             "password": password,
             "database": database,
+            "sslrootcert": sslrootcert,
+            "sslmode": sslmode,
         }
         self.engine = None
         self.Session = None
@@ -55,7 +59,11 @@ class SnomedExplorer:
             host = self.connection_params["host"]
             port = self.connection_params["port"]
             database = self.connection_params["database"]
-            url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+            sslrootcert = self.connection_params["sslrootcert"]
+            sslmode = self.connection_params["sslmode"]
+
+            # PostgreSQL connection URL with SSL parameters
+            url = f"postgresql://{user}:{password}@{host}:{port}/{database}?sslrootcert={sslrootcert}&sslmode={sslmode}"
             self.engine = create_engine(url)
             self.Session = sessionmaker(bind=self.engine)
             self.session = self.Session()
@@ -83,10 +91,31 @@ class SnomedExplorer:
         structure = {}
         db_name = self.connection_params["database"]
         with self.engine.connect() as conn:
-            tables = conn.execute(text("SHOW TABLES")).fetchall()
+            # PostgreSQL query to get all tables in the current database
+            tables = conn.execute(
+                text(
+                    """
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                ORDER BY table_name
+            """
+                )
+            ).fetchall()
             table_names = [row[0] for row in tables]
             for table in table_names:
-                columns = conn.execute(text(f"DESCRIBE {table}")).fetchall()
+                # PostgreSQL query to get columns for a table
+                columns = conn.execute(
+                    text(
+                        """
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_name = :table_name AND table_schema = 'public'
+                    ORDER BY ordinal_position
+                """
+                    ),
+                    {"table_name": table},
+                ).fetchall()
                 col_names = [col[0] for col in columns]
                 structure[table] = col_names
         return structure
@@ -129,7 +158,7 @@ class SnomedExplorer:
         # Query the master description table once
         matching_descriptions = (
             self.session.query(SnapDescription)
-            .filter(filters, SnapDescription.active == 1)
+            .filter(filters, SnapDescription.active == True)
             .limit(limit * 5)  # Fetch more to get a good pool of unique concepts
             .all()
         )
@@ -157,15 +186,15 @@ class SnomedExplorer:
 
     def get_relationships(self, concept_id: int) -> List[Dict[str, Any]]:
         """
-        Get relationships for a specific concept using snap_relationship table only.
-        Returns list of dicts with keys: typeId, destinationId, sourceId, id, active
+        Get relationships for a specific concept using relationship table only.
+        Returns list of dicts with keys: typeid, destinationid, sourceid, id, active
         """
         if not self.session:
             self.connect()
 
         results = (
             self.session.query(SnapRelationship)
-            .filter(SnapRelationship.sourceId == concept_id)
+            .filter(SnapRelationship.sourceid == concept_id)
             .limit(200)
             .all()
         )
@@ -185,14 +214,14 @@ class SnomedExplorer:
 
         results = (
             self.session.query(SnapRelationship)
-            .filter(SnapRelationship.sourceId.in_(concept_ids))
+            .filter(SnapRelationship.sourceid.in_(concept_ids))
             .all()
         )
 
-        # Group the results by sourceId
+        # Group the results by sourceid
         relationships_map = defaultdict(list)
         for rel in results:
-            relationships_map[rel.sourceId].append(rel.__dict__)
+            relationships_map[rel.sourceid].append(rel.__dict__)
 
         return relationships_map
 
@@ -208,14 +237,14 @@ class SnomedExplorer:
 
         results = (
             self.session.query(SnapRelationship)
-            .filter(SnapRelationship.destinationId.in_(concept_ids))
+            .filter(SnapRelationship.destinationid.in_(concept_ids))
             .all()
         )
 
-        # Group the results by sourceId to create a unified structure
+        # Group the results by sourceid to create a unified structure
         relationships_map = defaultdict(list)
         for rel in results:
-            relationships_map[rel.sourceId].append(rel.__dict__)
+            relationships_map[rel.sourceid].append(rel.__dict__)
 
         return relationships_map
 
@@ -232,52 +261,46 @@ class SnomedExplorer:
         term_like = f"%{search_term}%"
 
         # --- Step 1: Find all unique concept IDs that match the search term ---
-        # THE FIX: We use .label('conceptId') to explicitly name the column in the subquery.
+        # THE FIX: We use .label('conceptid') to explicitly name the column in the subquery.
         matching_concept_ids_subquery = (
-            self.session.query(distinct(SnapDescription.conceptId).label("conceptId"))
-            .filter(SnapDescription.term.ilike(term_like), SnapDescription.active == 1)
+            self.session.query(distinct(SnapDescription.conceptid).label("conceptid"))
+            .filter(
+                SnapDescription.term.ilike(term_like), SnapDescription.active == True
+            )
             .limit(limit)
             .subquery()
         )
 
-        # --- Step 2: Fetch the Preferred Term for each of those concepts ---
-        # This join will now work correctly because matching_concept_ids_subquery.c.conceptId is guaranteed to exist.
+        # --- Step 2: Fetch descriptions for each of those concepts ---
+        # This join will now work correctly because matching_concept_ids_subquery.c.conceptid is guaranteed to exist.
         results = (
             self.session.query(SnapDescription)
             .join(
                 matching_concept_ids_subquery,
-                SnapDescription.conceptId == matching_concept_ids_subquery.c.conceptId,
+                SnapDescription.conceptid == matching_concept_ids_subquery.c.conceptid,
             )
-            .join(
-                SnapRefsetLanguage,
-                SnapDescription.id == SnapRefsetLanguage.referencedComponentId,
-            )
-            .filter(
-                SnapDescription.active == 1,
-                SnapRefsetLanguage.active == 1,
-                SnapRefsetLanguage.acceptabilityId == PREFERRED_ACCEPTABILITY_ID,
-            )
+            .filter(SnapDescription.active == True)
             .all()
         )
 
         if not results:
             return []
 
-        # The query now returns description objects that are guaranteed to be the preferred terms.
+        # The query now returns description objects.
         # Build clean dictionaries to avoid passing around SQLAlchemy internal state.
         clean_results = []
         for res in results:
             clean_results.append(
                 {
                     "id": res.id,
-                    "effectiveTime": res.effectiveTime,
+                    "effectivetime": res.effectivetime,
                     "active": res.active,
-                    "moduleId": res.moduleId,
-                    "conceptId": res.conceptId,
-                    "languageCode": res.languageCode,
-                    "typeId": res.typeId,
+                    "moduleid": res.moduleid,
+                    "conceptid": res.conceptid,
+                    "languagecode": res.languagecode,
+                    "typeid": res.typeid,
                     "term": res.term,
-                    "caseSignificanceId": res.caseSignificanceId,
+                    "casesignificanceid": res.casesignificanceid,
                 }
             )
 
@@ -482,10 +505,10 @@ class SnomedExplorer:
             results = (
                 self.session.query(SnapDescription)
                 .filter(
-                    SnapDescription.conceptId == concept_id,
-                    SnapDescription.active == 1,
+                    SnapDescription.conceptid == concept_id,
+                    SnapDescription.active == True,
                     # Optional: Add language filter if your DB has multiple languages
-                    # SnapDescription.languageCode == lang
+                    # SnapDescription.languagecode == lang
                 )
                 .all()
             )
@@ -514,29 +537,38 @@ class SnomedExplorer:
 
     def get_preferred_term(self, concept_id: int) -> Optional[str]:
         """
-        Fetches the single, canonical Preferred Term for a given concept ID.
+        Fetches a term for a given concept ID.
+        Since we don't have language refset tables, we'll return the first active FSN or synonym.
         """
         if not self.session:
             self.connect()
 
         try:
+            # Try to get FSN first (Fully Specified Name)
             result = (
                 self.session.query(SnapDescription.term)
-                .join(
-                    SnapRefsetLanguage,
-                    SnapDescription.id == SnapRefsetLanguage.referencedComponentId,
-                )
                 .filter(
-                    SnapDescription.conceptId == concept_id,
-                    SnapDescription.active == 1,
-                    SnapRefsetLanguage.active == 1,
-                    SnapRefsetLanguage.acceptabilityId == PREFERRED_ACCEPTABILITY_ID,
+                    SnapDescription.conceptid == concept_id,
+                    SnapDescription.active == True,
+                    SnapDescription.typeid == 900000000000003001,  # FSN type ID
                 )
-                .first()  # We only expect one preferred term
+                .first()
+            )
+            if result:
+                return result[0]
+
+            # If no FSN, get any active synonym
+            result = (
+                self.session.query(SnapDescription.term)
+                .filter(
+                    SnapDescription.conceptid == concept_id,
+                    SnapDescription.active == True,
+                )
+                .first()
             )
             return result[0] if result else None
         except Exception as e:
-            print(f"Warning: Could not fetch preferred term for {concept_id}: {e}")
+            print(f"Warning: Could not fetch term for {concept_id}: {e}")
             return None
 
 

@@ -1,4 +1,14 @@
-from sqlalchemy import Boolean, Column, Date, DateTime, Float, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.mysql import (
     BIGINT,
     CHAR,
@@ -17,6 +27,20 @@ class ConfigRefsets(Base):
     __tablename__ = "config_Refsets"
     refsetId = Column(BIGINT(), primary_key=True, nullable=False)
     refsetType = Column(VARCHAR(length=60), nullable=False)
+
+
+class SnapRelationship(Base):
+    __tablename__ = "relationship"
+    id = Column(Numeric(18, 0), primary_key=True, nullable=False)
+    effectivetime = Column(DateTime, primary_key=True, nullable=False)
+    active = Column(Boolean, nullable=False)
+    moduleid = Column(Numeric(18, 0), nullable=False)
+    sourceid = Column(Numeric(18, 0), nullable=False)
+    destinationid = Column(Numeric(18, 0), nullable=False)
+    relationshipgroup = Column(Integer, nullable=False)
+    typeid = Column(Numeric(18, 0), nullable=False)
+    characteristictypeid = Column(Numeric(18, 0), nullable=False)
+    modifierid = Column(Numeric(18, 0), nullable=False)
 
 
 class ConfigLanguage(Base):
@@ -273,16 +297,16 @@ class SnapConcept(Base):
 
 
 class SnapDescription(Base):
-    __tablename__ = "snap_description"
-    id = Column(BIGINT(), primary_key=True, nullable=False)
-    effectiveTime = Column(DATETIME(), primary_key=True, nullable=False)
-    active = Column(TINYINT(), nullable=False)
-    moduleId = Column(BIGINT(), nullable=False)
-    conceptId = Column(BIGINT(), nullable=False)
-    languageCode = Column(VARCHAR(length=3), nullable=False)
-    typeId = Column(BIGINT(), nullable=False)
-    term = Column(TEXT(), nullable=False)
-    caseSignificanceId = Column(BIGINT(), nullable=False)
+    __tablename__ = "description"
+    id = Column(Numeric(18, 0), primary_key=True, nullable=False)
+    effectivetime = Column(DateTime, primary_key=True, nullable=False)
+    active = Column(Boolean, nullable=False)
+    moduleid = Column(Numeric(18, 0), nullable=False)
+    conceptid = Column(Numeric(18, 0), nullable=False)
+    languagecode = Column(String(3), nullable=False)
+    typeid = Column(Numeric(18, 0), nullable=False)
+    term = Column(Text, nullable=False)
+    casesignificanceid = Column(Numeric(18, 0), nullable=False)
 
 
 class SnapProximalPrimitives(Base):
@@ -470,20 +494,6 @@ class SnapRefsetSimplemap(Base):
     mapTarget = Column(
         VARCHAR(charset="utf8mb4", collation="utf8mb4_bin", length=200), nullable=False
     )
-
-
-class SnapRelationship(Base):
-    __tablename__ = "snap_relationship"
-    id = Column(BIGINT(), primary_key=True, nullable=False)
-    effectiveTime = Column(DATETIME(), primary_key=True, nullable=False)
-    active = Column(TINYINT(), nullable=False)
-    moduleId = Column(BIGINT(), nullable=False)
-    sourceId = Column(BIGINT(), nullable=False)
-    destinationId = Column(BIGINT(), nullable=False)
-    relationshipGroup = Column(INTEGER(), nullable=False)
-    typeId = Column(BIGINT(), nullable=False)
-    characteristicTypeId = Column(BIGINT(), nullable=False)
-    modifierId = Column(BIGINT(), nullable=False)
 
 
 class SnapTransclose(Base):
