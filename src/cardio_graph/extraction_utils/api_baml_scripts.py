@@ -137,18 +137,17 @@ def chunk_md_folder_wrapper(md_dir: Path, out_dir: Path, client_registry=None):
         # print("LLM processing")
         # # OneFunction(text, file_id=f"{counter:03d}", output_path=out_dir)
         # print(counter)
-        if counter >= 38:
-            print(text)
-            print("LLM processing")
-            logging.info(f"Processing file {md_file.name} (#{counter})")
-            OneFunction(
-                text,
-                file_id=f"{counter:03d}",
-                output_path=str(out_dir),
-                client_registry=client_registry,
-            )
-            logging.info(f"Completed file {md_file.name} (#{counter})")
-            print(counter)
+        print(text)
+        print("LLM processing")
+        logging.info(f"Processing file {md_file.name} (#{counter})")
+        OneFunction(
+            text,
+            file_id=f"{counter:03d}",
+            output_path=str(out_dir),
+            client_registry=client_registry,
+        )
+        logging.info(f"Completed file {md_file.name} (#{counter})")
+        print(counter)
         counter += 1
     return
 
