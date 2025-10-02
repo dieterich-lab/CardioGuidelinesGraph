@@ -16,6 +16,8 @@ import yaml
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCTERMS, OWL, RDF, RDFS, SKOS, XSD
 
+# Import client registry for LLM connections
+from cardio_graph.extraction_utils.clients import create_client_registry
 from cardio_graph.snomedct_utils.models import SnapDescription
 
 # Import SnomedExplorer from snomed_query.py
@@ -97,7 +99,16 @@ class CardioOntologyGenerator:
             }
 
             try:
-                result = b.CategorizeConcept(baml_input, SNOMED_CATEGORIES)
+                baml_options = (
+                    {"client_registry": self.client_registry}
+                    if self.client_registry
+                    else {}
+                )
+                result = b.CategorizeConcept(
+                    baml_input,
+                    SNOMED_CATEGORIES,
+                    baml_options=baml_options,
+                )
                 assigned_categories = result.categories
 
                 # The 'add_snomed_concept' function will now handle setting the correct label
@@ -108,7 +119,10 @@ class CardioOntologyGenerator:
 
                         # Pass the category to the creation function
                         concept_uri = self.add_snomed_concept(
-                            concept, category_class_uri, synonyms=synonyms
+                            concept,
+                            category_class_uri,
+                            synonyms=synonyms,
+                            as_individual=self.as_individual,
                         )
                         categories_map[cat_name].append(concept_uri)
 
@@ -127,7 +141,10 @@ class CardioOntologyGenerator:
                 if any(keyword in term for keyword in keyword_list):
                     category_class_uri = self.cgo[category_name]
                     concept_uri = self.add_snomed_concept(
-                        concept, category_class_uri, synonyms=None
+                        concept,
+                        category_class_uri,
+                        synonyms=None,
+                        as_individual=self.as_individual,
                     )
                     categories[category_name].append(concept_uri)
         return categories
@@ -147,17 +164,38 @@ class CardioOntologyGenerator:
 
     def __init__(
         self,
-        output_path: str = "cardio_ontology.owl",
-        snomed_host: str = "10.250.135.23",
-        snomed_port: str = "3306",
-        snomed_user: str = "test_user",
-        snomed_password: str = "medicaldatabase",
-        snomed_database: str = "snomedct",
+        output_path: str = None,  # Changed from "cardio_ontology.owl" to None
+        snomed_host: str = "snomed-ct2.internal",  # Updated to match snomed_query.py
+        snomed_port: str = "5432",  # PostgreSQL port
+        snomed_user: str = "readonly",  # Updated user
+        snomed_password: str = "readonly",  # Updated password
+        snomed_database: str = "snomed",  # Updated database name
+        snomed_sslrootcert: str = "/etc/ssl/certs/DieterichLab_CA.pem",  # SSL certificate
+        snomed_sslmode: str = "verify-full",  # SSL mode
         base_uri: str = "http://dieterich-lab.org/ontologies/cardioguidelinesonto/",
         version: str = "0.1.0",
         debug_mode: bool = False,
+        modeling_approach: str = "instance",  # "instance" or "class"
+        model: str = "Qwen32b",  # Model name for LLM categorization
+        node: str = "g5",  # Node identifier for Ollama models
+        ollama_port: int = None,  # Custom port number (overrides default node port)
     ):
-        """Initialize the ontology generator"""
+        """Initialize the ontology generator
+
+        Args:
+            modeling_approach: "instance" (SNOMED concepts as individuals) or "class" (SNOMED concepts as classes)
+            model: Model name to use for LLM categorization (e.g., Qwen32b5, Gemma, GPT4oMini)
+            node: Node identifier for Ollama models (g2, g3, g4, g5)
+            ollama_port: Custom port number (overrides default node port)
+        """
+        # Set default output path based on modeling approach if not specified
+        if output_path is None:
+            ontologies_dir = "/prj/doctoral_letters/guide/data/ontologies"
+            if modeling_approach == "instance":
+                output_path = f"{ontologies_dir}/cardio_ontology_instances.owl"
+            else:  # modeling_approach == "class"
+                output_path = f"{ontologies_dir}/cardio_ontology_class.owl"
+
         self.output_path = output_path
         self.snomed_explorer = SnomedExplorer(
             host=snomed_host,
@@ -165,8 +203,19 @@ class CardioOntologyGenerator:
             user=snomed_user,
             password=snomed_password,
             database=snomed_database,
+            sslrootcert=snomed_sslrootcert,
+            sslmode=snomed_sslmode,
         )
         self.debug_mode = debug_mode
+        self.modeling_approach = modeling_approach
+        self.as_individual = modeling_approach == "instance"
+
+        # Initialize client registry for LLM connections
+        try:
+            self.client_registry = create_client_registry(model, node, ollama_port)
+        except Exception as e:
+            print(f"Warning: Could not create client registry: {e}")
+            self.client_registry = None
 
         # Initialize RDF graph and namespaces
         self.g = Graph()
@@ -462,11 +511,24 @@ class CardioOntologyGenerator:
         return all_concepts
 
     def add_snomed_concept(
-        self, concept: Dict, category_class: URIRef, synonyms: List[str] = None
+        self,
+        concept: Dict,
+        category_class: URIRef,
+        synonyms: List[str] = None,
+        as_individual: bool = True,
     ) -> URIRef:
         """
-        Adds a SNOMED CT concept to the ontology, ensuring its rdfs:label
-        is always the canonical Preferred Term.
+        Adds a SNOMED CT concept to the ontology.
+
+        Args:
+            concept: SNOMED concept dictionary
+            category_class: CGO category class URI
+            synonyms: List of synonym terms
+            as_individual: If True, creates as NamedIndividual instance of category_class.
+                          If False, creates as OWL Class that is subclass of category_class.
+
+        Returns:
+            URI of the created concept
         """
         concept_id = concept.get("conceptId") or concept.get("id")
         if not concept_id:
@@ -494,10 +556,16 @@ class CardioOntologyGenerator:
 
         concept_uri = self.snomed[str(concept_id)]
 
-        # Add the concept as a Class, and make it a subclass of the given category
-        self.g.add((concept_uri, RDF.type, OWL.Class))
-        if category_class:
-            self.g.add((concept_uri, RDFS.subClassOf, category_class))
+        if as_individual:
+            # Create as NamedIndividual instance of the category class
+            self.g.add((concept_uri, RDF.type, OWL.NamedIndividual))
+            if category_class:
+                self.g.add((concept_uri, RDF.type, category_class))
+        else:
+            # Create as OWL Class that is subclass of the category class
+            self.g.add((concept_uri, RDF.type, OWL.Class))
+            if category_class:
+                self.g.add((concept_uri, RDFS.subClassOf, category_class))
 
         # Always use the fetched preferred_term for the official label.
         self.g.add((concept_uri, RDFS.label, Literal(preferred_term)))
@@ -532,7 +600,12 @@ class CardioOntologyGenerator:
             # Always create a relationship property and label
             rel_prop_uri = self.cgo[f"snomed_rel_{rel_type}"]
             if rel_prop_uri not in self.properties:
-                self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
+                if self.as_individual:
+                    # For individuals, relationships are object properties
+                    self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
+                else:
+                    # For classes, relationships are object properties (could also be restrictions)
+                    self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
                 rel_name = self.get_type_label(rel_type)
                 self.g.add((rel_prop_uri, RDFS.label, Literal(rel_name)))
                 self.properties.add(rel_prop_uri)
@@ -540,10 +613,13 @@ class CardioOntologyGenerator:
             # Add the relationship triple
             self.g.add((source_uri, rel_prop_uri, target_uri))
 
-            # Ensure the target class exists in the ontology
+            # Ensure the target concept exists in the ontology
             if target_id not in self.snomed_concepts:
                 term = f"SNOMED Concept {target_id}"
-                self.g.add((target_uri, RDF.type, OWL.Class))
+                if self.as_individual:
+                    self.g.add((target_uri, RDF.type, OWL.NamedIndividual))
+                else:
+                    self.g.add((target_uri, RDF.type, OWL.Class))
                 self.g.add((target_uri, RDFS.label, Literal(term)))
                 self.snomed_concepts[target_id] = target_uri
 
@@ -612,12 +688,18 @@ class CardioOntologyGenerator:
             # Print statistics
             print("--- Final Ontology Statistics ---")
             print(f"  - {len(self.classes)} core classes")
-            print(f"  - {len(self.snomed_concepts)} SNOMED CT concepts")
+            if self.as_individual:
+                print(f"  - {len(self.snomed_concepts)} SNOMED CT individuals")
+            else:
+                print(f"  - {len(self.snomed_concepts)} SNOMED CT classes")
             print(
                 f"  - {len(self.properties)} object properties (incl. dynamic SNOMED rel props)"
             )
             print(f"  - {len(self.data_properties)} data properties")
             print(f"  - {len(self.g)} total RDF triples")
+            print(
+                f"  - Modeling approach: {'instance-based' if self.as_individual else 'class-based'}"
+            )
 
             return True
 
@@ -640,22 +722,19 @@ def main():
     parser.add_argument(
         "-o",
         "--output",
-        default="cardio_ontology.owl",
-        help="Output file path for the generated ontology",
+        help="Output file path for the generated ontology (optional - will be set automatically based on modeling approach)",
     )
     parser.add_argument(
-        "--host", default="10.250.135.23", help="SNOMED CT database host"
+        "--host", default="snomed-ct2.internal", help="SNOMED CT database host"
     )
-    parser.add_argument("--port", default="3306", help="SNOMED CT database port")
+    parser.add_argument("--port", default="5432", help="SNOMED CT database port")
     parser.add_argument(
-        "--user", default="test_user", help="SNOMED CT database username"
-    )
-    parser.add_argument(
-        "--password", default="medicaldatabase", help="SNOMED CT database password"
+        "--user", default="readonly", help="SNOMED CT database username"
     )
     parser.add_argument(
-        "--database", default="snomedct", help="SNOMED CT database name"
+        "--password", default="readonly", help="SNOMED CT database password"
     )
+    parser.add_argument("--database", default="snomed", help="SNOMED CT database name")
     parser.add_argument(
         "--base-uri",
         default="http://dieterich-lab.org/ontologies/cardioguidelinesonto/",
@@ -703,6 +782,38 @@ def main():
         action="store_true",
         help="Convenience: equivalent to --baml-log-level off (suppress all BAML LLM logs).",
     )
+    parser.add_argument(
+        "--modeling-approach",
+        choices=["instance", "class"],
+        default="instance",
+        help="How to model SNOMED concepts: 'instance' (as individuals) or 'class' (as classes)",
+    )
+    parser.add_argument(
+        "--sslrootcert",
+        default="/etc/ssl/certs/DieterichLab_CA.pem",
+        help="Path to SSL root certificate for database connection",
+    )
+    parser.add_argument(
+        "--sslmode",
+        default="verify-full",
+        help="SSL mode for database connection (verify-full, require, etc.)",
+    )
+    parser.add_argument(
+        "--model",
+        default="Qwen32b",
+        help="Model name to use for LLM categorization (e.g., Qwen32b, Qwen8b, GPT41Nano)",
+    )
+    parser.add_argument(
+        "--node",
+        choices=["g2", "g3", "g4", "g5"],
+        default="g5",
+        help="Node identifier for Ollama models",
+    )
+    parser.add_argument(
+        "--ollama-port",
+        type=int,
+        help="Custom port number for Ollama server (overrides default node port)",
+    )
 
     args = parser.parse_args()
 
@@ -720,15 +831,21 @@ def main():
         os.environ["BOUNDARY_MAX_LOG_CHUNK_CHARS"] = str(args.baml_log_truncate)
 
     generator = CardioOntologyGenerator(
-        output_path=args.output,
+        output_path=args.output,  # Will be None if not specified, triggering auto-selection
         snomed_host=args.host,
         snomed_port=args.port,
         snomed_user=args.user,
         snomed_password=args.password,
         snomed_database=args.database,
+        snomed_sslrootcert=args.sslrootcert,
+        snomed_sslmode=args.sslmode,
         base_uri=args.base_uri,
         version=args.version,
         debug_mode=args.debug_mode,
+        modeling_approach=args.modeling_approach,
+        model=args.model,
+        node=args.node,
+        ollama_port=getattr(args, "ollama_port", None),
     )
 
     if not args.no_preflight:

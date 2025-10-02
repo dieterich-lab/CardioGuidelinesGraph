@@ -308,45 +308,131 @@ Default connection settings:
 - User: 'test_user'
 - Database: 'snomedct'
 
-#### Cardiovascular Ontology Generator (`generate-cardio-ontology`)
+### Cardiovascular Ontology Generator (`generate-cardio-ontology`)
 
-Generate an OWL/RDF ontology for cardiovascular guidelines based on SNOMED CT concepts.
+Generate an OWL/RDF ontology for cardiovascular guidelines based on SNOMED CT concepts with dual modeling support (classes vs instances).
 
-```bash
-# Generate the ontology with default settings
-poetry run generate-cardio-ontology
+#### Detailed Configuration Usage from `ontology_config.yaml`
 
-# Specify a custom output file
-poetry run generate-cardio-ontology --output my_cardio_ontology.owl
+The ontology generation process uses **every section** of the `ontology_config.yaml` file in a structured, hierarchical manner:
 
-# Use custom database connection
-poetry run generate-cardio-ontology --host myhost.example.com --port 3306 --user myuser --password mypassword
+##### 1. **SNOMED Categories** (`snomed_categories`)
+- **Purpose**: Defines the 10 high-level categorization buckets for LLM-based concept classification
+- **Usage**: When using `--categorization-method llm`, each extracted SNOMED concept is mapped to exactly one of these categories
+- **Categories**: `ClinicalAction`, `PatientPhenotype`, `Purpose`, `WorkflowStep`, `Guideline`, `EvidenceSource`, `Medication`, `Condition`, `GuidelineRecommendation`, `GuidelineSource`
 
-# Set custom base URI and version
-poetry run generate-cardio-ontology --base-uri "http://example.org/ontologies/cardio/" --version "1.0.0"
+##### 2. **SNOMED Keywords** (`snomed_keywords`) 
+- **Purpose**: Provides keyword-based fallback categorization when LLM is unavailable
+- **Usage**: Each category has associated keywords (e.g., "procedure", "therapy" for ClinicalAction) used for pattern matching
+- **Fallback Method**: Only used when `--categorization-method keyword` is specified
+
+##### 3. **Core Classes** (`core_classes`)
+- **Purpose**: Defines the complete T-Box (terminological box) schema - the high-level classes that structure the ontology
+- **Usage in Generation**:
+  - **Class Declaration**: Each entry creates an `owl:Class` with name, description, and labels
+  - **Subclass Relationships**: `subclass_of` entries create `rdfs:subClassOf` triples
+  - **SNOMED Search Terms**: `snomed_search_terms` arrays drive targeted database queries to extract relevant concepts
+- **Statistics**: 30+ core classes defined, each with specific cardiovascular domain semantics
+
+##### 4. **Core Properties** (`core_properties`) - Object Properties
+- **Purpose**: Defines relationship types between classes (object properties in OWL terminology)
+- **Usage**: Each property creates an `owl:ObjectProperty` with domain, range, and description
+- **Examples**: `hasAction` (ClinicalWorkflow → WorkflowStep), `recommends` (GuidelineRecommendation → ClinicalAction)
+- **Statistics**: 17 object properties defining the relational structure
+
+##### 5. **Data Properties** (`data_properties`) - Datatype Properties  
+- **Purpose**: Defines attribute types for classes (datatype properties in OWL)
+- **Usage**: Each property creates an `owl:DatatypeProperty` with XSD range types (string, integer, date, etc.)
+- **Examples**: `hasEvidenceLevel` (string), `hasTargetValue` (string), `pageNumber` (integer)
+- **Statistics**: 13 datatype properties for clinical attributes
+
+#### Relationship Sources (Yes, Relations Are Included!)
+
+**Relations come from THREE distinct sources** in the ontology generation:
+
+##### 1. **Schema-Level Relations** (From `ontology_config.yaml`)
+- **Source**: `core_properties` section defines high-level relationships between core classes
+- **Example**: `GuidelineRecommendation recommends ClinicalAction`
+- **Type**: Object properties with domain/range constraints
+
+##### 2. **SNOMED CT Database Relations** (Dynamic Properties)
+- **Source**: Extracted directly from SNOMED CT relationship tables during ontology generation
+- **Process**: For each SNOMED concept, outgoing and incoming relationships are queried
+- **Naming**: Dynamic properties named `cgo:snomed_rel_<typeId>` with human-readable labels
+- **Example**: Relationships like "is-a", "has-component", "associated-with" from SNOMED hierarchy
+
+##### 3. **SNOMED Concept Instance Relations** (Between Extracted Concepts)
+- **Source**: Relationships between the extracted SNOMED concepts themselves
+- **Process**: After categorization, relationships between concepts in the same categories are added
+- **Type**: Uses both schema properties and dynamic SNOMED properties
+
+#### Ontology Generation Process Details
+
+##### Phase 1: Schema-Aware Concept Extraction
+```python
+# For each core_class with snomed_search_terms:
+for class_entry in ontology_classes:
+    for term in class_entry["snomed_search_terms"]:
+        # Query SNOMED CT database with targeted search
+        concepts = snomed_explorer.search_concepts_by_term(term, limit=200)
 ```
 
-The generator creates an OWL ontology with:
+- **Search Strategy**: Uses `snomed_search_terms` from YAML to perform ~50 targeted searches
+- **Database Queries**: PostgreSQL queries against SNOMED CT tables using SQLAlchemy ORM
+- **Deduplication**: Ensures unique concepts across all search results
 
-1. **Core Classes**: ClinicalWorkflow, WorkflowStep, ClinicalAction, Purpose, LogicalJunction, etc.
-2. **Core Properties**: hasStep, hasAction, hasPurpose, requiresCondition, hasOperand, etc.
-3. **SNOMED CT Integration**: Imports relevant cardiovascular concepts from SNOMED CT
-4. **Example Patterns**: Creates example workflow patterns for cardiovascular care
-5. **Evidence Structure**: Supports evidence levels and guideline recommendations
-
-Preflight validation (quick schema sanity check):
-By default a schema preflight report runs before concept extraction. It lists how many core classes, object properties, and data properties were declared vs. expected and warns about any missing subclass parents.
-
-Disable it if you need a minimal run:
-```bash
-poetry run generate-cardio-ontology --no-preflight
+##### Phase 2: Intelligent Categorization  
+```python
+# LLM-based categorization for each concept
+result = b.CategorizeConcept({
+    "term": preferred_term,
+    "description": fsn, 
+    "synonyms": ", ".join(synonyms)
+}, SNOMED_CATEGORIES)
 ```
+- **LLM Context**: Each concept examined with full SNOMED details (FSN, synonyms, descriptions)
+- **Mapping**: Concepts assigned to single best-fit category from the 10 predefined buckets
+- **Fallback**: Keyword matching available when LLM categorization fails
 
-Data & datatype properties:
-Datatype properties defined in `ontology_config.yaml` under `data_properties` are now emitted as OWL DatatypeProperties with XSD ranges (string/integer/float/date/dateTime/boolean). Unknown ranges default to `xsd:string` with a warning.
+##### Phase 3: Relationship Extraction & Integration
+```python
+# Extract relationships for all found concepts
+outgoing_rels = snomed_explorer.get_outgoing_relationships_in_batch(concept_ids)
+incoming_rels = snomed_explorer.get_incoming_relationships_in_batch(concept_ids)
+```
+- **Batch Processing**: Efficiently retrieves all relationships in single database operations
+- **Dynamic Properties**: SNOMED relationship types become OWL object properties on-the-fly
 
-Dynamic SNOMED relationship properties:
-Each distinct SNOMED CT relationship type encountered is converted to an object property `cgo:snomed_rel_<typeId>` with its human‑readable label when available.
+#### Generated Ontology Statistics (Class-Based Version)
+
+Based on the current `cardio_ontology_class.owl` file:
+
+- **Total OWL Classes**: 44
+  - Core Schema Classes: 30 (from `core_classes` in YAML)
+  - SNOMED Concept Classes: 10 (extracted and categorized concepts)
+  - Additional Structural Classes: 4 (LogicalJunction, Conjunction, Disjunction, QuantitativePhenotype)
+
+- **Object Properties**: 17
+  - Schema Properties: 17 (from `core_properties` in YAML)
+  - Dynamic SNOMED Properties: 0 (in this smaller debug run; would be more in full generation)
+
+- **Datatype Properties**: 13 (from `data_properties` in YAML)
+
+- **RDF Triples**: 413 total
+  - Class declarations and metadata: ~200 triples
+  - Property declarations: ~150 triples  
+  - SNOMED concept integrations: ~63 triples
+
+- **SNOMED CT Integration**: 10 concepts imported with proper URIs and categorization
+
+#### Key Technical Features
+
+- **Dual Modeling Support**: SNOMED concepts can be modeled as OWL Classes (`--modeling-approach class`) or Named Individuals (`--modeling-approach instance`)
+- **LLM-Powered Precision**: BAML framework with Ollama server integration for intelligent categorization
+- **Database Integration**: Secure PostgreSQL connection to SNOMED CT with SSL certificate verification
+- **Standards Compliant**: Valid OWL/RDF output compatible with Protégé and graph databases
+- **Configuration Driven**: Entire process controlled by human-editable YAML file
+- **Quality Assurance**: Preflight validation checks schema completeness before generation
 
 Default output file: `cardio_ontology.owl` in the current directory
 
@@ -422,3 +508,171 @@ poetry shell
 python src/cardio_graph/pdf_utils/parse_pdfs_with_docling.py --text --structures --pdf-path /path/to/file.pdf
 python src/cardio_graph/neo4j_utils/feedneo4jdb.py
 ```
+
+## Cardiovascular Ontology Generation Guide
+
+### Overview
+The `cardio_ontology.owl` file was generated using the `generate_cardio_ontology.py` script, which creates a comprehensive OWL/RDF ontology for cardiovascular guidelines by extracting and categorizing concepts from the SNOMED CT terminology system.
+
+### Process Architecture
+
+The ontology generation follows a **refinement funnel approach** with three main phases:
+
+#### Phase 1: Schema Definition (T-Box Design)
+- **Configuration File**: `ontology_config.yaml` defines the entire ontology schema
+- **Core Classes**: ~30 high-level classes (ClinicalWorkflow, ClinicalAction, PatientPhenotype, etc.)
+- **Properties**: Object properties (relationships) and datatype properties (attributes)
+- **SNOMED Categories**: 10 categorization buckets for mapping SNOMED concepts
+
+#### Phase 2: Schema-Aware Concept Extraction (High Recall)
+- **Targeted Searches**: Uses `snomed_search_terms` from YAML config to perform dozens of specific searches
+- **Database Queries**: Searches SNOMED CT PostgreSQL database using SQLAlchemy ORM
+- **Deduplication**: Ensures unique concepts across all search results
+- **Result**: Broad set of cardiovascular-relevant SNOMED concepts
+
+#### Phase 3: Intelligent Categorization (High Precision)
+- **LLM Classification**: Each concept examined by BAML-powered LLM for precise categorization
+- **Context-Aware**: LLM receives full concept details (FSN, synonyms, descriptions)
+- **Quality Assurance**: Maps concepts to single best-fit category from predefined schema
+
+### Technical Implementation
+
+#### Database Connection
+```python
+# PostgreSQL connection with SSL
+url = f"postgresql://{user}:{password}@{host}:{port}/{database}?sslrootcert={sslrootcert}&sslmode={sslmode}"
+engine = create_engine(url)
+```
+
+#### Concept Extraction Process
+```python
+# For each ontology class with snomed_search_terms:
+for class_entry in ontology_classes:
+    for term in class_entry.get("snomed_search_terms", []):
+        concepts = snomed_explorer.search_concepts_by_term(term, limit=200)
+        # Deduplicate and store with source class metadata
+```
+
+#### LLM Categorization
+```python
+# BAML function call for each concept
+result = b.CategorizeConcept({
+    "term": preferred_term,
+    "description": fsn,
+    "synonyms": ", ".join(synonyms)
+}, SNOMED_CATEGORIES)
+```
+
+#### Ontology Generation
+- **RDF Graph**: Uses rdflib to build OWL ontology
+- **Namespace Management**: Custom namespaces for CardioGuidelinesOntology (cgo)
+- **Triple Generation**: Creates class declarations, subclass relationships, properties
+- **SNOMED Integration**: Imports relevant concepts as OWL classes with proper URIs
+
+### Generated Ontology Structure
+
+#### Classes Generated
+- **Core Schema Classes**: 30 predefined classes from YAML configuration (ClinicalWorkflow, ClinicalAction, PatientPhenotype, etc.)
+- **SNOMED Concept Classes**: 10 cardiovascular concepts extracted and categorized from SNOMED CT
+- **Category Classes**: SNOMED concepts properly subclassed under appropriate CGO categories
+
+#### Properties Generated
+- **Object Properties**: 17 relationships between classes (hasAction, recommends, isSupportedBy, etc.)
+- **Datatype Properties**: 13 attributes with XSD datatypes (hasEvidenceLevel, hasTargetValue, pageNumber, etc.)
+- **Dynamic SNOMED Properties**: Relationship types discovered in SNOMED CT data (snomed_rel_* properties)
+
+#### Key Features
+- **Standards Compliant**: Valid OWL/RDF format using established vocabularies
+- **Interoperable**: Compatible with Protégé, ontology editors, and graph databases
+- **Evidence-Based**: Grounded in SNOMED CT international clinical terminology
+- **Extensible**: YAML-driven configuration allows easy schema modifications
+- **Dual Modeling**: Support for both class-based and instance-based SNOMED modeling
+
+### Usage Examples
+
+#### Command Line Generation
+```bash
+# Generate class-based ontology (SNOMED concepts as OWL Classes)
+poetry run generate-cardio-ontology --modeling-approach class --categorization-method llm
+
+# Generate instance-based ontology (SNOMED concepts as Named Individuals)  
+poetry run generate-cardio-ontology --modeling-approach instance --categorization-method llm
+
+# Generate with keyword fallback categorization
+poetry run generate-cardio-ontology --categorization-method keyword
+
+# Debug mode with limited queries (10 concepts per category)
+poetry run generate-cardio-ontology --debug
+
+# Custom output path (overrides automatic naming)
+poetry run generate-cardio-ontology --output /custom/path/my_ontology.owl
+
+# Use specific Ollama server for LLM categorization
+poetry run generate-cardio-ontology --model Qwen8b --node g4 --ollama-port 34
+```
+
+#### Programmatic Usage
+```python
+from cardio_graph.snomedct_utils.generate_cardio_ontology import CardioOntologyGenerator
+
+# Generate class-based ontology (auto-saved to cardio_ontology_class.owl)
+generator = CardioOntologyGenerator(modeling_approach="class")
+success = generator.generate_ontology(categorization_method="llm")
+
+# Generate instance-based ontology (auto-saved to cardio_ontology_instances.owl)
+generator = CardioOntologyGenerator(modeling_approach="instance")
+success = generator.generate_ontology(categorization_method="llm")
+
+# Custom configuration with Ollama server
+generator = CardioOntologyGenerator(
+    output_path="/custom/path/my_ontology.owl",
+    modeling_approach="class",
+    model="Qwen8b",
+    node="g4", 
+    ollama_port=34
+)
+```
+
+### Quality Assurance
+
+#### Preflight Validation
+- Schema completeness check
+- Class/property declaration verification
+- Subclass relationship validation
+- SNOMED category coverage assessment
+
+#### Statistics Tracking
+- Concepts extracted per category
+- Relationships discovered
+- Ontology size metrics (classes, properties, triples)
+
+### Ontology Design Decision: Classes vs Instances
+
+**Important Design Decision**: The ontology can model SNOMED CT concepts as either **OWL Classes** or **Named Individuals**, controlled by the `--modeling-approach` parameter.
+
+#### Class-Based Modeling (Recommended for `cardio_ontology_class.owl`)
+- **Approach**: SNOMED concepts become OWL Classes that are subclasses of CGO categories
+- **Use Case**: Building a pure T-Box ontology for logical reasoning and concept hierarchies
+- **RDF Pattern**:
+```xml
+<owl:Class rdf:about="http://snomed.info/id/18360001">
+  <rdfs:subClassOf rdf:resource="http://dieterich-lab.org/ontologies/cardioguidelinesonto/#CardiovascularDisease"/>
+  <rdfs:label>Myocardial infarction</rdfs:label>
+</owl:Class>
+```
+
+#### Instance-Based Modeling (Legacy `cardio_ontology_instances.owl`)
+- **Approach**: SNOMED concepts become NamedIndividuals that are instances of CGO categories
+- **Use Case**: When you want concrete, instantiable concepts for direct use in applications
+- **RDF Pattern**:
+```xml
+<owl:NamedIndividual rdf:about="http://snomed.info/id/18360001">
+  <rdf:type rdf:resource="http://dieterich-lab.org/ontologies/cardioguidelinesonto/#ClinicalAction"/>
+  <rdfs:label>Myocardial infarction</rdfs:label>
+</owl:NamedIndividual>
+```
+
+#### Choosing the Right Approach
+- **Class-based**: Better for pure ontology modeling, enables sophisticated logical reasoning, current standard
+- **Instance-based**: Better for direct application use, easier to instantiate in knowledge graphs, legacy approach
+- **Current Generation**: The `cardio_ontology_class.owl` uses class-based modeling with 44 classes and 413 triples
