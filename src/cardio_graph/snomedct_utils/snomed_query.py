@@ -194,7 +194,9 @@ class SnomedExplorer:
 
         results = (
             self.session.query(SnapRelationship)
-            .filter(SnapRelationship.sourceid == concept_id)
+            .filter(
+                SnapRelationship.sourceid == concept_id, SnapRelationship.active == True
+            )
             .limit(200)
             .all()
         )
@@ -214,7 +216,10 @@ class SnomedExplorer:
 
         results = (
             self.session.query(SnapRelationship)
-            .filter(SnapRelationship.sourceid.in_(concept_ids))
+            .filter(
+                SnapRelationship.sourceid.in_(concept_ids),
+                SnapRelationship.active == True,
+            )
             .all()
         )
 
@@ -237,7 +242,10 @@ class SnomedExplorer:
 
         results = (
             self.session.query(SnapRelationship)
-            .filter(SnapRelationship.destinationid.in_(concept_ids))
+            .filter(
+                SnapRelationship.destinationid.in_(concept_ids),
+                SnapRelationship.active == True,
+            )
             .all()
         )
 

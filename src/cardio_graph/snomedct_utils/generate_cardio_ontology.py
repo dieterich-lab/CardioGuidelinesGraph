@@ -133,27 +133,41 @@ class CardioOntologyGenerator:
         return categories_map
 
     def categorize_concepts(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
-        """Categorize SNOMED concepts into snomed categories using keywords from YAML config"""
+        """Categorize SNOMED concepts into snomed categories using source class from extraction"""
         categories = {cat: [] for cat in SNOMED_CATEGORIES}
         for concept in concepts:
-            term = concept.get("term", "").lower()
-            for category_name, keyword_list in SNOMED_KEYWORDS.items():
-                if any(keyword in term for keyword in keyword_list):
-                    category_class_uri = self.cgo[category_name]
-                    concept_uri = self.add_snomed_concept(
-                        concept,
-                        category_class_uri,
-                        synonyms=None,
-                        as_individual=self.as_individual,
-                    )
-                    categories[category_name].append(concept_uri)
+            # Use the source class that was determined during extraction
+            source_class = concept.get("_source_class")
+            if source_class and source_class in categories:
+                category_class_uri = self.cgo[source_class]
+                concept_uri = self.add_snomed_concept(
+                    concept,
+                    category_class_uri,
+                    synonyms=None,
+                    as_individual=self.as_individual,
+                )
+                categories[source_class].append(concept_uri)
+            else:
+                # Fallback to keyword matching if no source class
+                term = concept.get("term", "").lower()
+                for category_name, keyword_list in SNOMED_KEYWORDS.items():
+                    if any(keyword in term for keyword in keyword_list):
+                        category_class_uri = self.cgo[category_name]
+                        concept_uri = self.add_snomed_concept(
+                            concept,
+                            category_class_uri,
+                            synonyms=None,
+                            as_individual=self.as_individual,
+                        )
+                        categories[category_name].append(concept_uri)
+                        break  # Only assign to first matching category
         return categories
 
     def get_type_label(self, type_id: int) -> str:
         """Lookup human-readable label for a SNOMED CT typeId."""
         result = (
             self.snomed_explorer.session.query(SnapDescription)
-            .filter_by(conceptId=type_id)
+            .filter_by(conceptid=type_id)
             .first()
         )
         if result and hasattr(result, "term"):
@@ -469,6 +483,7 @@ class CardioOntologyGenerator:
                     concept_id = None
                     id_keys_to_try = [
                         "conceptId",
+                        "conceptid",  # SNOMED search returns lowercase
                         "id",
                         "referencedComponentId",
                         "sourceId",
@@ -582,46 +597,94 @@ class CardioOntologyGenerator:
         return concept_uri
 
     def add_relationships(self, concept_id: int, relationships: List[Dict]):
-        """Add relationships for a concept to the ontology"""
-        if concept_id not in self.snomed_concepts:
-            return
+        """Add relationships for a concept to the ontology
 
-        source_uri = self.snomed_concepts[concept_id]
+        Args:
+            concept_id: The concept ID from the relationships map key
+            relationships: List of relationship dictionaries (all have sourceId, destinationId, typeId)
+        """
+        # Determine relationship direction based on whether concept_id is in our ontology
+        is_outgoing = concept_id in self.snomed_concepts
+
+        if is_outgoing:
+            # concept_id is the source of outgoing relationships
+            source_uri = self.snomed_concepts[concept_id]
+        else:
+            # concept_id is the source of incoming relationships (source not in our ontology)
+            # We need to verify that the destination is one of our concepts
+            pass
 
         for rel in relationships:
-            rel_type = rel.get("typeId")
-            target_id = rel.get("destinationId")
+            rel_type = rel.get("typeId") or rel.get("typeid")
+            source_id = rel.get("sourceId") or rel.get("sourceid")
+            destination_id = rel.get("destinationId") or rel.get("destinationid")
 
-            if not rel_type or not target_id:
+            if not rel_type or not source_id or not destination_id:
                 continue
 
-            target_uri = self.snomed[str(target_id)]
+            if is_outgoing:
+                # Outgoing: our_concept -> destinationId
+                if source_id != concept_id:
+                    continue
 
-            # Always create a relationship property and label
-            rel_prop_uri = self.cgo[f"snomed_rel_{rel_type}"]
-            if rel_prop_uri not in self.properties:
-                if self.as_individual:
-                    # For individuals, relationships are object properties
-                    self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
-                else:
-                    # For classes, relationships are object properties (could also be restrictions)
-                    self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
-                rel_name = self.get_type_label(rel_type)
-                self.g.add((rel_prop_uri, RDFS.label, Literal(rel_name)))
-                self.properties.add(rel_prop_uri)
+                target_uri = self.snomed[str(destination_id)]
 
-            # Add the relationship triple
-            self.g.add((source_uri, rel_prop_uri, target_uri))
+                # Ensure target exists
+                if destination_id not in self.snomed_concepts:
+                    term = f"SNOMED Concept {destination_id}"
+                    if self.as_individual:
+                        self.g.add((target_uri, RDF.type, OWL.NamedIndividual))
+                    else:
+                        self.g.add((target_uri, RDF.type, OWL.Class))
+                    self.g.add((target_uri, RDFS.label, Literal(term)))
+                    self.snomed_concepts[destination_id] = target_uri
 
-            # Ensure the target concept exists in the ontology
-            if target_id not in self.snomed_concepts:
-                term = f"SNOMED Concept {target_id}"
-                if self.as_individual:
-                    self.g.add((target_uri, RDF.type, OWL.NamedIndividual))
-                else:
-                    self.g.add((target_uri, RDF.type, OWL.Class))
-                self.g.add((target_uri, RDFS.label, Literal(term)))
-                self.snomed_concepts[target_id] = target_uri
+                rel_prop_uri = self.cgo[f"snomed_rel_{rel_type}"]
+                if rel_prop_uri not in self.properties:
+                    if self.as_individual:
+                        self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
+                    else:
+                        self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
+                    rel_name = self.get_type_label(rel_type)
+                    self.g.add((rel_prop_uri, RDFS.label, Literal(rel_name)))
+                    self.properties.add(rel_prop_uri)
+
+                # Add the relationship triple
+                self.g.add((source_uri, rel_prop_uri, target_uri))
+
+            else:
+                # Incoming: sourceId -> our_concept (where destinationId should be in our ontology)
+                if destination_id not in self.snomed_concepts:
+                    continue
+
+                if source_id != concept_id:
+                    continue
+
+                source_uri = self.snomed[str(source_id)]
+                target_uri = self.snomed_concepts[destination_id]
+
+                # Ensure source exists
+                if source_id not in self.snomed_concepts:
+                    term = f"SNOMED Concept {source_id}"
+                    if self.as_individual:
+                        self.g.add((source_uri, RDF.type, OWL.NamedIndividual))
+                    else:
+                        self.g.add((source_uri, RDF.type, OWL.Class))
+                    self.g.add((source_uri, RDFS.label, Literal(term)))
+                    self.snomed_concepts[source_id] = source_uri
+
+                rel_prop_uri = self.cgo[f"snomed_rel_{rel_type}"]
+                if rel_prop_uri not in self.properties:
+                    if self.as_individual:
+                        self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
+                    else:
+                        self.g.add((rel_prop_uri, RDF.type, OWL.ObjectProperty))
+                    rel_name = self.get_type_label(rel_type)
+                    self.g.add((rel_prop_uri, RDFS.label, Literal(rel_name)))
+                    self.properties.add(rel_prop_uri)
+
+                # Add the relationship triple
+                self.g.add((source_uri, rel_prop_uri, target_uri))
 
     def generate_ontology(self, categorization_method: str = "keyword"):
         """Generate the complete cardiovascular guidelines ontology"""
@@ -639,7 +702,15 @@ class CardioOntologyGenerator:
                 return False
 
             # Step 2: Extract all relationship data for the found concepts in a single batch
-            concept_ids_list = [c["conceptId"] for c in concepts if "conceptId" in c]
+            concept_ids_list = [
+                int(c["conceptId"]) for c in concepts if "conceptId" in c
+            ]
+            print(f"Concept IDs list length: {len(concept_ids_list)}")
+            if concept_ids_list:
+                print(f"Sample concept IDs: {concept_ids_list[:5]}")
+                print(
+                    f"Concept ID types: {[type(cid) for cid in concept_ids_list[:5]]}"
+                )
 
             # Step 3: Categorize concepts. This step now ALSO adds the concepts to the graph.
             if categorization_method == "llm":
@@ -656,7 +727,11 @@ class CardioOntologyGenerator:
                 print(f"  - {category}: {len(uris)} concepts")
 
             # Step 3: Extract all relationship data for the found concepts
-            concept_ids_list = [c["conceptId"] for c in concepts if "conceptId" in c]
+            concept_ids_list = [
+                int(c["conceptId"])
+                for c in concepts
+                if "conceptId" in c and c["conceptId"] is not None
+            ]
 
             print("--- Fetching Outgoing Relationships ---")
             outgoing_relationships = (
@@ -664,22 +739,40 @@ class CardioOntologyGenerator:
                     concept_ids_list
                 )
             )
+            print(
+                f"Found outgoing relationships for {len(outgoing_relationships)} concepts"
+            )
+            total_outgoing = sum(len(rels) for rels in outgoing_relationships.values())
+            print(f"Total outgoing relationships: {total_outgoing}")
+
             print("--- Fetching Incoming Relationships ---")
             incoming_relationships = (
                 self.snomed_explorer.get_incoming_relationships_in_batch(
                     concept_ids_list
                 )
             )
+            print(
+                f"Found incoming relationships for {len(incoming_relationships)} concepts"
+            )
+            total_incoming = sum(len(rels) for rels in incoming_relationships.values())
+            print(f"Total incoming relationships: {total_incoming}")
 
             # Merge the two dictionaries into a single, unified structure
             all_relationships = outgoing_relationships.copy()
             for source_id, rels in incoming_relationships.items():
                 all_relationships[source_id].extend(rels)
 
+            print(f"Total concepts with relationships: {len(all_relationships)}")
+            total_relationships = sum(len(rels) for rels in all_relationships.values())
+            print(f"Total relationships to process: {total_relationships}")
+
             # Step 4: Add all relationships using a single, simple loop
             print("--- Adding All Relationships ---")
+            relationships_added = 0
             for concept_id, rels in all_relationships.items():
+                relationships_added += len(rels)
                 self.add_relationships(concept_id, rels)
+            print(f"Relationships processed: {relationships_added}")
 
             # Save the ontology to file
             self.g.serialize(destination=self.output_path, format="xml")

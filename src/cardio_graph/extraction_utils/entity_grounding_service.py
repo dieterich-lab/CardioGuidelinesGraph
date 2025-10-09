@@ -3,8 +3,8 @@
 Entity Grounding Service (EGS) for the Cardio Guidelines Knowledge Graph.
 
 This service performs the following steps:
-1.  Parses the foundational `cardio_ontology.owl` file.
-2.  Extracts all named individuals (SNOMED concepts, etc.), their labels, and synonyms.
+1.  Parses the foundational `cardio_ontology.owl` file (class-based modeling).
+2.  Extracts all classes (SNOMED concepts, etc.), their labels, and synonyms.
 3.  Builds a fast, local full-text search index using Whoosh.
 4.  Provides a `ground()` method that takes raw text, identifies entity mentions using
     spaCy, and links them to the concepts in the ontology via the search index.
@@ -43,7 +43,7 @@ class GroundedEntity:
 class EntityGroundingService:
     def __init__(
         self,
-        ontology_path: str = "/prj/doctoral_letters/guide/data/ontologies/cardio_ontology.owl",
+        ontology_path: str = "/prj/doctoral_letters/guide/data/ontologies/cardio_ontology_class.owl",
         index_path: str = "/prj/doctoral_letters/guide/data/egs_index",
         rebuild_index: bool = False,
     ):
@@ -79,7 +79,7 @@ class EntityGroundingService:
 
     def _parse_ontology(self) -> Iterator[Dict]:
         """
-        Parses the OWL file and yields a dictionary for each named individual.
+        Parses the OWL file and yields a dictionary for each class (for class-based modeling).
         Includes validation to ensure the ontology has expected structure.
         """
         print(f"Parsing ontology file: {self.ontology_path}...")
@@ -87,41 +87,41 @@ class EntityGroundingService:
         g.parse(self.ontology_path)
 
         # Validate ontology structure
-        individuals = list(g.subjects(RDF.type, OWL.NamedIndividual))
-        if not individuals:
+        classes = list(g.subjects(RDF.type, OWL.Class))
+        if not classes:
             raise ValueError(
-                "Ontology does not contain any NamedIndividuals. Check the ontology file."
+                "Ontology does not contain any Classes. Check the ontology file."
             )
 
-        # This SPARQL query is the heart of the parsing step. It finds all individuals
-        # and gathers their label, type, and all alternative labels (synonyms).
+        # This SPARQL query is the heart of the parsing step. It finds all classes
+        # (for class-based modeling) and gathers their label, type, and all alternative labels (synonyms).
         query = """
-        SELECT ?individual ?label (GROUP_CONCAT(?altLabel; separator="||") AS ?synonyms) ?type
+        SELECT ?entity ?label (GROUP_CONCAT(?altLabel; separator="||") AS ?synonyms) ?type
         WHERE {
-            ?individual rdf:type owl:NamedIndividual .
-            ?individual rdfs:label ?label .
-            ?individual rdf:type ?type .
-            
-            # We want the specific cgo: type, not the generic owl:NamedIndividual type
-            FILTER(?type != owl:NamedIndividual)
+            ?entity rdf:type owl:Class .
+            ?entity rdfs:label ?label .
+
+            # Get the superclass (cgo: type)
+            ?entity rdfs:subClassOf ?type .
+            FILTER(STRSTARTS(STR(?type), "http://dieterich-lab.org/ontologies/cardioguidelinesonto"))
 
             # Optionally bind synonyms if they exist
-            OPTIONAL { ?individual skos:altLabel ?altLabel . }
+            OPTIONAL { ?entity skos:altLabel ?altLabel . }
         }
-        GROUP BY ?individual ?label ?type
+        GROUP BY ?entity ?label ?type
         """
 
         results = g.query(query)
-        print(f"Found {len(results)} individuals in the ontology.")
+        print(f"Found {len(results)} classes in the ontology.")
 
         if len(results) == 0:
             print(
-                "Warning: No individuals with labels and types found. Ontology may be incomplete."
+                "Warning: No classes with labels and types found. Ontology may be incomplete."
             )
 
         for row in results:
             yield {
-                "id": str(row.individual),
+                "id": str(row.entity),
                 "label": str(row.label),
                 "synonyms": str(row.synonyms).split("||") if row.synonyms else [],
                 "type": str(row.type),
@@ -270,7 +270,9 @@ def ground(ctx, text):
 def demo():
     """Demo/Main Block: Provides a working example with sample text, making it easy to test. It checks for the ontology file and handles missing files gracefully."""
     # Define paths to your files
-    ONTOLOGY_FILE = "/prj/doctoral_letters/guide/data/ontologies/cardio_ontology.owl"
+    ONTOLOGY_FILE = (
+        "/prj/doctoral_letters/guide/data/ontologies/cardio_ontology_class.owl"
+    )
     INDEX_DIR = "/prj/doctoral_letters/guide/data/egs_index"
 
     # Check if the ontology file exists
