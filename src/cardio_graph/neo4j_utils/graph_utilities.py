@@ -1,6 +1,12 @@
 import os, time, sys
 from neo4j import GraphDatabase
 from cardio_graph.neo4j_utils.feedneo4jdb import execute_cypher_file
+from cardio_graph.neo4j_utils.graph_adjustments import (
+    change_rdf_statement_labels,
+    rdf_statement_cleanup,
+    create_lowercase_value_property,
+    normalize_nodes,
+)
 
 URI = "bolt://neo4j-dev1.internal:7687"
 AUTH = ("neo4j", "KWCeoHhkJYAiFa3XTZZZLC77bHiZ5xzj")
@@ -8,6 +14,9 @@ AUTH = ("neo4j", "KWCeoHhkJYAiFa3XTZZZLC77bHiZ5xzj")
 
 def execute_cypher_folder_dev1(
     cypher_filepath="/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/md_to_cypher/",
+    session=None,
+    URI=URI,
+    AUTH=AUTH,
 ):
     """
     Excutes all cypher files in the specified folder against the dev1 database.
@@ -17,6 +26,15 @@ def execute_cypher_folder_dev1(
     """
     start = time.time()
     print("Starting: excecute_cypher_folder_dev1")
+    if session is not None:
+        for file in sorted(os.listdir(cypher_filepath)):
+            full_path = os.path.join(cypher_filepath, file)
+            print(f"Executing Cypher file: {full_path}")
+            execute_cypher_file(session, full_path)
+            print(f"Completed Cypher file: {full_path}")
+        print("Time:", time.time() - start)
+        print("Total Nodes:", count_nodes(session))
+        return
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
         driver.verify_connectivity()
         print("Connected to Neo4j database.")
@@ -69,7 +87,9 @@ def require_manual_delete(expected="delete"):
     return
 
 
-def delete_all_nodes_dev1(max_nodes=50000, dry_run=True):
+def delete_all_nodes_dev1(
+    max_nodes=50000, dry_run=True, URI=URI, AUTH=AUTH, session=None
+):
     """
     Deletes all current Nodes and Relationships in the dev1 database
     Requires a manual input to confirm deletion.
@@ -80,34 +100,56 @@ def delete_all_nodes_dev1(max_nodes=50000, dry_run=True):
     dry_run: bool
         If True, the deletion step is simulated but not executed.
         This allows you to see what would happen without making any changes.
+
+    session: neo4j.Session, optional, use for multiple operations in the same session
+
     """
     require_manual_delete(expected="delete")
-    with GraphDatabase.driver(URI, auth=AUTH) as driver:
-        driver.verify_connectivity()
-        print("Connected to Neo4j database.")
-        with driver.session() as session:
+    if session is not None:
+        node_count = count_nodes(session)
+        if node_count > max_nodes:
+            print(
+                f"Node count ({node_count}) exceeds max_nodes ({max_nodes}). Aborting deletion."
+            )
+            return
+        print(f"Node count before deletion: {node_count}")
 
-            node_count = count_nodes(session)
-            if node_count > max_nodes:
-                print(
-                    f"Node count ({node_count}) exceeds max_nodes ({max_nodes}). Aborting deletion."
-                )
-                return
-            print(f"Node count before deletion: {node_count}")
+        if dry_run:
+            print("Dry run enabled. No nodes will be deleted.")
+            print(f"Would delete all nodes and relationships from dev1.")
+            return
 
-            if dry_run:
-                print("Dry run enabled. No nodes will be deleted.")
-                print(f"Would delete all nodes and relationships from dev1.")
-                return
+        session.run("MATCH (n) DETACH DELETE n")
+        print("All nodes and relationships deleted from dev1, veryfying...")
+        node_count_after = count_nodes(session)
+        print(f"Node count after deletion: {node_count_after}")
+    else:
+        with GraphDatabase.driver(URI, auth=AUTH) as driver:
+            driver.verify_connectivity()
+            print("Connected to Neo4j database.")
+            with driver.session() as session:
 
-            session.run("MATCH (n) DETACH DELETE n")
-            print("All nodes and relationships deleted from dev1, veryfying...")
-            node_count_after = count_nodes(session)
-            print(f"Node count after deletion: {node_count_after}")
+                node_count = count_nodes(session)
+                if node_count > max_nodes:
+                    print(
+                        f"Node count ({node_count}) exceeds max_nodes ({max_nodes}). Aborting deletion."
+                    )
+                    return
+                print(f"Node count before deletion: {node_count}")
+
+                if dry_run:
+                    print("Dry run enabled. No nodes will be deleted.")
+                    print(f"Would delete all nodes and relationships from dev1.")
+                    return
+
+                session.run("MATCH (n) DETACH DELETE n")
+                print("All nodes and relationships deleted from dev1, veryfying...")
+                node_count_after = count_nodes(session)
+                print(f"Node count after deletion: {node_count_after}")
     return
 
 
-def reset_graph_from_cypher_folder(max_nodes=50000, dry_run=True):
+def reset_graph_from_cypher_folder(max_nodes=50000, dry_run=True, URI=URI, AUTH=AUTH):
     """
     Deletes all current Nodes and Relationships in the dev1 database
     and repopulates it from cypher files in the specified folder.
@@ -120,10 +162,23 @@ def reset_graph_from_cypher_folder(max_nodes=50000, dry_run=True):
         This allows you to see what would happen without making any changes.
     """
     beginning = time.time()
-    delete_all_nodes_dev1(max_nodes, dry_run)
-    execute_cypher_folder_dev1()
-    print("Graph reset from cypher folder completed.")
-    print("Total Time", time.time() - beginning)
+    with GraphDatabase.driver(URI, auth=AUTH) as driver:
+        driver.verify_connectivity()
+        print("Connected to Neo4j database.")
+        with driver.session() as session:
+            delete_all_nodes_dev1(max_nodes, dry_run, session=session)
+            execute_cypher_folder_dev1(session=session)
+            print("Graph reset from cypher folder completed.")
+            print("Parsing Time:", time.time() - beginning)
+            print("postprocessing...")
+            change_rdf_statement_labels(URI, AUTH, session=session)
+            rdf_statement_cleanup(URI, AUTH, session=session)
+            print("rdf_statments processed")
+            create_lowercase_value_property(URI, AUTH, session=session)
+            print("lowercase value property created")
+            normalize_nodes(URI, AUTH, session=session)
+            print("Total Time:", time.time() - beginning)
+
     return
 
 
