@@ -124,10 +124,10 @@ Default paths:
 
 #### Markdown Text Chunker (`markdown-chunks`)
 
-Split large markdown files into manageable chunks for downstream processing using LangChain's MarkdownTextSplitter.
+Split large markdown files into manageable chunks for downstream processing, with intelligent table extraction and sentence-aware splitting.
 
 ```bash
-# Process the default ESC CCS markdown file
+# Process the default ESC CCS markdown file with table extraction
 poetry run python src/cardio_graph/extraction_utils/markdown_chunks.py
 
 # Specify custom input file and output directory
@@ -136,22 +136,45 @@ poetry run python src/cardio_graph/extraction_utils/markdown_chunks.py --input-f
 # Customize chunk size and overlap
 poetry run python src/cardio_graph/extraction_utils/markdown_chunks.py --chunk-size 2000 --chunk-overlap 200
 
+# Disable table extraction (process tables as regular content)
+poetry run python src/cardio_graph/extraction_utils/markdown_chunks.py --no-extract-tables
+
 # Enable verbose logging
 poetry run python src/cardio_graph/extraction_utils/markdown_chunks.py --verbose
 ```
 
 **Features:**
-- Uses LangChain's MarkdownTextSplitter for intelligent markdown-aware chunking
-- Configurable chunk size and overlap to maintain context
-- Zero-padded filenames for consistent ordering
-- Comprehensive logging and error handling
-- Creates organized output directory structure
+- **Table Extraction**: Automatically detects and extracts markdown tables to separate files
+- **Sentence-Aware Splitting**: Uses RecursiveCharacterTextSplitter with sentence boundaries to avoid mid-sentence cuts
+- **Configurable Chunking**: Adjustable chunk size and overlap for optimal context preservation
+- **Organized Output**: Creates separate directories for chunks and extracted tables
+- **Zero-padded Filenames**: Consistent ordering with 3-digit padding (chunk_000.md, chunk_001.md, etc.)
+- **Comprehensive Logging**: Detailed progress tracking and error handling
 
 **Default Settings:**
 - Input File: `/prj/doctoral_letters/guide/data/guidelines/markdown/esc_ccs.md`
 - Output Directory: `/prj/doctoral_letters/guide/data/guidelines/markdown/chunks`
 - Chunk Size: 1000 characters
-- Chunk Overlap: 100 characters
+- Chunk Overlap: 200 characters
+- Table Extraction: Enabled
+
+**Output Structure:**
+```
+chunks/
+├── esc_ccs_chunk_000.md
+├── esc_ccs_chunk_001.md
+├── ...
+└── tables/
+    ├── esc_ccs_table_000.md
+    ├── esc_ccs_table_001.md
+    └── ...
+```
+
+**Example Results:**
+- **65 tables extracted** from ESC CCS guidelines
+- **714 chunks generated** from cleaned content (525,526 chars)
+- **Sentence boundaries preserved** across chunk transitions
+- **Tables completely removed** from main content to prevent fragmentation
 
 #### Parse Structures from Markdown or PDFs (`parse-structures`)
 
