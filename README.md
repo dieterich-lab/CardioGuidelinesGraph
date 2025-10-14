@@ -122,6 +122,37 @@ Default paths:
 
 ### Extraction Utilities
 
+#### Markdown Text Chunker (`markdown-chunks`)
+
+Split large markdown files into manageable chunks for downstream processing using LangChain's MarkdownTextSplitter.
+
+```bash
+# Process the default ESC CCS markdown file
+poetry run python src/cardio_graph/extraction_utils/markdown_chunks.py
+
+# Specify custom input file and output directory
+poetry run python src/cardio_graph/extraction_utils/markdown_chunks.py --input-file /path/to/file.md --output-dir /path/to/output
+
+# Customize chunk size and overlap
+poetry run python src/cardio_graph/extraction_utils/markdown_chunks.py --chunk-size 2000 --chunk-overlap 200
+
+# Enable verbose logging
+poetry run python src/cardio_graph/extraction_utils/markdown_chunks.py --verbose
+```
+
+**Features:**
+- Uses LangChain's MarkdownTextSplitter for intelligent markdown-aware chunking
+- Configurable chunk size and overlap to maintain context
+- Zero-padded filenames for consistent ordering
+- Comprehensive logging and error handling
+- Creates organized output directory structure
+
+**Default Settings:**
+- Input File: `/prj/doctoral_letters/guide/data/guidelines/markdown/esc_ccs.md`
+- Output Directory: `/prj/doctoral_letters/guide/data/guidelines/markdown/chunks`
+- Chunk Size: 1000 characters
+- Chunk Overlap: 100 characters
+
 #### Parse Structures from Markdown or PDFs (`parse-structures`)
 
 Extract structures from both PDF files (via image conversion) and markdown files.
