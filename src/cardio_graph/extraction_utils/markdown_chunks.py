@@ -57,12 +57,68 @@ def extract_tables_from_markdown(markdown_content: str) -> Tuple[str, List[str]]
     return cleaned_content, tables
 
 
+def clean_page_artifacts(markdown_content: str) -> str:
+    """
+    Remove page headers, footers, and other PDF conversion artifacts from markdown content.
+
+    This addresses issues where sentences get split across page breaks during chunking.
+    """
+    # Comprehensive patterns for page artifacts based on observed variations
+    patterns = [
+        # Full pattern with URL and "from Downloaded"
+        r"2025 April 02 on user Heidelberg Universität.*?from Downloaded",
+        # Pattern with URL and "Downloaded" at end
+        r"2025 April 02 on user Heidelberg Universität.*?Downloaded",
+        # Pattern with just URL
+        r"2025 April 02 on user Heidelberg Universität.*?https://academic\.oup\.com/eurheartj/article/\d+/\d+/\d+",
+        # Pattern ending with "by Downloaded"
+        r"2025 April 02 on user Heidelberg Universität by Downloaded",
+        # Simple pattern without additional text
+        r"2025 April 02 on user Heidelberg Universität",
+    ]
+
+    cleaned_content = markdown_content
+    total_removed = 0
+    for pattern in patterns:
+        before_len = len(cleaned_content)
+        cleaned_content = re.sub(
+            pattern, "", cleaned_content, flags=re.MULTILINE | re.DOTALL
+        )
+        removed = before_len - len(cleaned_content)
+        if removed > 0:
+            total_removed += removed
+            logger.debug(f"Pattern removed {removed} characters")
+
+    # Remove standalone "---" lines that might be left over
+    cleaned_content = re.sub(r"^---\s*$", "", cleaned_content, flags=re.MULTILINE)
+
+    # Clean up extra whitespace
+    cleaned_content = re.sub(r"\n{3,}", "\n\n", cleaned_content)
+
+    logger.info(
+        f"Cleaned page artifacts from markdown content - removed {total_removed} characters"
+    )
+    return cleaned_content.strip()
+
+
 def save_tables_to_files(
     tables: List[str], output_dir: str, base_filename: str
 ) -> None:
     """Save each table to a separate file."""
     tables_dir = os.path.join(output_dir, "tables")
     ensure_directory_exists(tables_dir)
+
+    # Clean up old table files with the same base filename
+    import glob
+
+    old_table_pattern = os.path.join(tables_dir, f"{base_filename}_table_*.md")
+    old_tables = glob.glob(old_table_pattern)
+    for old_table in old_tables:
+        try:
+            os.remove(old_table)
+            logger.debug(f"Removed old table file: {old_table}")
+        except Exception as e:
+            logger.warning(f"Could not remove old table file {old_table}: {e}")
 
     for i, table in enumerate(tables):
         table_filename = f"{base_filename}_table_{i:03d}.md"
@@ -121,6 +177,18 @@ def save_chunks_to_files(
     """Save each chunk to a separate file."""
     ensure_directory_exists(output_dir)
 
+    # Clean up old chunk files with the same base filename
+    import glob
+
+    old_chunk_pattern = os.path.join(output_dir, f"{base_filename}_chunk_*.md")
+    old_chunks = glob.glob(old_chunk_pattern)
+    for old_chunk in old_chunks:
+        try:
+            os.remove(old_chunk)
+            logger.debug(f"Removed old chunk file: {old_chunk}")
+        except Exception as e:
+            logger.warning(f"Could not remove old chunk file {old_chunk}: {e}")
+
     for i, chunk in enumerate(chunks):
         chunk_filename = f"{base_filename}_chunk_{i:03d}.md"
         chunk_path = os.path.join(output_dir, chunk_filename)
@@ -155,14 +223,26 @@ def process_markdown_file(
 
         logger.info(f"Read {len(markdown_content)} characters from file")
 
+        # Clean page artifacts first
+        cleaned_content = clean_page_artifacts(markdown_content)
+        logger.info(f"After cleaning page artifacts: {len(cleaned_content)} characters")
+
+        # Debug: Check if artifacts still exist
+        if "2025 April 02 on user Heidelberg" in cleaned_content:
+            logger.warning("WARNING: Page artifacts still found in cleaned content!")
+            # Count occurrences
+            count = cleaned_content.count("2025 April 02 on user Heidelberg")
+            logger.warning(f"Found {count} remaining page artifacts")
+        else:
+            logger.info("Page artifacts successfully removed from content")
+
         # Extract tables if requested
         if extract_tables:
-            cleaned_content, tables = extract_tables_from_markdown(markdown_content)
+            cleaned_content, tables = extract_tables_from_markdown(cleaned_content)
             logger.info(
                 f"Original content: {len(markdown_content)} chars, cleaned content: {len(cleaned_content)} chars"
             )
         else:
-            cleaned_content = markdown_content
             tables = []
 
         # Split into chunks
