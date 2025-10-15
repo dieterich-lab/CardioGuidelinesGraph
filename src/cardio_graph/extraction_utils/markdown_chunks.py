@@ -140,19 +140,18 @@ def split_markdown_into_chunks(
     """
     Split markdown content into chunks using sentence-aware splitting.
 
-    Uses RecursiveCharacterTextSplitter with sentence-aware separators to avoid
+    Uses RecursiveCharacterTextSplitter with separators to avoid
     splitting mid-sentence.
     """
     try:
-        # Use sentence-aware separators: prioritize sentence endings, then paragraphs, then words
+        # Use separators that work better for scientific text with citations
+        # Prioritize larger structural breaks, then sentence-like breaks
+        # Be more conservative with punctuation to allow chunks to grow larger
         separators = [
-            "\n\n",  # Paragraph breaks
-            ". ",  # Sentence endings (period + space)
-            "! ",  # Sentence endings (exclamation + space)
-            "? ",  # Sentence endings (question + space)
-            "\n",  # Line breaks
-            " ",  # Word boundaries
-            "",  # Character level (fallback)
+            "\n\n",  # Paragraph breaks (most important)
+            "\n",    # Line breaks
+            " ",     # Word boundaries (more conservative than punctuation)
+            "",      # Character level (fallback)
         ]
 
         text_splitter = RecursiveCharacterTextSplitter(
