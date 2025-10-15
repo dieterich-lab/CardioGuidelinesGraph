@@ -65,32 +65,16 @@ def clean_page_artifacts(markdown_content: str) -> str:
     """
     # Comprehensive patterns for page artifacts based on observed variations
     patterns = [
-        # Full pattern with URL and "from Downloaded" (most common)
-        r"2025April 02 on user Heidelberg Universität.*?from Downloaded",
+        # Full pattern with URL and "from Downloaded"
+        r"2025 April 02 on user Heidelberg Universität.*?from Downloaded",
         # Pattern with URL and "Downloaded" at end
-        r"2025April 02 on user Heidelberg Universität.*?Downloaded",
+        r"2025 April 02 on user Heidelberg Universität.*?Downloaded",
         # Pattern with just URL
-        r"2025April 02 on user Heidelberg Universität.*?https://academic\.oup\.com/eurheartj/article/\d+/\d+/\d+",
+        r"2025 April 02 on user Heidelberg Universität.*?https://academic\.oup\.com/eurheartj/article/\d+/\d+/\d+",
         # Pattern ending with "by Downloaded"
-        r"2025April 02 on user Heidelberg Universität by Downloaded",
-        # Simple pattern without additional text (with or without space)
-        r"2025 ?April 02 on user Heidelberg Universität",
-        # Shorter pattern without year
-        r"April 02 on user Heidelberg Universität.*?Downloaded",
-        r"April 02 on user Heidelberg Universität",
-        # Standalone Heidelberg artifacts
-        r"02 on user Heidelberg Universität by https://academic\.oup\.com/eurheartj/article/\d+/\d+/\d+",
-        r"on user Heidelberg Universität by https://academic\.oup\.com/eurheartj/article/\d+/\d+/\d+",
-        # ESC Guidelines headers (standalone)
-        r"^ESC Guidelines\s*$",
-        # ESC Guidelines headers with page numbers
-        r"^\d+\s+ESC Guidelines\s*$",
-        # New pattern for artifacts without "Heidelberg Universität" but with URL and "from Downloaded"
-        r"2025April 02 on user.*?from Downloaded",
-        # Pattern for artifacts with URL and "from Downloaded" (shorter)
-        r"02 on user.*?from Downloaded",
-        # Additional pattern for standalone URL artifacts
-        r"by https://academic\.oup\.com/eurheartj/article/\d+/\d+/\d+/.*from Downloaded",
+        r"2025 April 02 on user Heidelberg Universität by Downloaded",
+        # Simple pattern without additional text
+        r"2025 April 02 on user Heidelberg Universität",
     ]
 
     cleaned_content = markdown_content
