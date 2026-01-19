@@ -8,6 +8,10 @@ class APINodes {
   nodes APINode[] @description("a list of nodes")
 }
 
+class APIEntities {
+  entities string[] @description("a list of entities")
+}
+
 
 class APITriple {
   head_node_label string @description("the label of the head node, ONLY: 'Node', 'AND', 'Predicate'")
@@ -179,5 +183,15 @@ function APITotalConverter(string: string) -> APITriples {
 
     {{ ctx.output_format}}  
 
+  "#
+}
+
+function APIGrounder(string: string) -> APIEntities {
+  client GPT52
+  prompt #"
+    Extract all individual Entities from the following medical text.
+    
+    {{string}}
+    {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
   "#
 }
