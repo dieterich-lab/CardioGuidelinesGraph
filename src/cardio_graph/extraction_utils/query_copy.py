@@ -15,7 +15,7 @@ import json
 from collections import defaultdict
 
 # Database configuration
-URI = "bolt://neo4j-dev2.internal:7687"
+URI = "bolt://neo4j-dev1.internal:7687"
 AUTH = ("neo4j", "KWCeoHhkJYAiFa3XTZZZLC77bHiZ5xzj")
 DIR = "/prj/doctoral_letters/guide/outputs2/test_query"
 
