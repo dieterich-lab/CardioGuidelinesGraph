@@ -197,5 +197,67 @@ def normalize_nodes(URI=URI, AUTH=AUTH, session=None):
     return
 
 
+def cleanup_values(URI=URI, AUTH=AUTH, session=None):
+    """
+    removes the LIST OF STRINGS from normalization and keeps the first entry as a value for the node
+    """
+    if session is not None:
+        result = session.run(
+            """
+        MATCH (n:Node)
+        WHERE apoc.meta.cypher.type(n.value) = 'LIST OF STRING' AND size(n.value) > 0
+        SET n.value = n.value[0]
+        RETURN count(n) AS collapsed;
+        """
+        )
+        collapsed_count = result.single()["collapsed"]
+        print(f"{collapsed_count} values cleaned up successfully.")
+        return
+    with GraphDatabase.driver(URI, auth=AUTH) as driver:
+        driver.verify_connectivity()
+        print("Connected to Neo4j database.")
+        with driver.session() as session:
+            result = session.run(
+                """
+            MATCH (n:Node)
+            WHERE apoc.meta.cypher.type(n.value) = 'LIST OF STRING' AND size(n.value) > 0
+            SET n.value = n.value[0]
+            RETURN count(n) AS collapsed;
+            """
+            )
+            collapsed_count = result.single()["collapsed"]
+            print(f"{collapsed_count} values cleaned up successfully.")
+    return
+
+
+def remove_redundant_properties(URI=URI, AUTH=AUTH, session=None):
+    """
+    Removes redundant properties from nodes.
+    """
+    if session is not None:
+        session.run(
+            """
+        MATCH (n)
+        REMOVE n.value_lower
+        REMOVE n.id
+        """
+        )
+        print("value_lower and id properties removed successfully.")
+        return
+    with GraphDatabase.driver(URI, auth=AUTH) as driver:
+        driver.verify_connectivity()
+        print("Connected to Neo4j database.")
+        with driver.session() as session:
+            session.run(
+                """
+            MATCH (n)
+            REMOVE n.value_lower
+            REMOVE n.id
+            """
+            )
+            print("value_lower and id properties removed successfully.")
+    return
+
+
 if __name__ == "__main__":
-    normalize_nodes()
+    cleanup_values()
