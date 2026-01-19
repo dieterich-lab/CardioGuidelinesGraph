@@ -6,6 +6,8 @@ from cardio_graph.neo4j_utils.graph_adjustments import (
     rdf_statement_cleanup,
     create_lowercase_value_property,
     normalize_nodes,
+    cleanup_values,
+    remove_redundant_properties,
 )
 
 URI = "bolt://neo4j-dev1.internal:7687"
@@ -177,6 +179,11 @@ def reset_graph_from_cypher_folder(max_nodes=50000, dry_run=True, URI=URI, AUTH=
             create_lowercase_value_property(URI, AUTH, session=session)
             print("lowercase value property created")
             normalize_nodes(URI, AUTH, session=session)
+            print("nodes normalized")
+            remove_redundant_properties(URI, AUTH, session=session)
+            print("redundant properties removed")
+            cleanup_values(URI, AUTH, session=session)
+            print("values cleaned up")
             print("Total Time:", time.time() - beginning)
 
     return
