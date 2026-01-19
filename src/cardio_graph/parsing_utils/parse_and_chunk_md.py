@@ -8,16 +8,16 @@ from cardio_graph.extraction_utils.parse_structures_from_markdown_or_pdfs import
 
 # -------- Settings --------
 INPUT_DIR = Path(
-    "/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/docling_md_copy"
+    "/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/new_graph_construction/chunks/md_copy/docling_md_copy"
 )
 TABLE_DIR = Path(
-    "/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/chunks/table_chunks"
+    "/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/new_graph_construction/chunks/table_chunks"
 )
 TEXT_DIR = Path(
-    "/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/chunks/text_chunks"
+    "/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/new_graph_construction/chunks/text_chunks"
 )
 MODEL = "gpt-3.5-turbo"  # reference for tiktoken token counting
-MAX_TOKENS = 500  # optional, for grouping paragraphs
+MAX_TOKENS = 50000  # optional, for grouping paragraphs
 OVERLAP = 50
 # --------------------------
 
@@ -50,22 +50,57 @@ def remove_tables(md_text: str) -> str:
 
 
 def split_markdown_sections(md_text: str):
-    """Split markdown into (heading, content) by headings."""
+    """Split markdown into (heading, content) by headings.
+    Merge consecutive bold-heading lines into one heading block.
+    """
     sections = []
-    current_heading = "INTRO"
+    current_heading = None
     buffer = []
+    last_was_heading = False
 
     lines = md_text.splitlines()
-    for line in lines:
-        if re.match(r"^#{1,6}\s+", line):  # heading line
-            if buffer:
+    print("DEBUG: Splitting Markdown into sections...")
+    for i, line in enumerate(lines):
+        print(f"DEBUG: Processing line {i}: {line!r}")
+        is_hash_heading = re.match(r"^#{1,6}\s+", line)
+        is_bold_line = re.match(r"^\*\*.*\*\*$", line)
+        if is_hash_heading or is_bold_line:
+            print(f"DEBUG: Found heading line: {line!r}")
+            # If previous line was a heading and buffer is empty, merge consecutive bold lines
+            if (
+                last_was_heading
+                and buffer == []
+                and current_heading is not None
+                and is_bold_line
+            ):
+                print("DEBUG: Merging consecutive bold heading into current_heading")
+                current_heading = current_heading + "\n" + line.strip()
+                last_was_heading = True
+                continue
+
+            # otherwise flush previous section (if any) and start new heading
+            if current_heading is not None or buffer:
+                print(
+                    f"DEBUG: Appending section: Heading: {current_heading!r}, Content lines: {buffer}"
+                )
                 sections.append((current_heading, "\n".join(buffer).strip()))
                 buffer = []
             current_heading = line.strip()
+            last_was_heading = True
         else:
             buffer.append(line)
-    if buffer:
+            last_was_heading = False
+
+    # Append the last section if any content remains
+    if current_heading is not None or buffer:
+        print(
+            f"DEBUG: Appending last section: Heading: {current_heading!r}, Content lines: {buffer}"
+        )
         sections.append((current_heading, "\n".join(buffer).strip()))
+
+    print(
+        f"DEBUG: Final sections (count={len(sections)}): {[ (h, (c[:60]+'...' if len(c)>60 else c)) for h,c in sections ]}"
+    )
     return sections
 
 
@@ -91,13 +126,19 @@ def chunk_markdown(md_text: str, max_tokens: int = MAX_TOKENS, overlap: int = OV
             t_len = count_tokens(para)
             if buffer_tokens + t_len > max_tokens and buffer:
                 # flush buffer
-                chunks.append((heading, " ".join(buffer)))
+                text = " ".join(buffer)
+                if heading:
+                    text = f"{heading}\n\n{text}"
+                chunks.append((heading, text))
                 buffer, buffer_tokens = [], 0
             buffer.append(para)
             buffer_tokens += t_len
 
         if buffer:
-            chunks.append((heading, " ".join(buffer)))
+            text = " ".join(buffer)
+            if heading:
+                text = f"{heading}\n\n{text}"
+            chunks.append((heading, text))
 
     # add overlap
     final_chunks = []
