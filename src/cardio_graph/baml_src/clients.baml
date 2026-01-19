@@ -16,6 +16,14 @@ client<llm> GPT5 {
   }
 }
 
+client<llm> GPT52 {
+  provider openai
+  options {
+    model "gpt-5.2"
+    api_key env.KG_GENERATOR_API_KEY_FIRST
+  }
+}
+
 client<llm> CustomGPT4oMini {
   provider openai
   retry_policy Exponential
