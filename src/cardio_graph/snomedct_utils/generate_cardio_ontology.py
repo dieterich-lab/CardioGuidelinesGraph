@@ -192,7 +192,7 @@ class CardioOntologyGenerator:
         modeling_approach: str = "instance",  # "instance" or "class"
         model: str = "Qwen32b",  # Model name for LLM categorization
         node: str = "g5",  # Node identifier for Ollama models
-        ollama_port: int = None,  # Custom port number (overrides default node port)
+        ollama_port: int = "11430",  # Custom port number (overrides default node port)
     ):
         """Initialize the ontology generator
 
