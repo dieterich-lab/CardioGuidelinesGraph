@@ -62,8 +62,8 @@ class EntityGroundingService:
         self.index_path = index_path
 
         print("Loading spaCy NER model (scispaCy biomedical model)...")
-        # Using a biomedical NER model for better medical entity recognition
-        self.nlp = spacy.load("en_ner_bc5cdr_md")
+        # Using a biomedical NER model for better medical entity recognition en_core_sci_lg en_ner_bc5cdr_md
+        self.nlp = spacy.load("en_core_sci_lg")
 
         if (
             rebuild_index
@@ -173,6 +173,7 @@ class EntityGroundingService:
         The main method of the service. Takes raw text and returns a list of grounded entities.
         """
         grounded_entities = []
+        entities = []
         doc = self.nlp(text)
 
         print(f"Processing text with {len(doc.ents)} detected entities...")
@@ -183,6 +184,7 @@ class EntityGroundingService:
 
             # Process each entity mention found by spaCy's NER
             for ent in doc.ents:
+                entities.append(ent.text)
                 # Create a search query from the entity text.
                 # The OrGroup helps match multi-word entities better.
                 query = query_parser.parse(ent.text)
@@ -208,7 +210,7 @@ class EntityGroundingService:
                     print(f"No match found for entity '{ent.text}'")
 
         print(f"Grounding complete. Found {len(grounded_entities)} grounded entities.")
-        return grounded_entities
+        return grounded_entities, entities
 
 
 # --- CLI using Click ---
