@@ -163,6 +163,29 @@ def verify_data_exists(driver):
         print("   Verification failed. No data found after restore.")
 
 
+def reset_and_restore(URI, AUTH, backup_file):
+    """Resets the database and restores from the given backup file."""
+    driver = None
+    try:
+        driver = GraphDatabase.driver(URI, auth=AUTH)
+        driver.verify_connectivity()
+        print("Connection to database successful.")
+
+        # Step 1: Clear the database
+        clear_database(driver)
+
+        # Step 2: Restore the graph from the backup file.
+        if restore_graph_from_file(driver, backup_file):
+            # Step 3: Verify that the data was restored.
+            verify_data_exists(driver)
+
+    except Exception as e:
+        print(f"[FATAL] An unexpected error occurred: {e}")
+    finally:
+        if driver:
+            driver.close()
+
+
 def main():
     """Main function to demonstrate the backup and restore workflow."""
     print("--- Full Graph Backup & Restore Demo (using APOC) ---")
@@ -199,4 +222,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    URI = "bolt://neo4j-dev1.internal:7687"
+    AUTH = ("neo4j", "KWCeoHhkJYAiFa3XTZZZLC77bHiZ5xzj")
+    driver = GraphDatabase.driver(URI, auth=AUTH)
+    export_graph_to_file(
+        driver,
+        "/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/neo4j_backup/dev1_backup_november.cypher",
+    )
