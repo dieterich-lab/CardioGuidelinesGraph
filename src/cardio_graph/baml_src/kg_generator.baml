@@ -81,7 +81,7 @@ class Summary {
 }
 
 function SummarizeStatement(input: StatementSepID, subject_summary: Summary, object_summary: Summary) -> Summary {
-  client Qwen32b5 
+  client Qwen14b5 
   prompt #"
     Summarize the following statement where subject, predicate and object form a triple.
     subject is related to the object with the relation type being the predicate. the summary should reflect this relationship and the information included in the subject and object.
@@ -90,7 +90,7 @@ function SummarizeStatement(input: StatementSepID, subject_summary: Summary, obj
     {{subject_summary}}
     Consider the following summary for the object :
     {{object_summary}}
-    {{ ctx.output_format(prefix="Use the following OUTPUT FORMAT:") }}
+    {{ ctx.output_format}}
   "#
 }
 
