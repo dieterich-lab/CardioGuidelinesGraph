@@ -1,9 +1,16 @@
-from langchain_ollama import OllamaEmbeddings, ChatOllama
+# from langchain_ollama import OllamaEmbeddings, ChatOllama
+import re
 from langchain_community.document_loaders import UnstructuredMarkdownLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain.chains.retrieval_qa.base import RetrievalQA
-import re
+from cardio_graph.extraction_utils.langchain_replacement import (
+    SimpleRetrievalQA,
+    ChatOllama,
+    OllamaEmbeddings,
+)
+
+# from langchain.chains.retrieval_qa.base import RetrievalQA
+
 
 ollama_host_ip = "10.250.135.153:11430"
 md_path = "/prj/doctoral_letters/guide/data2/guidelines/esc_ccs.md"  # replace with your markdown file path
@@ -22,13 +29,19 @@ def create_vr_faiss_index(md_path, ollama_host_ip):
     )
 
     vectorstore = FAISS.from_documents(docs, embedding_model)
-    vectorstore.save_local("faiss_index_esc_ccs")
+    vectorstore.save_local(
+        folder_path="/home/ecalik/CardioGuidelineGraph/src/cardio_graph/data",
+        index_name="faiss_index_esc_ccs_new",
+    )
 
 
-def initialize_vector_rag(ollama_host_ip):
+def initialize_vector_rag(ollama_host_ip, folder_path):
+    embedding = OllamaEmbeddings(
+        model="mxbai-embed-large:335m", base_url=ollama_host_ip
+    )
     vectorstore = FAISS.load_local(
-        "faiss_index_esc_ccs",
-        OllamaEmbeddings(model="mxbai-embed-large:335m", base_url=ollama_host_ip),
+        embeddings=lambda text: embedding.embed_query(text),
+        folder_path=folder_path,
         allow_dangerous_deserialization=True,
     )
 
@@ -38,11 +51,9 @@ def initialize_vector_rag(ollama_host_ip):
 
     chat = ChatOllama(model="qwen3:14b", base_url=ollama_host_ip)
 
-    qa_chain = RetrievalQA.from_chain_type(
+    qa_chain = SimpleRetrievalQA(
         llm=chat,
-        chain_type="stuff",
         retriever=retriever,
-        return_source_documents=True,
     )
     return qa_chain
 
@@ -84,12 +95,16 @@ def print_v_rag_list(result_list):
 
 
 if __name__ == "__main__":
-    qa_chain = initialize_vector_rag(ollama_host_ip)
-    list = []
-    questions = [
-        "How did the ISCHEMIA-EXTEND follow-up influence the interpretation of invasive strategy outcomes, especially in patients with multivessel disease?"
-    ]
+    # qa_chain = initialize_vector_rag(ollama_host_ip)
+    # list = []
+    # questions = [
+    #     "How did the ISCHEMIA-EXTEND follow-up influence the interpretation of invasive strategy outcomes, especially in patients with multivessel disease?"
+    # ]
 
-    for question in questions:
-        list.append(v_rag_query(question, qa_chain))
-    print_v_rag_list(list)
+    # for question in questions:
+    #     list.append(v_rag_query(question, qa_chain))
+    # print_v_rag_list(list)
+    create_vr_faiss_index(
+        md_path="/prj/doctoral_letters/guide/data/guidelines/markdown/esc_ccs.md",
+        ollama_host_ip="10.250.135.156:11430",
+    )
