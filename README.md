@@ -257,7 +257,7 @@ Generate a knowledge graph from text content.
 
 ```bash
 # Generate a graph from text
-poetry run generate-graph "Your text here"
+poetry run python /home/ecalik/CardioGuidelineGraph/src/cardio_graph/extraction_utils/new_graph_construction.py 
 ```
 
 #### API BAML Scripts (`api-baml-scripts`)
