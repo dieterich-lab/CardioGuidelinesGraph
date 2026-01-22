@@ -763,8 +763,13 @@ def execute_cypher(cypher_triple_list, URI, AUTH):
 if __name__ == "__main__":
     # spacy_to_dev4(test_text2)
     # generate_statements(test_text2)
-    SpacySandbox(test_text)
+    # SpacySandbox(test_text)
     # SpacyExStaWrapper(test_text_list)
     # print(EntityGroundingService().ground(test_text2))
     # generate_statements_for_paragraph(test_text3)
-    # new_triple_gen_wrapper()
+    new_triple_gen_wrapper(
+        output_path="/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/new_graph_construction/cypher/",
+        URI="bolt://neo4j-dev3.internal:7687",
+        AUTH=("neo4j", "KWCeoHhkJYAiFa3XTZZZLC77bHiZ5xzj"),
+        chunk_dir="/home/ecalik/CardioGuidelineGraph/src/cardio_graph/outputs/new_graph_construction/chunks/text_chunks",
+    )
