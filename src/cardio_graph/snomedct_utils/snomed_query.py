@@ -524,9 +524,9 @@ class SnomedExplorer:
             descriptions = []
             for r in results:
                 desc_type = "Other"
-                if r.typeId == FSN_TYPE_ID:
+                if r.typeid == FSN_TYPE_ID:
                     desc_type = "FSN"
-                elif r.typeId == SYNONYM_TYPE_ID:
+                elif r.typeid == SYNONYM_TYPE_ID:
                     desc_type = "Synonym"
 
                 # We don't know the preferred term just from this table,
@@ -536,7 +536,7 @@ class SnomedExplorer:
                     desc_type = "PreferredTerm/Other"
 
                 descriptions.append(
-                    {"term": r.term, "type": desc_type, "typeId": r.typeId}
+                    {"term": r.term, "type": desc_type, "typeId": r.typeid}
                 )
             return descriptions
         except Exception as e:
