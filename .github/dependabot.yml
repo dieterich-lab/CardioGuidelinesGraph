@@ -7,9 +7,9 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 10
     reviewers:
-      - "dieterich-lab"
+      - "phiwi"
     assignees:
-      - "dieterich-lab"
+      - "phiwi"
     commit-message:
       prefix: "deps"
       include: "scope"
@@ -21,9 +21,9 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     reviewers:
-      - "dieterich-lab"
+      - "phiwi"
     assignees:
-      - "dieterich-lab"
+      - "phiwi"
     commit-message:
       prefix: "ci"
       include: "scope"
