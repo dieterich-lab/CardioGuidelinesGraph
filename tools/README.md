@@ -22,12 +22,12 @@ Most scripts can be run directly with Python:
 
 ```bash
 cd /path/to/CardioGuidelinesGraph
-python scripts/script_name.py
+python tools/script_name.py
 ```
 
 Some scripts may require the virtual environment to be activated:
 
 ```bash
 source .venv/bin/activate
-python scripts/script_name.py
+python tools/script_name.py
 ```
