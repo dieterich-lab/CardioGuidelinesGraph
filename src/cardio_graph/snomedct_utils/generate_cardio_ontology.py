@@ -382,6 +382,89 @@ class CardioOntologyGenerator:
                         self.g.add((uri, RDFS.range, XSD.string))
             self.data_properties.add(uri)
 
+    def add_manual_synonyms(self):
+        """
+        Add common clinical abbreviations and acronyms as additional synonyms to existing concepts.
+        This addresses the issue where NER detects abbreviations that aren't formally in SNOMED CT.
+        """
+        # Define manual synonym mappings: preferred term -> list of additional synonyms
+        manual_synonyms = {
+            "Heart failure with reduced ejection fraction": [
+                "HFREF",
+                "heart failure with reduced EF",
+            ],
+            "Heart failure with preserved ejection fraction": [
+                "HFpEF",
+                "HFPEF",
+                "heart failure with preserved EF",
+                "diastolic heart failure",
+            ],
+            "Heart failure": ["HF", "CHF", "congestive heart failure"],
+            "Myocardial infarction": ["MI", "heart attack"],
+            "Atrial fibrillation": ["AF", "AFib", "atrial fib"],
+            "Coronary artery disease": ["CAD"],
+            "Percutaneous coronary intervention": ["PCI"],
+            "Coronary artery bypass grafting": ["CABG"],
+            "Implantable cardioverter-defibrillator": ["ICD"],
+            "Left ventricular ejection fraction": ["LVEF"],
+            "N-terminal pro b-type natriuretic peptide": ["NT-proBNP"],
+            "B-type natriuretic peptide": ["BNP"],
+            "Creatine kinase-MB": ["CK-MB"],
+            "CHA2DS2-VASc": ["CHA2DS2-VASc score"],
+            "GRACE": ["GRACE score"],
+            "Dual antiplatelet therapy": ["DAPT"],
+            "Angiotensin receptor neprilysin inhibitor": ["ARNI"],
+            "Sodium-glucose cotransporter 2 inhibitor": ["SGLT2 inhibitor", "SGLT2i"],
+            "Mineralocorticoid receptor antagonist": ["MRA"],
+            "Beta adrenergic receptor blocking agent": ["beta blocker", "beta-blocker"],
+            "Angiotensin converting enzyme inhibitor": ["ACE inhibitor", "ACEi"],
+            "Angiotensin II receptor blocker": ["ARB"],
+            "Calcium channel blocker": ["CCB"],
+        }
+
+        synonyms_added = 0
+
+        # Search through all concepts in the ontology to find matches
+        # Handle both instance-based (NamedIndividual) and class-based (Class) modeling
+        concept_types = [OWL.NamedIndividual]
+        if not self.as_individual:  # class-based modeling
+            concept_types.append(OWL.Class)
+
+        for concept_type in concept_types:
+            for concept_uri in self.g.subjects(RDF.type, concept_type):
+                # Skip core schema classes (they don't have SNOMED IDs)
+                if str(concept_uri).startswith(str(self.cgo)):
+                    continue
+
+                # Get the preferred label
+                labels = list(self.g.objects(concept_uri, RDFS.label))
+                if not labels:
+                    continue
+
+                preferred_label = str(labels[0])
+
+                # Check if this concept has manual synonyms to add
+                for target_label, synonyms in manual_synonyms.items():
+                    if preferred_label.lower() == target_label.lower():
+                        # Add each synonym as an altLabel
+                        for synonym in synonyms:
+                            # Check if this synonym already exists
+                            existing_synonyms = list(
+                                self.g.objects(concept_uri, SKOS.altLabel)
+                            )
+                            existing_synonym_texts = [str(s) for s in existing_synonyms]
+
+                            if synonym not in existing_synonym_texts:
+                                self.g.add(
+                                    (concept_uri, SKOS.altLabel, Literal(synonym))
+                                )
+                                synonyms_added += 1
+                                print(
+                                    f"Added synonym '{synonym}' to '{preferred_label}'"
+                                )
+
+        print(f"Added {synonyms_added} manual clinical abbreviations as synonyms")
+
     def preflight_report(self):
         """Print a validation report comparing YAML schema to what was loaded into the graph."""
         cfg_classes = {
@@ -774,6 +857,10 @@ class CardioOntologyGenerator:
                 self.add_relationships(concept_id, rels)
             print(f"Relationships processed: {relationships_added}")
 
+            # Step 5: Add manual clinical abbreviations as synonyms
+            print("--- Adding Manual Clinical Abbreviations ---")
+            self.add_manual_synonyms()
+
             # Save the ontology to file
             self.g.serialize(destination=self.output_path, format="xml")
             print(f"Ontology generated successfully and saved to {self.output_path}")
@@ -878,7 +965,7 @@ def main():
     parser.add_argument(
         "--modeling-approach",
         choices=["instance", "class"],
-        default="instance",
+        default="class",
         help="How to model SNOMED concepts: 'instance' (as individuals) or 'class' (as classes)",
     )
     parser.add_argument(
