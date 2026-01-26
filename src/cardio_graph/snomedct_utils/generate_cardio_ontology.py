@@ -30,16 +30,23 @@ with open(CONFIG_PATH, "r") as f:
 
 class CardioOntologyGenerator:
 
-    def get_type_label(self, type_id: int) -> str:
-        """Lookup human-readable label for a SNOMED CT typeId."""
-        result = (
-            self.snomed_explorer.session.query(SnapDescription)
-            .filter_by(conceptid=type_id)
-            .first()
-        )
-        if result and hasattr(result, "term"):
-            return result.term
-        return f"snomedRelationship_{type_id}"
+    def _concept_exists_in_database(self, concept_id) -> bool:
+        """Check if a concept exists in the SNOMED CT concept table."""
+        if not concept_id or not isinstance(concept_id, int):
+            return False
+
+        try:
+            from sqlalchemy import text
+
+            result = self.snomed_explorer.session.execute(
+                text(
+                    "SELECT 1 FROM concept WHERE id = :concept_id AND active = true LIMIT 1"
+                ),
+                {"concept_id": concept_id},
+            )
+            return result.fetchone() is not None
+        except Exception:
+            return False
 
     """Generate a cardiovascular ontology from SNOMED CT data"""
 
@@ -312,24 +319,16 @@ class CardioOntologyGenerator:
 
     def extract_cardiovascular_concepts(self, limit: int = 1000) -> List[Dict]:
         """
-        Extracts cardiovascular concepts from SNOMED CT by running broad searches
-        using the cardiovascular_search_terms defined in the ontology_config.yaml.
-        This approach is simpler and more comprehensive than per-class extraction.
+        Extracts cardiovascular concepts from SNOMED CT by finding concepts that exist
+        in both the concept and description tables, ensuring data consistency.
         """
-        print("Extracting cardiovascular concepts using broad search terms...")
+        print("Extracting cardiovascular concepts using validated database queries...")
 
         all_concepts = []
         seen_ids = set()
 
-        # --- Debugging Setup ---
-        debug = getattr(self, "debug_mode", False)
-        use_limit = 50 if debug else 500  # Higher limit for broad search
-        max_terms = 5 if debug else None
-
-        # Use broad cardiovascular search terms instead of per-class terms
+        # Use broad cardiovascular search terms
         cardiovascular_terms = _config.get("cardiovascular_search_terms", [])
-        if max_terms:
-            cardiovascular_terms = cardiovascular_terms[:max_terms]
 
         print(
             f"Using {len(cardiovascular_terms)} broad search terms to extract concepts..."
@@ -337,45 +336,65 @@ class CardioOntologyGenerator:
 
         for term in cardiovascular_terms:
             print(f"--> Searching for: '{term}'")
-            concepts_for_term = self.snomed_explorer.search_concepts_by_term(
-                term, limit=use_limit
-            )
 
-            for concept in concepts_for_term:
-                concept_id = None
-                id_keys_to_try = [
-                    "conceptId",
-                    "conceptid",  # SNOMED search returns lowercase
-                    "id",
-                    "referencedComponentId",
-                    "sourceId",
-                ]
-                for key in id_keys_to_try:
-                    if key in concept and concept[key]:
-                        concept_id = concept[key]
-                        break  # Found it, stop looking
+            # Find concepts that exist in both concept and description tables
+            try:
+                from sqlalchemy import text
 
-                if not concept_id:
-                    # If we still can't find an ID, we must skip this record and warn the user.
-                    print(
-                        f"  [WARNING] Skipping record because no valid ID key was found. Data: {concept}"
+                # Query for concepts that have descriptions containing the search term
+                # and also exist in the concept table
+                query = text(
+                    """
+                    SELECT DISTINCT d.conceptid, d.term, d.typeid, c.active as concept_active
+                    FROM description d
+                    JOIN concept c ON d.conceptid = c.id
+                    WHERE d.term ILIKE :search_term
+                    AND d.active = true
+                    AND c.active = true
+                    LIMIT :limit_per_term
+                """
+                )
+
+                result = self.snomed_explorer.session.execute(
+                    query, {"search_term": f"%{term}%", "limit_per_term": 50}
+                )
+
+                for row in result:
+                    concept_id = int(row[0])
+                    if concept_id in seen_ids:
+                        continue
+                    seen_ids.add(concept_id)
+
+                    # Get full description info for this concept
+                    descriptions = self.snomed_explorer.get_descriptions_for_concept(
+                        concept_id
                     )
-                    continue
+                    if descriptions:
+                        # Use the first FSN or synonym as the primary term
+                        primary_term = descriptions[0]["term"]
+                        for desc in descriptions:
+                            if desc.get("type") == "FSN":
+                                primary_term = desc["term"]
+                                break
 
-                if concept_id in seen_ids:
-                    continue  # Already processed this concept
+                        concept_dict = {
+                            "conceptId": concept_id,
+                            "id": concept_id,
+                            "term": primary_term,
+                            "active": True,
+                            "descriptions": descriptions,
+                        }
+                        all_concepts.append(concept_dict)
 
-                seen_ids.add(concept_id)
-                all_concepts.append(concept)
-
-                if len(all_concepts) >= limit:
-                    print(f"Reached concept limit of {limit}")
-                    break
+            except Exception as e:
+                print(f"Error searching for term '{term}': {e}")
+                continue
 
             if len(all_concepts) >= limit:
+                print(f"Reached concept limit of {limit}")
                 break
 
-        print(f"Extracted {len(all_concepts)} unique cardiovascular concepts")
+        print(f"Extracted {len(all_concepts)} validated cardiovascular concepts")
         return all_concepts
 
     def add_snomed_concept(
@@ -444,8 +463,12 @@ class CardioOntologyGenerator:
 
         # Add all synonyms as alternative labels
         if synonyms:
+            print(
+                f"    Adding {len(synonyms)} synonyms as SKOS altLabels for concept {concept_id}"
+            )
             for synonym in synonyms:
                 self.g.add((concept_uri, SKOS.altLabel, Literal(synonym)))
+        # No longer printing "No synonyms to add" since that's expected for many concepts
 
         if concept.get("active") == 1:
             self.g.add((concept_uri, self.cgo["isActive"], Literal(True)))
@@ -564,15 +587,43 @@ class CardioOntologyGenerator:
             print("Creating ontology classes from SNOMED concepts...")
             snomed_classes = {}
             for concept in concepts:
+                # Get concept ID
+                concept_id = concept.get("conceptId") or concept.get("id")
+
+                # Fetch all descriptions (including synonyms) for this concept
+                synonyms = []
+                if concept_id and isinstance(concept_id, int):
+                    try:
+                        descriptions = (
+                            self.snomed_explorer.get_descriptions_for_concept(
+                                concept_id
+                            )
+                        )
+                        # Extract synonyms (exclude FSN which is usually the preferred term)
+                        synonyms = [
+                            desc["term"]
+                            for desc in descriptions
+                            if desc.get("type") == "Synonym"
+                        ]
+                        if synonyms:  # Only print if we found synonyms
+                            print(
+                                f"  Concept {concept_id}: found {len(synonyms)} synonyms"
+                            )
+                        # Don't skip concepts that have no synonyms - they might still be valid concepts
+                    except Exception as e:
+                        print(
+                            f"  Warning: Could not fetch descriptions for concept {concept_id}: {e}"
+                        )
+                        synonyms = []
+
                 # Create an ontology class for each SNOMED concept
                 class_uri = self.add_snomed_concept(
                     concept,
                     category_class=None,  # No category - direct class creation
-                    synonyms=None,
+                    synonyms=synonyms,  # Now passing actual synonyms!
                     as_individual=False,  # Create as OWL Class, not individual
                 )
                 if class_uri:
-                    concept_id = concept.get("conceptId") or concept.get("id")
                     snomed_classes[concept_id] = class_uri
 
             print(f"Created {len(snomed_classes)} ontology classes")
