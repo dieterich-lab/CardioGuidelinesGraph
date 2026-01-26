@@ -16,9 +16,10 @@ slurm/
 *.faiss
 *.pkl
 *.pdf
-*.md
 *.json
 *.owl
+# Allow SECURITY.md
+!SECURITY.md
 ### Linux ###
 *~
 
