@@ -22,7 +22,7 @@ python = ">=3.11,<3.12"
 # Core dependencies
 neo4j = "^5.14.0"
 python-dotenv = "^1.0.0"
-click = "^8.1.7"
+click = "^8.3.1"
 langchain = ">=0.1.0,<0.2.0"
 langchain-core = ">=0.1.28,<0.2.0"
 langchain-text-splitters = ">=0.0.1,<0.1.0"
