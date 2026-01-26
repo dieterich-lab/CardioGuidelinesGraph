@@ -57,7 +57,7 @@ requests = "^2.31.0"
 
 # Jupyter notebooks support
 jupyter = "^1.0.0"
-ipykernel = "^6.27.1"
+ipykernel = "^7.1.0"
 baml-py = "0.217.0"
 mysql-connector-python = "^9.4.0"
 rdflib = "^7.0.0"
