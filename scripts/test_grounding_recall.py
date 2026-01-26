@@ -15,7 +15,7 @@ from src.cardio_graph.extraction_utils.entity_grounding_service import (
 
 def test_simple():
     print("Initializing EntityGroundingService...")
-    egs = EntityGroundingService()
+    egs = EntityGroundingService(rebuild_index=True)
     print("Service initialized successfully.")
 
     test_text = "HFrEF patients need beta blockers."
@@ -54,7 +54,7 @@ def test_github_issue():
     print("=" * 60)
 
     print("Initializing EntityGroundingService...")
-    egs = EntityGroundingService()
+    egs = EntityGroundingService(rebuild_index=True)
     print("Service initialized successfully.")
 
     test_text = """Depression is common (15%–20% prevalence) in CVD, and associated

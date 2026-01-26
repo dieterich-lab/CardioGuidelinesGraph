@@ -210,7 +210,7 @@ class EntityGroundingService:
                     print(f"No match found for entity '{ent.text}'")
 
         print(f"Grounding complete. Found {len(grounded_entities)} grounded entities.")
-        return grounded_entities, entities
+        return grounded_entities
 
 
 # --- CLI using Click ---
