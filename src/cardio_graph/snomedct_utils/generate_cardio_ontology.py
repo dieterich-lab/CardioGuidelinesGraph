@@ -26,142 +26,9 @@ from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "ontology_config.yaml")
 with open(CONFIG_PATH, "r") as f:
     _config = yaml.safe_load(f)
-SNOMED_CATEGORIES = _config.get("snomed_categories", [])
-SNOMED_KEYWORDS = _config.get("snomed_keywords", {})
 
 
 class CardioOntologyGenerator:
-
-    def categorize_concepts_llm(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
-        """
-        Categorize SNOMED concepts using an LLM via BAML, with full description context.
-        """
-        from cardio_graph.baml_client.sync_client import b
-
-        categories_map = {cat: [] for cat in SNOMED_CATEGORIES}
-
-        for concept in concepts:
-            concept_id = concept.get("conceptId") or concept.get("id")
-            if not concept_id:
-                continue
-
-            # Fetch all descriptions for the concept
-            all_descriptions = []
-            if isinstance(concept_id, int):
-                # Only call get_descriptions_for_concept for actual SNOMED CT concept IDs
-                all_descriptions = self.snomed_explorer.get_descriptions_for_concept(
-                    concept_id
-                )
-            else:
-                # For UUID concepts, just use the term from the concept dict
-                all_descriptions = [
-                    {
-                        "term": concept.get("term", ""),
-                        "type": "PreferredTerm",
-                        "typeId": None,
-                    }
-                ]
-
-            preferred_term = ""
-            fsn = ""
-            synonyms = []
-
-            # Find the preferred term first (based on your get_descriptions_for_concept logic)
-            for desc in all_descriptions:
-                if desc.get(
-                    "is_preferred"
-                ):  # Assumes get_descriptions is updated to provide this
-                    preferred_term = desc["term"]
-                    break
-
-            # If not found via refset, fall back to the initial term
-            if not preferred_term:
-                preferred_term = concept.get("term", "")
-
-            # Now collect FSN and synonyms
-            for desc in all_descriptions:
-                if desc["type"] == "FSN":
-                    fsn = desc["term"]
-                # Add to synonyms if it's not the preferred term
-                elif desc["term"].lower() != preferred_term.lower():
-                    synonyms.append(desc["term"])
-
-            # Make sure FSN isn't also in the synonym list
-            if fsn and fsn.lower() != preferred_term.lower():
-                synonyms = [s for s in synonyms if s.lower() != fsn.lower()]
-
-            baml_input = {
-                "term": preferred_term,
-                "description": fsn,
-                "synonyms": ", ".join(
-                    sorted(list(set(synonyms)))
-                ),  # Ensure unique, sorted synonyms
-            }
-
-            try:
-                baml_options = (
-                    {"client_registry": self.client_registry}
-                    if self.client_registry
-                    else {}
-                )
-                result = b.CategorizeConcept(
-                    baml_input,
-                    SNOMED_CATEGORIES,
-                    baml_options=baml_options,
-                )
-                assigned_categories = result.categories
-
-                # The 'add_snomed_concept' function will now handle setting the correct label
-                # so we just need to pass the original concept dict to it.
-                for cat_name in assigned_categories:
-                    if cat_name in categories_map:
-                        category_class_uri = self.cgo[cat_name]
-
-                        # Pass the category to the creation function
-                        concept_uri = self.add_snomed_concept(
-                            concept,
-                            category_class_uri,
-                            synonyms=synonyms,
-                            as_individual=self.as_individual,
-                        )
-                        categories_map[cat_name].append(concept_uri)
-
-            except Exception as e:
-                print(f"Error categorizing concept '{preferred_term}': {e}")
-                continue
-
-        return categories_map
-
-    def categorize_concepts(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
-        """Categorize SNOMED concepts into snomed categories using source class from extraction"""
-        categories = {cat: [] for cat in SNOMED_CATEGORIES}
-        for concept in concepts:
-            # Use the source class that was determined during extraction
-            source_class = concept.get("_source_class")
-            if source_class and source_class in categories:
-                category_class_uri = self.cgo[source_class]
-                concept_uri = self.add_snomed_concept(
-                    concept,
-                    category_class_uri,
-                    synonyms=None,
-                    as_individual=self.as_individual,
-                )
-                categories[source_class].append(concept_uri)
-            else:
-                # Fallback to keyword matching if no source class
-                term = concept.get("term", "").lower()
-                for category_name, keyword_list in SNOMED_KEYWORDS.items():
-                    if any(keyword in term for keyword in keyword_list):
-                        category_class_uri = self.cgo[category_name]
-                        concept_uri = self.add_snomed_concept(
-                            concept,
-                            category_class_uri,
-                            synonyms=None,
-                            as_individual=self.as_individual,
-                        )
-                        categories[category_name].append(concept_uri)
-                        break  # Only assign to first matching category
-        return categories
 
     def get_type_label(self, type_id: int) -> str:
         """Lookup human-readable label for a SNOMED CT typeId."""
@@ -189,7 +56,7 @@ class CardioOntologyGenerator:
         base_uri: str = "http://dieterich-lab.org/ontologies/cardioguidelinesonto/",
         version: str = "0.1.0",
         debug_mode: bool = False,
-        modeling_approach: str = "instance",  # "instance" or "class"
+        modeling_approach: str = "class",  # "instance" or "class"
         model: str = "Qwen32b",  # Model name for LLM categorization
         node: str = "g5",  # Node identifier for Ollama models
         ollama_port: int = "11430",  # Custom port number (overrides default node port)
@@ -382,89 +249,6 @@ class CardioOntologyGenerator:
                         self.g.add((uri, RDFS.range, XSD.string))
             self.data_properties.add(uri)
 
-    def add_manual_synonyms(self):
-        """
-        Add common clinical abbreviations and acronyms as additional synonyms to existing concepts.
-        This addresses the issue where NER detects abbreviations that aren't formally in SNOMED CT.
-        """
-        # Define manual synonym mappings: preferred term -> list of additional synonyms
-        manual_synonyms = {
-            "Heart failure with reduced ejection fraction": [
-                "HFREF",
-                "heart failure with reduced EF",
-            ],
-            "Heart failure with preserved ejection fraction": [
-                "HFpEF",
-                "HFPEF",
-                "heart failure with preserved EF",
-                "diastolic heart failure",
-            ],
-            "Heart failure": ["HF", "CHF", "congestive heart failure"],
-            "Myocardial infarction": ["MI", "heart attack"],
-            "Atrial fibrillation": ["AF", "AFib", "atrial fib"],
-            "Coronary artery disease": ["CAD"],
-            "Percutaneous coronary intervention": ["PCI"],
-            "Coronary artery bypass grafting": ["CABG"],
-            "Implantable cardioverter-defibrillator": ["ICD"],
-            "Left ventricular ejection fraction": ["LVEF"],
-            "N-terminal pro b-type natriuretic peptide": ["NT-proBNP"],
-            "B-type natriuretic peptide": ["BNP"],
-            "Creatine kinase-MB": ["CK-MB"],
-            "CHA2DS2-VASc": ["CHA2DS2-VASc score"],
-            "GRACE": ["GRACE score"],
-            "Dual antiplatelet therapy": ["DAPT"],
-            "Angiotensin receptor neprilysin inhibitor": ["ARNI"],
-            "Sodium-glucose cotransporter 2 inhibitor": ["SGLT2 inhibitor", "SGLT2i"],
-            "Mineralocorticoid receptor antagonist": ["MRA"],
-            "Beta adrenergic receptor blocking agent": ["beta blocker", "beta-blocker"],
-            "Angiotensin converting enzyme inhibitor": ["ACE inhibitor", "ACEi"],
-            "Angiotensin II receptor blocker": ["ARB"],
-            "Calcium channel blocker": ["CCB"],
-        }
-
-        synonyms_added = 0
-
-        # Search through all concepts in the ontology to find matches
-        # Handle both instance-based (NamedIndividual) and class-based (Class) modeling
-        concept_types = [OWL.NamedIndividual]
-        if not self.as_individual:  # class-based modeling
-            concept_types.append(OWL.Class)
-
-        for concept_type in concept_types:
-            for concept_uri in self.g.subjects(RDF.type, concept_type):
-                # Skip core schema classes (they don't have SNOMED IDs)
-                if str(concept_uri).startswith(str(self.cgo)):
-                    continue
-
-                # Get the preferred label
-                labels = list(self.g.objects(concept_uri, RDFS.label))
-                if not labels:
-                    continue
-
-                preferred_label = str(labels[0])
-
-                # Check if this concept has manual synonyms to add
-                for target_label, synonyms in manual_synonyms.items():
-                    if preferred_label.lower() == target_label.lower():
-                        # Add each synonym as an altLabel
-                        for synonym in synonyms:
-                            # Check if this synonym already exists
-                            existing_synonyms = list(
-                                self.g.objects(concept_uri, SKOS.altLabel)
-                            )
-                            existing_synonym_texts = [str(s) for s in existing_synonyms]
-
-                            if synonym not in existing_synonym_texts:
-                                self.g.add(
-                                    (concept_uri, SKOS.altLabel, Literal(synonym))
-                                )
-                                synonyms_added += 1
-                                print(
-                                    f"Added synonym '{synonym}' to '{preferred_label}'"
-                                )
-
-        print(f"Added {synonyms_added} manual clinical abbreviations as synonyms")
-
     def preflight_report(self):
         """Print a validation report comparing YAML schema to what was loaded into the graph."""
         cfg_classes = {
@@ -528,102 +312,87 @@ class CardioOntologyGenerator:
 
     def extract_cardiovascular_concepts(self, limit: int = 1000) -> List[Dict]:
         """
-        Extracts cardiovascular concepts from SNOMED CT by running targeted searches
-        based on the snomed_search_terms defined in the ontology_config.yaml.
+        Extracts cardiovascular concepts from SNOMED CT by running broad searches
+        using the cardiovascular_search_terms defined in the ontology_config.yaml.
+        This approach is simpler and more comprehensive than per-class extraction.
         """
-        print("Extracting cardiovascular concepts using a schema-aware approach...")
+        print("Extracting cardiovascular concepts using broad search terms...")
 
         all_concepts = []
         seen_ids = set()
 
-        # --- Debugging Setup (from your code) ---
+        # --- Debugging Setup ---
         debug = getattr(self, "debug_mode", False)
-        use_limit = 10 if debug else 200
-        max_classes = 10 if debug else None
-        max_terms = 2 if debug else None
-        max_concepts = 10 if debug else None
+        use_limit = 50 if debug else 500  # Higher limit for broad search
+        max_terms = 5 if debug else None
 
-        ontology_classes = _config.get("core_classes", [])
-        if max_classes:
-            ontology_classes = ontology_classes[:max_classes]
-
-        for class_entry in ontology_classes:
-            class_name = class_entry["name"]
-            search_terms = class_entry.get("snomed_search_terms")
-
-            if not search_terms:
-                continue
-
-            print(f"--> Searching for concepts related to class: {class_name}")
-            terms = search_terms[:max_terms] if max_terms else search_terms
-
-            for term in terms:
-                concepts_for_term = self.snomed_explorer.search_concepts_by_term(
-                    term, limit=use_limit
-                )
-
-                for concept in concepts_for_term:
-                    concept_id = None
-                    id_keys_to_try = [
-                        "conceptId",
-                        "conceptid",  # SNOMED search returns lowercase
-                        "id",
-                        "referencedComponentId",
-                        "sourceId",
-                    ]
-                    for key in id_keys_to_try:
-                        if key in concept and concept[key]:
-                            concept_id = concept[key]
-                            break  # Found it, stop looking
-
-                    if not concept_id:
-                        # If we still can't find an ID, we must skip this record and warn the user.
-                        print(
-                            f"  [WARNING] Skipping record because no valid ID key was found. Data: {concept}"
-                        )
-                        continue
-                    # --- END OF FIX ---
-
-                    if concept_id not in seen_ids:
-                        # To avoid KeyErrors later, we will standardize the ID key.
-                        # We will add 'conceptId' to the dictionary if it's not already there.
-                        if "conceptId" not in concept:
-                            concept["conceptId"] = concept_id
-
-                        concept["_source_class"] = class_name
-                        all_concepts.append(concept)
-                        seen_ids.add(concept_id)
-
-                        if max_concepts and len(all_concepts) >= max_concepts:
-                            print(
-                                f"[DEBUG] Reached max_concepts={max_concepts}, stopping early."
-                            )
-                            print(
-                                f"Extracted {len(all_concepts)} unique concepts using schema-aware search."
-                            )
-                            return all_concepts
+        # Use broad cardiovascular search terms instead of per-class terms
+        cardiovascular_terms = _config.get("cardiovascular_search_terms", [])
+        if max_terms:
+            cardiovascular_terms = cardiovascular_terms[:max_terms]
 
         print(
-            f"Extracted {len(all_concepts)} unique concepts using schema-aware search."
+            f"Using {len(cardiovascular_terms)} broad search terms to extract concepts..."
         )
+
+        for term in cardiovascular_terms:
+            print(f"--> Searching for: '{term}'")
+            concepts_for_term = self.snomed_explorer.search_concepts_by_term(
+                term, limit=use_limit
+            )
+
+            for concept in concepts_for_term:
+                concept_id = None
+                id_keys_to_try = [
+                    "conceptId",
+                    "conceptid",  # SNOMED search returns lowercase
+                    "id",
+                    "referencedComponentId",
+                    "sourceId",
+                ]
+                for key in id_keys_to_try:
+                    if key in concept and concept[key]:
+                        concept_id = concept[key]
+                        break  # Found it, stop looking
+
+                if not concept_id:
+                    # If we still can't find an ID, we must skip this record and warn the user.
+                    print(
+                        f"  [WARNING] Skipping record because no valid ID key was found. Data: {concept}"
+                    )
+                    continue
+
+                if concept_id in seen_ids:
+                    continue  # Already processed this concept
+
+                seen_ids.add(concept_id)
+                all_concepts.append(concept)
+
+                if len(all_concepts) >= limit:
+                    print(f"Reached concept limit of {limit}")
+                    break
+
+            if len(all_concepts) >= limit:
+                break
+
+        print(f"Extracted {len(all_concepts)} unique cardiovascular concepts")
         return all_concepts
 
     def add_snomed_concept(
         self,
         concept: Dict,
-        category_class: URIRef,
+        category_class: URIRef = None,
         synonyms: List[str] = None,
-        as_individual: bool = True,
+        as_individual: bool = False,
     ) -> URIRef:
         """
-        Adds a SNOMED CT concept to the ontology.
+        Adds a SNOMED CT concept to the ontology as a class.
 
         Args:
             concept: SNOMED concept dictionary
-            category_class: CGO category class URI
+            category_class: Optional CGO category class URI (for backward compatibility)
             synonyms: List of synonym terms
-            as_individual: If True, creates as NamedIndividual instance of category_class.
-                          If False, creates as OWL Class that is subclass of category_class.
+            as_individual: If True, creates as NamedIndividual. If False, creates as OWL Class.
 
         Returns:
             URI of the created concept
@@ -660,13 +429,18 @@ class CardioOntologyGenerator:
             if category_class:
                 self.g.add((concept_uri, RDF.type, category_class))
         else:
-            # Create as OWL Class that is subclass of the category class
+            # Create as OWL Class
             self.g.add((concept_uri, RDF.type, OWL.Class))
+            # If category_class is provided, make it a subclass
             if category_class:
                 self.g.add((concept_uri, RDFS.subClassOf, category_class))
 
         # Always use the fetched preferred_term for the official label.
         self.g.add((concept_uri, RDFS.label, Literal(preferred_term)))
+
+        # Add SNOMED ID as data property
+        if isinstance(concept_id, int):
+            self.g.add((concept_uri, self.cgo["hasSnomedId"], Literal(str(concept_id))))
 
         # Add all synonyms as alternative labels
         if synonyms:
@@ -769,97 +543,77 @@ class CardioOntologyGenerator:
                 # Add the relationship triple
                 self.g.add((source_uri, rel_prop_uri, target_uri))
 
-    def generate_ontology(self, categorization_method: str = "keyword"):
-        """Generate the complete cardiovascular guidelines ontology"""
+    def generate_ontology(self):
+        """Generate the complete cardiovascular guidelines ontology by creating classes directly from SNOMED CT concepts"""
         print("Generating cardiovascular guidelines ontology...")
 
         try:
             # Connect to the SNOMED CT database
             self.snomed_explorer.connect()
 
-            # Step 1: Extract a list of candidate concept dictionaries
+            # Step 1: Extract cardiovascular concepts from SNOMED CT
             concepts = self.extract_cardiovascular_concepts()
 
             if not concepts:
                 print("No cardiovascular concepts found in SNOMED CT")
                 return False
 
-            # Step 2: Extract all relationship data for the found concepts in a single batch
-            concept_ids_list = [
-                int(c["conceptId"]) for c in concepts if "conceptId" in c
-            ]
-            print(f"Concept IDs list length: {len(concept_ids_list)}")
-            if concept_ids_list:
-                print(f"Sample concept IDs: {concept_ids_list[:5]}")
-                print(
-                    f"Concept ID types: {[type(cid) for cid in concept_ids_list[:5]]}"
+            print(f"Extracted {len(concepts)} cardiovascular concepts")
+
+            # Step 2: Create ontology classes directly from SNOMED concepts
+            print("Creating ontology classes from SNOMED concepts...")
+            snomed_classes = {}
+            for concept in concepts:
+                # Create an ontology class for each SNOMED concept
+                class_uri = self.add_snomed_concept(
+                    concept,
+                    category_class=None,  # No category - direct class creation
+                    synonyms=None,
+                    as_individual=False,  # Create as OWL Class, not individual
                 )
+                if class_uri:
+                    concept_id = concept.get("conceptId") or concept.get("id")
+                    snomed_classes[concept_id] = class_uri
 
-            # Step 3: Categorize concepts. This step now ALSO adds the concepts to the graph.
-            if categorization_method == "llm":
-                print("Using LLM-based concept categorization...")
-                categories = self.categorize_concepts_llm(concepts)
-            else:
-                print("Using keyword-based concept categorization...")
-                # Note: The keyword version will also need to be updated to call the new add_snomed_concept
-                categories = self.categorize_concepts(concepts)
+            print(f"Created {len(snomed_classes)} ontology classes")
 
-            # Print category statistics
-            print("--- Category Statistics ---")
-            for category, uris in categories.items():
-                print(f"  - {category}: {len(uris)} concepts")
-
-            # Step 3: Extract all relationship data for the found concepts
+            # Step 3: Extract relationship data and create hierarchy
             concept_ids_list = [
                 int(c["conceptId"])
                 for c in concepts
                 if "conceptId" in c and c["conceptId"] is not None
             ]
 
-            print("--- Fetching Outgoing Relationships ---")
-            outgoing_relationships = (
-                self.snomed_explorer.get_outgoing_relationships_in_batch(
-                    concept_ids_list
+            if concept_ids_list:
+                print("--- Fetching SNOMED Relationships for Hierarchy ---")
+                outgoing_relationships = (
+                    self.snomed_explorer.get_outgoing_relationships_in_batch(
+                        concept_ids_list
+                    )
                 )
-            )
-            print(
-                f"Found outgoing relationships for {len(outgoing_relationships)} concepts"
-            )
-            total_outgoing = sum(len(rels) for rels in outgoing_relationships.values())
-            print(f"Total outgoing relationships: {total_outgoing}")
-
-            print("--- Fetching Incoming Relationships ---")
-            incoming_relationships = (
-                self.snomed_explorer.get_incoming_relationships_in_batch(
-                    concept_ids_list
+                print(
+                    f"Found outgoing relationships for {len(outgoing_relationships)} concepts"
                 )
-            )
-            print(
-                f"Found incoming relationships for {len(incoming_relationships)} concepts"
-            )
-            total_incoming = sum(len(rels) for rels in incoming_relationships.values())
-            print(f"Total incoming relationships: {total_incoming}")
 
-            # Merge the two dictionaries into a single, unified structure
-            all_relationships = outgoing_relationships.copy()
-            for source_id, rels in incoming_relationships.items():
-                all_relationships[source_id].extend(rels)
+                # Create subclass relationships based on SNOMED "Is a" relationships
+                print("Creating ontology hierarchy from SNOMED relationships...")
+                hierarchy_relationships = 0
+                for concept_id, relationships in outgoing_relationships.items():
+                    if concept_id not in snomed_classes:
+                        continue
 
-            print(f"Total concepts with relationships: {len(all_relationships)}")
-            total_relationships = sum(len(rels) for rels in all_relationships.values())
-            print(f"Total relationships to process: {total_relationships}")
+                    source_uri = snomed_classes[concept_id]
+                    for rel in relationships:
+                        rel_type = rel.get("typeId")
+                        destination_id = rel.get("destinationId")
 
-            # Step 4: Add all relationships using a single, simple loop
-            print("--- Adding All Relationships ---")
-            relationships_added = 0
-            for concept_id, rels in all_relationships.items():
-                relationships_added += len(rels)
-                self.add_relationships(concept_id, rels)
-            print(f"Relationships processed: {relationships_added}")
+                        # Look for "Is a" relationships (SNOMED typeId 116680003)
+                        if rel_type == 116680003 and destination_id in snomed_classes:
+                            parent_uri = snomed_classes[destination_id]
+                            self.g.add((source_uri, RDFS.subClassOf, parent_uri))
+                            hierarchy_relationships += 1
 
-            # Step 5: Add manual clinical abbreviations as synonyms
-            print("--- Adding Manual Clinical Abbreviations ---")
-            self.add_manual_synonyms()
+                print(f"Created {hierarchy_relationships} subclass relationships")
 
             # Save the ontology to file
             self.g.serialize(destination=self.output_path, format="xml")
@@ -868,18 +622,11 @@ class CardioOntologyGenerator:
             # Print statistics
             print("--- Final Ontology Statistics ---")
             print(f"  - {len(self.classes)} core classes")
-            if self.as_individual:
-                print(f"  - {len(self.snomed_concepts)} SNOMED CT individuals")
-            else:
-                print(f"  - {len(self.snomed_concepts)} SNOMED CT classes")
-            print(
-                f"  - {len(self.properties)} object properties (incl. dynamic SNOMED rel props)"
-            )
+            print(f"  - {len(snomed_classes)} SNOMED-derived classes")
+            print(f"  - {len(self.properties)} object properties")
             print(f"  - {len(self.data_properties)} data properties")
             print(f"  - {len(self.g)} total RDF triples")
-            print(
-                f"  - Modeling approach: {'instance-based' if self.as_individual else 'class-based'}"
-            )
+            print("  - Modeling approach: class-based (direct SNOMED concept mapping)")
 
             return True
 
@@ -926,7 +673,7 @@ def main():
         "--categorization-method",
         choices=["keyword", "llm"],
         default="llm",
-        help="Concept categorization method: 'keyword' (default) or 'llm' (large language model)",
+        help="Concept categorization method: 'keyword' (default) or 'llm' (large language model) - DEPRECATED: Direct class creation is now used",
     )
 
     parser.add_argument(
@@ -1030,7 +777,7 @@ def main():
 
     if not args.no_preflight:
         generator.preflight_report()
-    generator.generate_ontology(categorization_method=args.categorization_method)
+    generator.generate_ontology()
 
 
 if __name__ == "__main__":

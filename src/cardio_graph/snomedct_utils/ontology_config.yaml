@@ -1,457 +1,267 @@
 # Configuration for the Cardio Ontology Generator
 # This file defines the T-Box (schema) and parameters for the A-Box (data) population.
+# Simplified for direct entity grounding: SNOMED concepts become ontology classes.
 
-# These are the high-level categories we will try to sort SNOMED concepts into.
-snomed_categories:
-  - ClinicalAction
-  - PatientPhenotype
-  - Purpose
-  - WorkflowStep
-  - Guideline
-  - EvidenceSource
-  - Medication
-  - Condition
-  - GuidelineRecommendation
-  - GuidelineSource
-
-# Keyword lists for the fallback 'keyword' categorization method.
-snomed_keywords:
-  ClinicalAction:
-    - procedure
-    - therapy
-    - treatment
-    - examination
-    - assessment
-    - monitoring
-    - administration
-    - prescription
-    - intervention
-  PatientPhenotype:
-    - finding
-    - disorder
-    - disease
-    - syndrome
-    - condition
-    - symptom
-    - sign
-    - observation
-    - measurement
-    - test result
-  Purpose:
-    - goal
-    - target
-    - objective
-    - purpose
-    - aim
-    - intended
-    - indication
-  WorkflowStep:
-    - treatment protocol
-    - step
-    - stage
-    - phase
-    - clinical pathway
-    - regimen
-    - algorithm
-  Guideline:
-    - guideline
-    - recommendation
-    - protocol
-    - consensus
-    - standard
-    - best practice
-    - statement
-  EvidenceSource:
-    - trial
-    - study
-    - evidence
-    - publication
-    - literature
-    - research
-    - meta-analysis
-  Medication:
-    - medication
-    - drug
-    - pharmaceutical
-    - pill
-    - tablet
-    - capsule
-    - injection
-    - infusion
-    - anticoagulant
-    - statin
-    - beta blocker
-    - ace inhibitor
-    - antiplatelet
-    - diuretic
-  Condition:
-    - disease
-    - disorder
-    - syndrome
-    - condition
-    - pathology
-    - abnormality
-    - deficiency
-    - stenosis
-    - insufficiency
-    - failure
+# Broad search terms for extracting cardiovascular concepts from SNOMED CT
+# These terms are used to find ALL relevant concepts, then create ontology classes directly
+cardiovascular_search_terms:
+  - "heart"
+  - "cardiac"
+  - "cardiovascular"
+  - "coronary"
+  - "myocardial"
+  - "atrial"
+  - "ventricular"
+  - "valve"
+  - "arrhythmia"
+  - "hypertension"
+  - "stroke"
+  - "embolism"
+  - "aneurysm"
+  - "angina"
+  - "ischemia"
+  - "infarction"
+  - "failure"
+  - "cardiomyopathy"
+  - "pericard"
+  - "endocard"
+  - "vascular"
+  - "artery"
+  - "vein"
+  - "blood pressure"
+  - "cholesterol"
+  - "lipid"
+  - "diabetes"
+  - "obesity"
+  - "smoking"
+  - "exercise"
+  - "rehabilitation"
+  - "beta blocker"
+  - "ACE inhibitor"
+  - "statin"
+  - "anticoagulant"
+  - "antiplatelet"
+  - "diuretic"
+  - "echocardiography"
+  - "angiography"
+  - "catheterization"
+  - "pacemaker"
+  - "defibrillator"
+  - "transplant"
+  - "depression"
+  - "anxiety"
+  - "mortality"
+  - "death"
+  # Specific clinical acronyms and terms
+  - "HFrEF"
+  - "HFpEF"
+  - "LVEF"
+  - "ejection fraction"
+  - "NYHA"
+  - "ACC/AHA"
+  - "ESC"
+  - "STEMI"
+  - "NSTEMI"
+  - "PCI"
+  - "CABG"
+  - "TAVR"
+  - "ICD"
+  - "CRT"
+  - "AF"
+  - "atrial fibrillation"
+  - "VT"
+  - "ventricular tachycardia"
+  - "VF"
+  - "ventricular fibrillation"
+  - "ACS"
+  - "acute coronary syndrome"
 
 # This section defines the core schema (T-Box) of the ontology.
-# The new 'snomed_search_terms' key guides the intelligent, schema-aware extraction from SNOMED CT.
+# Focused on cardiovascular concepts that entities from text can ground to.
+# SNOMED CT concepts will be added as subclasses of these core classes.
 core_classes:
-  # --- Abstract / Structural Classes ---
-  - name: ClinicalWorkflow
-    description: Represents a multi-step clinical process from guidelines.
-    snomed_search_terms:
-      - "treatment protocol"
-      - "clinical pathway"
-      - "management algorithm"
-  - name: WorkflowStep
-    description: Represents a single step in a clinical workflow.
-  - name: Purpose
-    description: The reason or goal for a clinical action.
-  - name: LogicalJunction
-    description: Abstract node to represent logical groupings.
-  - name: Conjunction
-    description: Logical AND grouping of conditions.
-    subclass_of: LogicalJunction
-  - name: Disjunction
-    description: Logical OR grouping of conditions.
-    subclass_of: LogicalJunction
-  - name: QuantitativePhenotype
-    description: A structured way to represent a clinical value with an operator (e.g., LVEF < 40%).
-  - name: EvidenceStatement
-    description: The parent class for any claim, finding, or statement made in a text. This is the core node for reification.
-    snomed_search_terms:
-      - "finding"
-      - "evidence"
-      - "observation"
-  - name: GuidelineRecommendation
-    description: A formal recommendation from a clinical guideline.
-    subclass_of: EvidenceStatement
-  - name: ContrastingStatement
-    description: An evidence statement used to present contrasting or nuanced findings.
-    subclass_of: EvidenceStatement
-  - name: EvidenceSource
-    description: Source of clinical evidence, like a clinical trial or meta-analysis.
-    snomed_search_terms:
-      - "clinical trial"
-      - "meta-analysis"
-      - "observational study"
-  - name: GuidelineSource
-    description: The guideline document itself.
-    snomed_search_terms:
-      - "guideline"
-      - "consensus document"
-  - name: Guideline
-    description: A high-level clinical practice guideline entity (category for SNOMED mapping).
-  - name: DosageInstruction
-    description: A structured representation of medication dosage, including titration and adjustments.
-    snomed_search_terms:
-      - "dosage"
-      - "dosing"
-      - "titration"
-  - name: TreatmentGoal
-    description: A specific therapeutic target or goal for a patient or condition (e.g., target blood pressure).
-    snomed_search_terms:
-      - "target"
-      - "goal"
-      - "therapeutic objective"
-  - name: PatientPhenotype
-    description: An observable characteristic of a patient (e.g., a symptom, sign, comorbidity).
-    snomed_search_terms:
-      - "finding"
-      - "symptom"
-      - "sign"
-      - "history of"
-  - name: Medication
-    description: A specific drug or a class of drugs.
-  - name: Condition
-    description: A medical disease, disorder, or diagnosis.
-    snomed_search_terms:
-      - "disease"
-      - "disorder"
-      - "syndrome"
-      - "failure"
+  # --- Core Cardiovascular Conditions ---
   - name: CardiovascularDisease
     description: Diseases affecting the heart and blood vessels.
-    subclass_of: Condition
-    snomed_search_terms:
-      - "myocardial infarction"
-      - "heart failure"
-      - "atrial fibrillation"
-      - "coronary artery disease"
-  - name: ClinicalAction
-    description: A specific action to be taken (e.g., a procedure, test, or therapy administration).
-    snomed_search_terms:
-      - "procedure"
-      - "intervention"
-      - "assessment"
-      - "monitoring"
-  - name: CardiacImaging
-    description: Diagnostic imaging procedures for the heart.
-    subclass_of: ClinicalAction
-    snomed_search_terms:
-      - "echocardiography"
-      - "cardiac magnetic resonance"
-      - "coronary angiography"
-  - name: CardiacBiomarker
-    description: Laboratory tests used to diagnose cardiac conditions.
-    snomed_search_terms:
-      - "troponin"
-      - "natriuretic peptide"
-      - "BNP"
-      - "creatine kinase-MB"
-  - name: CardiacRiskFactor
-    description: Factors that increase risk of cardiovascular disease.
-    subclass_of: PatientPhenotype
-    snomed_search_terms:
-      - "hypertension"
-      - "hyperlipidemia"
-      - "diabetes mellitus"
-      - "tobacco smoking"
-      - "obesity"
-      - "family history of cardiovascular disease"
-  - name: RiskStratification
-    description: Method for categorizing patient risk levels.
-    snomed_search_terms:
-      - "risk score"
-      - "risk assessment"
-      - "prognostic model"
-      - "GRACE risk score"
-      - "CHA2DS2-VASc"
-  - name: CardiacDevice
-    description: Medical devices used in cardiovascular care.
-    snomed_search_terms:
-      - "pacemaker"
-      - "implantable cardioverter-defibrillator"
-      - "ICD"
-      - "coronary stent"
-      - "ventricular assist device"
+  - name: HeartDisease
+    description: Diseases of the heart.
+    subclass_of: CardiovascularDisease
+  - name: HeartFailure
+    description: Heart failure conditions.
+    subclass_of: HeartDisease
+  - name: CoronaryArteryDisease
+    description: Diseases of the coronary arteries.
+    subclass_of: HeartDisease
+  - name: Arrhythmia
+    description: Abnormal heart rhythms.
+    subclass_of: HeartDisease
+  - name: ValvularHeartDisease
+    description: Diseases of the heart valves.
+    subclass_of: HeartDisease
+  - name: Cardiomyopathy
+    description: Diseases of the heart muscle.
+    subclass_of: HeartDisease
+  - name: Hypertension
+    description: High blood pressure.
+    subclass_of: CardiovascularDisease
+  - name: Stroke
+    description: Cerebrovascular accidents.
+    subclass_of: CardiovascularDisease
+  - name: PeripheralArteryDisease
+    description: Diseases of peripheral arteries.
+    subclass_of: CardiovascularDisease
+
+  # --- Cardiovascular Procedures and Interventions ---
   - name: CardiacProcedure
-    description: Interventional procedures on the heart.
-    subclass_of: ClinicalAction
-    snomed_search_terms:
-      - "percutaneous coronary intervention"
-      - "PCI"
-      - "coronary artery bypass grafting"
-      - "CABG"
-      - "catheter ablation"
-      - "valve replacement"
-  - name: AnticoagulationTherapy
-    description: Therapy to prevent blood clotting.
-    subclass_of: ClinicalAction
-    snomed_search_terms:
-      - "anticoagulant"
-      - "heparin"
-      - "warfarin"
-      - "apixaban"
-      - "rivaroxaban"
-      - "dabigatran"
-      - "edoxaban"
-  - name: AntiplateletTherapy
-    description: Therapy to prevent platelet aggregation.
-    subclass_of: ClinicalAction
-    snomed_search_terms:
-      - "antiplatelet"
-      - "aspirin"
-      - "clopidogrel"
-      - "ticagrelor"
-      - "prasugrel"
-  - name: LipidLoweringTherapy
-    description: Therapy to reduce lipid levels.
-    subclass_of: ClinicalAction
-    snomed_search_terms:
-      - "statin"
-      - "atorvastatin"
-      - "rosuvastatin"
-      - "simvastatin"
-      - "ezetimibe"
-      - "PCSK9 inhibitor"
-  - name: AntihypertensiveTherapy
-    description: Therapy to reduce blood pressure.
-    subclass_of: ClinicalAction
-    snomed_search_terms:
-      - "beta blocker"
-      - "ace inhibitor"
-      - "angiotensin receptor blocker"
-      - "ARB"
-      - "calcium channel blocker"
-      - "diuretic"
-  - name: HeartFailureTherapy
-    description: Therapy specific to heart failure.
-    subclass_of: ClinicalAction
-    snomed_search_terms:
-      - "sacubitril / valsartan"
-      - "ARNI"
-      - "SGLT2 inhibitor"
-      - "dapagliflozin"
-      - "empagliflozin"
-      - "mineralocorticoid receptor antagonist"
-      - "MRA"
-      - "ivabradine"
-  - name: EmergencyCardiacCare
-    description: Immediate interventions for cardiac emergencies.
-    subclass_of: ClinicalWorkflow
-    snomed_search_terms:
-      - "cardiopulmonary resuscitation"
-      - "CPR"
-      - "defibrillation"
-      - "advanced cardiac life support"
-  - name: CardiacRehabilitation
-    description: Structured program for cardiac recovery.
-    subclass_of: ClinicalWorkflow
-    snomed_search_terms:
-      - "cardiac rehabilitation"
-      - "exercise training for heart disease"
-  - name: PreventiveCardiology
-    description: Approaches to prevent cardiovascular disease.
-    subclass_of: ClinicalWorkflow
-    snomed_search_terms:
-      - "primary prevention of cardiovascular disease"
-      - "secondary prevention of cardiovascular disease"
+    description: Procedures performed on the heart.
+  - name: CardiacImaging
+    description: Imaging procedures for the heart.
+    subclass_of: CardiacProcedure
+  - name: CardiacCatheterization
+    description: Catheter-based cardiac procedures.
+    subclass_of: CardiacProcedure
+  - name: CardiacSurgery
+    description: Surgical procedures on the heart.
+    subclass_of: CardiacProcedure
+  - name: CardiacDeviceImplantation
+    description: Implantation of cardiac devices.
+    subclass_of: CardiacProcedure
+
+  # --- Medications and Therapies ---
+  - name: CardiovascularMedication
+    description: Medications used for cardiovascular conditions.
+  - name: Antihypertensive
+    description: Medications to treat hypertension.
+    subclass_of: CardiovascularMedication
+  - name: Antiarrhythmic
+    description: Medications to treat arrhythmias.
+    subclass_of: CardiovascularMedication
+  - name: Anticoagulant
+    description: Blood thinning medications.
+    subclass_of: CardiovascularMedication
+  - name: Antiplatelet
+    description: Platelet inhibiting medications.
+    subclass_of: CardiovascularMedication
+  - name: LipidLoweringAgent
+    description: Medications to lower lipid levels.
+    subclass_of: CardiovascularMedication
+  - name: HeartFailureMedication
+    description: Medications specifically for heart failure.
+    subclass_of: CardiovascularMedication
+
+  # --- Risk Factors and Biomarkers ---
+  - name: CardiovascularRiskFactor
+    description: Factors that increase cardiovascular risk.
+  - name: CardiacBiomarker
+    description: Laboratory markers for cardiac conditions.
+  - name: CardiovascularSymptom
+    description: Symptoms of cardiovascular conditions.
+
+  # --- Outcomes and Events ---
+  - name: CardiovascularEvent
+    description: Cardiovascular events and outcomes.
+  - name: Mortality
+    description: Death-related outcomes.
+    subclass_of: CardiovascularEvent
 
 # This section defines the Object Properties (relationships) of the ontology.
 core_properties:
-  # --- Workflow & Action Properties ---
-  - name: hasStep
-    domain: ClinicalWorkflow
-    range: WorkflowStep
-    description: Relates a clinical workflow to its constituent steps.
-  - name: hasAction
-    domain: WorkflowStep
-    range: ClinicalAction
-    description: Relates a workflow step to the actions to be performed.
-  - name: hasPurpose
-    domain: ClinicalAction
-    range: Purpose
-    description: Relates a clinical action to its intended purpose.
-  - name: hasFollowUp
-    domain: ClinicalAction
-    range: ClinicalAction
-    description: Indicates a follow-up action that should be performed.
+  # --- Cardiovascular Relationships ---
+  - name: hasRiskFactor
+    domain: CardiovascularDisease
+    range: CardiovascularRiskFactor
+    description: Links a cardiovascular disease to its risk factors.
+  - name: hasSymptom
+    domain: CardiovascularDisease
+    range: CardiovascularSymptom
+    description: Links a cardiovascular disease to its symptoms.
+  - name: hasBiomarker
+    domain: CardiovascularDisease
+    range: CardiacBiomarker
+    description: Links a cardiovascular disease to relevant biomarkers.
+  - name: treatedBy
+    domain: CardiovascularDisease
+    range: CardiovascularMedication
+    description: Links a disease to medications that treat it.
+  - name: treatedBy
+    domain: CardiovascularDisease
+    range: CardiacProcedure
+    description: Links a disease to procedures that treat it.
+  - name: causes
+    domain: CardiovascularDisease
+    range: CardiovascularEvent
+    description: Links a disease to potential outcomes or events.
+  - name: subclassOf
+    domain: null
+    range: null
+    description: General subclass relationship (OWL built-in, but declared for completeness).
 
-  # --- Logical & Conditional Properties ---
-  - name: appliesWhen
-    domain: EvidenceStatement # Actions and Recommendations are now Statements
-    range: null # Can be PatientPhenotype or LogicalJunction
-    description: Links a statement or action to the condition(s) under which it applies.
-  - name: hasOperand
-    domain: LogicalJunction
-    range: PatientPhenotype # Making the range more specific
-    description: Links a logical junction to its constituent patient phenotypes or conditions.
-
-  # --- Evidence & Provenance Properties ---
-  - name: isSupportedBy
-    domain: EvidenceStatement
-    range: EvidenceSource
-    description: Links a statement to its supporting evidence source (e.g., a trial).
-  - name: isStatedIn
-    domain: EvidenceStatement
-    range: GuidelineSource
-    description: Links a statement to the guideline document it comes from.
-  - name: contrastsWith
-    domain: EvidenceStatement
-    range: ContrastingStatement
-    description: Links an evidence statement to a contrasting or nuanced finding.
-
-  # --- Recommendation & Treatment Properties ---
-  - name: recommends
-    domain: GuidelineRecommendation
-    range: ClinicalAction
-    description: Indicates the action or treatment that is being recommended.
-  - name: hasIndication
-    domain: Medication
-    range: Condition
-    description: Links a medication to a condition it is officially indicated for.
-  - name: isContraindicatedIn
-    domain: Medication
-    range: Condition
-    description: Links a medication to a condition in which it is contraindicated.
-  - name: hasAlternative
-    domain: ClinicalAction # Generalizing from Medication to any Action
-    range: ClinicalAction
-    description: Indicates an alternative action or medication that can be used.
-  - name: hasTreatmentGoal
-    ## REFINEMENT: New property to link a recommendation to our new TreatmentGoal class.
-    domain: GuidelineRecommendation
-    range: TreatmentGoal
-    description: Specifies the therapeutic target or goal of a recommendation.
-
-  # --- Medication-Specific Properties ---
-  - name: hasDosageInstruction
-    domain: Medication
-    range: DosageInstruction
-    description: Links a medication to its structured dosage instructions.
+  # --- Medication Relationships ---
   - name: interactsWith
-    domain: Medication
-    range: Medication
-    description: Indicates that two medications have a drug interaction.
-  - name: isAdministeredWith
-    domain: Medication
-    range: Medication
-    description: Indicates that two medications are typically administered together.
+    domain: CardiovascularMedication
+    range: CardiovascularMedication
+    description: Indicates drug interactions between medications.
+  - name: hasAdverseEffect
+    domain: CardiovascularMedication
+    range: CardiovascularSymptom
+    description: Links medications to their potential adverse effects.
 
 # This section defines the Datatype Properties (attributes) of the ontology.
 data_properties:
   # --- General Metadata ---
   - name: hasSnomedId
-    domain: null # Applies to any individual linked to SNOMED
+    domain: null # Applies to any class linked to SNOMED
     range: string
     description: SNOMED CT identifier for a concept.
-  - name: hasSourceText
-    ## REFINEMENT: Renamed from 'hasReference' for clarity. Stores the direct text snippet.
-    domain: EvidenceStatement
+  - name: hasDescription
+    domain: null
     range: string
-    description: The literal text snippet from the guideline that supports the statement.
-  - name: pageNumber
-    domain: GuidelineSource
-    range: integer
-    description: Page number where content appears in a guideline document.
-  - name: hasEvidenceLevel
-    ## REFINEMENT: This is an attribute of a recommendation, linking to a literal string.
-    domain: GuidelineRecommendation
-    range: string
-    description: Evidence level as a string (e.g., 'Class I, Level A').
+    description: Human-readable description of a concept.
 
-  # --- DosageInstruction Attributes (used by our new class) ---
-  - name: hasInitialDose
-    domain: DosageInstruction
+  # --- Cardiovascular Attributes ---
+  - name: hasSeverity
+    domain: CardiovascularDisease
     range: string
-    description: The starting dose of a medication (e.g., '2.5 mg daily').
-  - name: hasTargetDose
-    domain: DosageInstruction
+    description: Severity level of a cardiovascular condition (e.g., 'mild', 'moderate', 'severe').
+  - name: hasStage
+    domain: CardiovascularDisease
     range: string
-    description: The target or maximum dose of a medication (e.g., '10 mg daily').
-  - name: hasTitrationSchedule
-    domain: DosageInstruction
+    description: Stage or classification of a disease (e.g., 'Stage A', 'NYHA Class II').
+  - name: hasPrognosis
+    domain: CardiovascularDisease
     range: string
-    description: Instructions for how to increase the dose over time (e.g., 'double dose every 2 weeks').
-  - name: hasAdjustmentInstruction
-    domain: DosageInstruction
+    description: Prognostic information for a condition.
+  - name: hasPrevalence
+    domain: CardiovascularDisease
     range: string
-    description: Instructions for dose adjustments based on conditions (e.g., 'reduce by 50% if eGFR < 30').
+    description: Prevalence information for a condition.
 
-  # --- TreatmentGoal Attributes (used by our new class) ---
-  - name: hasTargetValue
-    domain: TreatmentGoal
-    range: string # Could also be float/integer depending on desired complexity
-    description: The target value for a clinical measurement (e.g., '130' for systolic BP).
-  - name: hasTargetOperator
-    domain: TreatmentGoal
+  # --- Medication Attributes ---
+  - name: hasDosage
+    domain: CardiovascularMedication
     range: string
-    description: The operator for the target (e.g., '<', '<=').
-  - name: hasTargetUnit
-    domain: TreatmentGoal
+    description: Standard dosage information for a medication.
+  - name: hasIndication
+    domain: CardiovascularMedication
     range: string
-    description: The unit for the target value (e.g., 'mmHg', 'mg/dL').
+    description: Clinical indications for using a medication.
+  - name: hasContraindication
+    domain: CardiovascularMedication
+    range: string
+    description: Contraindications for a medication.
 
-  # --- Other Clinical Attributes ---
-  - name: hasFrequency
-    domain: ClinicalAction
+  # --- Biomarker Attributes ---
+  - name: hasNormalRange
+    domain: CardiacBiomarker
     range: string
-    description: Frequency of a clinical action (e.g., 'daily', 'twice daily').
-  - name: hasAdverseEffect
-    domain: Medication
+    description: Normal reference range for a biomarker.
+  - name: hasUnits
+    domain: CardiacBiomarker
     range: string
-    description: A common adverse effect of a medication.
+    description: Units of measurement for a biomarker.
+
+  # --- Risk Factor Attributes ---
+  - name: hasRelativeRisk
+    domain: CardiovascularRiskFactor
+    range: string
+    description: Relative risk associated with a risk factor.
