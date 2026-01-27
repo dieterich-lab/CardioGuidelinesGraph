@@ -229,10 +229,19 @@ Below is a step-by-step overview and a schematic of how the ontology is derived 
 - **The resulting ontology is a unified, extensible hierarchy, ready for entity grounding and further knowledge population.**
 
 ---
-  - `Chronic right-sided heart failure` (subclass of `Heart failure`)
-- `Atrial fibrillation` (subclass of `Arrhythmia`)
-- `Myocardial infarction` (subclass of `CoronaryArteryDisease`)
-- `Essential hypertension` (subclass of `Hypertension`)
+
+## Preview: Real SNOMED-Derived (A-Box) Classes from Current Run
+
+Here are some real examples of SNOMED concepts mapped to core classes, as processed in the current ontology generation run:
+
+| SNOMED Concept (ID)                                 | Core Class Mapping         | Synonyms (SKOS altLabels)                                                                 |
+|-----------------------------------------------------|---------------------------|------------------------------------------------------------------------------------------|
+| Acute left-sided heart failure (364006)             | Condition                 | Acute left heart failure, Acute left-sided heart failure                                  |
+| Heart valve disorder (368009)                       | Condition                 | Disorder of heart valve, Heart valve disease, Heart valve disorder, Valvular heart disease|
+| Abnormal fetal heart beat noted before labor (655007)| Condition, PatientPhenotype| Abnormal fetal heart beat noted before labor in liveborn infant, Abnormal fetal heart beat noted before labour in liveborn infant, Abnormal foetal heart beat noted before labour in liveborn infant |
+| Heart valve disorder (368009)                       | Condition                 | Disorder of heart valve, Heart valve disease, Heart valve disorder, Valvular heart disease|
+
+**Note:** These are just a few preview entries. The final ontology will contain 1000+ such SNOMED-derived classes, each mapped to one or more core classes and enriched with synonyms for robust entity grounding.
 
 ## File Locations
 
