@@ -677,9 +677,10 @@ class CardioOntologyGenerator:
         # Add all synonyms as alternative labels
         if synonyms:
             print(
-                f"    Adding {len(synonyms)} synonyms as SKOS altLabels for concept {concept_id}"
+                f"    Adding {len(synonyms)} synonyms as SKOS altLabels for concept {concept_id}: {synonyms}"
             )
             for synonym in synonyms:
+                print(f"      - {synonym}")
                 self.g.add((concept_uri, SKOS.altLabel, Literal(synonym)))
         # No longer printing "No synonyms to add" since that's expected for many concepts
 
