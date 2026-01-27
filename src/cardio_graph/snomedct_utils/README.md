@@ -258,12 +258,6 @@ src/cardio_graph/snomedct_utils/ontology_config.yaml
 ### Generation Scripts
 ```
 src/cardio_graph/snomedct_utils/generate_cardio_ontology.py
-slurm/generate_ontology.sh
-```
-
-### Logs
-```
-slurm/generate_ontology_simple.txt
 ```
 
 ## Entity Grounding Integration
@@ -296,12 +290,6 @@ The system queries multiple SNOMED CT tables:
 - `snap_concept` - Concept definitions
 - `snap_description` - Term descriptions
 - `snap_relationship` - Concept relationships
-
-### Performance
-
-- **Database Queries:** ~70 search terms × 500 concepts each = ~35K queries
-- **Processing Time:** ~10-15 minutes on SLURM compute nodes
-- **Memory Usage:** ~500MB peak during relationship processing
 
 ### Modeling Approaches
 
