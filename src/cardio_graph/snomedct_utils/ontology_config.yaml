@@ -1,6 +1,53 @@
 # Configuration for the Cardio Ontology Generator
 # This file defines the T-Box (schema) and parameters for the A-Box (data) population.
-# Simplified for direct entity grounding: SNOMED concepts become ontology classes.
+
+# These are the high-level categories we will try to sort SNOMED concepts into.
+snomed_categories:
+  - ClinicalAction
+  - PatientPhenotype
+  - Purpose
+  - WorkflowStep
+  - Guideline
+  - EvidenceSource
+  - Medication
+  - Condition
+  - GuidelineRecommendation
+  - GuidelineSource
+
+# Keyword lists for the fallback 'keyword' categorization method.
+snomed_keywords:
+  ClinicalAction:
+    - procedure
+    - therapy
+    - treatment
+    - examination
+    - assessment
+    - monitoring
+    - administration
+    - prescription
+    - intervention
+  PatientPhenotype:
+    - finding
+    - disorder
+    - disease
+    - syndrome
+    - condition
+    - symptom
+    - sign
+    - observation
+    - measurement
+    - test result
+  Purpose:
+    - goal
+    - target
+    - objective
+    - purpose
+    - aim
+    - intended
+    - indication
+  WorkflowStep:
+    - treatment protocol
+    - step
 
 # Broad search terms for extracting cardiovascular concepts from SNOMED CT
 # These terms are used to find ALL relevant concepts, then create ontology classes directly
