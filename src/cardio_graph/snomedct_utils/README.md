@@ -15,6 +15,7 @@ The resulting ontology enables entity grounding by providing a structured hierar
 
 ### Ontology Structure Diagram (Core Schema & Relationships)
 
+
 ```
 Core T-Box Classes (Schema)
 ├── CardiovascularDisease
@@ -24,8 +25,8 @@ Core T-Box Classes (Schema)
 │   │   ├── Arrhythmia
 │   │   ├── ValvularHeartDisease
 │   │   └── Cardiomyopathy
-│   └── Hypertension
-│   └── Stroke
+│   ├── Hypertension
+│   ├── Stroke
 │   └── PeripheralArteryDisease
 ├── CardiacProcedure
 │   ├── CardiacImaging
@@ -74,6 +75,7 @@ Data Properties (Attributes):
 
 Legend:
 - All arrows represent rdfs:subClassOf or object property relationships.
+- This diagram is a direct reflection of all core_classes defined in ontology_config.yaml.
 - Only core classes and relationships are shown here. SNOMED-derived classes will be shown in real examples after the current ontology generation run completes.
 ```
 
