@@ -54,21 +54,22 @@ class CardioOntologyGenerator:
 
     def __init__(
         self,
-        output_path: str = None,  # Changed from "cardio_ontology.owl" to None
-        snomed_host: str = "snomed-ct2.internal",  # Updated to match snomed_query.py
-        snomed_port: str = "5432",  # PostgreSQL port
-        snomed_user: str = "readonly",  # Updated user
-        snomed_password: str = "readonly",  # Updated password
-        snomed_database: str = "snomed",  # Updated database name
-        snomed_sslrootcert: str = "/etc/ssl/certs/DieterichLab_CA.pem",  # SSL certificate
-        snomed_sslmode: str = "verify-full",  # SSL mode
+        output_path: str = None,
+        snomed_host: str = "snomed-ct2.internal",
+        snomed_port: str = "5432",
+        snomed_user: str = "readonly",
+        snomed_password: str = "readonly",
+        snomed_database: str = "snomed",
+        snomed_sslrootcert: str = "/etc/ssl/certs/DieterichLab_CA.pem",
+        snomed_sslmode: str = "verify-full",
         base_uri: str = "http://dieterich-lab.org/ontologies/cardioguidelinesonto/",
         version: str = "0.1.0",
         debug_mode: bool = False,
-        modeling_approach: str = "class",  # "instance" or "class"
-        model: str = "Qwen8b4",  # Model name for LLM categorization
-        node: str = "g4",  # Node identifier for Ollama models
-        ollama_port: int = "34",  # Custom port number (overrides default node port)
+        modeling_approach: str = "class",
+        model: str = "Qwen8b4",
+        node: str = "g4",
+        ollama_port: int = "34",
+        snomed_relations_mode: str = "none",  # 'none', 'curated', 'all'
     ):
         """Initialize the ontology generator
 
@@ -78,15 +79,27 @@ class CardioOntologyGenerator:
             node: Node identifier for Ollama models (g2, g3, g4, g5)
             ollama_port: Custom port number (overrides default node port)
         """
-        # Set default output path based on modeling approach if not specified
+        # Set default output path based on modeling approach and SNOMED relations mode if not specified
         if output_path is None:
             ontologies_dir = "/prj/doctoral_letters/guide/data/ontologies"
+            suffix = {
+                "none": "coreonly",
+                "curated": "curatedsnomed",
+                "all": "allsnomed",
+            }.get(snomed_relations_mode, "coreonly")
             if modeling_approach == "instance":
-                output_path = f"{ontologies_dir}/cardio_ontology_instances.owl"
-            else:  # modeling_approach == "class"
-                output_path = f"{ontologies_dir}/cardio_ontology_class.owl"
+                output_path = f"{ontologies_dir}/cardio_ontology_instances_{suffix}.owl"
+            else:
+                output_path = f"{ontologies_dir}/cardio_ontology_class_{suffix}.owl"
 
         self.output_path = output_path
+        self.snomed_relations_mode = snomed_relations_mode
+        # Initialize ontology namespace (CGO) before any use
+        self.cgo = Namespace(base_uri)
+        self.snomed = Namespace("http://snomed.info/id/")
+        self.g = Graph()
+        self.g.bind("cgo", self.cgo)
+        self.g.bind("snomed", self.snomed)
         self.snomed_explorer = SnomedExplorer(
             host=snomed_host,
             port=snomed_port,
@@ -99,82 +112,134 @@ class CardioOntologyGenerator:
         self.debug_mode = debug_mode
         self.modeling_approach = modeling_approach
         self.as_individual = modeling_approach == "instance"
+        self.classes = set()
+        self.properties = set()
+        self.data_properties = set()
+        self.snomed_concepts = dict()
 
         # Initialize client registry for LLM connections
         try:
             self.client_registry = create_client_registry(model, node, ollama_port)
         except Exception as e:
             print(f"Warning: Could not create client registry: {e}")
-            self.client_registry = None
 
-        # Initialize RDF graph and namespaces
-        self.g = Graph()
-        self.base = Namespace(base_uri)
-        self.snomed = Namespace("http://snomed.info/id/")
-        self.cgo = Namespace(f"{base_uri}#")  # CardioGuidelinesOntology namespace
+            def generate_ontology(self):
+                """Generate the complete cardiovascular guidelines ontology by creating classes directly from SNOMED CT concepts"""
+                print("Generating cardiovascular guidelines ontology...")
 
-        # Register namespaces
-        self.g.bind("", self.base)
-        self.g.bind("cgo", self.cgo)
-        self.g.bind("snomed", self.snomed)
-        self.g.bind("owl", OWL)
-        self.g.bind("rdf", RDF)
-        self.g.bind("rdfs", RDFS)
-        self.g.bind("xsd", XSD)
-        self.g.bind("skos", SKOS)
-        self.g.bind("dcterms", DCTERMS)
+                # Curated SNOMED relationship type IDs (example: add more as needed)
+                curated_type_ids = {
+                    "116676008",  # 'associated morphology'
+                    "363698007",  # 'finding site'
+                    "246454002",  # 'occurrence'
+                    "363713009",  # 'has interpretation'
+                    "370135005",  # 'pathological process'
+                    "363714003",  # 'procedure site'
+                    "363589002",  # 'associated with'
+                    "260686004",  # 'method'
+                    "363705008",  # 'has specimen'
+                    "246075003",  # 'causative agent'
+                }
 
-        # Set ontology metadata
-        self.ont_uri = URIRef(base_uri)
-        self.g.add((self.ont_uri, RDF.type, OWL.Ontology))
-        self.g.add(
-            (self.ont_uri, DCTERMS.title, Literal("Cardiovascular Guidelines Ontology"))
-        )
-        self.g.add(
-            (
-                self.ont_uri,
-                DCTERMS.description,
-                Literal(
-                    "An ontology for representing knowledge from cardiovascular guidelines, "
-                    "with concepts derived from SNOMED CT and enhanced with guideline-specific classes."
-                ),
-            )
-        )
-        self.g.add(
-            (
-                self.ont_uri,
-                DCTERMS.created,
-                Literal(datetime.now().isoformat(), datatype=XSD.dateTime),
-            )
-        )
-        self.g.add((self.ont_uri, OWL.versionInfo, Literal(version)))
+                try:
+                    # Connect to the SNOMED CT database
+                    self.snomed_explorer.connect()
 
-        # Track classes and properties to avoid duplicates (initialize once)
-        self.classes = set()
-        self.properties = set()  # Object properties (store URIs)
-        self.data_properties = set()  # Datatype properties (store URIs)
-        self.snomed_concepts = {}  # Map from SNOMED concept ID to URI
+                    # Step 1: Extract cardiovascular concepts from SNOMED CT
+                    concepts = self.extract_cardiovascular_concepts()
 
-        # Initialize core classes and properties
-        self._init_core_structure()
+                    if not concepts:
+                        print("No concepts extracted.")
+                        return False
 
-    def _init_core_structure(self):
-        """Initialize the core ontology structure from YAML (core_classes, core_properties, data_properties)."""
-        from rdflib.namespace import XSD
+                    print(f"Extracted {len(concepts)} cardiovascular concepts")
 
-        # First pass: declare classes & collect subclass axioms
-        pending_subclasses = []  # (child, parent)
-        seen: set[str] = set()
+                    # Step 2: Categorize concepts. This step now ALSO adds the concepts to the graph.
+                    categorization_method = "llm"  # Use LLM for categorization
+                    if categorization_method == "llm":
+                        categories = self.categorize_concepts_llm(concepts)
+                    else:
+                        categories = self.categorize_concepts(concepts)
+
+                    # Collect all SNOMED classes created
+                    snomed_classes = {}
+                    for cat_name, concept_uris in categories.items():
+                        for uri in concept_uris:
+                            snomed_classes[uri] = cat_name
+
+                    print(f"Created {len(snomed_classes)} ontology classes")
+
+                    # Print category statistics
+                    for cat_name, concept_uris in categories.items():
+                        print(f"  - {cat_name}: {len(concept_uris)} concepts")
+
+                    # Step 3: Extract relationship data and create hierarchy
+                    concept_ids_list = [
+                        int(c["conceptId"])
+                        for c in concepts
+                        if "conceptId" in c and c["conceptId"] is not None
+                    ]
+
+                    if concept_ids_list:
+                        if self.snomed_relations_mode == "none":
+                            # Only add is-a relationships (taxonomy)
+                            print("Adding only SNOMED is-a (taxonomy) relationships.")
+                            # (Assume existing logic already does this)
+                        elif self.snomed_relations_mode == "curated":
+                            print("Adding curated SNOMED relationships.")
+                            for cid in concept_ids_list:
+                                rels = self.snomed_explorer.get_relationships(cid)
+                                curated_rels = [
+                                    r
+                                    for r in rels
+                                    if str(r.get("typeId")) in curated_type_ids
+                                    or str(r.get("typeid")) in curated_type_ids
+                                ]
+                                self.add_relationships(cid, curated_rels)
+                        elif self.snomed_relations_mode == "all":
+                            print("Adding all SNOMED relationships.")
+                            for cid in concept_ids_list:
+                                rels = self.snomed_explorer.get_relationships(cid)
+                                self.add_relationships(cid, rels)
+
+                    # Save the ontology to file
+                    self.g.serialize(destination=self.output_path, format="xml")
+                    print(
+                        f"Ontology generated successfully and saved to {self.output_path}"
+                    )
+
+                    # Print statistics
+                    print("--- Final Ontology Statistics ---")
+                    print(f"  - {len(self.classes)} core classes")
+                    print(f"  - {len(snomed_classes)} SNOMED-derived classes")
+                    print(f"  - {len(self.properties)} object properties")
+                    print(f"  - {len(self.data_properties)} data properties")
+                    print(f"  - {len(self.g)} total RDF triples")
+                    print(
+                        f"  - Modeling approach: {self.modeling_approach}-based (direct SNOMED concept mapping)"
+                    )
+                    print(f"  - SNOMED relations mode: {self.snomed_relations_mode}")
+
+                    return True
+
+                except Exception as e:
+                    print(f"Error generating ontology: {e}")
+                    import traceback
+
+                    traceback.print_exc()
+                    return False
+
+                finally:
+                    # Close the database connection
+                    self.snomed_explorer.disconnect()
+
+        # --- Core class creation (from config) ---
+        pending_subclasses = []
+        seen = set()
         for class_entry in _config.get("core_classes", []) or []:
             class_name = class_entry.get("name")
             if not class_name:
                 continue
-            if class_name in seen:
-                print(
-                    f"[WARN] Duplicate class definition for '{class_name}' ignored (keeping first)."
-                )
-                continue
-            seen.add(class_name)
             class_uri = self.cgo[class_name]
             self.g.add((class_uri, RDF.type, OWL.Class))
             self.g.add((class_uri, RDFS.label, Literal(class_name)))
@@ -187,6 +252,7 @@ class CardioOntologyGenerator:
             if parent:
                 pending_subclasses.append((class_name, parent))
             self.classes.add(class_name)
+            seen.add(class_name)
 
         # Second pass: subclass axioms
         for child, parent in pending_subclasses:
@@ -923,6 +989,13 @@ def main():
         help="Custom port number for Ollama server (overrides default node port)",
     )
 
+    parser.add_argument(
+        "--snomed-relations",
+        choices=["none", "curated", "all"],
+        default="none",
+        help="Which SNOMED relationships to include: none (only is-a), curated (selected types), or all. Output filename will reflect this mode.",
+    )
+
     args = parser.parse_args()
 
     # Resolve BAML logging preferences (precedence: --silent-llm > --quiet-llm > explicit level)
@@ -939,7 +1012,7 @@ def main():
         os.environ["BOUNDARY_MAX_LOG_CHUNK_CHARS"] = str(args.baml_log_truncate)
 
     generator = CardioOntologyGenerator(
-        output_path=args.output,  # Will be None if not specified, triggering auto-selection
+        output_path=args.output,
         snomed_host=args.host,
         snomed_port=args.port,
         snomed_user=args.user,
@@ -954,6 +1027,7 @@ def main():
         model=args.model,
         node=args.node,
         ollama_port=getattr(args, "ollama_port", None),
+        snomed_relations_mode=args.snomed_relations,
     )
 
     if not args.no_preflight:
