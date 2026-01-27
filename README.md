@@ -73,25 +73,19 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-	subgraph Ontology_Generation
-		A1[Load ontology_config.yaml] --> A2[Connect to SNOMED CT DB]
-		A2 --> A3[Extract concepts using search terms]
-		A3 --> A4[LLM-based categorization]
-		A4 --> A5[Build OWL/RDF ontology]
-	end
-	subgraph KG_Construction
-		B1[Parse guidelines (PDF/MD)] --> B2[Extract statements/tables]
-		B2 --> B3[Ground entities to ontology]
-		B3 --> B4[Map logic (AND/OR/NOT)]
-		B4 --> B5[Build Neo4j graph]
-	end
-	subgraph Querying
-		C1[User/system query] --> C2[Subgraph extraction]
-		C2 --> C3[Logic resolution]
-		C3 --> C4[Answer + evidence]
-	end
-	A5 --> B3
-	B5 --> C2
+  A1[Load ontology_config.yaml] --> A2[Connect to SNOMED CT DB]
+  A2 --> A3[Extract concepts using search terms]
+  A3 --> A4[LLM-based categorization]
+  A4 --> A5[Build OWL/RDF ontology]
+  A5 --> B3
+  B1[Parse guidelines (PDF/MD)] --> B2[Extract statements/tables]
+  B2 --> B3[Ground entities to ontology]
+  B3 --> B4[Map logic (AND/OR/NOT)]
+  B4 --> B5[Build Neo4j graph]
+  B5 --> C2
+  C1[User/system query] --> C2[Subgraph extraction]
+  C2 --> C3[Logic resolution]
+  C3 --> C4[Answer + evidence]
 ```
 
 ---
