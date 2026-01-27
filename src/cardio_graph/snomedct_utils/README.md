@@ -12,36 +12,72 @@ The ontology generation process creates a rich OWL/RDF ontology containing:
 
 The resulting ontology enables entity grounding by providing a structured hierarchy where SNOMED concepts are integrated under domain-specific core classes, allowing flexible matching for text mentions (like "HFrEF", "atrial fibrillation", "myocardial infarction").
 
-### Ontology Structure Diagram
+
+### Ontology Structure Diagram (Core Schema & Relationships)
 
 ```
 Core T-Box Classes (Schema)
 ├── CardiovascularDisease
 │   ├── HeartDisease
-│   │   ├── HeartFailure (core class)
-│   │   │   ├── Heart failure (SNOMED class, subclass of HeartFailure)
-│   │   │   │   ├── Acute heart failure (SNOMED, subclass of Heart failure)
-│   │   │   │   └── Chronic heart failure (SNOMED, subclass of Heart failure)
-│   │   ├── Arrhythmia (core class)
-│   │   │   ├── Atrial fibrillation (SNOMED, subclass of Arrhythmia)
-│   │   │   └── Ventricular tachycardia (SNOMED, subclass of Arrhythmia)
-│   │   └── CoronaryArteryDisease (core class)
-│   │       └── Myocardial infarction (SNOMED, subclass of CoronaryArteryDisease)
-│   └── Hypertension (core class)
-│       └── Essential hypertension (SNOMED, subclass of Hypertension)
+│   │   ├── HeartFailure
+│   │   ├── CoronaryArteryDisease
+│   │   ├── Arrhythmia
+│   │   ├── ValvularHeartDisease
+│   │   └── Cardiomyopathy
+│   └── Hypertension
+│   └── Stroke
+│   └── PeripheralArteryDisease
 ├── CardiacProcedure
-│   ├── Echocardiography (SNOMED, subclass of CardiacProcedure)
-│   └── Cardiac catheterization (SNOMED, subclass of CardiacProcedure)
-└── CardiovascularMedication
-    ├── Beta blocker (SNOMED, subclass of CardiovascularMedication)
-    └── ACE inhibitor (SNOMED, subclass of CardiovascularMedication)
+│   ├── CardiacImaging
+│   ├── CardiacCatheterization
+│   ├── CardiacSurgery
+│   └── CardiacDeviceImplantation
+├── CardiovascularMedication
+│   ├── Antihypertensive
+│   ├── Antiarrhythmic
+│   ├── Anticoagulant
+│   ├── Antiplatelet
+│   ├── LipidLoweringAgent
+│   └── HeartFailureMedication
+├── CardiovascularRiskFactor
+├── CardiacBiomarker
+├── CardiovascularSymptom
+├── CardiovascularEvent
+│   └── Mortality
 
-Key:
-- Bold: Core classes (T-Box, defined in config)
-- Italic: SNOMED-derived classes (A-Box, extracted and categorized)
-- Arrows: rdfs:subClassOf relationships
-- SNOMED classes inherit both core taxonomy and internal SNOMED hierarchies
+Object Properties (Relationships):
+  CardiovascularDisease
+    ├─ hasRiskFactor ─────────────► CardiovascularRiskFactor
+    ├─ hasSymptom ───────────────► CardiovascularSymptom
+    ├─ hasBiomarker ─────────────► CardiacBiomarker
+    ├─ treatedBy ────────────────► CardiovascularMedication
+    ├─ treatedBy ────────────────► CardiacProcedure
+    ├─ causes ───────────────────► CardiovascularEvent
+  CardiovascularMedication
+    ├─ interactsWith ────────────► CardiovascularMedication
+    ├─ hasAdverseEffect ────────► CardiovascularSymptom
+
+Data Properties (Attributes):
+  (applies to various classes, see config)
+    ├─ hasSnomedId: string
+    ├─ hasDescription: string
+    ├─ hasSeverity: string (CardiovascularDisease)
+    ├─ hasStage: string (CardiovascularDisease)
+    ├─ hasPrognosis: string (CardiovascularDisease)
+    ├─ hasPrevalence: string (CardiovascularDisease)
+    ├─ hasDosage: string (CardiovascularMedication)
+    ├─ hasIndication: string (CardiovascularMedication)
+    ├─ hasContraindication: string (CardiovascularMedication)
+    ├─ hasNormalRange: string (CardiacBiomarker)
+    ├─ hasUnits: string (CardiacBiomarker)
+    ├─ hasRelativeRisk: string (CardiovascularRiskFactor)
+
+Legend:
+- All arrows represent rdfs:subClassOf or object property relationships.
+- Only core classes and relationships are shown here. SNOMED-derived classes will be shown in real examples after the current ontology generation run completes.
 ```
+
+> **Note:** SNOMED-derived classes (A-Box) and their mappings to core classes will be illustrated with real examples once the current ontology generation run is finished. This ensures the documentation reflects actual mappings and codes.
 
 ## Architecture
 
@@ -123,124 +159,74 @@ LIMIT 500
 **Key Details:**
 - Uses full-text search with ILIKE for case-insensitive matching
 - Limits results per term to prevent overwhelming the database
-- Deduplicates concepts by ID across all search terms
-- Extracts ~1000 unique cardiovascular concepts
 
-### Step 4: Ontology Schema Initialization
+## Ontology Generation Pipeline
 
-Creates the core ontology structure from `core_classes`, `core_properties`, and `data_properties`:
+Below is a step-by-step overview and a schematic of how the ontology is derived from SNOMED CT and the configuration:
 
-```python
-# Initialize core classes
-for class_entry in config["core_classes"]:
-    class_uri = self.cgo[class_entry["name"]]
-    self.g.add((class_uri, RDF.type, OWL.Class))
-    self.g.add((class_uri, RDFS.label, Literal(class_entry["name"])))
-
-# Initialize properties
-for prop_entry in config["core_properties"]:
-    prop_uri = self.cgo[prop_entry["name"]]
-    self.g.add((prop_uri, RDF.type, OWL.ObjectProperty))
-    # Add domain, range, labels, etc.
+```
+┌────────────────────┐
+│ ontology_config.yaml│
+└─────────┬──────────┘
+          │ (defines core classes, properties, search terms)
+          ▼
+┌────────────────────────────┐
+│ generate_cardio_ontology.py│
+└─────────┬──────────────────┘
+          │ (loads config, connects to SNOMED DB)
+          ▼
+┌──────────────────────────────┐
+│ SNOMED CT PostgreSQL DB      │
+└─────────┬────────────────────┘
+          │ (extracts concepts using search terms)
+          ▼
+┌──────────────────────────────┐
+│ LLM-based Categorization     │
+└─────────┬────────────────────┘
+          │ (assigns SNOMED concepts to core classes)
+          ▼
+┌──────────────────────────────┐
+│ Ontology Construction        │
+└─────────┬────────────────────┘
+          │ (creates classes, properties, relationships)
+          ▼
+┌──────────────────────────────┐
+│ Output: OWL/RDF Ontology     │
+└──────────────────────────────┘
 ```
 
-### Step 5: SNOMED Concept Class Creation and Categorization
+### Stepwise Process
 
-For each extracted SNOMED concept, the system:
-1. Creates an ontology class with preferred term and synonyms
-2. Uses LLM-based categorization to assign it to appropriate core classes
+1. **Configuration Loading:**
+   - Loads `ontology_config.yaml` (core classes, object/data properties, search terms).
+2. **Database Connection:**
+   - Connects to SNOMED CT PostgreSQL DB using credentials in the script/config.
+3. **Concept Extraction:**
+   - For each search term, queries SNOMED for matching concepts and deduplicates results.
+4. **Core Schema Initialization:**
+   - Creates all core classes and properties in the ontology graph.
+5. **LLM-based Categorization:**
+   - For each SNOMED concept, uses an LLM to assign it to one or more core classes (categories).
+6. **Class Creation & Mapping:**
+   - Adds each SNOMED concept as a subclass of its assigned core class(es), with synonyms as SKOS altLabels.
+7. **Relationship Construction:**
+   - Adds subclass relationships (core and SNOMED "Is a"), object/data properties, and links.
+8. **Ontology Output:**
+   - Serializes the ontology as OWL/RDF to the specified output file.
 
-```python
-# LLM categorization example
-prompt = "Classify 'Heart failure' into: Condition, Medication, Procedure, ..."
-# Result: assigns to 'Condition' (mapped to HeartFailure core class)
+> **Tip:** The pipeline is fully configurable and extensible. To add new classes, properties, or search terms, simply update `ontology_config.yaml` and rerun the script.
 
-# Create OWL class linked to core class
-concept_uri = self.snomed[str(concept_id)]
-self.g.add((concept_uri, RDF.type, OWL.Class))
-self.g.add((concept_uri, RDFS.subClassOf, core_class_uri))  # Link to core class
-```
+---
 
-**Example Transformations:**
-- SNOMED Concept ID `84114007` ("Heart failure") → Class `Heart failure` (subclass of `HeartFailure`)
-- SNOMED Concept ID `49436004` ("Atrial fibrillation") → Class `Atrial fibrillation` (subclass of `Arrhythmia`)
+## How We Derive the Ontology from SNOMED: Key Points
 
-### Step 6: Hierarchy Creation
+- **All core classes and relationships are defined in the config, not hardcoded.**
+- **SNOMED concepts are extracted using broad, domain-specific search terms.**
+- **LLM-based categorization ensures that each SNOMED concept is mapped to the most appropriate core class, not just by keyword.**
+- **All relationships (object/data properties) are explicitly declared and visualized in the diagram above.**
+- **The resulting ontology is a unified, extensible hierarchy, ready for entity grounding and further knowledge population.**
 
-Establishes subclass relationships using both core class taxonomy and SNOMED CT "Is a" relationships:
-
-```python
-# Core class hierarchy (from config)
-self.g.add((heart_failure_uri, RDFS.subClassOf, heart_disease_uri))
-
-# SNOMED internal hierarchy
-for rel in snomed_relationships:
-    if rel["typeId"] == 116680003:  # "Is a"
-        self.g.add((child_uri, RDFS.subClassOf, parent_uri))
-```
-
-**Result:** A unified hierarchical ontology where SNOMED concepts are anchored to core classes while preserving their internal relationships.
-
-## Usage
-
-### Command Line
-
-```bash
-# Generate ontology (class-based modeling)
-python -m cardio_graph.snomedct_utils.generate_cardio_ontology \
-    --modeling-approach class \
-    --output /path/to/output.owl
-
-# With debug mode (limited search terms)
-python -m cardio_graph.snomedct_utils.generate_cardio_ontology \
-    --debug \
-    --modeling-approach class
-```
-
-### SLURM Batch Job
-
-```bash
-# Submit to compute cluster
-sbatch slurm/generate_ontology.sh
-```
-
-### Python API
-
-```python
-from cardio_graph.snomedct_utils.generate_cardio_ontology import CardioOntologyGenerator
-
-generator = CardioOntologyGenerator(
-    output_path="cardio_ontology_class.owl",
-    modeling_approach="class",  # "class" or "instance"
-    debug_mode=False
-)
-
-success = generator.generate_ontology()
-```
-
-## Output Statistics
-
-### Current Ontology (January 2026)
-
-- **Core Classes:** 27 cardiovascular domain classes (T-Box schema)
-- **SNOMED-Derived Classes:** 1000+ categorized mappings from SNOMED CT (linked to core classes)
-- **Object Properties:** 8 cardiovascular-specific relationships
-- **Data Properties:** 12 cardiovascular-specific attributes
-- **RDF Triples:** 3204 total (including categorization links)
-- **File Size:** ~207KB
-
-### Example Classes
-
-**Core Classes (T-Box):**
-- `CardiovascularDisease`
-- `HeartDisease` (subclass of CardiovascularDisease)
-- `HeartFailure` (subclass of HeartDisease)
-- `Arrhythmia` (subclass of HeartDisease)
-- `Hypertension` (subclass of CardiovascularDisease)
-
-**SNOMED-Derived Classes (A-Box, linked to core):**
-- `Heart failure` (subclass of `HeartFailure`)
-  - `Acute left-sided congestive heart failure` (subclass of `Heart failure`)
+---
   - `Chronic right-sided heart failure` (subclass of `Heart failure`)
 - `Atrial fibrillation` (subclass of `Arrhythmia`)
 - `Myocardial infarction` (subclass of `CoronaryArteryDisease`)
