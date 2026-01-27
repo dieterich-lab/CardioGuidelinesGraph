@@ -32,13 +32,13 @@ Clinical guidelines are the backbone of evidence-based medicine, but their logic
 
 ```mermaid
 flowchart TD
-	A[Guideline Documents (PDF/Markdown)] --> B[Parsing & Chunking]
-	B --> C[Statement Extraction & Logic Mapping]
-	C --> D[Entity Grounding (NER + SNOMED CT)]
-	D --> E[Ontology Construction (OWL/RDF)]
-	E --> F[Knowledge Graph Construction (Neo4j)]
-	F --> G[Querying & Reasoning]
-	G --> H[Patient-Specific Answers & Evidence]
+  A[Guideline Documents PDF or Markdown] --> B[Parsing and Chunking]
+  B --> C[Statement Extraction and Logic Mapping]
+  C --> D[Entity Grounding NER and SNOMED CT]
+  D --> E[Ontology Construction OWL or RDF]
+  E --> F[Knowledge Graph Construction Neo4j]
+  F --> G[Querying and Reasoning]
+  G --> H[Patient Specific Answers and Evidence]
 ```
 
 ---
@@ -75,17 +75,17 @@ flowchart TD
 flowchart TD
   A1[Load ontology_config.yaml] --> A2[Connect to SNOMED CT DB]
   A2 --> A3[Extract concepts using search terms]
-  A3 --> A4[LLM-based categorization]
-  A4 --> A5[Build OWL/RDF ontology]
+  A3 --> A4[LLM based categorization]
+  A4 --> A5[Build OWL or RDF ontology]
   A5 --> B3
-  B1[Parse guidelines (PDF/MD)] --> B2[Extract statements/tables]
+  B1[Parse guidelines PDF or Markdown] --> B2[Extract statements and tables]
   B2 --> B3[Ground entities to ontology]
-  B3 --> B4[Map logic (AND/OR/NOT)]
+  B3 --> B4[Map logic AND OR NOT]
   B4 --> B5[Build Neo4j graph]
   B5 --> C2
-  C1[User/system query] --> C2[Subgraph extraction]
+  C1[User or system query] --> C2[Subgraph extraction]
   C2 --> C3[Logic resolution]
-  C3 --> C4[Answer + evidence]
+  C3 --> C4[Answer and evidence]
 ```
 
 ---
