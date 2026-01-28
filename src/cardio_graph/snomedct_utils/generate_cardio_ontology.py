@@ -404,8 +404,20 @@ class CardioOntologyGenerator:
                 assigned_categories = result.categories
                 llm_synonyms = result.synonyms or []
 
+                # DEBUG: Print synonym information
+                if llm_synonyms:
+                    print(
+                        f"[DEBUG] LLM generated synonyms for '{preferred_term}': {llm_synonyms}"
+                    )
+                if synonyms:
+                    print(f"[DEBUG] SNOMED synonyms for '{preferred_term}': {synonyms}")
+
                 # Combine SNOMED synonyms with LLM-generated synonyms, avoiding duplicates
                 combined_synonyms = list(set(synonyms + llm_synonyms))
+                if combined_synonyms != synonyms:
+                    print(
+                        f"[DEBUG] Combined synonyms for '{preferred_term}': {combined_synonyms}"
+                    )
 
                 # The 'add_snomed_concept' function will now handle setting the correct label
                 # so we just need to pass the original concept dict to it.
@@ -793,7 +805,8 @@ class CardioOntologyGenerator:
             self.snomed_explorer.connect()
 
             # Step 1: Extract cardiovascular concepts from SNOMED CT
-            concepts = self.extract_cardiovascular_concepts()
+            limit = 5 if self.debug_mode else 1000
+            concepts = self.extract_cardiovascular_concepts(limit=limit)
 
             if not concepts:
                 print("No cardiovascular concepts found in SNOMED CT")
