@@ -32,6 +32,7 @@ esac
 # SLURM directives
 #SBATCH --gres=gpu:${GPU_TYPE}:1
 #SBATCH --partition=gpu
+#SBATCH --nodelist=gpu-g4-1
 #SBATCH --mem=16G
 
 # Get the actual node name
