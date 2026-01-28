@@ -131,7 +131,16 @@ import pytest
         (
             "Depression is common (15%–20% prevalence) in CVD, and associated with poor adherence and worse outcomes, including MACE and premature death.",
             ["Depression", "CVD", "MACE", "premature death"],
-            ["Depression", "prevalence", "CVD", "poor adherence", "worse", "outcomes", "MACE", "premature death"],
+            [
+                "Depression",
+                "prevalence",
+                "CVD",
+                "poor adherence",
+                "worse",
+                "outcomes",
+                "MACE",
+                "premature death",
+            ],
         ),
         (
             "HF and MI patients may need PCI or CABG. LV function is key.",
@@ -155,42 +164,50 @@ def test_full_grounding_pipeline(text, expected_grounded, expected_detected):
     4. Only expected entities are grounded (no false positives)
     """
     egs = EntityGroundingService(rebuild_index=False)
-    
+
     # Capture detected entities by temporarily modifying the ground method
     # Since we can't easily capture from ground(), we'll run NER separately
     doc = egs.nlp(text)
     detected_entities = [ent.text for ent in doc.ents]
-    
+
     # Run full grounding
     grounded = egs.ground(text)
     grounded_mentions = [g.mention for g in grounded]
-    
+
     print("\n--- FULL PIPELINE TEST DIAGNOSTICS ---")
     print(f"Text: {text}")
     print(f"NER Detected: {detected_entities}")
     print(f"Expected Detected: {expected_detected}")
     print(f"Grounded: {grounded_mentions}")
     print(f"Expected Grounded: {expected_grounded}")
-    
+
     # Test 1: All expected entities should be detected by NER
     for entity in expected_grounded:
-        assert entity in detected_entities, f"Expected entity '{entity}' not detected by NER"
-    
+        assert (
+            entity in detected_entities
+        ), f"Expected entity '{entity}' not detected by NER"
+
     # Test 2: All expected entities should be grounded
     for entity in expected_grounded:
         assert entity in grounded_mentions, f"Expected entity '{entity}' not grounded"
-    
+
     # Test 3: No unexpected entities should be grounded (precision check)
     unexpected_grounded = [g for g in grounded_mentions if g not in expected_grounded]
-    assert not unexpected_grounded, f"Unexpected entities grounded: {unexpected_grounded}"
-    
+    assert (
+        not unexpected_grounded
+    ), f"Unexpected entities grounded: {unexpected_grounded}"
+
     # Test 4: Non-groundable entities should be detected but not grounded
     non_groundable = [d for d in detected_entities if d not in expected_grounded]
     grounded_non_groundable = [g for g in grounded_mentions if g in non_groundable]
-    assert not grounded_non_groundable, f"Non-groundable entities were incorrectly grounded: {grounded_non_groundable}"
-    
+    assert (
+        not grounded_non_groundable
+    ), f"Non-groundable entities were incorrectly grounded: {grounded_non_groundable}"
+
     # Test 5: Recall calculation
-    recall = len(expected_grounded) / len(expected_grounded) if expected_grounded else 1.0
+    recall = (
+        len(expected_grounded) / len(expected_grounded) if expected_grounded else 1.0
+    )
     assert recall >= 0.8, f"Grounding recall below threshold: {recall:.2f}"
 
 
