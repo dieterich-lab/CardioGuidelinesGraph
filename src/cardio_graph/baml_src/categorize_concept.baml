@@ -7,6 +7,7 @@ class Concept {
 class CategorizationResult {
   categories string[] @description("List of ontology categories assigned to the concept")
   reasoning string @description("Short explanation for the categorization")
+  synonyms string[] @description("List of well-known synonyms or abbreviations for the concept")
 }
 
 function CategorizeConcept(concept: Concept, ontology_categories: string[]) -> CategorizationResult {
@@ -18,6 +19,7 @@ function CategorizeConcept(concept: Concept, ontology_categories: string[]) -> C
     - If the concept fits multiple categories, list all relevant ones.
     - If none fit, return an empty list.
     - Provide a brief reasoning for your choices.
+    - Additionally, provide a list of well-known synonyms or abbreviations for this concept, such as common medical acronyms (e.g., "HF" for Heart Failure, "MACE" for Major Adverse Cardiovascular Events).
 
     Concept term: {{concept.term}}
     Description: {{concept.description}}
