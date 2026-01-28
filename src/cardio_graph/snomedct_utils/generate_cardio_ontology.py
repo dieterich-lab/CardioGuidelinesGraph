@@ -402,6 +402,10 @@ class CardioOntologyGenerator:
                     baml_options=baml_options,
                 )
                 assigned_categories = result.categories
+                llm_synonyms = result.synonyms or []
+
+                # Combine SNOMED synonyms with LLM-generated synonyms, avoiding duplicates
+                combined_synonyms = list(set(synonyms + llm_synonyms))
 
                 # The 'add_snomed_concept' function will now handle setting the correct label
                 # so we just need to pass the original concept dict to it.
@@ -413,7 +417,7 @@ class CardioOntologyGenerator:
                         concept_uri = self.add_snomed_concept(
                             concept,
                             category_class_uri,
-                            synonyms=synonyms,
+                            synonyms=combined_synonyms,
                             as_individual=self.as_individual,
                         )
                         categories_map[cat_name].append(concept_uri)
