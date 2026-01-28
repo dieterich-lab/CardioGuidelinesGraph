@@ -104,9 +104,44 @@ trap stop_ollama EXIT
 # Start Ollama
 start_ollama
 
-# Pull the required model (assuming qwen3:latest for now, can be parameterized later)
-echo "Pulling model qwen3:latest..."
-ollama pull qwen3:latest
+# Extract model from PYTHON_COMMAND (default to Qwen32b)
+MODEL=$(echo "$PYTHON_COMMAND" | grep -oP '(?<=--model )\w+' || echo "Qwen32b")
+
+# Map model name to Ollama model string
+case $MODEL in
+    Qwen32b)
+        OLLAMA_MODEL="qwen3:32b"
+        ;;
+    Qwen8b)
+        OLLAMA_MODEL="qwen3:latest"
+        ;;
+    Qwen30b)
+        OLLAMA_MODEL="qwen3:30b"
+        ;;
+    Qwen14b)
+        OLLAMA_MODEL="qwen3:14b"
+        ;;
+    Qwen4b)
+        OLLAMA_MODEL="qwen3:4b"
+        ;;
+    Qwen235b)
+        OLLAMA_MODEL="qwen3:235b"
+        ;;
+    Qwen25vl72b)
+        OLLAMA_MODEL="qwen2.5vl:72b"
+        ;;
+    Qwen25vl32b)
+        OLLAMA_MODEL="qwen2.5vl:32b"
+        ;;
+    *)
+        echo "Unknown model $MODEL, defaulting to qwen3:32b"
+        OLLAMA_MODEL="qwen3:32b"
+        ;;
+esac
+
+# Pull the required model
+echo "Pulling model $OLLAMA_MODEL for $MODEL..."
+ollama pull $OLLAMA_MODEL
 
 # Check if Ollama is listening on the port
 if ! ss -tln | grep -q ":$OLLAMA_PORT "; then
