@@ -87,6 +87,8 @@ class CardioOntologyGenerator:
                 "curated": "curatedsnomed",
                 "all": "allsnomed",
             }.get(snomed_relations_mode, "coreonly")
+            # Add unique hash to make each run's output file unique
+            suffix = f"{suffix}_{uuid.uuid4().hex[:8]}"
             if modeling_approach == "instance":
                 output_path = f"{ontologies_dir}/cardio_ontology_instances_{suffix}.owl"
             else:
