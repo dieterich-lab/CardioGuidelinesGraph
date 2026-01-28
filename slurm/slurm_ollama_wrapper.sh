@@ -139,9 +139,8 @@ case $MODEL in
         ;;
 esac
 
-# Pull the required model
-echo "Pulling model $OLLAMA_MODEL for $MODEL..."
-ollama pull $OLLAMA_MODEL
+# Assume model is already pulled as per user affirmation
+echo "Assuming model $OLLAMA_MODEL for $MODEL is already pulled..."
 
 # Check if Ollama is listening on the port
 if ! ss -tln | grep -q ":$OLLAMA_PORT "; then
