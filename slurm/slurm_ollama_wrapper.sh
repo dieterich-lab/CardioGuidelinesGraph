@@ -148,6 +148,14 @@ if ! ss -tln | grep -q ":$OLLAMA_PORT "; then
     exit 1
 fi
 
+# Test Ollama API
+echo "Testing Ollama API..."
+if curl -s http://127.0.0.1:$OLLAMA_PORT/v1/models | grep -q "qwen3"; then
+    echo "Ollama API is responding and has qwen3 models"
+else
+    echo "Warning: Ollama API test failed or no qwen3 models found"
+fi
+
 # Run the provided Python command with added --node and --ollama-port
 eval "$PYTHON_COMMAND --node $NODE --ollama-port $OLLAMA_PORT"
 
