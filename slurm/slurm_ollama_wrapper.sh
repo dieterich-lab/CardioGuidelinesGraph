@@ -81,7 +81,7 @@ echo "Python command: $PYTHON_COMMAND"
 # Function to start Ollama server
 start_ollama() {
     echo "Starting Ollama server on $NODE ($OLLAMA_IP:$OLLAMA_PORT)..."
-    OLLAMA_ORIGINS=* OLLAMA_KEEP_ALIVE=240h OLLAMA_CONTEXT_LENGTH=128000 OLLAMA_TMPDIR=/beegfs/scratch/pwiesenbach TMPDIR=/beegfs/scratch/pwiesenbach OLLAMA_HOST=$OLLAMA_IP:$OLLAMA_PORT OLLAMA_TIMEOUT=30 OLLAMA_DEBUG=1 ollama serve &
+    OLLAMA_ORIGINS=* OLLAMA_KEEP_ALIVE=240h OLLAMA_CONTEXT_LENGTH=128000 OLLAMA_TMPDIR=/beegfs/scratch/pwiesenbach TMPDIR=/beegfs/scratch/pwiesenbach OLLAMA_HOST=0.0.0.0:$OLLAMA_PORT OLLAMA_TIMEOUT=30 OLLAMA_DEBUG=1 ollama serve &
     OLLAMA_PID=$!
     echo "Ollama started with PID: $OLLAMA_PID"
     # Wait a bit for Ollama to start

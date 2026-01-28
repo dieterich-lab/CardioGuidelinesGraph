@@ -91,7 +91,7 @@ def create_client_registry(
         actual_node = node
 
     # Add Ollama models for the specified node
-    base_url = f"http://{ip_dict[actual_node]}:{actual_port}/v1"
+    base_url = f"http://127.0.0.1:{actual_port}/v1"
 
     # Add the requested Ollama model if it exists
     if model_name in ollama_models:
