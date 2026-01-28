@@ -30,7 +30,8 @@ case $GPU_TYPE in
 esac
 
 # SLURM directives
-#SBATCH --nodelist=gpu-g4-1
+#SBATCH --gres=gpu:${GPU_TYPE}:1
+#SBATCH --partition=gpu
 #SBATCH --mem=16G
 
 # Get the actual node name
@@ -154,6 +155,11 @@ if curl -s http://127.0.0.1:$OLLAMA_PORT/v1/models | grep -q "qwen3"; then
 else
     echo "Warning: Ollama API test failed or no qwen3 models found"
 fi
+
+# Load the model
+echo "Loading model $OLLAMA_MODEL..."
+curl -s -X POST http://127.0.0.1:$OLLAMA_PORT/api/generate -H "Content-Type: application/json" -d "{\"model\": \"$OLLAMA_MODEL\", \"prompt\": \"Hello world\", \"stream\": false}" > /dev/null
+echo "Model loaded."
 
 # Run the provided Python command with added --node and --ollama-port
 eval "$PYTHON_COMMAND --node $NODE --ollama-port $OLLAMA_PORT"

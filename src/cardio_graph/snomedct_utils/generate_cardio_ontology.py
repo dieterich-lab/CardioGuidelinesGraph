@@ -66,7 +66,7 @@ class CardioOntologyGenerator:
         version: str = "0.1.0",
         debug_mode: bool = False,
         modeling_approach: str = "class",
-        model: str = "Qwen8b4",
+        model: str = "Qwen8b",
         node: str = "g4",
         ollama_port: int = "34",
         snomed_relations_mode: str = "none",  # 'none', 'curated', 'all'
@@ -994,7 +994,7 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="Qwen32b",
+        default="Qwen8b",
         help="Model name to use for LLM categorization (e.g., Qwen32b, Qwen8b, GPT41Nano)",
     )
     parser.add_argument(
