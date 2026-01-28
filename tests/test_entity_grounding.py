@@ -130,7 +130,7 @@ import pytest
         ("HFrEF patients need beta blockers.", ["HFrEF"]),
         (
             "Depression is common (15%–20% prevalence) in CVD, and associated with poor adherence and worse outcomes, including MACE and premature death.",
-            ["Depression", "CVD", "premature death"],
+            ["Depression", "CVD", "MACE", "premature death"],
         ),
         (
             "HF and MI patients may need PCI or CABG. LV function is key.",
