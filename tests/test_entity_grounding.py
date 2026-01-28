@@ -118,16 +118,57 @@ def test_edge_cases():
     """
     Test abbreviations, synonyms, and ambiguous terms.
     """
+
+
+# Parameterized recall/grounding test with assertions and recall metric
+import pytest
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("HFrEF patients need beta blockers.", ["HFrEF"]),
+        (
+            "Depression is common (15%–20% prevalence) in CVD, and associated with poor adherence and worse outcomes, including MACE and premature death.",
+            ["Depression", "CVD", "premature death"],
+        ),
+        (
+            "HF and MI patients may need PCI or CABG. LV function is key.",
+            ["HF", "MI", "PCI", "CABG", "LV function"],
+        ),
+    ],
+    ids=[
+        "simple-HFrEF",
+        "github-issue-MACE",
+        "edge-cases-HF-MI-PCI-CABG-LV",
+    ],
+)
+def test_recall_cases(text, expected):
+    """
+    Parameterized recall test: checks that all expected entities are grounded.
+    Also computes recall and fails if below threshold.
+    """
     egs = EntityGroundingService(rebuild_index=False)
-    test_text = "HF and MI patients may need PCI or CABG. LV function is key."
-    print(f"\nTesting edge cases: {test_text}")
-    doc = egs.nlp(test_text)
-    entities = [ent.text for ent in doc.ents]
-    print(f"NER detected entities: {entities}")
-    grounded = egs.ground(test_text)
-    print(f"Grounded entities: {len(grounded)}")
-    for g in grounded:
-        print(f"  {g.mention} -> {g.label}")
+    grounded_mentions = [g.mention for g in egs.ground(text)]
+    # Check each expected entity is grounded
+    missing = [e for e in expected if e not in grounded_mentions]
+    recall = (len(expected) - len(missing)) / max(1, len(expected))
+    print("\n--- RECALL TEST DIAGNOSTICS ---")
+    print(f"Text: {text}")
+    print(f"Expected: {expected}")
+    print(f"Grounded: {grounded_mentions}")
+    print(f"Missing: {missing}")
+    print(f"Recall: {recall:.2f}")
+    if missing:
+        print(
+            "[TODO] These entities are not currently grounded. Consider improving the NER, index, or synonym handling."
+        )
+    # Require at least 80% recall for the test to pass
+    assert recall >= 0.8, f"Recall below threshold: {recall:.2f}, missing: {missing}"
+    for entity in expected:
+        assert (
+            entity in grounded_mentions
+        ), f"Expected '{entity}' to be grounded in: {text}"
 
 
 def test_negative_control():
