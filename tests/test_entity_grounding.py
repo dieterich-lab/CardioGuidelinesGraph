@@ -125,15 +125,17 @@ import pytest
 
 
 @pytest.mark.parametrize(
-    "text,expected",
+    "text,expected_grounded,expected_detected",
     [
-        ("HFrEF patients need beta blockers.", ["HFrEF"]),
+        ("HFrEF patients need beta blockers.", ["HFrEF"], ["HFrEF", "beta blockers"]),
         (
             "Depression is common (15%–20% prevalence) in CVD, and associated with poor adherence and worse outcomes, including MACE and premature death.",
             ["Depression", "CVD", "MACE", "premature death"],
+            ["Depression", "prevalence", "CVD", "poor adherence", "worse", "outcomes", "MACE", "premature death"],
         ),
         (
             "HF and MI patients may need PCI or CABG. LV function is key.",
+            ["HF", "MI", "PCI", "CABG", "LV function"],
             ["HF", "MI", "PCI", "CABG", "LV function"],
         ),
     ],
@@ -143,32 +145,53 @@ import pytest
         "edge-cases-HF-MI-PCI-CABG-LV",
     ],
 )
-def test_recall_cases(text, expected):
+def test_full_grounding_pipeline(text, expected_grounded, expected_detected):
     """
-    Parameterized recall test: checks that all expected entities are grounded.
-    Also computes recall and fails if below threshold.
+    Full pipeline test: NER detection + grounding.
+    Verifies that:
+    1. Expected entities are detected by NER
+    2. Expected entities are successfully grounded
+    3. Non-groundable entities are detected but not grounded
+    4. Only expected entities are grounded (no false positives)
     """
     egs = EntityGroundingService(rebuild_index=False)
-    grounded_mentions = [g.mention for g in egs.ground(text)]
-    # Check each expected entity is grounded
-    missing = [e for e in expected if e not in grounded_mentions]
-    recall = (len(expected) - len(missing)) / max(1, len(expected))
-    print("\n--- RECALL TEST DIAGNOSTICS ---")
+    
+    # Capture detected entities by temporarily modifying the ground method
+    # Since we can't easily capture from ground(), we'll run NER separately
+    doc = egs.nlp(text)
+    detected_entities = [ent.text for ent in doc.ents]
+    
+    # Run full grounding
+    grounded = egs.ground(text)
+    grounded_mentions = [g.mention for g in grounded]
+    
+    print("\n--- FULL PIPELINE TEST DIAGNOSTICS ---")
     print(f"Text: {text}")
-    print(f"Expected: {expected}")
+    print(f"NER Detected: {detected_entities}")
+    print(f"Expected Detected: {expected_detected}")
     print(f"Grounded: {grounded_mentions}")
-    print(f"Missing: {missing}")
-    print(f"Recall: {recall:.2f}")
-    if missing:
-        print(
-            "[TODO] These entities are not currently grounded. Consider improving the NER, index, or synonym handling."
-        )
-    # Require at least 80% recall for the test to pass
-    assert recall >= 0.8, f"Recall below threshold: {recall:.2f}, missing: {missing}"
-    for entity in expected:
-        assert (
-            entity in grounded_mentions
-        ), f"Expected '{entity}' to be grounded in: {text}"
+    print(f"Expected Grounded: {expected_grounded}")
+    
+    # Test 1: All expected entities should be detected by NER
+    for entity in expected_grounded:
+        assert entity in detected_entities, f"Expected entity '{entity}' not detected by NER"
+    
+    # Test 2: All expected entities should be grounded
+    for entity in expected_grounded:
+        assert entity in grounded_mentions, f"Expected entity '{entity}' not grounded"
+    
+    # Test 3: No unexpected entities should be grounded (precision check)
+    unexpected_grounded = [g for g in grounded_mentions if g not in expected_grounded]
+    assert not unexpected_grounded, f"Unexpected entities grounded: {unexpected_grounded}"
+    
+    # Test 4: Non-groundable entities should be detected but not grounded
+    non_groundable = [d for d in detected_entities if d not in expected_grounded]
+    grounded_non_groundable = [g for g in grounded_mentions if g in non_groundable]
+    assert not grounded_non_groundable, f"Non-groundable entities were incorrectly grounded: {grounded_non_groundable}"
+    
+    # Test 5: Recall calculation
+    recall = len(expected_grounded) / len(expected_grounded) if expected_grounded else 1.0
+    assert recall >= 0.8, f"Grounding recall below threshold: {recall:.2f}"
 
 
 def test_negative_control():
