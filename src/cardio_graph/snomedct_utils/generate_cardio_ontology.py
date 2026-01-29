@@ -334,36 +334,132 @@ class CardioOntologyGenerator:
 
     def _load_abbreviations(self) -> Dict[str, str]:
         """Load guideline-internal abbreviations from abbrv.txt file.
-        
+
         Returns:
             Dictionary mapping full terms to their abbreviations
         """
         abbrv_path = os.path.join(os.path.dirname(__file__), "abbrv.txt")
         abbreviations = {}
-        
+
         try:
-            with open(abbrv_path, 'r', encoding='utf-8') as f:
+            with open(abbrv_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
-                
+
             # Split by "; " and parse each abbreviation
             entries = content.split("; ")
             for entry in entries:
                 entry = entry.strip()
-                if not entry or entry.endswith('. a'):  # Skip the trailing ". a"
+                if not entry or entry.endswith(". a"):  # Skip the trailing ". a"
                     continue
-                    
+
                 if ", " in entry:
                     abbr, full_term = entry.split(", ", 1)
                     abbr = abbr.strip()
                     full_term = full_term.strip()
                     if abbr and full_term:
                         abbreviations[full_term.lower()] = abbr
-                        
+
         except Exception as e:
             print(f"Warning: Could not load abbreviations file: {e}")
-            
+
         print(f"Loaded {len(abbreviations)} guideline abbreviations")
         return abbreviations
+
+    def _find_abbreviation_match(self, term: str) -> str:
+        """Find abbreviation match for a term using hybrid flexible matching.
+
+        Args:
+            term: The term to find an abbreviation for
+
+        Returns:
+            The abbreviation if found, empty string otherwise
+        """
+        import difflib
+        import re
+
+        term_lower = term.lower()
+
+        # 1. Exact match (fastest)
+        if term_lower in self.abbreviations:
+            return self.abbreviations[term_lower]
+
+        # 2. Normalized match (handles plurals, punctuation, case)
+        normalized_term = self._normalize_term(term_lower)
+        for full_term, abbr in self.abbreviations.items():
+            if self._normalize_term(full_term) == normalized_term:
+                return abbr
+
+        # 3. Fuzzy match (handles minor variations, typos)
+        best_match = None
+        best_ratio = 0.0
+
+        for full_term in self.abbreviations.keys():
+            ratio = difflib.SequenceMatcher(None, term_lower, full_term.lower()).ratio()
+            if ratio > best_ratio and ratio > 0.85:  # 85% similarity threshold
+                best_match = full_term
+                best_ratio = ratio
+
+        if best_match:
+            return self.abbreviations[best_match]
+
+        # 4. Token-based match (handles word reordering)
+        term_words = set(re.findall(r"\b\w+\b", term_lower))
+
+        for full_term, abbr in self.abbreviations.items():
+            dict_words = set(re.findall(r"\b\w+\b", full_term.lower()))
+            if term_words and dict_words:
+                # Calculate Jaccard similarity (intersection over union)
+                intersection = len(term_words & dict_words)
+                union = len(term_words | dict_words)
+                if union > 0:
+                    similarity = intersection / union
+                    if similarity > 0.8:  # 80% word overlap
+                        return abbr
+
+        return ""
+
+    def _normalize_term(self, term: str) -> str:
+        """Normalize a term for better matching.
+
+        - Convert to lowercase
+        - Remove punctuation and parentheses
+        - Handle common plural/singular variations
+        - Sort words alphabetically for order-independent comparison
+        """
+        import re
+
+        # Convert to lowercase and remove punctuation/parentheses
+        normalized = re.sub(r"[^\w\s]", "", term.lower())
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+
+        # Split into words
+        words = normalized.split()
+
+        # Handle some common medical term variations
+        normalized_words = []
+        for word in words:
+            # Handle plural/singular (basic rules)
+            if word.endswith("ies"):
+                word = word[:-3] + "y"  # studies -> study
+            elif (
+                word.endswith("es")
+                and not word.endswith("ses")
+                and not word.endswith("zes")
+            ):
+                word = word[:-2]  # diseases -> disease (but not analyses, diagnoses)
+            elif (
+                word.endswith("s")
+                and not word.endswith("ss")
+                and not word.endswith("us")
+            ):
+                word = word[:-1]  # events -> event (but not stress, focus)
+
+            # Skip very short words (likely noise)
+            if len(word) > 1:
+                normalized_words.append(word)
+
+        # Sort words for order-independent matching
+        return " ".join(sorted(normalized_words))
 
     def categorize_concepts_llm(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
         """
@@ -469,19 +565,28 @@ class CardioOntologyGenerator:
                 # Add guideline abbreviations if the preferred term or any synonym matches
                 guideline_abbreviations = []
                 # Check preferred term
-                if preferred_term.lower() in self.abbreviations:
-                    guideline_abbreviations.append(self.abbreviations[preferred_term.lower()])
+                preferred_abbr = self._find_abbreviation_match(preferred_term)
+                if preferred_abbr:
+                    guideline_abbreviations.append(preferred_abbr)
+
                 # Check SNOMED synonyms
                 for synonym in synonyms:
-                    if synonym.lower() in self.abbreviations:
-                        guideline_abbreviations.append(self.abbreviations[synonym.lower()])
-                
+                    synonym_abbr = self._find_abbreviation_match(synonym)
+                    if synonym_abbr:
+                        guideline_abbreviations.append(synonym_abbr)
+
                 # Add unique abbreviations to combined synonyms
                 if guideline_abbreviations:
-                    guideline_abbreviations = list(set(guideline_abbreviations))  # Remove duplicates
+                    guideline_abbreviations = list(
+                        set(guideline_abbreviations)
+                    )  # Remove duplicates
                     combined_synonyms.extend(guideline_abbreviations)
-                    combined_synonyms = list(set(combined_synonyms))  # Remove any new duplicates
-                    print(f"[DEBUG] Added guideline abbreviations for '{preferred_term}': {guideline_abbreviations}")
+                    combined_synonyms = list(
+                        set(combined_synonyms)
+                    )  # Remove any new duplicates
+                    print(
+                        f"[DEBUG] Added guideline abbreviations for '{preferred_term}': {guideline_abbreviations}"
+                    )
 
                 # The 'add_snomed_concept' function will now handle setting the correct label
                 # so we just need to pass the original concept dict to it.
