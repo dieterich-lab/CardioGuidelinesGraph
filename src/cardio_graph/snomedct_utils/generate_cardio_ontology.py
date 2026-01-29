@@ -70,6 +70,7 @@ class CardioOntologyGenerator:
         node: str = "g4",
         ollama_port: int = "34",
         snomed_relations_mode: str = "none",  # 'none', 'curated', 'all'
+        collect_synonyms: bool = True,  # Whether to use LLM for synonym collection
     ):
         """Initialize the ontology generator
 
@@ -78,6 +79,7 @@ class CardioOntologyGenerator:
             model: Model name to use for LLM categorization (e.g., Qwen32b5, Gemma, GPT4oMini)
             node: Node identifier for Ollama models (g2, g3, g4, g5)
             ollama_port: Custom port number (overrides default node port)
+            collect_synonyms: Whether to use LLM for collecting additional synonyms beyond SNOMED CT
         """
         # Set default output path based on modeling approach and SNOMED relations mode if not specified
         if output_path is None:
@@ -114,6 +116,7 @@ class CardioOntologyGenerator:
         self.debug_mode = debug_mode
         self.modeling_approach = modeling_approach
         self.as_individual = modeling_approach == "instance"
+        self.collect_synonyms = collect_synonyms
         self.classes = set()
         self.properties = set()
         self.data_properties = set()
@@ -404,7 +407,11 @@ class CardioOntologyGenerator:
                     baml_options=baml_options,
                 )
                 assigned_categories = result.categories
-                llm_synonyms = result.synonyms or []
+
+                # Conditionally collect LLM synonyms based on flag
+                llm_synonyms = []
+                if self.collect_synonyms:
+                    llm_synonyms = result.synonyms or []
 
                 # DEBUG: Print synonym information
                 if llm_synonyms:
@@ -1016,6 +1023,12 @@ def main():
         help="Which SNOMED relationships to include: none (only is-a), curated (selected types), or all. Output filename will reflect this mode.",
     )
 
+    parser.add_argument(
+        "--no-synonyms",
+        action="store_true",
+        help="Skip LLM-based synonym collection (only use SNOMED CT synonyms)",
+    )
+
     args = parser.parse_args()
 
     # Resolve BAML logging preferences (precedence: --silent-llm > --quiet-llm > explicit level)
@@ -1048,6 +1061,7 @@ def main():
         node=args.node,
         ollama_port=getattr(args, "ollama_port", None),
         snomed_relations_mode=args.snomed_relations,
+        collect_synonyms=not args.no_synonyms,
     )
 
     if not args.no_preflight:

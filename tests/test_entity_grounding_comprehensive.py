@@ -265,7 +265,9 @@ def test_guideline_excerpt_exact_matching(egs_service):
 
     # At least some key terms should be found
     found_key_terms = [e for e in expected if e in found]
-    assert len(found_key_terms) > 0, f"No key cardiovascular terms found. Expected at least one of {expected}"
+    assert (
+        len(found_key_terms) > 0
+    ), f"No key cardiovascular terms found. Expected at least one of {expected}"
 
     print(f"✅ Found {len(found_key_terms)} key terms: {found_key_terms}")
 
@@ -285,7 +287,9 @@ def test_negative_control_exact_matching(egs_service):
     print(f"Grounded entities: {len(grounded)} - {grounded_mentions}")
 
     # Should not ground any entities in non-medical text
-    assert len(grounded) == 0, f"Unexpected entities grounded in negative control: {grounded_mentions}"
+    assert (
+        len(grounded) == 0
+    ), f"Unexpected entities grounded in negative control: {grounded_mentions}"
 
     print("✅ Negative control passed - no false positives")
 
@@ -360,9 +364,7 @@ death."""
     if ungrounded:
         print(f"  Ungrounded entities: {ungrounded}")
         print(f"  Expected to be groundable: {expected_entities}")
-        missing_expected = [
-            e for e in expected_entities if e not in grounded_mentions
-        ]
+        missing_expected = [e for e in expected_entities if e not in grounded_mentions]
         if missing_expected:
             print(f"  Missing expected entities: {missing_expected}")
     else:
@@ -370,6 +372,8 @@ death."""
 
     # Verify expected entities are grounded
     for expected in expected_entities:
-        assert expected in grounded_mentions, f"Expected entity '{expected}' not grounded"
+        assert (
+            expected in grounded_mentions
+        ), f"Expected entity '{expected}' not grounded"
 
     print("✅ GitHub issue scenario test passed")
