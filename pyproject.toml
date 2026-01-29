@@ -120,4 +120,4 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 python_classes = "Test*"
-addopts = "--cov=cardio_graph"
+addopts = "--cov=src.cardio_graph"
