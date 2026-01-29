@@ -77,6 +77,11 @@ class EntityGroundingService:
 
         self.ix = index.open_dir(self.index_path)
 
+        # Load ontology graph for exact matching
+        print("Loading ontology graph for exact matching...")
+        self.g = rdflib.Graph()
+        self.g.parse(self.ontology_path)
+
     def _parse_ontology(self) -> Iterator[Dict]:
         """
         Parses the OWL file and yields a dictionary for each class (for class-based modeling).
@@ -211,6 +216,110 @@ class EntityGroundingService:
 
         print(f"Grounding complete. Found {len(grounded_entities)} grounded entities.")
         return grounded_entities
+
+    def ground_exact_first(self, text: str) -> List[GroundedEntity]:
+        """
+        Ground entities using exact matching first (synonyms and labels), then fuzzy as fallback.
+        This prevents false matches like 'beta blockers' -> 'Beta blocker target dose not achieved'.
+        """
+        grounded_entities = []
+        doc = self.nlp(text)
+
+        print(
+            f"Processing text with {len(doc.ents)} detected entities (exact-first mode)..."
+        )
+
+        # Process each entity mention found by spaCy's NER
+        for ent in doc.ents:
+            print(f"Checking entity: '{ent.text}'")
+
+            # First try exact match in ontology synonyms
+            exact_matches = self._find_exact_synonym_matches(ent.text)
+
+            if exact_matches:
+                print(f"  Found {len(exact_matches)} exact synonym matches")
+                # Use the first exact match
+                match = exact_matches[0]
+                grounded = GroundedEntity(
+                    mention=ent.text,
+                    span=(ent.start_char, ent.end_char),
+                    id=match["id"],
+                    label=match["label"],
+                    type=match["type"],
+                    score=1.0,  # Exact match gets perfect score
+                )
+                grounded_entities.append(grounded)
+                print(f"  Grounded to: '{match['label']}' (exact synonym)")
+                continue
+
+            # If no exact synonym match, try exact match in labels
+            exact_label_matches = self._find_exact_label_matches(ent.text)
+
+            if exact_label_matches:
+                print(f"  Found {len(exact_label_matches)} exact label matches")
+                # Use the first exact match
+                match = exact_label_matches[0]
+                grounded = GroundedEntity(
+                    mention=ent.text,
+                    span=(ent.start_char, ent.end_char),
+                    id=match["id"],
+                    label=match["label"],
+                    type=match["type"],
+                    score=1.0,  # Exact match gets perfect score
+                )
+                grounded_entities.append(grounded)
+                print(f"  Grounded to: '{match['label']}' (exact label)")
+                continue
+
+            # No exact matches found - do NOT ground this entity
+            print(f"  No exact matches found for '{ent.text}' - skipping")
+            continue
+
+        print(f"Grounding complete. Found {len(grounded_entities)} grounded entities.")
+        return grounded_entities
+
+    def _find_exact_synonym_matches(self, term: str) -> List[dict]:
+        """Find exact matches in ontology synonyms."""
+        matches = []
+
+        query = f"""
+        SELECT ?entity ?label ?type WHERE {{
+            ?entity skos:altLabel ?synonym .
+            ?entity rdfs:label ?label .
+            ?entity rdfs:subClassOf ?type .
+            FILTER(STRSTARTS(STR(?type), "http://dieterich-lab.org/ontologies/cardioguidelinesonto"))
+            FILTER(LCASE(STR(?synonym)) = LCASE("{term}"))
+        }}
+        """
+
+        results = self.g.query(query)
+        for row in results:
+            matches.append(
+                {"id": str(row.entity), "label": str(row.label), "type": str(row.type)}
+            )
+
+        return matches
+
+    def _find_exact_label_matches(self, term: str) -> List[dict]:
+        """Find exact matches in ontology labels."""
+        matches = []
+
+        query = f"""
+        SELECT ?entity ?label ?type WHERE {{
+            ?entity rdfs:label ?label .
+            ?entity rdfs:subClassOf ?type .
+            FILTER(STRSTARTS(STR(?type), "http://dieterich-lab.org/ontologies/cardioguidelinesonto"))
+            FILTER(LCASE(STR(?label)) = LCASE("{term}"))
+        }}
+        """
+
+        results = self.g.query(query)
+        for row in results:
+            matches.append(
+                {"id": str(row.entity), "label": str(row.label), "type": str(row.type)}
+            )
+
+        return matches
 
 
 # --- CLI using Click ---
