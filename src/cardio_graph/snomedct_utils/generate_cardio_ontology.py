@@ -122,6 +122,9 @@ class CardioOntologyGenerator:
         self.data_properties = set()
         self.snomed_concepts = dict()
 
+        # Load guideline abbreviations
+        self.abbreviations = self._load_abbreviations()
+
         # Initialize client registry for LLM connections
         try:
             self.client_registry = create_client_registry(model, node, ollama_port)
@@ -329,6 +332,39 @@ class CardioOntologyGenerator:
                         self.g.add((uri, RDFS.range, XSD.string))
             self.data_properties.add(uri)
 
+    def _load_abbreviations(self) -> Dict[str, str]:
+        """Load guideline-internal abbreviations from abbrv.txt file.
+        
+        Returns:
+            Dictionary mapping full terms to their abbreviations
+        """
+        abbrv_path = os.path.join(os.path.dirname(__file__), "abbrv.txt")
+        abbreviations = {}
+        
+        try:
+            with open(abbrv_path, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                
+            # Split by "; " and parse each abbreviation
+            entries = content.split("; ")
+            for entry in entries:
+                entry = entry.strip()
+                if not entry or entry.endswith('. a'):  # Skip the trailing ". a"
+                    continue
+                    
+                if ", " in entry:
+                    abbr, full_term = entry.split(", ", 1)
+                    abbr = abbr.strip()
+                    full_term = full_term.strip()
+                    if abbr and full_term:
+                        abbreviations[full_term.lower()] = abbr
+                        
+        except Exception as e:
+            print(f"Warning: Could not load abbreviations file: {e}")
+            
+        print(f"Loaded {len(abbreviations)} guideline abbreviations")
+        return abbreviations
+
     def categorize_concepts_llm(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
         """
         Categorize SNOMED concepts using an LLM via BAML, with full description context.
@@ -423,10 +459,29 @@ class CardioOntologyGenerator:
 
                 # Combine SNOMED synonyms with LLM-generated synonyms, avoiding duplicates
                 combined_synonyms = list(set(synonyms + llm_synonyms))
-                if combined_synonyms != synonyms:
+                if (
+                    llm_synonyms
+                ):  # Only print combined message when LLM synonyms were actually collected
                     print(
                         f"[DEBUG] Combined synonyms for '{preferred_term}': {combined_synonyms}"
                     )
+
+                # Add guideline abbreviations if the preferred term or any synonym matches
+                guideline_abbreviations = []
+                # Check preferred term
+                if preferred_term.lower() in self.abbreviations:
+                    guideline_abbreviations.append(self.abbreviations[preferred_term.lower()])
+                # Check SNOMED synonyms
+                for synonym in synonyms:
+                    if synonym.lower() in self.abbreviations:
+                        guideline_abbreviations.append(self.abbreviations[synonym.lower()])
+                
+                # Add unique abbreviations to combined synonyms
+                if guideline_abbreviations:
+                    guideline_abbreviations = list(set(guideline_abbreviations))  # Remove duplicates
+                    combined_synonyms.extend(guideline_abbreviations)
+                    combined_synonyms = list(set(combined_synonyms))  # Remove any new duplicates
+                    print(f"[DEBUG] Added guideline abbreviations for '{preferred_term}': {guideline_abbreviations}")
 
                 # The 'add_snomed_concept' function will now handle setting the correct label
                 # so we just need to pass the original concept dict to it.
