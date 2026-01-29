@@ -466,6 +466,43 @@ CAD, coronary artery disease
 [DEBUG] Abbreviation match for 'major adverse cardiovascular event': 'MACE' (method: normalized)
 ```
 
+### Entity Grounding Service Hybrid Matching
+
+**Feature:** Advanced hybrid matching in Entity Grounding Service for improved clinical text processing.
+
+**Implementation:** Extends the Entity Grounding Service with the same 4-stage matching algorithm used in ontology generation.
+
+**Methods:**
+- **`ground_hybrid_matching()`** - Main grounding method with exact + hybrid fallback
+- **`_find_hybrid_synonym_match()`** - Applies 4-stage algorithm to ontology synonyms
+- **`_normalize_term_for_matching()`** - Term normalization (plurals, punctuation, case)
+- **`_get_all_synonyms()`** - Efficient caching of ontology synonyms
+
+**CLI Usage:**
+```bash
+# Use hybrid matching with fallback
+poetry run cardio_graph.extraction_utils.entity_grounding_service ground_hybrid "patient with myocardial infarctions"
+
+# Disable fallback (exact matching only)
+poetry run cardio_graph.extraction_utils.entity_grounding_service ground_hybrid --no-hybrid-fallback "patient with myocardial infarctions"
+```
+
+**Algorithm Stages:**
+1. **Exact Match:** Fast SPARQL queries for identical terms
+2. **Normalized Match:** Handles plurals/singulars ("infarctions" → "infarction")
+3. **Fuzzy Match:** Similarity-based matching (>85% threshold)
+4. **Token-Based Match:** Word overlap analysis (80% Jaccard similarity)
+
+**Benefits:**
+- **Consistency:** Same matching logic across ontology generation and entity grounding
+- **Accuracy:** More precise matches than fuzzy search (e.g., "Myocardial infarctions" correctly matches "Myocardial infarction")
+- **Performance:** Conservative fallback approach minimizes false positives
+- **Configurable:** Can be enabled/disabled based on use case requirements
+
+**Comparison Results:**
+- **Current (Whoosh fuzzy):** "Myocardial infarctions" → "Aorto-myocardial shunt" (incorrect)
+- **Hybrid matching:** "Myocardial infarctions" → "Myocardial infarction" (correct via normalization)
+
 ### Performance Optimizations
 
 - **Conditional synonym collection** reduces LLM API calls by ~40%
