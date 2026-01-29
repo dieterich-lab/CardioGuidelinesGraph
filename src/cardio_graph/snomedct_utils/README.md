@@ -302,20 +302,85 @@ The system queries multiple SNOMED CT tables:
 
 ### Modeling Approaches
 
-**Class-Based with Categorization (Current):**
-- SNOMED concepts become OWL Classes, categorized under core classes
-- LLM-based assignment ensures accurate domain mapping
-- Combined hierarchy: core taxonomy + SNOMED relationships
-- Optimal for entity grounding with structured knowledge
+The ontology generator supports different approaches for modeling SNOMED CT concepts in OWL. The choice significantly impacts entity grounding capabilities and use case suitability.
 
-**Class-Based (Legacy):**
-- SNOMED concepts become OWL Classes without categorization
-- Flat hierarchy based only on SNOMED "Is a" relationships
-- Limited integration with domain schema
+#### **Class-Based with Categorization (Current Default - Recommended)**
+- **SNOMED concepts become OWL Classes**, categorized under domain-specific core classes
+- **LLM-based categorization** ensures accurate mapping to cardiovascular domains
+- **Combined hierarchy**: Core taxonomy (T-Box) + SNOMED relationships (A-Box)
+- **Optimal for entity grounding** with structured knowledge representation
 
-**Instance-Based (Alternative):**
-- SNOMED concepts become OWL Individuals
-- More granular but complex for grounding
+**Why this approach works for cardiovascular guidelines:**
+- **Multiple instances per concept**: Same concept can appear multiple times in text with different contexts
+- **Rich instance properties**: Each mention can have location, confidence, relationships to other entities
+- **Flexible querying**: Find all "heart failure" mentions in section 2, or all mentions with high confidence
+- **Semantic reasoning**: OWL reasoners can infer relationships between instances
+
+**Example Ontology Structure:**
+```turtle
+# Core class (T-Box)
+:HeartFailure rdf:type owl:Class .
+
+# SNOMED-derived class (A-Box)
+:Heart_failure rdf:type owl:Class ;
+    rdfs:subClassOf :HeartFailure ;
+    skos:altLabel "HF", "Heart failure", "Cardiac failure" .
+
+# Entity grounding instance
+:mention_1 rdf:type :Heart_failure ;
+    :foundAt "page 15, paragraph 3" ;
+    :confidence "0.95" .
+```
+
+#### **Instance-Based (Alternative - Not Recommended for Guidelines)**
+- **SNOMED concepts become OWL NamedIndividuals** (single instances)
+- **Singleton pattern**: Each concept exists only once in the ontology
+- **Direct linking**: Text mentions link to existing individuals
+- **Limited flexibility** for multiple occurrences
+
+**Why this approach is problematic for guidelines:**
+- **No multiple instances**: Can't represent the same concept appearing in different contexts
+- **Limited properties**: Can't attach mention-specific information (location, confidence, etc.)
+- **Poor querying**: Can't distinguish between different occurrences of the same concept
+- **Semantic constraints**: Treats concepts as unique entities rather than reusable classes
+
+**Example (Problematic for Guidelines):**
+```turtle
+# SNOMED concept as individual
+:heart_failure rdf:type owl:NamedIndividual .
+
+# Can't create multiple mentions - would violate uniqueness
+# This doesn't work for text analysis where "heart failure" appears 50+ times
+```
+
+#### **Class-Based Legacy (Deprecated)**
+- **SNOMED concepts become OWL Classes** without categorization
+- **Flat hierarchy** based only on SNOMED "Is a" relationships
+- **Limited integration** with domain schema
+- **No core class structure** for cardiovascular domains
+
+## Entity Grounding Integration
+
+The **class-based approach** enables sophisticated entity grounding:
+
+**Text Mentions → Ontology Classes:**
+- "HFrEF" → Creates instance of `HeartFailure` class with SNOMED mapping
+- Multiple "heart failure" mentions → Multiple instances with different contexts
+- "atrial fibrillation" → Instance of `Arrhythmia` class with location/confidence metadata
+
+**Grounding Process:**
+1. Extract entities from text using NER/spaCy
+2. Match entity text to ontology class labels (core + SNOMED synonyms)
+3. **Create RDF instances** linking text spans to ontology classes
+4. Use hierarchical relationships for flexible matching
+5. Attach context-specific properties (location, confidence, relationships)
+
+**Key Benefits for Guidelines:**
+- **Multiple occurrences**: Same concept can appear many times with different contexts
+- **Rich metadata**: Each mention can have document location, confidence scores, temporal info
+- **Flexible queries**: "Find all heart failure mentions in elderly patients" or "Show confidence distribution"
+- **Semantic reasoning**: Infer relationships between related mentions
+- **Scalability**: Handle large documents with many concept repetitions
 
 ## Dependencies
 
@@ -361,6 +426,7 @@ python generate_cardio_ontology.py [OPTIONS]
 - `--database DB`: SNOMED CT database name (default: snomed)
 - `--model MODEL`: LLM model for categorization (default: Qwen32b)
 - `--node {g2,g3,g4,g5}`: Ollama node identifier (default: g5)
+- `--modeling-approach {class,instance}`: How to model SNOMED concepts (default: class - recommended for entity grounding)
 
 **Debugging & Performance:**
 - `--debug, --dev`: Enable debug mode (limit to 5 concepts for faster testing)

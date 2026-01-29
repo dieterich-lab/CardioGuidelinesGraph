@@ -70,7 +70,7 @@ class CardioOntologyGenerator:
         node: str = "g4",
         ollama_port: int = "34",
         snomed_relations_mode: str = "none",  # 'none', 'curated', 'all'
-        collect_synonyms: bool = True,  # Whether to use LLM for synonym collection
+        collect_synonyms: bool = False,  # Whether to use LLM for synonym collection
     ):
         """Initialize the ontology generator
 
@@ -1184,9 +1184,9 @@ def main():
     )
 
     parser.add_argument(
-        "--no-synonyms",
+        "--llm-synonyms",
         action="store_true",
-        help="Skip LLM-based synonym collection (only use SNOMED CT synonyms)",
+        help="Use LLM for collecting additional synonyms beyond SNOMED CT",
     )
 
     args = parser.parse_args()
@@ -1221,7 +1221,7 @@ def main():
         node=args.node,
         ollama_port=getattr(args, "ollama_port", None),
         snomed_relations_mode=args.snomed_relations,
-        collect_synonyms=not args.no_synonyms,
+        collect_synonyms=args.llm_synonyms,
     )
 
     if not args.no_preflight:
