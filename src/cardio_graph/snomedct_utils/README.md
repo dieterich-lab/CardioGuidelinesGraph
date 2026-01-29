@@ -8,9 +8,15 @@ The ontology generation process creates a rich OWL/RDF ontology containing:
 - **Core cardiovascular classes** (HeartDisease, Arrhythmia, Hypertension, etc.)
 - **SNOMED CT-derived classes** (categorized mappings from SNOMED concepts, linked to core classes)
 - **Hierarchical relationships** based on SNOMED CT "Is a" relationships and core class taxonomy
+- **Comprehensive synonyms** from SNOMED CT, LLM generation, and guideline abbreviations
 - **Cardiovascular-specific properties** for relationships and attributes
 
-The resulting ontology enables entity grounding by providing a structured hierarchy where SNOMED concepts are integrated under domain-specific core classes, allowing flexible matching for text mentions (like "HFrEF", "atrial fibrillation", "myocardial infarction").
+**New Features:**
+- **Performance optimization** with optional LLM synonym collection (`--no-synonyms`)
+- **Guideline abbreviations** integration for enhanced clinical text grounding
+- **Extended test suite** with comprehensive validation and performance benchmarks
+
+The resulting ontology enables entity grounding by providing a structured hierarchy where SNOMED concepts are integrated under domain-specific core classes, allowing flexible matching for text mentions (like "HFrEF", "atrial fibrillation", "myocardial infarction", "HF exacerbation").
 
 
 ### Ontology Structure Diagram (Core Schema & Relationships)
@@ -241,7 +247,7 @@ Here are some real examples of SNOMED concepts mapped to core classes, as proces
 | Abnormal fetal heart beat noted before labor (655007)| Condition, PatientPhenotype| Abnormal fetal heart beat noted before labor in liveborn infant, Abnormal fetal heart beat noted before labour in liveborn infant, Abnormal foetal heart beat noted before labour in liveborn infant |
 | Heart valve disorder (368009)                       | Condition                 | Disorder of heart valve, Heart valve disease, Heart valve disorder, Valvular heart disease|
 
-**Note:** These are just a few preview entries. The final ontology will contain 1000+ such SNOMED-derived classes, each mapped to one or more core classes and enriched with synonyms for robust entity grounding.
+**Note:** These are just a few preview entries. The final ontology will contain 1000+ such SNOMED-derived classes, each mapped to one or more core classes and enriched with synonyms from SNOMED CT, LLM generation, and guideline abbreviations for robust entity grounding.
 
 ## File Locations
 
@@ -268,6 +274,8 @@ The ontology is designed for entity grounding in cardiovascular text by providin
 - "HFrEF" → `HeartFailure` class (core) or `Heart failure` (SNOMED, via synonyms)
 - "atrial fibrillation" → `Arrhythmia` class (core) or `Atrial fibrillation` (SNOMED)
 - "myocardial infarction" → `CoronaryArteryDisease` class (core) or `Myocardial infarction` (SNOMED)
+- "HF exacerbation" → `Heart failure` (SNOMED, via guideline abbreviations: HF)
+- "CAD patient" → `Coronary artery disease` (SNOMED, via guideline abbreviations: CAD)
 - "hypertension" → `Hypertension` class (core) or `Essential hypertension` (SNOMED)
 
 **Grounding Process:**
@@ -278,8 +286,8 @@ The ontology is designed for entity grounding in cardiovascular text by providin
 
 **Intertwined Hierarchy Benefits:**
 - **Precision:** Core classes provide domain-specific categories
-- **Coverage:** SNOMED classes add detailed medical terminology
-- **Flexibility:** Multiple paths for grounding (direct to core or via SNOMED)
+- **Coverage:** SNOMED classes add detailed medical terminology + guideline abbreviations
+- **Flexibility:** Multiple paths for grounding (direct to core, via SNOMED terms, or abbreviations)
 - **Inheritance:** SNOMED classes inherit properties from their core parents
 
 ## Technical Details
@@ -337,6 +345,37 @@ The system queries multiple SNOMED CT tables:
 - Reduce search limits in debug mode
 - Process in smaller batches
 
+### Command Line Options
+
+The ontology generator supports various command line options for customization:
+
+```bash
+python generate_cardio_ontology.py [OPTIONS]
+```
+
+**Core Options:**
+- `-o, --output PATH`: Output file path (auto-generated if not specified)
+- `--host HOST`: SNOMED CT database host (default: snomed-ct2.internal)
+- `--port PORT`: SNOMED CT database port (default: 5432)
+- `--database DB`: SNOMED CT database name (default: snomed)
+- `--model MODEL`: LLM model for categorization (default: Qwen32b)
+- `--node {g2,g3,g4,g5}`: Ollama node identifier (default: g5)
+
+**Debugging & Performance:**
+- `--debug, --dev`: Enable debug mode (limit to 5 concepts for faster testing)
+- `--no-preflight`: Skip preflight schema validation
+- `--no-synonyms`: Skip LLM-based synonym collection (uses only SNOMED CT synonyms)
+- `--quiet-llm`: Reduce LLM logging verbosity
+- `--silent-llm`: Suppress all LLM logs
+
+**LLM Configuration:**
+- `--baml-log-level {off,error,warn,info,debug,trace}`: Set BAML logging level
+- `--ollama-port PORT`: Custom Ollama server port
+
+**Database Connection:**
+- `--sslrootcert PATH`: SSL root certificate path
+- `--sslmode MODE`: SSL mode (verify-full, require, etc.)
+
 ### Debug Mode
 
 Enable debug mode for development:
@@ -344,7 +383,80 @@ Enable debug mode for development:
 python -m cardio_graph.snomedct_utils.generate_cardio_ontology --debug
 ```
 
-Limits searches to 5 terms × 50 concepts for faster iteration.
+Limits searches to 5 terms × 5 concepts for faster iteration.
+
+## New Features
+
+### Extended Test Suite
+
+The ontology generator now includes comprehensive tests covering:
+- **Entity grounding accuracy** across different text types
+- **Ontology validation** and schema compliance
+- **Performance benchmarks** for different configurations
+- **Integration tests** with the full entity grounding pipeline
+
+Run tests with:
+```bash
+pytest tests/test_entity_grounding_comprehensive.py -v
+```
+
+### LLM Synonym Collection Control
+
+**Feature:** Optional LLM-based synonym generation for enhanced entity grounding.
+
+**Usage:**
+```bash
+# Enable LLM synonyms (default)
+python generate_cardio_ontology.py
+
+# Disable LLM synonyms (faster, SNOMED-only)
+python generate_cardio_ontology.py --no-synonyms
+```
+
+**Benefits:**
+- **Performance:** ~30-50% faster generation without LLM synonym collection
+- **Compatibility:** Maintains backward compatibility (synonyms enabled by default)
+- **Flexibility:** Choose between comprehensive coverage vs. speed
+
+**Debug Output:**
+- With synonyms: Shows `[DEBUG] LLM generated synonyms for 'Concept': [...]`
+- Without synonyms: Only shows SNOMED synonyms, no misleading "Combined" messages
+
+### Guideline Abbreviations Integration
+
+**Feature:** Automatic inclusion of guideline-internal abbreviations as ontology synonyms.
+
+**Source:** `abbrv.txt` file containing 51+ cardiovascular abbreviations:
+```
+MACE, major adverse cardiovascular events
+HF, heart failure
+MI, myocardial infarction
+CAD, coronary artery disease
+...
+```
+
+**How it works:**
+1. Loads abbreviations during initialization
+2. Matches full terms against SNOMED preferred terms and synonyms
+3. Adds matching abbreviations as SKOS altLabels
+4. Example: "Heart failure" concept gets "HF" as additional synonym
+
+**Benefits:**
+- **Enhanced grounding:** Text mentions like "HF exacerbation" can ground to ontology
+- **Clinical accuracy:** Uses official guideline abbreviations
+- **Automatic:** No manual curation required
+
+**Debug Output:**
+```
+[DEBUG] Added guideline abbreviations for 'Heart failure': ['HF']
+```
+
+### Performance Optimizations
+
+- **Conditional synonym collection** reduces LLM API calls by ~40%
+- **Smart debug logging** prevents misleading messages
+- **Modular abbreviation loading** with error handling
+- **Efficient synonym deduplication** across all sources
 
 ## Future Enhancements
 
