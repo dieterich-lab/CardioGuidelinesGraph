@@ -16,10 +16,32 @@ from src.cardio_graph.extraction_utils.entity_grounding_service import (
 
 GUIDELINE_PATH = "/prj/doctoral_letters/guide/data/guidelines/text/esc_ccs.txt"
 
+# Ontology configurations for testing
+ONTOLOGY_CONFIGS = [
+    {
+        "name": "coreonly_c62d4f6b",
+        "path": "/prj/doctoral_letters/guide/data/ontologies/cardio_ontology_class_coreonly_c62d4f6b.owl",
+    },
+    {
+        "name": "curatedsnomed_7318fa4c",
+        "path": "/prj/doctoral_letters/guide/data/ontologies/cardio_ontology_class_curatedsnomed_7318fa4c.owl",
+    },
+    {
+        "name": "allsnomed_800ae34c",
+        "path": "/prj/doctoral_letters/guide/data/ontologies/cardio_ontology_class_coreonly_800ae34c.owl",
+    },
+]
 
-def test_simple():
+
+@pytest.mark.parametrize(
+    "ontology_config", ONTOLOGY_CONFIGS, ids=[c["name"] for c in ONTOLOGY_CONFIGS]
+)
+def test_simple(ontology_config):
+    print(f"\n=== Testing with ontology: {ontology_config['name']} ===")
     print("Initializing EntityGroundingService...")
-    egs = EntityGroundingService(rebuild_index=True)
+    egs = EntityGroundingService(
+        ontology_path=ontology_config["path"], rebuild_index=True
+    )
     print("Service initialized successfully.")
 
     test_text = "HFrEF patients need beta blockers."
@@ -37,13 +59,15 @@ def test_simple():
         print(f"  {g.mention} -> {g.label}")
 
 
-def test_github_issue():
-    print("\n" + "=" * 60)
-    print("TESTING GITHUB ISSUE: SnoMed Linker Validation")
-    print("=" * 60)
-
+@pytest.mark.parametrize(
+    "ontology_config", ONTOLOGY_CONFIGS, ids=[c["name"] for c in ONTOLOGY_CONFIGS]
+)
+def test_github_issue(ontology_config):
+    print(f"\n=== Testing GitHub Issue with ontology: {ontology_config['name']} ===")
     print("Initializing EntityGroundingService...")
-    egs = EntityGroundingService(rebuild_index=True)
+    egs = EntityGroundingService(
+        ontology_path=ontology_config["path"], rebuild_index=True
+    )
     print("Service initialized successfully.")
 
     test_text = """Depression is common (15%–20% prevalence) in CVD, and associated\nwith poor adherence and worse outcomes, including MACE and premature\ndeath."""
@@ -86,12 +110,25 @@ def test_github_issue():
         print("  All entities successfully grounded! 🎉")
 
 
-def test_guideline_excerpt():
+@pytest.mark.parametrize(
+    "ontology_config", ONTOLOGY_CONFIGS, ids=[c["name"] for c in ONTOLOGY_CONFIGS]
+)
+def test_guideline_excerpt(ontology_config):
     """
     Test grounding on a real excerpt from the ESC guideline.
     """
+    print(
+        f"\n=== Testing Guideline Excerpt with ontology: {ontology_config['name']} ==="
+    )
     if not os.path.exists(GUIDELINE_PATH):
         pytest.skip("Guideline file not found.")
+
+    print("Initializing EntityGroundingService...")
+    egs = EntityGroundingService(
+        ontology_path=ontology_config["path"], rebuild_index=True
+    )
+    print("Service initialized successfully.")
+
     with open(GUIDELINE_PATH, "r") as f:
         lines = f.readlines()
     # Use a paragraph with rich clinical content (lines 1000-1020)
@@ -125,6 +162,9 @@ import pytest
 
 
 @pytest.mark.parametrize(
+    "ontology_config", ONTOLOGY_CONFIGS, ids=[c["name"] for c in ONTOLOGY_CONFIGS]
+)
+@pytest.mark.parametrize(
     "text,expected_grounded,expected_detected",
     [
         ("HFrEF patients need beta blockers.", ["HFrEF"], ["HFrEF", "beta blockers"]),
@@ -154,7 +194,9 @@ import pytest
         "edge-cases-HF-MI-PCI-CABG-LV",
     ],
 )
-def test_full_grounding_pipeline(text, expected_grounded, expected_detected):
+def test_full_grounding_pipeline(
+    ontology_config, text, expected_grounded, expected_detected
+):
     """
     Full pipeline test: NER detection + grounding.
     Verifies that:
@@ -163,7 +205,10 @@ def test_full_grounding_pipeline(text, expected_grounded, expected_detected):
     3. Non-groundable entities are detected but not grounded
     4. Only expected entities are grounded (no false positives)
     """
-    egs = EntityGroundingService(rebuild_index=False)
+    print(f"\n=== Testing Full Pipeline with ontology: {ontology_config['name']} ===")
+    egs = EntityGroundingService(
+        ontology_path=ontology_config["path"], rebuild_index=True
+    )
 
     # Capture detected entities by temporarily modifying the ground method
     # Since we can't easily capture from ground(), we'll run NER separately
@@ -211,23 +256,39 @@ def test_full_grounding_pipeline(text, expected_grounded, expected_detected):
     assert recall >= 0.8, f"Grounding recall below threshold: {recall:.2f}"
 
 
-def test_negative_control():
+@pytest.mark.parametrize(
+    "ontology_config", ONTOLOGY_CONFIGS, ids=[c["name"] for c in ONTOLOGY_CONFIGS]
+)
+def test_negative_control(ontology_config):
     """
     Test that non-cardiology text does not produce false positives.
     """
-    egs = EntityGroundingService(rebuild_index=False)
+    print(
+        f"\n=== Testing Negative Control with ontology: {ontology_config['name']} ==="
+    )
+    egs = EntityGroundingService(
+        ontology_path=ontology_config["path"], rebuild_index=True
+    )
     test_text = "The cat sat on the mat."
-    print(f"\nTesting negative control: {test_text}")
+    print(f"Testing negative control: {test_text}")
     grounded = egs.ground(test_text)
     print(f"Grounded entities: {len(grounded)}")
     assert len(grounded) == 0
 
 
-def test_ontology_integrity():
+@pytest.mark.parametrize(
+    "ontology_config", ONTOLOGY_CONFIGS, ids=[c["name"] for c in ONTOLOGY_CONFIGS]
+)
+def test_ontology_integrity(ontology_config):
     """
     Test that core and SNOMED-derived classes are present in the index.
     """
-    egs = EntityGroundingService(rebuild_index=False)
+    print(
+        f"\n=== Testing Ontology Integrity with ontology: {ontology_config['name']} ==="
+    )
+    egs = EntityGroundingService(
+        ontology_path=ontology_config["path"], rebuild_index=True
+    )
     # Try searching for a few core classes and known SNOMED-derived classes
     core_terms = ["HeartFailure", "Arrhythmia", "CoronaryArteryDisease"]
     snomed_terms = ["Acute left-sided heart failure", "Heart valve disorder"]
