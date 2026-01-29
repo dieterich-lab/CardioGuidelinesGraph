@@ -13,6 +13,7 @@ The ontology generation process creates a rich OWL/RDF ontology containing:
 
 **New Features:**
 - **Performance optimization** with optional LLM synonym collection (`--no-synonyms`)
+- **Hybrid abbreviation matching** with 4-stage flexible algorithm for clinical terms
 - **Guideline abbreviations** integration for enhanced clinical text grounding
 - **Extended test suite** with comprehensive validation and performance benchmarks
 
@@ -422,9 +423,15 @@ python generate_cardio_ontology.py --no-synonyms
 - With synonyms: Shows `[DEBUG] LLM generated synonyms for 'Concept': [...]`
 - Without synonyms: Only shows SNOMED synonyms, no misleading "Combined" messages
 
-### Guideline Abbreviations Integration
+### Hybrid Abbreviation Matching
 
-**Feature:** Automatic inclusion of guideline-internal abbreviations as ontology synonyms.
+**Feature:** Advanced 4-stage flexible matching algorithm for clinical abbreviation integration.
+
+**Algorithm Stages:**
+1. **Exact Match:** Fast lookup for identical terms (case-insensitive)
+2. **Normalized Match:** Handles plurals/singulars, punctuation, and word reordering
+3. **Fuzzy Match:** Catches minor typos and variations (>85% similarity threshold)
+4. **Token-Based Match:** Word overlap analysis (80% Jaccard similarity)
 
 **Source:** `abbrv.txt` file containing 51+ cardiovascular abbreviations:
 ```
@@ -436,19 +443,27 @@ CAD, coronary artery disease
 ```
 
 **How it works:**
-1. Loads abbreviations during initialization
-2. Matches full terms against SNOMED preferred terms and synonyms
-3. Adds matching abbreviations as SKOS altLabels
-4. Example: "Heart failure" concept gets "HF" as additional synonym
+1. Loads abbreviations during ontology generator initialization
+2. For each SNOMED concept, applies hybrid matching to preferred terms and synonyms
+3. Adds matching abbreviations as SKOS altLabels to enhance entity grounding
+4. Example: "major adverse cardiovascular event" (singular) matches "MACE" via normalized matching
+
+**Matching Examples:**
+- ✅ "heart failure" → "HF" (exact match)
+- ✅ "major adverse cardiovascular event" → "MACE" (normalized: handles singular/plural)
+- ✅ "myocardial infarctions" → "MI" (normalized: handles plural/singular)
+- ✅ Case variations handled automatically
 
 **Benefits:**
-- **Enhanced grounding:** Text mentions like "HF exacerbation" can ground to ontology
-- **Clinical accuracy:** Uses official guideline abbreviations
-- **Automatic:** No manual curation required
+- **Robust grounding:** Handles clinical term variations missed by exact matching
+- **Clinical accuracy:** Uses official guideline abbreviations with flexible matching
+- **Performance:** Multi-stage fallback ensures high match rate with minimal overhead
+- **Automatic:** No manual curation required, works with existing abbreviation files
 
 **Debug Output:**
 ```
 [DEBUG] Added guideline abbreviations for 'Heart failure': ['HF']
+[DEBUG] Abbreviation match for 'major adverse cardiovascular event': 'MACE' (method: normalized)
 ```
 
 ### Performance Optimizations
