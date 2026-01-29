@@ -217,16 +217,18 @@ class EntityGroundingService:
         print(f"Grounding complete. Found {len(grounded_entities)} grounded entities.")
         return grounded_entities
 
-    def ground_exact_first(self, text: str) -> List[GroundedEntity]:
+    def ground_hybrid_matching(
+        self, text: str, enable_fallback: bool = True
+    ) -> List[GroundedEntity]:
         """
-        Ground entities using exact matching first (synonyms and labels), then fuzzy as fallback.
-        This prevents false matches like 'beta blockers' -> 'Beta blocker target dose not achieved'.
+        Ground entities using exact matching first, with optional hybrid fallback.
+        This provides consistency with ontology generation's abbreviation matching logic.
         """
         grounded_entities = []
         doc = self.nlp(text)
 
         print(
-            f"Processing text with {len(doc.ents)} detected entities (exact-first mode)..."
+            f"Processing text with {len(doc.ents)} detected entities (hybrid matching mode)..."
         )
 
         # Process each entity mention found by spaCy's NER
@@ -271,8 +273,29 @@ class EntityGroundingService:
                 print(f"  Grounded to: '{match['label']}' (exact label)")
                 continue
 
-            # No exact matches found - do NOT ground this entity
-            print(f"  No exact matches found for '{ent.text}' - skipping")
+            # Optional: Apply hybrid matching fallback
+            if enable_fallback:
+                print(f"  No exact matches found, trying hybrid matching fallback...")
+                hybrid_match = self._find_hybrid_synonym_match(ent.text)
+
+                if hybrid_match:
+                    match = hybrid_match
+                    grounded = GroundedEntity(
+                        mention=ent.text,
+                        span=(ent.start_char, ent.end_char),
+                        id=match["id"],
+                        label=match["label"],
+                        type=match["type"],
+                        score=0.9,  # Hybrid match gets high but not perfect score
+                    )
+                    grounded_entities.append(grounded)
+                    print(
+                        f"  Grounded to: '{match['label']}' (hybrid {match.get('method', 'match')})"
+                    )
+                    continue
+
+            # No matches found - do NOT ground this entity
+            print(f"  No matches found for '{ent.text}' - skipping")
             continue
 
         print(f"Grounding complete. Found {len(grounded_entities)} grounded entities.")
@@ -320,6 +343,120 @@ class EntityGroundingService:
             )
 
         return matches
+
+    def _find_hybrid_synonym_match(self, term: str) -> dict:
+        """Find hybrid synonym match using the same algorithm as ontology generation."""
+        import difflib
+        import re
+
+        term_lower = term.lower()
+
+        # 1. Exact match (fastest)
+        exact_matches = self._find_exact_synonym_matches(term)
+        if exact_matches:
+            return {**exact_matches[0], "method": "exact"}
+
+        # 2. Normalized match (handles plurals, punctuation, case)
+        normalized_term = self._normalize_term_for_matching(term_lower)
+        for synonym in self._get_all_synonyms():
+            if self._normalize_term_for_matching(synonym.lower()) == normalized_term:
+                # Find the entity that has this synonym
+                matches = self._find_exact_synonym_matches(synonym)
+                if matches:
+                    return {**matches[0], "method": "normalized"}
+
+        # 3. Fuzzy match (handles minor variations, typos)
+        best_match = None
+        best_ratio = 0.0
+        best_entity = None
+
+        for synonym in self._get_all_synonyms():
+            ratio = difflib.SequenceMatcher(None, term_lower, synonym.lower()).ratio()
+            if ratio > best_ratio and ratio > 0.85:  # 85% similarity threshold
+                best_match = synonym
+                best_ratio = ratio
+                # Find the entity for this synonym
+                matches = self._find_exact_synonym_matches(synonym)
+                if matches:
+                    best_entity = matches[0]
+
+        if best_entity:
+            return {**best_entity, "method": "fuzzy"}
+
+        # 4. Token-based match (handles word reordering)
+        term_words = set(re.findall(r"\b\w+\b", term_lower))
+
+        for synonym in self._get_all_synonyms():
+            dict_words = set(re.findall(r"\b\w+\b", synonym.lower()))
+            if term_words and dict_words:
+                # Calculate Jaccard similarity (intersection over union)
+                intersection = len(term_words & dict_words)
+                union = len(term_words | dict_words)
+                if union > 0:
+                    similarity = intersection / union
+                    if similarity > 0.8:  # 80% word overlap
+                        matches = self._find_exact_synonym_matches(synonym)
+                        if matches:
+                            return {**matches[0], "method": "token-based"}
+
+        return {}
+
+    def _normalize_term_for_matching(self, term: str) -> str:
+        """Normalize a term for better matching (same as ontology generator)."""
+        import re
+
+        # Convert to lowercase and remove punctuation/parentheses
+        normalized = re.sub(r"[^\w\s]", "", term.lower())
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+
+        # Split into words
+        words = normalized.split()
+
+        # Handle some common medical term variations
+        normalized_words = []
+        for word in words:
+            # Handle plural/singular (basic rules)
+            if word.endswith("ies"):
+                word = word[:-3] + "y"  # studies -> study
+            elif (
+                word.endswith("es")
+                and not word.endswith("ses")
+                and not word.endswith("zes")
+            ):
+                word = word[:-2]  # diseases -> disease (but not analyses, diagnoses)
+            elif (
+                word.endswith("s")
+                and not word.endswith("ss")
+                and not word.endswith("us")
+            ):
+                word = word[:-1]  # events -> event (but not stress, focus)
+
+            # Skip very short words (likely noise)
+            if len(word) > 1:
+                normalized_words.append(word)
+
+        # Sort words for order-independent matching
+        return " ".join(sorted(normalized_words))
+
+    def _get_all_synonyms(self) -> List[str]:
+        """Get all synonyms from the ontology for hybrid matching."""
+        if not hasattr(self, "_all_synonyms_cache"):
+            synonyms = set()
+
+            # Query all synonyms
+            query = """
+            SELECT ?synonym WHERE {
+                ?entity skos:altLabel ?synonym .
+            }
+            """
+
+            results = self.g.query(query)
+            for row in results:
+                synonyms.add(str(row.synonym))
+
+            self._all_synonyms_cache = list(synonyms)
+
+        return self._all_synonyms_cache
 
 
 # --- CLI using Click ---
@@ -378,7 +515,35 @@ def ground(ctx, text):
         click.echo(f"Error: {e}", err=True)
 
 
-def demo():
+@cli.command()
+@click.argument("text")
+@click.option(
+    "--hybrid-fallback/--no-hybrid-fallback",
+    default=True,
+    help="Enable hybrid matching fallback after exact matching fails.",
+)
+@click.pass_context
+def ground_hybrid(ctx, text, hybrid_fallback):
+    """Ground entities in the provided text using hybrid matching (exact + fallback)."""
+    try:
+        egs = EntityGroundingService(
+            ontology_path=ctx.obj["ontology_path"],
+            index_path=ctx.obj["index_path"],
+            rebuild_index=ctx.obj["rebuild_index"],
+        )
+        found_entities = egs.ground_hybrid_matching(
+            text, enable_fallback=hybrid_fallback
+        )
+
+        if not found_entities:
+            click.echo("No entities were grounded.")
+        else:
+            for entity in found_entities:
+                click.echo(
+                    f"Mention: '{entity.mention}' -> ID: {entity.id}, Label: '{entity.label}', Type: {entity.type}, Score: {entity.score:.2f}"
+                )
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
     """Demo/Main Block: Provides a working example with sample text, making it easy to test. It checks for the ontology file and handles missing files gracefully."""
     # Define paths to your files
     ONTOLOGY_FILE = (
