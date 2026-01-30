@@ -122,6 +122,11 @@ cardiovascular_search_terms:
   - "ventricular fibrillation"
   - "ACS"
   - "acute coronary syndrome"
+  # Key concepts with common abbreviations
+  - "heart failure"
+  - "coronary artery disease"
+  - "myocardial infarction"
+  - "major adverse cardiovascular events"
 
 # This section defines the core schema (T-Box) of the ontology.
 # Focused on cardiovascular concepts that entities from text can ground to.
@@ -136,6 +141,10 @@ core_classes:
   - name: HeartFailure
     description: Heart failure conditions.
     subclass_of: HeartDisease
+    snomed_search_terms:
+      - HF
+      - heart failure
+      - cardiac failure
   - name: CoronaryArteryDisease
     description: Diseases of the coronary arteries.
     subclass_of: HeartDisease
