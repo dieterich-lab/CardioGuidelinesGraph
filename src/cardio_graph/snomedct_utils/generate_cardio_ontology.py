@@ -26,8 +26,10 @@ from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "ontology_config.yaml")
 with open(CONFIG_PATH, "r") as f:
     _config = yaml.safe_load(f)
-SNOMED_CATEGORIES = _config.get("snomed_categories", [])
-SNOMED_KEYWORDS = _config.get("snomed_keywords", {})
+# Get core class names for categorization (replaces SNOMED_CATEGORIES)
+CORE_CLASS_NAMES = [
+    c.get("name") for c in _config.get("core_classes", []) if c.get("name")
+]
 
 
 class CardioOntologyGenerator:
@@ -467,7 +469,7 @@ class CardioOntologyGenerator:
         """
         from cardio_graph.baml_client.sync_client import b
 
-        categories_map = {cat: [] for cat in SNOMED_CATEGORIES}
+        categories_map = {cat: [] for cat in CORE_CLASS_NAMES}
 
         for concept in concepts:
             concept_id = concept.get("conceptId") or concept.get("id")
@@ -610,48 +612,9 @@ class CardioOntologyGenerator:
         return categories_map
 
     def categorize_concepts(self, concepts: List[Dict]) -> Dict[str, List[URIRef]]:
-        """Categorize SNOMED concepts into snomed categories using source class from extraction"""
-        categories = {cat: [] for cat in SNOMED_CATEGORIES}
-        for concept in concepts:
-            # Use the source class that was determined during extraction
-            source_class = concept.get("_source_class")
-            if source_class and source_class in categories:
-                category_class_uri = self.cgo[source_class]
-                concept_uri = self.add_snomed_concept(
-                    concept,
-                    category_class_uri,
-                    synonyms=None,
-                    as_individual=self.as_individual,
-                )
-                categories[source_class].append(concept_uri)
-            else:
-                # Fallback: try to categorize based on keywords in the term
-                term = concept.get("term", "").lower()
-                assigned = False
-                for cat, keywords in SNOMED_KEYWORDS.items():
-                    if any(kw in term for kw in keywords):
-                        category_class_uri = self.cgo[cat]
-                        concept_uri = self.add_snomed_concept(
-                            concept,
-                            category_class_uri,
-                            synonyms=None,
-                            as_individual=self.as_individual,
-                        )
-                        categories[cat].append(concept_uri)
-                        assigned = True
-                        break
-                if not assigned:
-                    # Default to Condition if nothing matches
-                    if "Condition" in categories:
-                        category_class_uri = self.cgo["Condition"]
-                        concept_uri = self.add_snomed_concept(
-                            concept,
-                            category_class_uri,
-                            synonyms=None,
-                            as_individual=self.as_individual,
-                        )
-                        categories["Condition"].append(concept_uri)
-
+        """Categorize SNOMED concepts into core classes using simple heuristics"""
+        categories = {cat: [] for cat in CORE_CLASS_NAMES}
+        # No fallback categorization - concepts without LLM categorization remain uncategorized
         return categories
 
     def preflight_report(self):
@@ -692,14 +655,6 @@ class CardioOntologyGenerator:
         print(
             f"Data properties: expected {len(_config.get('data_properties', []))} | Declared: {len(data_props)}"
         )
-        # SNOMED category coverage
-        missing_categories = [c for c in SNOMED_CATEGORIES if c not in cfg_classes]
-        if missing_categories:
-            print(
-                f"[WARN] SNOMED categories not defined as classes: {missing_categories}"
-            )
-        else:
-            print("All SNOMED categories have corresponding classes.")
         print("--------------------------------")
         return {
             "core_classes_yaml": len(cfg_classes),
@@ -710,7 +665,6 @@ class CardioOntologyGenerator:
             "data_properties_loaded": len(data_props),
             "subclass_issues": subclass_issues,
             "missing_classes": missing,
-            "missing_categories": missing_categories,
         }
 
     # (No mutations performed in preflight beyond report; data property declaration occurs earlier in init)
