@@ -660,7 +660,4 @@ def ground_hybrid(ctx, text, hybrid_fallback):
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) == 1:
-        demo()
-    else:
-        cli()
+    cli()
