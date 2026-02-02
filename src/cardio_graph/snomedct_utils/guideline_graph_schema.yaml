@@ -1,0 +1,202 @@
+# Der Neue Workflow: "Text-First, SNOMED-Backed"
+# 1. Die Vorbereitung (Static Config)
+# Ihr ladet keine Millionen Knoten. Ihr habt nur eure ontology_config.yaml.
+# Sie enthält Root-Konzepte (z.B. ID für Cardiovascular Agent).
+# Sie ist der "Türsteher": Sie bestimmt, was überhaupt in den Graphen darf und welches Label (z.B. :Medication) es bekommt.
+# 2. Der Trigger (Guideline Parsing)
+# Euer LLM/Docling liest die Leitlinie (Text oder Tabelle).
+# Fund: "Patients on Bisoprolol showed improved outcomes..."
+# LLM Aufgabe: Extrahiere "Bisoprolol" als Entity und die Logik (Outcome: Improved).
+# 3. Der "Live"-Lookup (The Magic Step)
+# Bevor ihr irgendwas in Neo4j schreibt, fragt euer Python-Skript die SNOMED-API (oder lokale DB):
+# Frage: "Wer ist 'Bisoprolol'?"
+# Antwort: "ID 12345. Elternpfad: Bisoprolol -> Beta-Blocker -> ... -> Substance."
+# 4. Die Filterung & Konstruktion
+# Euer Skript prüft den Pfad gegen die Config (Schritt 1).
+# Check: "Ist einer der Vorfahren in unserer Config als 'Medication'-Root gelistet?"
+# Ergebnis: Ja! (Beta-Blocker oder Cardiovascular Agent passt).
+# Action: Ihr schreibt jetzt nur diesen relevanten Pfad in den Graphen.
+# 5. Das Ergebnis im Graph
+# Ihr habt jetzt einen Graphen, der:
+# Die medizinische Hierarchie kennt (Bisoprolol -IS_A-> Beta-Blocker).
+# Die klinische Regel kennt (Bisoprolol -[RECOMMENDED]-> Heart Failure).
+# Schlank ist (keine unnötigen Medikamente, die nicht in der Leitlinie stehen).
+
+project_name: "CardioGuidelinesGraph"
+version: "2.0.0"
+description: "Hybrid Ontology for Cardiology Guidelines combining Semantic Medical Entities with Guideline Decision Logic."
+
+# ==========================================
+# 1. NODE LABELS (The "Classes")
+# ==========================================
+nodes:
+  # --- A. Semantic Layer (The Vocabulary) ---
+  # Diese Knoten repräsentieren "Wissen" und werden auf SNOMED CT gemappt.
+  # Sie sind die "Anker" für den Patienten-Input.
+
+  - label: "ClinicalCondition"
+    description: "Diseases, syndromes, or symptoms."
+    attributes:
+      - name: "name"
+        type: "string"
+        description: "Official name"
+      - name: "snomed_id"
+        type: "string"
+        description: "SCTID from SNOMED CT"
+      - name: "synonyms"
+        type: "list"
+
+  - label: "Medication"
+    description: "Drug substances or drug classes."
+    attributes:
+      - name: "name"
+        type: "string"
+      - name: "snomed_id"
+        type: "string"
+      - name: "drug_class"
+        type: "boolean" # True = ACE-Inhibitor (Class), False = Ramipril (Substance)
+
+  - label: "ClinicalParameter"
+    description: "Measurable entities (e.g., Blood Pressure, LVEF, Potassium Level)."
+    attributes:
+      - name: "name"
+        type: "string"
+      - name: "snomed_id"
+        type: "string"
+      - name: "unit"
+        type: "string" # e.g., "mmHg", "%", "mmol/L"
+
+  - label: "Procedure"
+    description: "Diagnostic or therapeutic procedures (e.g., PCI, ECG, Echo)."
+    attributes:
+      - name: "name"
+        type: "string"
+      - name: "snomed_id"
+        type: "string"
+
+  # --- B. Logic Layer (The Guideline Structure) ---
+  # Diese Knoten bilden den Entscheidungsbaum/DAG ab.
+  # Sie werden NICHT zwingend auf SNOMED gemappt, sondern strukturieren den Ablauf.
+
+  - label: "GuidelineSource"
+    description: "Metadata about the source document (e.g., ESC 2021 Heart Failure)."
+    attributes:
+      - name: "title"
+        type: "string"
+      - name: "year"
+        type: "integer"
+      - name: "section"
+        type: "string" # e.g., "Table 5" or "Section 3.2"
+
+  - label: "DecisionNode"
+    description: "A logical fork in the road. Represents a check against a parameter or condition."
+    attributes:
+      - name: "question"
+        type: "string" # e.g., "Is LVEF < 40%?"
+      - name: "operator"
+        type: "string" # e.g., "<", ">", "=", "PRESENT", "ABSENT"
+      - name: "threshold_value"
+        type: "float"  # e.g., 40.0
+      - name: "logic_type"
+        type: "string" # "AND", "OR", "SINGLE"
+
+  - label: "RecommendationNode"
+    description: "The specific clinical instruction derived from the guideline."
+    attributes:
+      - name: "class_of_recommendation"
+        type: "string" # "I", "IIa", "IIb", "III"
+      - name: "level_of_evidence"
+        type: "string" # "A", "B", "C"
+      - name: "full_text"
+        type: "string" # The exact sentence from the PDF
+      - name: "recommendation_type"
+        type: "string" # "PRESCRIPTION", "DIAGNOSIS", "LIFESTYLE"
+
+
+# ==========================================
+# 2. RELATIONSHIPS (The "Edges")
+# ==========================================
+relationships:
+  # --- Logic Flow (The "Algorithm") ---
+  
+  - type: "EVALUATES"
+    source: "DecisionNode"
+    target: "ClinicalParameter"
+    description: "Links the logic check to the semantic concept (e.g., Check -> LVEF)."
+
+  - type: "CHECKS_FOR"
+    source: "DecisionNode"
+    target: "ClinicalCondition"
+    description: "Checks for presence of a disease (e.g., Check -> Diabetes)."
+
+  - type: "LEADS_TO"
+    source: "DecisionNode"
+    target: "DecisionNode"
+    description: "Connecting logic steps (if yes -> go to next check)."
+    properties:
+      - name: "condition_met"
+        type: "boolean" # True (YES path) or False (NO path)
+
+  - type: "RESULTS_IN"
+    source: "DecisionNode"
+    target: "RecommendationNode"
+    description: "The outcome of a decision path."
+    properties:
+      - name: "condition_met"
+        type: "boolean"
+
+  # --- Action Mapping (Connecting Logic to Reality) ---
+
+  - type: "RECOMMENDS_USAGE"
+    source: "RecommendationNode"
+    target: "Medication"
+    description: "Positive recommendation (Class I/II)."
+
+  - type: "CONTRAINDICATES"
+    source: "RecommendationNode"
+    target: "Medication"
+    description: "Negative recommendation (Class III)."
+
+  - type: "RECOMMENDS_PROCEDURE"
+    source: "RecommendationNode"
+    target: "Procedure"
+
+  # --- Context & Grounding ---
+
+  - type: "MENTIONED_IN"
+    source: "RecommendationNode" # or DecisionNode
+    target: "GuidelineSource"
+    description: "Traceability back to the PDF source."
+
+
+# ==========================================
+# 3. SNOMED INTEGRATION & TAXONOMY
+# ==========================================
+# Hier definieren wir, wie wir SNOMED-Hierarchien nutzen, 
+# um unseren Knoten automatisch Labels zu geben.
+
+snomed_mapping:
+  import_hierarchy: true   # JA, wir wollen IS_A Relationen importieren!
+  
+  # Wenn ein Begriff unterhalb dieses SNOMED-Concepts liegt, 
+  # bekommt er automatisch das Label "Medication"
+  mapping_rules:
+    - target_label: "Medication"
+      root_concepts: 
+        - "105590001" # Substance
+        - "373873005" # Pharmaceutical / biologic product (product)
+        - "373247007" # Cardiovascular agent (substance)
+        - "410942007" # Drug or medicament (substance)
+      
+    - target_label: "ClinicalCondition"
+      root_concepts:
+        - "49601007"  # Disorder of cardiovascular system
+        - "404684003" # Clinical finding (für Symptome)
+
+    - target_label: "Procedure"
+      root_concepts:
+        - "71388002"  # Procedure
+
+    - target_label: "ClinicalParameter"
+      root_concepts:
+        - "363787002" # Observable entity (z.B. Blood Pressure)
