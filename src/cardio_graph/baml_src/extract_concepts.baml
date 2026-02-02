@@ -21,6 +21,9 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
   client Qwen8bG4_37
   prompt #"
     You are a medical guideline extraction assistant. Given a single sentence, extract key medical concepts.
+    Context:
+    - The input may start with tags like [GUIDELINE: ...] and [SOURCE_TYPE: text|table].
+    - Use these tags to interpret whether the content is a text chunk or a markdown table.
     Requirements:
     - Extract entities and normalize them into a standardized SNOMED candidate string.
     - Provide a role for each entity (Recommendation, Condition, Medication, Procedure, ClinicalParameter, GuidelineSource, DecisionNode, RecommendationNode, or Other).
