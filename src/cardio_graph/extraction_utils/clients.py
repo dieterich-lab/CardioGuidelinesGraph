@@ -10,10 +10,10 @@ ip_dict = {
 
 # Port mapping for different nodes
 port_dict = {
-    "g2": 30,
-    "g3": 30,
-    "g4": 30,
-    "g5": 30,
+    "g2": 32,
+    "g3": 33,
+    "g4": 34,
+    "g5": 35,
 }
 
 # Available Ollama models and their model strings from clients.baml
