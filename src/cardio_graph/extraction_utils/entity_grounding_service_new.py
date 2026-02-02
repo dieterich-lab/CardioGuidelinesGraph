@@ -275,11 +275,17 @@ class EntityGroundingServiceNew:
             formatted.append({"concept_id": str(cid), "term": term})
         return formatted
 
-    def extract_concepts(self, sentence: str) -> List[ExtractedConcept]:
+    def extract_concepts(
+        self, sentence: str, source_type: str, guideline_title: str
+    ) -> List[ExtractedConcept]:
         from cardio_graph.baml_client.sync_client import b
 
         baml_options = {"client_registry": self.client_registry}
-        result = b.ExtractConcepts(sentence, baml_options=baml_options)
+        tagged_text = (
+            f"[GUIDELINE: {guideline_title}] "
+            f"[SOURCE_TYPE: {source_type}]\n{sentence}"
+        )
+        result = b.ExtractConcepts(tagged_text, baml_options=baml_options)
 
         concepts = []
         for concept in result.concepts or []:
@@ -302,8 +308,10 @@ class EntityGroundingServiceNew:
             )
         return concepts
 
-    def ground_sentence(self, sentence: str) -> List[GroundedConcept]:
-        extracted = self.extract_concepts(sentence)
+    def ground_sentence(
+        self, sentence: str, source_type: str, guideline_title: str
+    ) -> List[GroundedConcept]:
+        extracted = self.extract_concepts(sentence, source_type, guideline_title)
         grounded: List[GroundedConcept] = []
 
         for concept in extracted:
@@ -367,6 +375,38 @@ class EntityGroundingServiceNew:
         self.index.save()
         return grounded
 
+    def build_index_from_dirs(
+        self,
+        chunks_dir: Optional[str],
+        tables_dir: Optional[str],
+        guideline_title: str,
+    ) -> None:
+        if chunks_dir:
+            for filename in sorted(os.listdir(chunks_dir)):
+                if not filename.endswith(".md"):
+                    continue
+                path = os.path.join(chunks_dir, filename)
+                with open(path, "r", encoding="utf-8") as f:
+                    text = f.read().strip()
+                if not text:
+                    continue
+                self.ground_sentence(
+                    text, source_type="text", guideline_title=guideline_title
+                )
+
+        if tables_dir:
+            for filename in sorted(os.listdir(tables_dir)):
+                if not filename.endswith(".md"):
+                    continue
+                path = os.path.join(tables_dir, filename)
+                with open(path, "r", encoding="utf-8") as f:
+                    text = f.read().strip()
+                if not text:
+                    continue
+                self.ground_sentence(
+                    text, source_type="table", guideline_title=guideline_title
+                )
+
     def _resolve_target_label_for_role(
         self, role: str, path_ids: List[int]
     ) -> Optional[str]:
@@ -394,7 +434,11 @@ class EntityGroundingServiceNew:
 
 
 @click.command()
-@click.argument("sentence")
+@click.option(
+    "--sentence",
+    default=None,
+    help="Single sentence to ground (omit when using chunks/tables)",
+)
 @click.option(
     "--config-path",
     default=DEFAULT_CONFIG_PATH,
@@ -405,13 +449,31 @@ class EntityGroundingServiceNew:
     default=DEFAULT_INDEX_PATH,
     help="Path to the JSON grounding index file",
 )
+@click.option(
+    "--chunks-dir",
+    default=None,
+    help="Directory containing guideline text chunks (.md)",
+)
+@click.option(
+    "--tables-dir",
+    default=None,
+    help="Directory containing guideline table chunks (.md)",
+)
+@click.option(
+    "--guideline-title",
+    default="2024 ESC Guidelines for the management of chronic coronary syndromes",
+    help="Guideline title for extraction context",
+)
 @click.option("--model", default="Qwen8b", help="LLM model name")
 @click.option("--node", default="g4", help="Ollama node")
 @click.option("--port", type=int, help="Custom Ollama port")
 def main(
-    sentence: str,
+    sentence: Optional[str],
     config_path: str,
     index_path: str,
+    chunks_dir: Optional[str],
+    tables_dir: Optional[str],
+    guideline_title: str,
     model: str,
     node: str,
     port: Optional[int],
@@ -423,7 +485,17 @@ def main(
         port=port,
         index_path=index_path,
     )
-    results = service.ground_sentence(sentence)
+    if chunks_dir or tables_dir:
+        service.build_index_from_dirs(chunks_dir, tables_dir, guideline_title)
+        return
+    if not sentence:
+        raise click.UsageError(
+            "Provide --sentence or use --chunks-dir/--tables-dir for batch processing."
+        )
+
+    results = service.ground_sentence(
+        sentence, source_type="text", guideline_title=guideline_title
+    )
 
     for r in results:
         click.echo("---")
