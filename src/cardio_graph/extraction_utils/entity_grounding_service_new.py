@@ -455,17 +455,33 @@ class EntityGroundingServiceNew:
             formatted.append({"concept_id": str(cid), "term": term})
         return formatted
 
+    def _serialize_baml_result(self, result) -> Dict:
+        if hasattr(result, "model_dump"):
+            return result.model_dump()
+        if hasattr(result, "dict"):
+            return result.dict()
+        if hasattr(result, "json"):
+            try:
+                return json.loads(result.json())
+            except Exception:
+                return {"raw": result.json()}
+        return {"raw": str(result)}
+
     def extract_concepts(
         self, sentence: str, source_type: str, guideline_title: str
     ) -> List[ExtractedConcept]:
         from cardio_graph.baml_client.sync_client import b
 
         baml_options = {"client_registry": self.client_registry}
+        os.environ["BAML_LOG"] = "OFF"
         tagged_text = (
             f"[GUIDELINE: {guideline_title}] "
             f"[SOURCE_TYPE: {source_type}]\n{sentence}"
         )
         result = b.ExtractConcepts(tagged_text, baml_options=baml_options)
+        parsed_payload = self._serialize_baml_result(result)
+        logger.info("---Parsed Response (class ExtractConceptsResult)---")
+        logger.info(json.dumps(parsed_payload, ensure_ascii=False, indent=2))
 
         concepts = []
         for concept in result.concepts or []:
@@ -510,9 +526,7 @@ class EntityGroundingServiceNew:
             cached = self.index.lookup(concept.entity_standardized_candidate)
             if cached:
                 if cached.get("target_label") is None and concept.role:
-                    fallback_label = self._fallback_target_label_for_role(
-                        concept.role
-                    )
+                    fallback_label = self._fallback_target_label_for_role(concept.role)
                     if fallback_label:
                         cached["target_label"] = fallback_label
                 if self._should_skip_concept(
