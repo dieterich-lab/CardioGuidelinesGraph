@@ -436,9 +436,6 @@ class EntityGroundingServiceNew:
         for concept in extracted:
             cached = self.index.lookup(concept.entity_standardized_candidate)
             if cached:
-                if cached.get("logic_structured") is None:
-                    cached["logic_structured"] = concept.logic_structured
-                self.index.add(cached)
                 if self._should_skip_concept(
                     concept,
                     cached.get("score", 1.0),
@@ -492,15 +489,12 @@ class EntityGroundingServiceNew:
 
             self.index.add(
                 {
-                    "rule_id": concept.rule_id,
                     "entity_standardized_candidate": concept.entity_standardized_candidate,
                     "snomed_id": concept_id,
                     "preferred_term": preferred_term,
                     "score": score,
                     "taxonomy_path": taxonomy_path,
                     "target_label": target_label,
-                    "role": concept.role,
-                    "logic_structured": concept.logic_structured,
                 }
             )
 
