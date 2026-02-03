@@ -55,6 +55,7 @@ HEADER_NOISE_PATTERNS = [
 
 @dataclass
 class ExtractedConcept:
+    rule_id: Optional[int]
     entity_original: str
     entity_standardized_candidate: str
     role: str
@@ -64,6 +65,7 @@ class ExtractedConcept:
 
 @dataclass
 class GroundedConcept:
+    rule_id: Optional[int]
     entity_original: str
     entity_standardized_candidate: str
     role: str
@@ -399,14 +401,18 @@ class EntityGroundingServiceNew:
         for concept in result.concepts or []:
             logic_structured = {
                 "strength": "Unknown",
-                "class": "Unknown",
                 "level": "Unknown",
                 "direction": "UNKNOWN",
+                "operator": None,
+                "threshold": None,
+                "unit": None,
+                "condition_context": None,
             }
             if getattr(concept, "logic_structured", None):
                 logic_structured.update(concept.logic_structured.model_dump())
             concepts.append(
                 ExtractedConcept(
+                    rule_id=getattr(concept, "rule_id", None),
                     entity_original=concept.entity_original,
                     entity_standardized_candidate=concept.entity_standardized_candidate,
                     role=concept.role,
@@ -441,6 +447,7 @@ class EntityGroundingServiceNew:
                     continue
                 grounded.append(
                     GroundedConcept(
+                        rule_id=concept.rule_id,
                         entity_original=concept.entity_original,
                         entity_standardized_candidate=concept.entity_standardized_candidate,
                         role=concept.role,
@@ -469,6 +476,7 @@ class EntityGroundingServiceNew:
                 continue
 
             grounded_concept = GroundedConcept(
+                rule_id=concept.rule_id,
                 entity_original=concept.entity_original,
                 entity_standardized_candidate=concept.entity_standardized_candidate,
                 role=concept.role,
@@ -484,6 +492,7 @@ class EntityGroundingServiceNew:
 
             self.index.add(
                 {
+                    "rule_id": concept.rule_id,
                     "entity_standardized_candidate": concept.entity_standardized_candidate,
                     "snomed_id": concept_id,
                     "preferred_term": preferred_term,
@@ -629,6 +638,7 @@ def main(
 
     for r in results:
         click.echo("---")
+        click.echo(f"Rule ID: {r.rule_id}")
         click.echo(f"Entity: {r.entity_original}")
         click.echo(f"Standardized: {r.entity_standardized_candidate}")
         click.echo(f"Role: {r.role}")
