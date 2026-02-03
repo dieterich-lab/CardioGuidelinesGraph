@@ -31,7 +31,19 @@ DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/extracted_rules.jsonl"
 MIN_MATCH_SCORE = 0.7
 MIN_TERM_LEN = 3
-ALLOWED_ROLES = {"Condition", "ClinicalParameter", "Medication", "Procedure"}
+ALLOWED_ROLES = {
+    "Condition",
+    "ClinicalParameter",
+    "Medication",
+    "Procedure",
+    "Other",
+}
+BLOCKED_ROLES = {
+    "GuidelineSource",
+    "Recommendation",
+    "DecisionNode",
+    "RecommendationNode",
+}
 ALWAYS_NOISE_PATTERNS = [
     r"^doi\b",
     r"\bdoi:\b",
@@ -51,6 +63,34 @@ HEADER_NOISE_PATTERNS = [
     r"^european heart journal",
     r"\bguidelines?\b",
     r"^page\s+\d+",
+]
+STUDY_SOURCE_PATTERNS = [
+    r"\btrial\b",
+    r"\bstudy\b",
+    r"\bmeta-?analysis\b",
+    r"\bregistry\b",
+    r"\bguidelines?\b",
+    r"\brecommendation table\b",
+    r"\bevidence table\b",
+    r"\btable\s+\d+\b",
+    r"\bfigure\s+\d+\b",
+    r"\bsection\b",
+]
+ADVERSE_EVENT_KEYWORDS = [
+    "diarrhea",
+    "diarrhoea",
+    "pneumonia",
+    "bleeding",
+    "hemorrhage",
+    "haemorrhage",
+    "rash",
+    "angioedema",
+    "edema",
+    "infection",
+    "nausea",
+    "vomiting",
+    "hypotension",
+    "arrhythmia",
 ]
 
 
@@ -246,14 +286,61 @@ class EntityGroundingServiceNew:
         concept: ExtractedConcept,
         score: float,
         target_label: Optional[str],
+        has_clinical_anchor: bool,
     ) -> bool:
         if self._is_noise_phrase(concept.entity_standardized_candidate):
+            return True
+        if self._is_blocked_role(concept):
+            return True
+        if self._is_study_or_source_term(concept):
+            return True
+        if concept.role == "Other" and not self._should_keep_other(
+            concept, target_label
+        ):
+            return True
+        if self._is_statistic_term(concept) and not has_clinical_anchor:
             return True
         if score < MIN_MATCH_SCORE:
             return True
         if target_label is None and concept.role not in ALLOWED_ROLES:
             return True
         return False
+
+    def _is_blocked_role(self, concept: ExtractedConcept) -> bool:
+        return (concept.role or "").strip() in BLOCKED_ROLES
+
+    def _is_study_or_source_term(self, concept: ExtractedConcept) -> bool:
+        text = (
+            f"{concept.entity_original} {concept.entity_standardized_candidate}".lower()
+        )
+        return any(re.search(pattern, text) for pattern in STUDY_SOURCE_PATTERNS)
+
+    def _should_keep_other(
+        self, concept: ExtractedConcept, target_label: Optional[str]
+    ) -> bool:
+        if target_label == "ClinicalCondition":
+            return True
+        return self._is_adverse_event_term(concept)
+
+    def _is_adverse_event_term(self, concept: ExtractedConcept) -> bool:
+        text = (
+            f"{concept.entity_original} {concept.entity_standardized_candidate}".lower()
+        )
+        return any(keyword in text for keyword in ADVERSE_EVENT_KEYWORDS)
+
+    def _is_statistic_term(self, concept: ExtractedConcept) -> bool:
+        text = (
+            f"{concept.entity_original} {concept.entity_standardized_candidate}".lower()
+        )
+        stat_patterns = [
+            r"\bhazard ratio\b",
+            r"\bhr\b",
+            r"\bp-?value\b",
+            r"\bconfidence interval\b",
+            r"\bci\b",
+            r"\bp\s*=\s*\d",
+        ]
+        return any(re.search(pattern, text) for pattern in stat_patterns)
 
     def _get_preferred_term(self, concept_id: int) -> Optional[str]:
         if concept_id in self._preferred_term_cache:
@@ -433,6 +520,9 @@ class EntityGroundingServiceNew:
             filtered_sentence, source_type, guideline_title
         )
         grounded: List[GroundedConcept] = []
+        has_clinical_anchor = any(
+            c.role in {"Condition", "Medication", "Procedure"} for c in extracted
+        )
 
         for concept in extracted:
             cached = self.index.lookup(concept.entity_standardized_candidate)
@@ -441,6 +531,7 @@ class EntityGroundingServiceNew:
                     concept,
                     cached.get("score", 1.0),
                     cached.get("target_label"),
+                    has_clinical_anchor,
                 ):
                     continue
                 grounded.append(
@@ -470,7 +561,9 @@ class EntityGroundingServiceNew:
                 )
             taxonomy_path = self._format_taxonomy_path(path_ids)
 
-            if self._should_skip_concept(concept, score, target_label):
+            if self._should_skip_concept(
+                concept, score, target_label, has_clinical_anchor
+            ):
                 continue
 
             grounded_concept = GroundedConcept(
@@ -591,6 +684,7 @@ class EntityGroundingServiceNew:
             "ClinicalParameter": "ClinicalParameter",
             "Medication": "Medication",
             "Procedure": "Procedure",
+            "Other": "ClinicalCondition",
         }
         mapped_label = role_map.get(role)
         if not mapped_label:
