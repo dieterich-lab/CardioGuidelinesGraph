@@ -28,6 +28,7 @@ DEFAULT_ABBRV_PATH = os.path.join(
     os.path.dirname(__file__), "../snomedct_utils/abbrv.txt"
 )
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/grounding_index.json"
+DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/extracted_rules.jsonl"
 MIN_MATCH_SCORE = 0.7
 MIN_TERM_LEN = 3
 ALLOWED_ROLES = {"Condition", "ClinicalParameter", "Medication", "Procedure"}
@@ -506,7 +507,12 @@ class EntityGroundingServiceNew:
         chunks_dir: Optional[str],
         tables_dir: Optional[str],
         guideline_title: str,
+        rules_out_path: Optional[str] = None,
     ) -> None:
+        rules_file = None
+        if rules_out_path:
+            os.makedirs(os.path.dirname(rules_out_path), exist_ok=True)
+            rules_file = open(rules_out_path, "w", encoding="utf-8")
         if chunks_dir:
             for filename in sorted(os.listdir(chunks_dir)):
                 if not filename.endswith(".md"):
@@ -516,9 +522,18 @@ class EntityGroundingServiceNew:
                     text = f.read().strip()
                 if not text:
                     continue
-                self.ground_sentence(
+                grounded = self.ground_sentence(
                     text, source_type="text", guideline_title=guideline_title
                 )
+                if rules_file:
+                    self._write_rules_entries(
+                        rules_file,
+                        grounded,
+                        chunk_id=filename,
+                        source_context=path,
+                        source_type="text",
+                        guideline_title=guideline_title,
+                    )
 
         if tables_dir:
             for filename in sorted(os.listdir(tables_dir)):
@@ -529,9 +544,44 @@ class EntityGroundingServiceNew:
                     text = f.read().strip()
                 if not text:
                     continue
-                self.ground_sentence(
+                grounded = self.ground_sentence(
                     text, source_type="table", guideline_title=guideline_title
                 )
+                if rules_file:
+                    self._write_rules_entries(
+                        rules_file,
+                        grounded,
+                        chunk_id=filename,
+                        source_context=path,
+                        source_type="table",
+                        guideline_title=guideline_title,
+                    )
+        if rules_file:
+            rules_file.close()
+
+    def _write_rules_entries(
+        self,
+        fh,
+        grounded: List[GroundedConcept],
+        chunk_id: str,
+        source_context: str,
+        source_type: str,
+        guideline_title: str,
+    ) -> None:
+        for concept in grounded:
+            entry = {
+                "entity_standardized_candidate": concept.entity_standardized_candidate,
+                "snomed_id": concept.snomed_id,
+                "role": concept.role,
+                "target_label": concept.target_label,
+                "logic_structured": concept.logic_structured,
+                "rule_id": concept.rule_id,
+                "chunk_id": chunk_id,
+                "source_context": source_context,
+                "source_type": source_type,
+                "guideline_title": guideline_title,
+            }
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     def _resolve_target_label_for_role(
         self, role: str, path_ids: List[int]
@@ -576,6 +626,11 @@ class EntityGroundingServiceNew:
     help="Path to the JSON grounding index file",
 )
 @click.option(
+    "--rules-out-path",
+    default=DEFAULT_RULES_PATH,
+    help="Path to write extracted rules as JSONL (optional)",
+)
+@click.option(
     "--abbrv-path",
     default=DEFAULT_ABBRV_PATH,
     help="Path to abbreviation list (abbrv, expansion; ...) ",
@@ -603,6 +658,7 @@ def main(
     config_path: str,
     index_path: str,
     abbrv_path: str,
+    rules_out_path: Optional[str],
     chunks_dir: Optional[str],
     tables_dir: Optional[str],
     guideline_title: str,
@@ -619,7 +675,12 @@ def main(
         abbrv_path=abbrv_path,
     )
     if chunks_dir or tables_dir:
-        service.build_index_from_dirs(chunks_dir, tables_dir, guideline_title)
+        service.build_index_from_dirs(
+            chunks_dir,
+            tables_dir,
+            guideline_title,
+            rules_out_path=rules_out_path,
+        )
         return
     if not sentence:
         raise click.UsageError(
