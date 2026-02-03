@@ -76,22 +76,6 @@ STUDY_SOURCE_PATTERNS = [
     r"\bfigure\s+\d+\b",
     r"\bsection\b",
 ]
-ADVERSE_EVENT_KEYWORDS = [
-    "diarrhea",
-    "diarrhoea",
-    "pneumonia",
-    "bleeding",
-    "hemorrhage",
-    "haemorrhage",
-    "rash",
-    "angioedema",
-    "edema",
-    "infection",
-    "nausea",
-    "vomiting",
-    "hypotension",
-    "arrhythmia",
-]
 
 
 @dataclass
@@ -318,15 +302,7 @@ class EntityGroundingServiceNew:
     def _should_keep_other(
         self, concept: ExtractedConcept, target_label: Optional[str]
     ) -> bool:
-        if target_label == "ClinicalCondition":
-            return True
-        return self._is_adverse_event_term(concept)
-
-    def _is_adverse_event_term(self, concept: ExtractedConcept) -> bool:
-        text = (
-            f"{concept.entity_original} {concept.entity_standardized_candidate}".lower()
-        )
-        return any(keyword in text for keyword in ADVERSE_EVENT_KEYWORDS)
+        return target_label == "ClinicalCondition"
 
     def _is_statistic_term(self, concept: ExtractedConcept) -> bool:
         text = (
