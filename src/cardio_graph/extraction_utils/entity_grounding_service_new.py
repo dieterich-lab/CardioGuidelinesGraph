@@ -9,6 +9,7 @@ Entity Grounding Service (New Workflow)
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Dict, List, Optional, Tuple
@@ -23,7 +24,33 @@ IS_A_TYPE_ID = 116680003
 DEFAULT_CONFIG_PATH = os.path.join(
     os.path.dirname(__file__), "../snomedct_utils/guideline_graph_schema.yaml"
 )
+DEFAULT_ABBRV_PATH = os.path.join(
+    os.path.dirname(__file__), "../snomedct_utils/abbrv.txt"
+)
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/grounding_index.json"
+MIN_MATCH_SCORE = 0.7
+MIN_TERM_LEN = 3
+ALLOWED_ROLES = {"Condition", "ClinicalParameter", "Medication", "Procedure"}
+ALWAYS_NOISE_PATTERNS = [
+    r"^doi\b",
+    r"\bdoi:\b",
+    r"\bissn\b",
+    r"\bwww\.\b",
+    r"\bhttp(s)?://",
+    r"^©",
+    r"copyright",
+    r"all rights reserved",
+    r"^downloaded from",
+    r"^by guest",
+]
+HEADER_NOISE_PATTERNS = [
+    r"^table\s+\d+",
+    r"^figure\s+\d+",
+    r"^supplementary",
+    r"^european heart journal",
+    r"\bguidelines?\b",
+    r"^page\s+\d+",
+]
 
 
 @dataclass
@@ -103,6 +130,7 @@ class EntityGroundingServiceNew:
         node: str = "g4",
         port: Optional[int] = None,
         index_path: str = DEFAULT_INDEX_PATH,
+        abbrv_path: str = DEFAULT_ABBRV_PATH,
     ):
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Config file not found at: {config_path}")
@@ -122,6 +150,7 @@ class EntityGroundingServiceNew:
 
         self._preferred_term_cache: Dict[int, str] = {}
         self.index = ConceptIndex(index_path=index_path)
+        self.abbreviations = self._load_abbreviations(abbrv_path)
 
     def _collect_root_concepts(self, mapping_rules: List[Dict]) -> List[int]:
         roots = []
@@ -136,6 +165,40 @@ class EntityGroundingServiceNew:
     def _normalize(self, text: str) -> str:
         return " ".join(text.lower().strip().split())
 
+    def _load_abbreviations(self, abbrv_path: str) -> Dict[str, List[str]]:
+        mapping: Dict[str, List[str]] = {}
+        if not abbrv_path or not os.path.exists(abbrv_path):
+            return mapping
+        with open(abbrv_path, "r", encoding="utf-8") as f:
+            raw = f.read().strip()
+        if not raw:
+            return mapping
+        entries = [e.strip() for e in raw.split(";") if e.strip()]
+        for entry in entries:
+            entry = entry.strip().rstrip(".")
+            if "," not in entry:
+                continue
+            abbrv, expansion = entry.split(",", 1)
+            abbrv = " ".join(abbrv.strip().split())
+            expansion = " ".join(expansion.strip().split())
+            if not abbrv or not expansion:
+                continue
+            abbrv_key = self._normalize(abbrv)
+            expansion_key = self._normalize(expansion)
+            mapping.setdefault(abbrv_key, [])
+            if expansion not in mapping[abbrv_key]:
+                mapping[abbrv_key].append(expansion)
+            mapping.setdefault(expansion_key, [])
+            if abbrv not in mapping[expansion_key]:
+                mapping[expansion_key].append(abbrv)
+        return mapping
+
+    def _expand_term(self, term: str) -> List[str]:
+        if not term:
+            return []
+        key = self._normalize(term)
+        return self.abbreviations.get(key, [])
+
     def _score(self, query: str, candidate: str) -> float:
         q = self._normalize(query)
         c = self._normalize(candidate)
@@ -144,6 +207,50 @@ class EntityGroundingServiceNew:
         if q == c:
             return 1.0
         return SequenceMatcher(None, q, c).ratio()
+
+    def _is_noise_phrase(self, text: str) -> bool:
+        if not text:
+            return True
+        normalized = self._normalize(text)
+        if len(normalized) < MIN_TERM_LEN:
+            return True
+        if all(ch.isdigit() or ch in {"-", "/"} for ch in normalized):
+            return True
+        for pattern in ALWAYS_NOISE_PATTERNS:
+            if re.search(pattern, normalized, flags=re.IGNORECASE):
+                return True
+        if len(normalized) < 80:
+            for pattern in HEADER_NOISE_PATTERNS:
+                if re.search(pattern, normalized, flags=re.IGNORECASE):
+                    return True
+        return False
+
+    def _filter_text_block(self, text: str) -> str:
+        if not text:
+            return ""
+        kept_lines = []
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            if self._is_noise_phrase(line):
+                continue
+            kept_lines.append(line)
+        return "\n".join(kept_lines)
+
+    def _should_skip_concept(
+        self,
+        concept: ExtractedConcept,
+        score: float,
+        target_label: Optional[str],
+    ) -> bool:
+        if self._is_noise_phrase(concept.entity_standardized_candidate):
+            return True
+        if score < MIN_MATCH_SCORE:
+            return True
+        if target_label is None and concept.role not in ALLOWED_ROLES:
+            return True
+        return False
 
     def _get_preferred_term(self, concept_id: int) -> Optional[str]:
         if concept_id in self._preferred_term_cache:
@@ -160,6 +267,7 @@ class EntityGroundingServiceNew:
             return None, None, 0.0
 
         search_terms = [term]
+        search_terms.extend(self._expand_term(term))
         tokens = [t for t in self._normalize(term).split() if len(t) > 2]
         search_terms.extend(tokens)
 
@@ -311,7 +419,12 @@ class EntityGroundingServiceNew:
     def ground_sentence(
         self, sentence: str, source_type: str, guideline_title: str
     ) -> List[GroundedConcept]:
-        extracted = self.extract_concepts(sentence, source_type, guideline_title)
+        filtered_sentence = self._filter_text_block(sentence)
+        if not filtered_sentence:
+            return []
+        extracted = self.extract_concepts(
+            filtered_sentence, source_type, guideline_title
+        )
         grounded: List[GroundedConcept] = []
 
         for concept in extracted:
@@ -320,6 +433,12 @@ class EntityGroundingServiceNew:
                 if cached.get("logic_structured") is None:
                     cached["logic_structured"] = concept.logic_structured
                 self.index.add(cached)
+                if self._should_skip_concept(
+                    concept,
+                    cached.get("score", 1.0),
+                    cached.get("target_label"),
+                ):
+                    continue
                 grounded.append(
                     GroundedConcept(
                         entity_original=concept.entity_original,
@@ -346,6 +465,9 @@ class EntityGroundingServiceNew:
                 )
             taxonomy_path = self._format_taxonomy_path(path_ids)
 
+            if self._should_skip_concept(concept, score, target_label):
+                continue
+
             grounded_concept = GroundedConcept(
                 entity_original=concept.entity_original,
                 entity_standardized_candidate=concept.entity_standardized_candidate,
@@ -368,6 +490,7 @@ class EntityGroundingServiceNew:
                     "score": score,
                     "taxonomy_path": taxonomy_path,
                     "target_label": target_label,
+                    "role": concept.role,
                     "logic_structured": concept.logic_structured,
                 }
             )
@@ -450,6 +573,11 @@ class EntityGroundingServiceNew:
     help="Path to the JSON grounding index file",
 )
 @click.option(
+    "--abbrv-path",
+    default=DEFAULT_ABBRV_PATH,
+    help="Path to abbreviation list (abbrv, expansion; ...) ",
+)
+@click.option(
     "--chunks-dir",
     default=None,
     help="Directory containing guideline text chunks (.md)",
@@ -471,6 +599,7 @@ def main(
     sentence: Optional[str],
     config_path: str,
     index_path: str,
+    abbrv_path: str,
     chunks_dir: Optional[str],
     tables_dir: Optional[str],
     guideline_title: str,
@@ -484,6 +613,7 @@ def main(
         node=node,
         port=port,
         index_path=index_path,
+        abbrv_path=abbrv_path,
     )
     if chunks_dir or tables_dir:
         service.build_index_from_dirs(chunks_dir, tables_dir, guideline_title)
