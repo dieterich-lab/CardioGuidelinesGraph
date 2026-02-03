@@ -8,6 +8,7 @@ This folder contains the parsing, extraction, and grounding pipeline used to tur
 
 **Primary outputs:**
 - Grounding index: /prj/doctoral_letters/guide/data/grounding_index.json
+- Extracted rules: /prj/doctoral_letters/guide/data/extracted_rules.jsonl
 - Chunked guideline text: /prj/doctoral_letters/guide/data/guidelines/markdown/chunks
 - Chunked tables: /prj/doctoral_letters/guide/data/guidelines/markdown/chunks/tables
 
@@ -42,6 +43,7 @@ This folder contains the parsing, extraction, and grounding pipeline used to tur
 
 6) **Index creation and caching**
 - Output index: /prj/doctoral_letters/guide/data/grounding_index.json
+- Output rules (JSONL): /prj/doctoral_letters/guide/data/extracted_rules.jsonl
 - The index is keyed by both SNOMED ID and normalized standardized term.
 - Noisy lines are filtered prior to extraction, and low-score matches are skipped.
 
@@ -95,6 +97,7 @@ Single-sentence example:
 
 7) **Index write-through**
 - Results are saved to grounding_index.json (by SNOMED ID and standardized term).
+- Extracted rules are saved to extracted_rules.jsonl (one rule per line, if present in the chunk).
 - Subsequent runs reuse cached matches for speed and consistency.
 
 ## Example: one sentence to index entry
