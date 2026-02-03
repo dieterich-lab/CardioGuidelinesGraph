@@ -97,6 +97,42 @@ Single-sentence example:
 - Results are saved to grounding_index.json (by SNOMED ID and standardized term).
 - Subsequent runs reuse cached matches for speed and consistency.
 
+## Example: one sentence to index entry
+
+**Input sentence:**
+- "MACE was reduced with ACE-I in patients with CAD."
+
+**Step 1 — Tagged input passed to the LLM**
+- [GUIDELINE: 2024 ESC Guidelines for the management of chronic coronary syndromes]
+- [SOURCE_TYPE: text]
+- MACE was reduced with ACE-I in patients with CAD.
+
+**Step 2 — LLM extracts concepts**
+- entity_original: "MACE"
+  - entity_standardized_candidate: "major adverse cardiovascular events"
+  - role: ClinicalParameter
+- entity_original: "ACE-I"
+  - entity_standardized_candidate: "angiotensin-converting enzyme inhibitor"
+  - role: Medication
+- entity_original: "CAD"
+  - entity_standardized_candidate: "coronary artery disease"
+  - role: Condition
+
+**Step 3 — Abbreviation expansion and SNOMED search**
+- "MACE" expands to "major adverse cardiovascular events" for SNOMED search.
+- "ACE-I" expands to "angiotensin-converting enzyme inhibitor" for SNOMED search.
+- "CAD" expands to "coronary artery disease" for SNOMED search.
+
+**Step 4 — Example grounded entry written to the index**
+- grounding_index.json (by standardized term):
+  - entity_standardized_candidate: "angiotensin-converting enzyme inhibitor"
+  - snomed_id: <resolved SNOMED concept id>
+  - preferred_term: <SNOMED preferred term>
+  - score: <similarity score>
+  - taxonomy_path: [{"concept_id": "...", "term": "..."}, ...]
+  - target_label: Medication
+  - role: Medication
+
 ## Mermaid flow chart (full workflow)
 
 ```mermaid
