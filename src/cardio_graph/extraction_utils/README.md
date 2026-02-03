@@ -123,7 +123,17 @@ Single-sentence example:
 - "ACE-I" expands to "angiotensin-converting enzyme inhibitor" for SNOMED search.
 - "CAD" expands to "coronary artery disease" for SNOMED search.
 
-**Step 4 — Example grounded entry written to the index**
+**Step 4 — Example grounded entries written to the index (all three terms)**
+
+- grounding_index.json (by standardized term):
+  - entity_standardized_candidate: "major adverse cardiovascular events"
+  - snomed_id: <resolved SNOMED concept id>
+  - preferred_term: <SNOMED preferred term>
+  - score: <similarity score>
+  - taxonomy_path: [{"concept_id": "...", "term": "..."}, ...]
+  - target_label: ClinicalParameter
+  - role: ClinicalParameter
+
 - grounding_index.json (by standardized term):
   - entity_standardized_candidate: "angiotensin-converting enzyme inhibitor"
   - snomed_id: <resolved SNOMED concept id>
@@ -132,6 +142,38 @@ Single-sentence example:
   - taxonomy_path: [{"concept_id": "...", "term": "..."}, ...]
   - target_label: Medication
   - role: Medication
+
+- grounding_index.json (by standardized term):
+  - entity_standardized_candidate: "coronary artery disease"
+  - snomed_id: <resolved SNOMED concept id>
+  - preferred_term: <SNOMED preferred term>
+  - score: <similarity score>
+  - taxonomy_path: [{"concept_id": "...", "term": "..."}, ...]
+  - target_label: ClinicalCondition
+  - role: Condition
+
+**Impact summary for the three terms**
+
+- MACE → standardized to "major adverse cardiovascular events" and grounded as a ClinicalParameter.
+- ACE-I → standardized to "angiotensin-converting enzyme inhibitor" and grounded as a Medication.
+- CAD → standardized to "coronary artery disease" and grounded as a ClinicalCondition.
+
+**Mini graph (example triples)**
+
+Below is a minimal graph that links grounded entities using only relations explicitly stated in the same chunk. In this sentence, the only relation supported by the text is the reduction of MACE with ACE-I.
+
+- Asserted triple (within-chunk): (angiotensin-converting enzyme inhibitor) --reducesRiskOf--> (major adverse cardiovascular events)
+
+**Mini graph (Mermaid view)**
+
+```mermaid
+graph LR
+  CAD["Coronary artery disease\n(ClinicalCondition)"]
+  MACE["Major adverse cardiovascular events\n(ClinicalParameter)"]
+  ACEI["ACE inhibitor\n(Medication)"]
+
+  ACEI -- reducesRiskOf --> MACE
+```
 
 ## Mermaid flow chart (full workflow)
 
