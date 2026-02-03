@@ -26,6 +26,8 @@ ollama_models = {
     "Qwen30b": "qwen3:30b",
     "Qwen32b": "qwen3:32b",
     "Qwen235b": "qwen3:235b",
+    "Qwen06b": "qwen3:0.6b",
+    "Qwen17b": "qwen3:1.7b",
 }
 
 # OpenAI models
