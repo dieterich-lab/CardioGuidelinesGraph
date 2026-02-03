@@ -509,6 +509,12 @@ class EntityGroundingServiceNew:
         for concept in extracted:
             cached = self.index.lookup(concept.entity_standardized_candidate)
             if cached:
+                if cached.get("target_label") is None and concept.role:
+                    fallback_label = self._fallback_target_label_for_role(
+                        concept.role
+                    )
+                    if fallback_label:
+                        cached["target_label"] = fallback_label
                 if self._should_skip_concept(
                     concept,
                     cached.get("score", 1.0),
@@ -541,6 +547,8 @@ class EntityGroundingServiceNew:
                 target_label = self._resolve_target_label_for_role(
                     concept.role, path_ids
                 )
+            if target_label is None and concept.role and len(path_ids) <= 1:
+                target_label = self._fallback_target_label_for_role(concept.role)
             taxonomy_path = self._format_taxonomy_path(path_ids)
 
             if self._should_skip_concept(
@@ -733,6 +741,16 @@ class EntityGroundingServiceNew:
             if roots & set(path_ids):
                 return mapped_label
         return None
+
+    def _fallback_target_label_for_role(self, role: str) -> Optional[str]:
+        role_map = {
+            "Condition": "ClinicalCondition",
+            "ClinicalParameter": "ClinicalParameter",
+            "Medication": "Medication",
+            "Procedure": "Procedure",
+            "Other": "ClinicalCondition",
+        }
+        return role_map.get(role)
 
 
 @click.command()
