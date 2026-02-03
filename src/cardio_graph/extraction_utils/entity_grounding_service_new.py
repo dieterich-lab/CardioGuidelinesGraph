@@ -653,23 +653,28 @@ class EntityGroundingServiceNew:
         chunk_id: str,
         source_type: str,
         grounded: List[GroundedConcept],
+        index: Optional[int] = None,
+        total: Optional[int] = None,
     ) -> None:
         if not grounded:
             logger.info("Chunk %s (%s): grounded 0 concepts", chunk_id, source_type)
             return
-        logger.info(
-            "Chunk %s (%s): grounded %d concepts",
-            chunk_id,
-            index: Optional[int] = None,
-            total: Optional[int] = None,
-            source_type,
-            len(grounded),
-                logger.info("Chunk %s (%s): grounded 0 concepts", chunk_id, source_type)
-                return
-            if index is not None and total is not None:
-                logger.info("Chunk %d/%d %s (%s): grounded %d concepts", index, total, chunk_id, source_type, len(grounded))
-            else:
-                logger.info("Chunk %s (%s): grounded %d concepts", chunk_id, source_type, len(grounded))
+        if index is not None and total is not None:
+            logger.info(
+                "Chunk %d/%d %s (%s): grounded %d concepts",
+                index,
+                total,
+                chunk_id,
+                source_type,
+                len(grounded),
+            )
+        else:
+            logger.info(
+                "Chunk %s (%s): grounded %d concepts",
+                chunk_id,
+                source_type,
+                len(grounded),
+            )
         for concept in grounded:
             logger.info(
                 "  - %s | role=%s | snomed_id=%s | target_label=%s",
