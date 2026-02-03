@@ -8,6 +8,7 @@ Entity Grounding Service (New Workflow)
 """
 
 import json
+import logging
 import os
 import re
 from dataclasses import dataclass
@@ -19,6 +20,11 @@ import yaml
 
 from cardio_graph.extraction_utils.clients import create_client_registry
 from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("EntityGroundingService")
 
 IS_A_TYPE_ID = 116680003
 DEFAULT_CONFIG_PATH = os.path.join(
@@ -583,9 +589,11 @@ class EntityGroundingServiceNew:
             os.makedirs(os.path.dirname(rules_out_path), exist_ok=True)
             rules_file = open(rules_out_path, "w", encoding="utf-8")
         if chunks_dir:
-            for filename in sorted(os.listdir(chunks_dir)):
-                if not filename.endswith(".md"):
-                    continue
+            chunk_files = [
+                f for f in sorted(os.listdir(chunks_dir)) if f.endswith(".md")
+            ]
+            total_chunks = len(chunk_files)
+            for idx, filename in enumerate(chunk_files, start=1):
                 path = os.path.join(chunks_dir, filename)
                 with open(path, "r", encoding="utf-8") as f:
                     text = f.read().strip()
@@ -593,6 +601,13 @@ class EntityGroundingServiceNew:
                     continue
                 grounded = self.ground_sentence(
                     text, source_type="text", guideline_title=guideline_title
+                )
+                self._log_grounded_summary(
+                    chunk_id=filename,
+                    source_type="text",
+                    grounded=grounded,
+                    index=idx,
+                    total=total_chunks,
                 )
                 if rules_file:
                     self._write_rules_entries(
@@ -616,6 +631,11 @@ class EntityGroundingServiceNew:
                 grounded = self.ground_sentence(
                     text, source_type="table", guideline_title=guideline_title
                 )
+                self._log_grounded_summary(
+                    chunk_id=filename,
+                    source_type="table",
+                    grounded=grounded,
+                )
                 if rules_file:
                     self._write_rules_entries(
                         rules_file,
@@ -627,6 +647,37 @@ class EntityGroundingServiceNew:
                     )
         if rules_file:
             rules_file.close()
+
+    def _log_grounded_summary(
+        self,
+        chunk_id: str,
+        source_type: str,
+        grounded: List[GroundedConcept],
+    ) -> None:
+        if not grounded:
+            logger.info("Chunk %s (%s): grounded 0 concepts", chunk_id, source_type)
+            return
+        logger.info(
+            "Chunk %s (%s): grounded %d concepts",
+            chunk_id,
+            index: Optional[int] = None,
+            total: Optional[int] = None,
+            source_type,
+            len(grounded),
+                logger.info("Chunk %s (%s): grounded 0 concepts", chunk_id, source_type)
+                return
+            if index is not None and total is not None:
+                logger.info("Chunk %d/%d %s (%s): grounded %d concepts", index, total, chunk_id, source_type, len(grounded))
+            else:
+                logger.info("Chunk %s (%s): grounded %d concepts", chunk_id, source_type, len(grounded))
+        for concept in grounded:
+            logger.info(
+                "  - %s | role=%s | snomed_id=%s | target_label=%s",
+                concept.entity_standardized_candidate,
+                concept.role,
+                concept.snomed_id,
+                concept.target_label,
+            )
 
     def _write_rules_entries(
         self,
