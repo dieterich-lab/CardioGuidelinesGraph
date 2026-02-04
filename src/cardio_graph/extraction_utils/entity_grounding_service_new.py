@@ -12,6 +12,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from difflib import SequenceMatcher
 from typing import Dict, List, Optional, Tuple
 
@@ -61,6 +62,8 @@ ALWAYS_NOISE_PATTERNS = [
     r"all rights reserved",
     r"^downloaded from",
     r"^by guest",
+    r"\bguidelinesource\b",
+    r"\bguideline source\b",
 ]
 HEADER_NOISE_PATTERNS = [
     r"^table\s+\d+",
@@ -81,6 +84,8 @@ STUDY_SOURCE_PATTERNS = [
     r"\btable\s+\d+\b",
     r"\bfigure\s+\d+\b",
     r"\bsection\b",
+    r"\bguidelinesource\b",
+    r"\bguideline source\b",
 ]
 
 
@@ -140,6 +145,17 @@ class ConceptIndex:
             "by_standardized": self.by_standardized,
         }
         with open(self.index_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+    def save_as(self, index_path: str) -> None:
+        if not index_path:
+            return
+        os.makedirs(os.path.dirname(index_path), exist_ok=True)
+        data = {
+            "by_snomed_id": self.by_snomed_id,
+            "by_standardized": self.by_standardized,
+        }
+        with open(index_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
     def lookup(self, standardized_name: str) -> Optional[Dict]:
@@ -606,6 +622,11 @@ class EntityGroundingServiceNew:
         guideline_title: str,
         rules_out_path: Optional[str] = None,
     ) -> None:
+        run_started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamped_index_path = None
+        if self.index.index_path:
+            base, ext = os.path.splitext(self.index.index_path)
+            timestamped_index_path = f"{base}_{run_started_at}{ext or '.json'}"
         rules_file = None
         if rules_out_path:
             os.makedirs(os.path.dirname(rules_out_path), exist_ok=True)
@@ -669,6 +690,8 @@ class EntityGroundingServiceNew:
                     )
         if rules_file:
             rules_file.close()
+        if timestamped_index_path:
+            self.index.save_as(timestamped_index_path)
 
     def _log_grounded_summary(
         self,
