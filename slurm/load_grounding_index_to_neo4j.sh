@@ -31,6 +31,7 @@ fi
 
 poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/neo4j_utils/grounding_index_to_neo4j.py \
   --index-path "$INDEX_PATH" \
+  --allow-null-rule-ids \
   $RULES_ARGS
 
 echo "==== GROUNDING INDEX TO NEO4J END ===="

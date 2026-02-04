@@ -170,6 +170,23 @@ def _recommendation_relation(logic_structured: Dict[str, Any]) -> str:
     return "RECOMMENDS_USAGE"
 
 
+def _rule_group_key(item: Dict[str, Any], allow_null_rule_ids: bool) -> Optional[str]:
+    rule_id = item.get("rule_id")
+    chunk_id = (
+        item.get("chunk_id")
+        or item.get("source_id")
+        or item.get("source_context")
+        or ""
+    )
+    if rule_id is None:
+        if not allow_null_rule_ids:
+            return None
+        if not chunk_id:
+            return None
+        return f"{chunk_id}_rule_null"
+    return f"{chunk_id}_{rule_id}" if chunk_id else str(rule_id)
+
+
 @click.command()
 @click.option(
     "--index-path",
@@ -182,13 +199,24 @@ def _recommendation_relation(logic_structured: Dict[str, Any]) -> str:
     default=None,
     help="Optional JSON or JSONL with per-concept rule_id/logic_structured",
 )
+@click.option(
+    "--allow-null-rule-ids/--no-allow-null-rule-ids",
+    default=True,
+    show_default=True,
+    help="Create logic nodes even when rule_id is missing by grouping per chunk",
+)
 @click.option("--uri", default=DEFAULT_URI, show_default=True, help="Neo4j URI")
 @click.option("--user", default=DEFAULT_AUTH[0], show_default=True, help="Neo4j user")
 @click.option(
     "--password", default=DEFAULT_AUTH[1], show_default=True, help="Neo4j password"
 )
 def main(
-    index_path: str, rules_path: Optional[str], uri: str, user: str, password: str
+    index_path: str,
+    rules_path: Optional[str],
+    allow_null_rule_ids: bool,
+    uri: str,
+    user: str,
+    password: str,
 ) -> None:
     if not os.path.exists(index_path):
         raise FileNotFoundError(f"Grounding index not found: {index_path}")
@@ -206,16 +234,9 @@ def main(
             if rules:
                 grouped_rules: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
                 for item in rules:
-                    rule_id = item.get("rule_id")
-                    if rule_id is None:
+                    unique_key = _rule_group_key(item, allow_null_rule_ids)
+                    if unique_key is None:
                         continue
-                    chunk_id = (
-                        item.get("chunk_id")
-                        or item.get("source_id")
-                        or item.get("source_context")
-                        or "global"
-                    )
-                    unique_key = f"{chunk_id}_{rule_id}"
                     grouped_rules[unique_key].append(item)
                 _create_rule_nodes(session, grouped_rules)
 
