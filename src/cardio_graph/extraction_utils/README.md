@@ -8,9 +8,15 @@ This folder contains the parsing, extraction, and grounding pipeline used to tur
 
 **Primary outputs:**
 - Grounding index: /prj/doctoral_letters/guide/data/grounding_index.json
+- Timestamped snapshots: /prj/doctoral_letters/guide/data/grounding_index_YYYYMMDD_HHMMSS.json
 - Extracted rules: /prj/doctoral_letters/guide/data/extracted_rules.jsonl
 - Chunked guideline text: /prj/doctoral_letters/guide/data/guidelines/markdown/chunks
 - Chunked tables: /prj/doctoral_letters/guide/data/guidelines/markdown/chunks/tables
+
+**Why split grounding_index vs extracted_rules?**
+- grounding_index.json is the stable SNOMED-backed dictionary for concepts (used across runs and for Neo4j concept nodes).
+- extracted_rules.jsonl is the per-chunk, per-mention output that preserves logic and provenance (used to create decision/recommendation nodes and edges).
+- This split keeps the reusable concept cache small and deterministic while allowing rule-level logic to evolve independently.
 
 ## Intermediate steps and files
 
@@ -99,6 +105,13 @@ Single-sentence example:
 - Results are saved to grounding_index.json (by SNOMED ID and standardized term).
 - Extracted rules are saved to extracted_rules.jsonl (one rule per line, if present in the chunk).
 - Subsequent runs reuse cached matches for speed and consistency.
+
+## Upload into Neo4j (concepts + optional rules)
+
+- Loader script: /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/neo4j_utils/grounding_index_to_neo4j.py
+- SLURM wrapper: /home/pwiesenbach/CardioGuidelinesGraph/slurm/load_grounding_index_to_neo4j.sh
+
+The loader ingests grounding_index.json as concept nodes, and if extracted_rules.jsonl is present it adds decision/recommendation nodes plus rule edges. By default it targets the Neo4j URI configured in feedneo4jdb.py.
 
 ## Example: one sentence to index entry
 
