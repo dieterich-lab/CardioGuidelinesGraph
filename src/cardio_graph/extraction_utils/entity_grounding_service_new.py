@@ -560,7 +560,14 @@ class EntityGroundingServiceNew:
             f"[GUIDELINE: {guideline_title}] "
             f"[SOURCE_TYPE: {source_type}]\n{sentence}"
         )
-        result = b.ExtractConcepts(tagged_text, baml_options=baml_options)
+        try:
+            result = b.ExtractConcepts(tagged_text, baml_options=baml_options)
+        except Exception as exc:
+            logger.warning(
+                "BAML extraction failed; skipping sentence. Error: %s",
+                exc,
+            )
+            return []
         parsed_payload = self._serialize_baml_result(result)
         logger.info("---Parsed Response (class ExtractConceptsResult)---")
         logger.info(json.dumps(parsed_payload, ensure_ascii=False, indent=2))
@@ -641,7 +648,9 @@ class EntityGroundingServiceNew:
                 continue
             search_term = concept.entity_standardized_candidate
             if search_term and "scheduled" in search_term.lower():
-                search_term = re.sub(r"\bscheduled\b", "", search_term, flags=re.IGNORECASE).strip()
+                search_term = re.sub(
+                    r"\bscheduled\b", "", search_term, flags=re.IGNORECASE
+                ).strip()
             concept_id, preferred_term, score = self._search_best_concept(search_term)
             path_ids = self._extract_taxonomy_path(concept_id)
             target_label = self._resolve_target_label(path_ids)

@@ -30,7 +30,7 @@ class ExtractConceptsResult {
 }
 
 function ExtractConcepts(text: string) -> ExtractConceptsResult {
-  client Qwen25vl32bG5
+  client Qwen14b5
   prompt #"
     You are a medical guideline extraction expert. 
     Analyze the text and extract logical rules consisting of Conditions and Actions.

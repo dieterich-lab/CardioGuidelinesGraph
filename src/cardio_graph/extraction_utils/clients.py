@@ -68,6 +68,7 @@ def create_client_registry(
             options={
                 "model": model,
                 "api_key": api_key,
+                "format": "json",
             },
         )
         clients_added.append(name)
@@ -80,6 +81,7 @@ def create_client_registry(
             options={
                 "model": model,
                 "api_key": api_key,
+                "format": "json",
             },
         )
         clients_added.append(name)
@@ -111,6 +113,7 @@ def create_client_registry(
                     else 100000
                 ),
                 "temperature": 0.0,
+                "format": "json",
             },
         )
         clients_added.append(model_name)
