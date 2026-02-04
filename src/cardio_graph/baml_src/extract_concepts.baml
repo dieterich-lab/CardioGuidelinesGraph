@@ -34,6 +34,10 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
   prompt #"
     You are a medical guideline extraction expert. 
     Analyze the text and extract logical rules consisting of Conditions and Actions.
+
+    Output rules MUST be valid JSON and MUST match the OUTPUT FORMAT exactly.
+    Do NOT include <think> blocks, explanations, or any text outside the JSON.
+    If uncertain, return an empty concepts array rather than any extra text.
     
     Context:
     - [GUIDELINE: ...] tags indicate context.
