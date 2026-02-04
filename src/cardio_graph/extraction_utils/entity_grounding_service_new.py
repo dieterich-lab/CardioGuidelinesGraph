@@ -354,8 +354,9 @@ class EntityGroundingServiceNew:
         if not term:
             return None, None, 0.0
 
+        expanded_terms = self._expand_term(term)
         search_terms = [term]
-        search_terms.extend(self._expand_term(term))
+        search_terms.extend(expanded_terms)
         tokens = [t for t in self._normalize(term).split() if len(t) > 2]
         search_terms.extend(tokens)
 
@@ -386,6 +387,7 @@ class EntityGroundingServiceNew:
         best_term = None
         best_score = 0.0
 
+        query_terms = [term] + expanded_terms
         for concept_id, terms in concept_terms.items():
             preferred = self._get_preferred_term(concept_id)
             candidates = list(terms)
@@ -395,7 +397,10 @@ class EntityGroundingServiceNew:
             score = 0.0
             best_candidate_term = None
             for candidate in candidates:
-                candidate_score = self._score(term, candidate)
+                candidate_score = max(
+                    (self._score(q, candidate) for q in query_terms if q),
+                    default=0.0,
+                )
                 if candidate_score > score:
                     score = candidate_score
                     best_candidate_term = candidate
@@ -471,6 +476,58 @@ class EntityGroundingServiceNew:
             formatted.append({"concept_id": str(cid), "term": term})
         return formatted
 
+    def _expand_abbreviations_in_text(self, text: str) -> str:
+        replacements = {
+            "LVEF": "left ventricular ejection fraction (LVEF)",
+            "CCS": "chronic coronary syndrome (CCS)",
+            "CAD": "coronary artery disease (CAD)",
+            "CABG": "coronary artery bypass grafting (CABG)",
+            "PCI": "percutaneous coronary intervention (PCI)",
+            "LAD": "left anterior descending artery (LAD)",
+            "MVD": "multivessel disease (MVD)",
+            "FFR": "fractional flow reserve (FFR)",
+            "IFR": "instantaneous wave-free ratio (iFR)",
+            "QFR": "quantitative flow ratio (QFR)",
+            "IVUS": "intravascular ultrasound (IVUS)",
+            "OCT": "optical coherence tomography (OCT)",
+            "STS": "society of thoracic surgeons score (STS)",
+            "SYNTAX": "SYNTAX score (SYNTAX)",
+        }
+        updated = text
+        for abbr, expansion in replacements.items():
+            updated = re.sub(rf"\b{re.escape(abbr)}\b", expansion, updated)
+        return updated
+
+    def _format_docling_table_rows(self, table_json: Dict) -> List[Tuple[str, str]]:
+        rows = table_json.get("data", []) or []
+        header = "Columns: Recommendations | Class | Level"
+        formatted_rows: List[Tuple[str, str]] = []
+        for idx, row in enumerate(rows, start=1):
+            recommendation = (row.get("Recommendations") or "").strip()
+            cls = (row.get("Class a") or "").strip()
+            level = (row.get("Level b") or "").strip()
+            if not recommendation and not cls and not level:
+                continue
+            recommendation = self._expand_abbreviations_in_text(recommendation)
+            parts = []
+            if recommendation:
+                parts.append(f"Recommendation: {recommendation}")
+            if cls:
+                parts.append(f"Class: {cls}")
+            if level:
+                parts.append(f"Level: {level}")
+            row_text = "\n".join(
+                [
+                    "DOC_SOURCE: docling_json",
+                    "DOC_FORMAT: docling_json",
+                    header,
+                    "",
+                    " | ".join(parts),
+                ]
+            ).strip()
+            formatted_rows.append((f"row_{idx:02d}", row_text))
+        return formatted_rows
+
     def _serialize_baml_result(self, result) -> Dict:
         if hasattr(result, "model_dump"):
             return result.model_dump()
@@ -527,7 +584,10 @@ class EntityGroundingServiceNew:
     def ground_sentence(
         self, sentence: str, source_type: str, guideline_title: str
     ) -> List[GroundedConcept]:
-        filtered_sentence = self._filter_text_block(sentence)
+        if "DOC_FORMAT: docling_json" in (sentence or ""):
+            filtered_sentence = (sentence or "").strip()
+        else:
+            filtered_sentence = self._filter_text_block(sentence)
         if not filtered_sentence:
             return []
         extracted = self.extract_concepts(
@@ -693,6 +753,54 @@ class EntityGroundingServiceNew:
         if timestamped_index_path:
             self.index.save_as(timestamped_index_path)
 
+    def build_index_from_docling_table(
+        self,
+        docling_table_json: str,
+        guideline_title: str,
+        rules_out_path: Optional[str] = None,
+        table_id: Optional[str] = None,
+    ) -> None:
+        run_started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamped_index_path = None
+        if self.index.index_path:
+            base, ext = os.path.splitext(self.index.index_path)
+            timestamped_index_path = f"{base}_{run_started_at}{ext or '.json'}"
+
+        rules_file = None
+        if rules_out_path:
+            os.makedirs(os.path.dirname(rules_out_path), exist_ok=True)
+            rules_file = open(rules_out_path, "w", encoding="utf-8")
+
+        with open(docling_table_json, "r", encoding="utf-8") as f:
+            table_json = json.load(f)
+
+        rows = self._format_docling_table_rows(table_json)
+        for row_id, row_text in rows:
+            if table_id:
+                row_text = f"DOC_TABLE: {table_id}\nDOC_ROW: {row_id}\n" + row_text
+            chunk_label = f"{table_id}:{row_id}" if table_id else row_id
+            grounded = self.ground_sentence(
+                row_text, source_type="table", guideline_title=guideline_title
+            )
+            self._log_grounded_summary(
+                chunk_id=chunk_label,
+                source_type="table",
+                grounded=grounded,
+            )
+            if rules_file:
+                self._write_rules_entries(
+                    rules_file,
+                    grounded,
+                    chunk_id=chunk_label,
+                    source_context=docling_table_json,
+                    source_type="table",
+                    guideline_title=guideline_title,
+                )
+        if rules_file:
+            rules_file.close()
+        if timestamped_index_path:
+            self.index.save_as(timestamped_index_path)
+
     def _log_grounded_summary(
         self,
         chunk_id: str,
@@ -827,6 +935,16 @@ class EntityGroundingServiceNew:
     help="Directory containing guideline table chunks (.md)",
 )
 @click.option(
+    "--docling-table-json",
+    default=None,
+    help="Path to a docling table JSON file (table_*.json)",
+)
+@click.option(
+    "--docling-table-id",
+    default=None,
+    help="Optional table identifier for docling JSON provenance",
+)
+@click.option(
     "--guideline-title",
     default="2024 ESC Guidelines for the management of chronic coronary syndromes",
     help="Guideline title for extraction context",
@@ -842,6 +960,8 @@ def main(
     rules_out_path: Optional[str],
     chunks_dir: Optional[str],
     tables_dir: Optional[str],
+    docling_table_json: Optional[str],
+    docling_table_id: Optional[str],
     guideline_title: str,
     model: str,
     node: str,
@@ -855,6 +975,14 @@ def main(
         index_path=index_path,
         abbrv_path=abbrv_path,
     )
+    if docling_table_json:
+        service.build_index_from_docling_table(
+            docling_table_json,
+            guideline_title,
+            rules_out_path=rules_out_path,
+            table_id=docling_table_id,
+        )
+        return
     if chunks_dir or tables_dir:
         service.build_index_from_dirs(
             chunks_dir,

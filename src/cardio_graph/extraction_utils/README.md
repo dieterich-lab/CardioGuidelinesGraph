@@ -56,7 +56,7 @@ This folder contains the parsing, extraction, and grounding pipeline used to tur
 ## Example: build the full grounding index
 
 Use the SLURM wrapper:
-- /home/pwiesenbach/CardioGuidelinesGraph/slurm/grounding_full_index.sh
+- /home/pwiesenbach/CardioGuidelinesGraph/slurm/grounding_index.sh
 
 Direct run (no SLURM):
 - poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extraction_utils/entity_grounding_service_new.py \
