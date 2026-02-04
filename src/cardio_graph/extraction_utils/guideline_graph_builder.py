@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Entity Grounding Service (New Workflow)
+Guideline Graph Builder
 
 - Uses LLM (BAML) to extract and standardize concepts from text.
 - Fuzzy searches SNOMED CT database directly for best matching concept.
 - Extracts taxonomy path to configured root concepts and maps to T-Box labels.
+- Builds index + rules outputs for graph construction.
 """
 
 import json
@@ -25,7 +26,7 @@ from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
-logger = logging.getLogger("EntityGroundingService")
+logger = logging.getLogger("GuidelineGraphBuilder")
 
 IS_A_TYPE_ID = 116680003
 DEFAULT_CONFIG_PATH = os.path.join(
@@ -170,7 +171,7 @@ class ConceptIndex:
             self.by_standardized[self._normalize(standardized)] = entry
 
 
-class EntityGroundingServiceNew:
+class GuidelineGraphBuilder:
     def __init__(
         self,
         config_path: str = DEFAULT_CONFIG_PATH,
@@ -1111,7 +1112,7 @@ def main(
     node: str,
     port: Optional[int],
 ):
-    service = EntityGroundingServiceNew(
+    service = GuidelineGraphBuilder(
         config_path=config_path,
         model=model,
         node=node,
