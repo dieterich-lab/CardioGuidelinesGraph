@@ -45,13 +45,15 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
      3. **Direction**: Set logic_structured.direction based on the statement:
        - POSITIVE for recommendations/indications/should use.
        - NEGATIVE for contraindications/avoid/do not use.
-       - UNKNOWN if no action is stated (pure background/outcome reporting).
+       - UNKNOWN only if no action is stated (pure background/outcome reporting). If an action exists, do NOT use UNKNOWN.
      4. **Roles**:
        - Use 'Condition' or 'ClinicalParameter' for the IF part.
        - Use 'Medication' or 'Procedure' for the THEN part.
-     5. **Recommendation strength/evidence**: If the text includes class/level (e.g., Class I, Level B), populate logic_structured.strength and logic_structured.level.
-     6. **Standardization**: Map entities to their canonical clinical name.
-     7. **Exclude sources**: Do not emit GuidelineSource/Recommendation nodes; only clinical entities and actions.
+       - NEVER use role 'Recommendation'.
+     5. **Action required**: For every rule_id, you MUST include at least one action concept (Medication or Procedure).
+     6. **Recommendation strength/evidence**: If the text includes class/level (e.g., Class I, Level B), populate logic_structured.strength and logic_structured.level.
+     7. **Standardization**: Map entities to canonical clinical names (e.g., "LVEF" -> "left ventricular ejection fraction", "CABG" -> "coronary artery bypass grafting"). Avoid abstract phrases like "recommendation level".
+     8. **Exclude sources**: Do not emit GuidelineSource or Recommendation nodes; only clinical entities and actions.
 
     Sentence: {{text}}
 

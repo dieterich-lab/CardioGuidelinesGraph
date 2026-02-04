@@ -47,7 +47,6 @@ ALLOWED_ROLES = {
 }
 BLOCKED_ROLES = {
     "GuidelineSource",
-    "Recommendation",
     "DecisionNode",
     "RecommendationNode",
 }
@@ -498,9 +497,16 @@ class EntityGroundingServiceNew:
             updated = re.sub(rf"\b{re.escape(abbr)}\b", expansion, updated)
         return updated
 
-    def _format_docling_table_rows(self, table_json: Dict) -> List[Tuple[str, str]]:
-        rows = table_json.get("data", []) or []
+    def _format_docling_table_rows(
+        self, table_jsons: List[Dict], footnotes: Optional[str] = None
+    ) -> List[Tuple[str, str]]:
+        rows: List[Dict] = []
+        for table_json in table_jsons:
+            rows.extend(table_json.get("data", []) or [])
         header = "Columns: Recommendations | Class | Level"
+        footnotes_block = None
+        if footnotes:
+            footnotes_block = "DOC_FOOTNOTES:\n" + footnotes.strip()
         formatted_rows: List[Tuple[str, str]] = []
         for idx, row in enumerate(rows, start=1):
             recommendation = (row.get("Recommendations") or "").strip()
@@ -516,14 +522,17 @@ class EntityGroundingServiceNew:
                 parts.append(f"Class: {cls}")
             if level:
                 parts.append(f"Level: {level}")
+            body_lines = [
+                "DOC_SOURCE: docling_json",
+                "DOC_FORMAT: docling_json",
+                header,
+                "",
+                " | ".join(parts),
+            ]
+            if footnotes_block:
+                body_lines.extend(["", footnotes_block])
             row_text = "\n".join(
-                [
-                    "DOC_SOURCE: docling_json",
-                    "DOC_FORMAT: docling_json",
-                    header,
-                    "",
-                    " | ".join(parts),
-                ]
+                [line for line in body_lines if line is not None]
             ).strip()
             formatted_rows.append((f"row_{idx:02d}", row_text))
         return formatted_rows
@@ -599,6 +608,8 @@ class EntityGroundingServiceNew:
         )
 
         for concept in extracted:
+            if (concept.role or "").strip() == "Recommendation":
+                concept.role = "Condition"
             cached = self.index.lookup(concept.entity_standardized_candidate)
             if cached:
                 if cached.get("target_label") is None and concept.role:
@@ -628,9 +639,10 @@ class EntityGroundingServiceNew:
                     )
                 )
                 continue
-            concept_id, preferred_term, score = self._search_best_concept(
-                concept.entity_standardized_candidate
-            )
+            search_term = concept.entity_standardized_candidate
+            if search_term and "scheduled" in search_term.lower():
+                search_term = re.sub(r"\bscheduled\b", "", search_term, flags=re.IGNORECASE).strip()
+            concept_id, preferred_term, score = self._search_best_concept(search_term)
             path_ids = self._extract_taxonomy_path(concept_id)
             target_label = self._resolve_target_label(path_ids)
             if target_label is None and concept.role:
@@ -753,12 +765,13 @@ class EntityGroundingServiceNew:
         if timestamped_index_path:
             self.index.save_as(timestamped_index_path)
 
-    def build_index_from_docling_table(
+    def build_index_from_docling_tables(
         self,
-        docling_table_json: str,
+        docling_table_jsons: List[str],
         guideline_title: str,
         rules_out_path: Optional[str] = None,
         table_id: Optional[str] = None,
+        footnotes: Optional[str] = None,
     ) -> None:
         run_started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
         timestamped_index_path = None
@@ -771,10 +784,12 @@ class EntityGroundingServiceNew:
             os.makedirs(os.path.dirname(rules_out_path), exist_ok=True)
             rules_file = open(rules_out_path, "w", encoding="utf-8")
 
-        with open(docling_table_json, "r", encoding="utf-8") as f:
-            table_json = json.load(f)
+        table_jsons: List[Dict] = []
+        for table_json_path in docling_table_jsons:
+            with open(table_json_path, "r", encoding="utf-8") as f:
+                table_jsons.append(json.load(f))
 
-        rows = self._format_docling_table_rows(table_json)
+        rows = self._format_docling_table_rows(table_jsons, footnotes=footnotes)
         for row_id, row_text in rows:
             if table_id:
                 row_text = f"DOC_TABLE: {table_id}\nDOC_ROW: {row_id}\n" + row_text
@@ -792,7 +807,7 @@ class EntityGroundingServiceNew:
                     rules_file,
                     grounded,
                     chunk_id=chunk_label,
-                    source_context=docling_table_json,
+                    source_context=";".join(docling_table_jsons),
                     source_type="table",
                     guideline_title=guideline_title,
                 )
@@ -936,13 +951,23 @@ class EntityGroundingServiceNew:
 )
 @click.option(
     "--docling-table-json",
-    default=None,
-    help="Path to a docling table JSON file (table_*.json)",
+    multiple=True,
+    help="Path(s) to docling table JSON file(s) (table_*.json)",
 )
 @click.option(
     "--docling-table-id",
     default=None,
     help="Optional table identifier for docling JSON provenance",
+)
+@click.option(
+    "--docling-footnotes",
+    default=None,
+    help="Optional footnotes text appended to each row",
+)
+@click.option(
+    "--docling-footnotes-path",
+    default=None,
+    help="Path to a file containing footnotes text",
 )
 @click.option(
     "--guideline-title",
@@ -960,8 +985,10 @@ def main(
     rules_out_path: Optional[str],
     chunks_dir: Optional[str],
     tables_dir: Optional[str],
-    docling_table_json: Optional[str],
+    docling_table_json: Tuple[str, ...],
     docling_table_id: Optional[str],
+    docling_footnotes: Optional[str],
+    docling_footnotes_path: Optional[str],
     guideline_title: str,
     model: str,
     node: str,
@@ -975,12 +1002,17 @@ def main(
         index_path=index_path,
         abbrv_path=abbrv_path,
     )
+    footnotes = docling_footnotes
+    if docling_footnotes_path:
+        with open(docling_footnotes_path, "r", encoding="utf-8") as f:
+            footnotes = f.read().strip()
     if docling_table_json:
-        service.build_index_from_docling_table(
-            docling_table_json,
+        service.build_index_from_docling_tables(
+            list(docling_table_json),
             guideline_title,
             rules_out_path=rules_out_path,
             table_id=docling_table_id,
+            footnotes=footnotes,
         )
         return
     if chunks_dir or tables_dir:
