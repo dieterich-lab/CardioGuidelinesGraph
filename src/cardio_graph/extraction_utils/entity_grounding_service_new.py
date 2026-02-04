@@ -36,7 +36,7 @@ DEFAULT_ABBRV_PATH = os.path.join(
 )
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/extracted_rules.jsonl"
-MIN_MATCH_SCORE = 0.7
+DEFAULT_MIN_MATCH_SCORE = 0.7
 MIN_TERM_LEN = 3
 ALLOWED_ROLES = {
     "Condition",
@@ -179,6 +179,7 @@ class EntityGroundingServiceNew:
         port: Optional[int] = None,
         index_path: str = DEFAULT_INDEX_PATH,
         abbrv_path: str = DEFAULT_ABBRV_PATH,
+        min_match_score: float = DEFAULT_MIN_MATCH_SCORE,
     ):
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Config file not found at: {config_path}")
@@ -199,6 +200,7 @@ class EntityGroundingServiceNew:
         self._preferred_term_cache: Dict[int, str] = {}
         self.index = ConceptIndex(index_path=index_path)
         self.abbreviations = self._load_abbreviations(abbrv_path)
+        self.min_match_score = min_match_score
 
     def _collect_root_concepts(self, mapping_rules: List[Dict]) -> List[int]:
         roots = []
@@ -305,7 +307,7 @@ class EntityGroundingServiceNew:
             return True
         if self._is_statistic_term(concept) and not has_clinical_anchor:
             return True
-        if score < MIN_MATCH_SCORE:
+        if score < self.min_match_score:
             return True
         if target_label is None and concept.role not in ALLOWED_ROLES:
             return True
@@ -632,15 +634,15 @@ class EntityGroundingServiceNew:
             )
         return concepts
 
-    def ground_sentence(
+    def extract_and_ground(
         self, sentence: str, source_type: str, guideline_title: str
-    ) -> List[GroundedConcept]:
+    ) -> Tuple[List[ExtractedConcept], List[GroundedConcept]]:
         if "DOC_FORMAT: docling_json" in (sentence or ""):
             filtered_sentence = (sentence or "").strip()
         else:
             filtered_sentence = self._filter_text_block(sentence)
         if not filtered_sentence:
-            return []
+            return [], []
         extracted = self.extract_concepts(
             filtered_sentence, source_type, guideline_title
         )
@@ -729,6 +731,12 @@ class EntityGroundingServiceNew:
             )
 
         self.index.save()
+        return extracted, grounded
+
+    def ground_sentence(
+        self, sentence: str, source_type: str, guideline_title: str
+    ) -> List[GroundedConcept]:
+        _, grounded = self.extract_and_ground(sentence, source_type, guideline_title)
         return grounded
 
     def build_index_from_dirs(
@@ -758,7 +766,7 @@ class EntityGroundingServiceNew:
                     text = f.read().strip()
                 if not text:
                     continue
-                grounded = self.ground_sentence(
+                extracted, grounded = self.extract_and_ground(
                     text, source_type="text", guideline_title=guideline_title
                 )
                 self._log_grounded_summary(
@@ -769,9 +777,9 @@ class EntityGroundingServiceNew:
                     total=total_chunks,
                 )
                 if rules_file:
-                    self._write_rules_entries(
+                    self._write_rules_entries_from_extracted(
                         rules_file,
-                        grounded,
+                        extracted,
                         chunk_id=filename,
                         source_context=path,
                         source_type="text",
@@ -787,7 +795,7 @@ class EntityGroundingServiceNew:
                     text = f.read().strip()
                 if not text:
                     continue
-                grounded = self.ground_sentence(
+                extracted, grounded = self.extract_and_ground(
                     text, source_type="table", guideline_title=guideline_title
                 )
                 self._log_grounded_summary(
@@ -796,9 +804,9 @@ class EntityGroundingServiceNew:
                     grounded=grounded,
                 )
                 if rules_file:
-                    self._write_rules_entries(
+                    self._write_rules_entries_from_extracted(
                         rules_file,
-                        grounded,
+                        extracted,
                         chunk_id=filename,
                         source_context=path,
                         source_type="table",
@@ -841,7 +849,7 @@ class EntityGroundingServiceNew:
             if table_id:
                 table_text = f"DOC_TABLE: {table_id}\n" + table_text
             chunk_label = f"{table_id}:whole" if table_id else "docling_table_whole"
-            grounded = self.ground_sentence(
+            extracted, grounded = self.extract_and_ground(
                 table_text, source_type="table", guideline_title=guideline_title
             )
             self._log_grounded_summary(
@@ -850,9 +858,9 @@ class EntityGroundingServiceNew:
                 grounded=grounded,
             )
             if rules_file:
-                self._write_rules_entries(
+                self._write_rules_entries_from_extracted(
                     rules_file,
-                    grounded,
+                    extracted,
                     chunk_id=chunk_label,
                     source_context=";".join(docling_table_jsons),
                     source_type="table",
@@ -864,7 +872,7 @@ class EntityGroundingServiceNew:
                 if table_id:
                     row_text = f"DOC_TABLE: {table_id}\nDOC_ROW: {row_id}\n" + row_text
                 chunk_label = f"{table_id}:{row_id}" if table_id else row_id
-                grounded = self.ground_sentence(
+                extracted, grounded = self.extract_and_ground(
                     row_text, source_type="table", guideline_title=guideline_title
                 )
                 self._log_grounded_summary(
@@ -873,9 +881,9 @@ class EntityGroundingServiceNew:
                     grounded=grounded,
                 )
                 if rules_file:
-                    self._write_rules_entries(
+                    self._write_rules_entries_from_extracted(
                         rules_file,
-                        grounded,
+                        extracted,
                         chunk_id=chunk_label,
                         source_context=";".join(docling_table_jsons),
                         source_type="table",
@@ -937,6 +945,31 @@ class EntityGroundingServiceNew:
                 "snomed_id": concept.snomed_id,
                 "role": concept.role,
                 "target_label": concept.target_label,
+                "logic_structured": concept.logic_structured,
+                "rule_id": concept.rule_id,
+                "chunk_id": chunk_id,
+                "source_context": source_context,
+                "source_type": source_type,
+                "guideline_title": guideline_title,
+            }
+            fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    def _write_rules_entries_from_extracted(
+        self,
+        fh,
+        extracted: List[ExtractedConcept],
+        chunk_id: str,
+        source_context: str,
+        source_type: str,
+        guideline_title: str,
+    ) -> None:
+        for concept in extracted:
+            target_label = self._fallback_target_label_for_role(concept.role)
+            entry = {
+                "entity_standardized_candidate": concept.entity_standardized_candidate,
+                "snomed_id": None,
+                "role": concept.role,
+                "target_label": target_label,
                 "logic_structured": concept.logic_structured,
                 "rule_id": concept.rule_id,
                 "chunk_id": chunk_id,
@@ -1045,6 +1078,13 @@ class EntityGroundingServiceNew:
     help="Process docling table as a single combined input instead of per row",
 )
 @click.option(
+    "--min-match-score",
+    default=DEFAULT_MIN_MATCH_SCORE,
+    show_default=True,
+    type=float,
+    help="Minimum similarity score for SNOMED grounding",
+)
+@click.option(
     "--guideline-title",
     default="2024 ESC Guidelines for the management of chronic coronary syndromes",
     help="Guideline title for extraction context",
@@ -1065,6 +1105,7 @@ def main(
     docling_footnotes: Optional[str],
     docling_footnotes_path: Optional[str],
     docling_whole_table: bool,
+    min_match_score: float,
     guideline_title: str,
     model: str,
     node: str,
@@ -1077,6 +1118,7 @@ def main(
         port=port,
         index_path=index_path,
         abbrv_path=abbrv_path,
+        min_match_score=min_match_score,
     )
     footnotes = docling_footnotes
     if docling_footnotes_path:
