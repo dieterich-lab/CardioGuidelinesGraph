@@ -100,20 +100,22 @@ def create_client_registry(
     # Add the requested Ollama model if it exists
     if model_name in ollama_models:
         model_string = ollama_models[model_name]
+        max_tokens = 10000
+        if "qwen3:32b" in model_string or "qwen3:30b" in model_string:
+            max_tokens = 100000
+        if "qwen3:14b" in model_string:
+            max_tokens = 4000
         cr.add_llm_client(
             name=model_name,
             provider="openai-generic",
             options={
                 "base_url": base_url,
                 "model": model_string,
-                "max_tokens": (
-                    10000
-                    if "qwen3:32b" not in model_string
-                    and "qwen3:30b" not in model_string
-                    else 100000
-                ),
+                "max_tokens": max_tokens,
                 "temperature": 0.0,
                 "format": "json",
+                "timeout": 900,
+                "request_timeout": 900,
             },
         )
         clients_added.append(model_name)

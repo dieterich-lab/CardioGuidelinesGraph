@@ -537,6 +537,41 @@ class EntityGroundingServiceNew:
             formatted_rows.append((f"row_{idx:02d}", row_text))
         return formatted_rows
 
+    def _format_docling_table_full(
+        self, table_jsons: List[Dict], footnotes: Optional[str] = None
+    ) -> str:
+        rows: List[Dict] = []
+        for table_json in table_jsons:
+            rows.extend(table_json.get("data", []) or [])
+        header = "Columns: Recommendations | Class | Level"
+        row_lines: List[str] = []
+        for idx, row in enumerate(rows, start=1):
+            recommendation = (row.get("Recommendations") or "").strip()
+            cls = (row.get("Class a") or "").strip()
+            level = (row.get("Level b") or "").strip()
+            if not recommendation and not cls and not level:
+                continue
+            recommendation = self._expand_abbreviations_in_text(recommendation)
+            parts = []
+            if recommendation:
+                parts.append(f"Recommendation: {recommendation}")
+            if cls:
+                parts.append(f"Class: {cls}")
+            if level:
+                parts.append(f"Level: {level}")
+            row_lines.append(f"Row {idx:02d}: " + " | ".join(parts))
+        body_lines = [
+            "DOC_SOURCE: docling_json",
+            "DOC_FORMAT: docling_json",
+            header,
+            "",
+            "DOC_ROWS:",
+        ]
+        body_lines.extend(row_lines)
+        if footnotes:
+            body_lines.extend(["", "DOC_FOOTNOTES:", footnotes.strip()])
+        return "\n".join([line for line in body_lines if line is not None]).strip()
+
     def _serialize_baml_result(self, result) -> Dict:
         if hasattr(result, "model_dump"):
             return result.model_dump()
@@ -781,6 +816,7 @@ class EntityGroundingServiceNew:
         rules_out_path: Optional[str] = None,
         table_id: Optional[str] = None,
         footnotes: Optional[str] = None,
+        whole_table: bool = False,
     ) -> None:
         run_started_at = datetime.now().strftime("%Y%m%d_%H%M%S")
         timestamped_index_path = None
@@ -798,13 +834,15 @@ class EntityGroundingServiceNew:
             with open(table_json_path, "r", encoding="utf-8") as f:
                 table_jsons.append(json.load(f))
 
-        rows = self._format_docling_table_rows(table_jsons, footnotes=footnotes)
-        for row_id, row_text in rows:
+        if whole_table:
+            table_text = self._format_docling_table_full(
+                table_jsons, footnotes=footnotes
+            )
             if table_id:
-                row_text = f"DOC_TABLE: {table_id}\nDOC_ROW: {row_id}\n" + row_text
-            chunk_label = f"{table_id}:{row_id}" if table_id else row_id
+                table_text = f"DOC_TABLE: {table_id}\n" + table_text
+            chunk_label = f"{table_id}:whole" if table_id else "docling_table_whole"
             grounded = self.ground_sentence(
-                row_text, source_type="table", guideline_title=guideline_title
+                table_text, source_type="table", guideline_title=guideline_title
             )
             self._log_grounded_summary(
                 chunk_id=chunk_label,
@@ -820,6 +858,29 @@ class EntityGroundingServiceNew:
                     source_type="table",
                     guideline_title=guideline_title,
                 )
+        else:
+            rows = self._format_docling_table_rows(table_jsons, footnotes=footnotes)
+            for row_id, row_text in rows:
+                if table_id:
+                    row_text = f"DOC_TABLE: {table_id}\nDOC_ROW: {row_id}\n" + row_text
+                chunk_label = f"{table_id}:{row_id}" if table_id else row_id
+                grounded = self.ground_sentence(
+                    row_text, source_type="table", guideline_title=guideline_title
+                )
+                self._log_grounded_summary(
+                    chunk_id=chunk_label,
+                    source_type="table",
+                    grounded=grounded,
+                )
+                if rules_file:
+                    self._write_rules_entries(
+                        rules_file,
+                        grounded,
+                        chunk_id=chunk_label,
+                        source_context=";".join(docling_table_jsons),
+                        source_type="table",
+                        guideline_title=guideline_title,
+                    )
         if rules_file:
             rules_file.close()
         if timestamped_index_path:
@@ -979,6 +1040,11 @@ class EntityGroundingServiceNew:
     help="Path to a file containing footnotes text",
 )
 @click.option(
+    "--docling-whole-table/--no-docling-whole-table",
+    default=False,
+    help="Process docling table as a single combined input instead of per row",
+)
+@click.option(
     "--guideline-title",
     default="2024 ESC Guidelines for the management of chronic coronary syndromes",
     help="Guideline title for extraction context",
@@ -998,6 +1064,7 @@ def main(
     docling_table_id: Optional[str],
     docling_footnotes: Optional[str],
     docling_footnotes_path: Optional[str],
+    docling_whole_table: bool,
     guideline_title: str,
     model: str,
     node: str,
@@ -1022,6 +1089,7 @@ def main(
             rules_out_path=rules_out_path,
             table_id=docling_table_id,
             footnotes=footnotes,
+            whole_table=docling_whole_table,
         )
         return
     if chunks_dir or tables_dir:
