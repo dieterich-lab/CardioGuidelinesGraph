@@ -111,39 +111,76 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
             logic_structured = concept.get("logic_structured") or {}
             snomed_id = concept.get("snomed_id")
             target_label = concept.get("target_label") or "Concept"
+            concept_name = concept.get("entity_standardized_candidate") or concept.get(
+                "entity_original"
+            )
 
             if role in {"Condition", "ClinicalParameter"}:
-                session.run(
-                    f"""
-                    MERGE (c:`{target_label}` {{snomed_id: $snomed_id}})
-                    MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, concept: $concept}})
-                    SET dec.operator = $operator,
-                        dec.threshold = $threshold,
-                        dec.unit = $unit,
-                        dec.condition_context = $condition_context
-                    MERGE (c)-[:HAS_RULE]->(dec)
-                    MERGE (dec)-[:RESULTS_IN {{condition_met: true}}]->(rec)
-                    """,
-                    snomed_id=snomed_id,
-                    rule_key=str(rule_key),
-                    concept=concept.get("entity_standardized_candidate"),
-                    operator=logic_structured.get("operator"),
-                    threshold=logic_structured.get("threshold"),
-                    unit=logic_structured.get("unit"),
-                    condition_context=logic_structured.get("condition_context"),
-                )
+                if snomed_id:
+                    session.run(
+                        f"""
+                        MERGE (c:`{target_label}` {{snomed_id: $snomed_id}})
+                        MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, concept: $concept}})
+                        SET dec.operator = $operator,
+                            dec.threshold = $threshold,
+                            dec.unit = $unit,
+                            dec.condition_context = $condition_context
+                        MERGE (c)-[:HAS_RULE]->(dec)
+                        MERGE (dec)-[:RESULTS_IN {{condition_met: true}}]->(rec)
+                        """,
+                        snomed_id=snomed_id,
+                        rule_key=str(rule_key),
+                        concept=concept_name,
+                        operator=logic_structured.get("operator"),
+                        threshold=logic_structured.get("threshold"),
+                        unit=logic_structured.get("unit"),
+                        condition_context=logic_structured.get("condition_context"),
+                    )
+                else:
+                    session.run(
+                        """
+                        MERGE (u:UnresolvedConcept {name: $name, target_label: $target_label})
+                        MERGE (dec:DecisionNode {rule_unique_id: $rule_key, concept: $concept})
+                        SET dec.operator = $operator,
+                            dec.threshold = $threshold,
+                            dec.unit = $unit,
+                            dec.condition_context = $condition_context
+                        MERGE (u)-[:HAS_RULE]->(dec)
+                        MERGE (dec)-[:RESULTS_IN {condition_met: true}]->(rec)
+                        """,
+                        name=concept_name,
+                        target_label=target_label,
+                        rule_key=str(rule_key),
+                        concept=concept_name,
+                        operator=logic_structured.get("operator"),
+                        threshold=logic_structured.get("threshold"),
+                        unit=logic_structured.get("unit"),
+                        condition_context=logic_structured.get("condition_context"),
+                    )
 
             if role in {"Medication", "Procedure"}:
                 relation = _recommendation_relation(logic_structured)
-                session.run(
-                    f"""
-                    MERGE (a:`{target_label}` {{snomed_id: $snomed_id}})
-                    MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
-                    MERGE (rec)-[r:{relation}]->(a)
-                    """,
-                    snomed_id=snomed_id,
-                    rule_key=str(rule_key),
-                )
+                if snomed_id:
+                    session.run(
+                        f"""
+                        MERGE (a:`{target_label}` {{snomed_id: $snomed_id}})
+                        MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
+                        MERGE (rec)-[r:{relation}]->(a)
+                        """,
+                        snomed_id=snomed_id,
+                        rule_key=str(rule_key),
+                    )
+                else:
+                    session.run(
+                        f"""
+                        MERGE (u:UnresolvedConcept {{name: $name, target_label: $target_label}})
+                        MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
+                        MERGE (rec)-[r:{relation}]->(u)
+                        """,
+                        name=concept_name,
+                        target_label=target_label,
+                        rule_key=str(rule_key),
+                    )
 
 
 def _infer_recommendation_props(

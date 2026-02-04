@@ -208,6 +208,7 @@ client<llm> Qwen14b5 {
     model qwen3:14b
     max_tokens 10000
     temperature 0.0
+    format "json"
   }
 }
 

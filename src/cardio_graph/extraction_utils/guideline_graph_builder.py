@@ -965,10 +965,16 @@ class GuidelineGraphBuilder:
         guideline_title: str,
     ) -> None:
         for concept in extracted:
-            target_label = self._fallback_target_label_for_role(concept.role)
+            cached = self.index.lookup(concept.entity_standardized_candidate)
+            snomed_id = cached.get("snomed_id") if cached else None
+            target_label = None
+            if cached:
+                target_label = cached.get("target_label")
+            if not target_label:
+                target_label = self._fallback_target_label_for_role(concept.role)
             entry = {
                 "entity_standardized_candidate": concept.entity_standardized_candidate,
-                "snomed_id": None,
+                "snomed_id": snomed_id,
                 "role": concept.role,
                 "target_label": target_label,
                 "logic_structured": concept.logic_structured,
