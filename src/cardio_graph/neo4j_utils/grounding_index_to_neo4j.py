@@ -82,14 +82,14 @@ def _merge_concepts(session, label: str, rows: List[Dict[str, Any]]) -> None:
             )
 
 
-def _create_rule_nodes(
-    session, grouped_rules: Dict[str, List[Dict[str, Any]]]
-) -> None:
+def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) -> None:
     for rule_key, concepts in grouped_rules.items():
         rec_props = _infer_recommendation_props(concepts)
-        source_info = concepts[0].get("source_context") or concepts[0].get(
-            "chunk_id"
-        ) or "Unknown Source"
+        source_info = (
+            concepts[0].get("source_context")
+            or concepts[0].get("chunk_id")
+            or "Unknown Source"
+        )
         original_rule_id = concepts[0].get("rule_id")
         session.run(
             """
