@@ -43,21 +43,13 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
     - [GUIDELINE: ...] tags indicate context.
     - Group related concepts (e.g., a specific condition and its resulting medication) using the same 'rule_id'.
     
-     Requirements:
-     1. **Grouping**: Assign the same 'rule_id' to all concepts that form a single logical statement (IF X AND Y -> THEN Z). Start at 1 and increment per distinct rule in this sentence.
-     2. **Logic Details**: For 'ClinicalParameter' or conditions with thresholds (e.g. 'LVEF < 40%'), accurately fill 'operator', 'threshold', and 'unit' in logic_structured. Use operator "PRESENT" if a condition is stated as present/absent without a numeric threshold.
-     3. **Direction**: Set logic_structured.direction based on the statement:
-       - POSITIVE for recommendations/indications/should use.
-       - NEGATIVE for contraindications/avoid/do not use.
-       - UNKNOWN only if no action is stated (pure background/outcome reporting). If an action exists, do NOT use UNKNOWN.
-     4. **Roles**:
-       - Use 'Condition' or 'ClinicalParameter' for the IF part.
-       - Use 'Medication' or 'Procedure' for the THEN part.
-       - NEVER use role 'Recommendation'.
-     5. **Action required**: For every rule_id, you MUST include at least one action concept (Medication or Procedure).
-     6. **Recommendation strength/evidence**: If the text includes class/level (e.g., Class I, Level B), populate logic_structured.strength and logic_structured.level.
-     7. **Standardization**: Map entities to canonical clinical names (e.g., "LVEF" -> "left ventricular ejection fraction", "CABG" -> "coronary artery bypass grafting"). Avoid abstract phrases like "recommendation level".
-     8. **Exclude sources**: Do not emit GuidelineSource or Recommendation nodes; only clinical entities and actions.
+    Requirements:
+    1. **Grouping**: Assign the same 'rule_id' to all concepts that form a single logical statement (IF X AND Y -> THEN Z). Start at 1 and increment per distinct rule in this sentence.
+    2. **Logic**: For thresholds, fill 'operator', 'threshold', and 'unit'. Use operator "PRESENT" when a condition is stated without a numeric threshold.
+    3. **Direction**: POSITIVE for recommendations/indications, NEGATIVE for contraindications/avoid. Use UNKNOWN only if there is no action.
+    4. **Roles + action**: IF part uses 'Condition' or 'ClinicalParameter'; THEN part uses 'Medication' or 'Procedure'. Include at least one action per rule_id. Never use role 'Recommendation'.
+    5. **Strength/level**: Populate logic_structured.strength and logic_structured.level when present.
+    6. **SNOMED-style terms**: Output short, specific noun phrases (singular). Avoid full sentences, lists, and parenthetical abbreviations like "(PCI)". If text uses abbreviations, output the expanded clinical term only. Do not emit GuidelineSource/Recommendation nodes.
 
     Sentence: {{text}}
 
