@@ -1,7 +1,10 @@
 import unittest
 from unittest.mock import patch
 
-from cardio_graph.extraction_utils.guideline_graph_builder import GuidelineGraphBuilder
+from cardio_graph.extraction_utils.guideline_graph_builder import (
+    ExtractedConcept,
+    GuidelineGraphBuilder,
+)
 
 
 class FakeSnomedExplorer:
@@ -90,6 +93,44 @@ class GroundingFalseMatchTests(unittest.TestCase):
             preferred_term="Preinfarction syndrome (disorder)",
             parent_id=49601007,
         )
+
+    def test_unmapped_terms_are_retained(self):
+        term = "Heart Team Consultation"
+        role = "Procedure"
+        results = [{"conceptid": 421946003, "term": "Consultation for acute pain"}]
+        preferred_terms = {421946003: "Consultation for acute pain (procedure)"}
+        parent_map = {421946003: 71388002}
+        builder = _build_builder(
+            FakeSnomedExplorer(results, preferred_terms, parent_map)
+        )
+        extracted = [
+            ExtractedConcept(
+                rule_id=1,
+                entity_original=term,
+                entity_standardized_candidate=term,
+                role=role,
+                logic="",
+                logic_structured={
+                    "strength": "Class I",
+                    "level": "C",
+                    "direction": "POSITIVE",
+                    "operator": None,
+                    "threshold": None,
+                    "unit": None,
+                    "condition_context": None,
+                },
+            )
+        ]
+
+        with patch.object(builder, "extract_concepts", return_value=extracted):
+            _, grounded = builder.extract_and_ground(
+                "Heart Team Consultation", "text", "Test Guideline"
+            )
+
+        self.assertEqual(len(grounded), 1)
+        self.assertIsNone(grounded[0].snomed_id)
+        self.assertEqual(grounded[0].entity_standardized_candidate, term)
+        self.assertEqual(grounded[0].target_label, "Procedure")
 
 
 if __name__ == "__main__":
