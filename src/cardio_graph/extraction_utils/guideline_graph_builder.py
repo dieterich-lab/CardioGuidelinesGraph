@@ -39,6 +39,34 @@ DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/extracted_rules.jsonl"
 DEFAULT_MIN_MATCH_SCORE = 0.7
 MIN_TERM_LEN = 3
+STOPWORD_TOKENS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "chronic",
+    "complex",
+    "consultation",
+    "disease",
+    "disorder",
+    "for",
+    "from",
+    "in",
+    "is",
+    "of",
+    "on",
+    "or",
+    "procedure",
+    "syndrome",
+    "team",
+    "the",
+    "to",
+    "with",
+}
 ALLOWED_ROLES = {
     "Condition",
     "ClinicalParameter",
@@ -199,6 +227,7 @@ class GuidelineGraphBuilder:
         self.snomed_explorer.connect()
 
         self._preferred_term_cache: Dict[int, str] = {}
+        self._taxonomy_path_cache: Dict[int, List[int]] = {}
         self.index = ConceptIndex(index_path=index_path)
         self.abbreviations = self._load_abbreviations(abbrv_path)
         self.min_match_score = min_match_score
@@ -249,6 +278,23 @@ class GuidelineGraphBuilder:
             return []
         key = self._normalize(term)
         return self.abbreviations.get(key, [])
+
+    def _expand_term_variants(self, term: str) -> List[str]:
+        if not term:
+            return []
+        variants = set()
+        tokens = re.findall(r"[A-Za-z0-9]+", term)
+        for token in tokens:
+            expansions = self._expand_term(token)
+            for expansion in expansions:
+                pattern = re.compile(rf"\b{re.escape(token)}\b", re.IGNORECASE)
+                variant = pattern.sub(expansion, term)
+                variants.add(variant)
+        return list(variants)
+
+    def _important_tokens(self, text: str) -> List[str]:
+        tokens = re.findall(r"[a-z0-9]+", self._normalize(text))
+        return [t for t in tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
 
     def _score(self, query: str, candidate: str) -> float:
         q = self._normalize(query)
@@ -351,12 +397,13 @@ class GuidelineGraphBuilder:
         return term
 
     def _search_best_concept(
-        self, term: str, limit: int = 100
+        self, term: str, role: Optional[str], limit: int = 100
     ) -> Tuple[Optional[int], Optional[str], float]:
         if not term:
             return None, None, 0.0
 
         expanded_terms = self._expand_term(term)
+        expanded_terms.extend(self._expand_term_variants(term))
         search_terms = [term]
         search_terms.extend(expanded_terms)
         tokens = [t for t in self._normalize(term).split() if len(t) > 2]
@@ -390,11 +437,24 @@ class GuidelineGraphBuilder:
         best_score = 0.0
 
         query_terms = [term] + expanded_terms
+        important_query_tokens = set()
+        for q in query_terms:
+            important_query_tokens.update(self._important_tokens(q))
         for concept_id, terms in concept_terms.items():
+            if role and not self._candidate_matches_role(concept_id, role):
+                continue
             preferred = self._get_preferred_term(concept_id)
             candidates = list(terms)
             if preferred:
                 candidates.append(preferred)
+
+            if important_query_tokens:
+                if not any(
+                    important_query_tokens
+                    & set(self._important_tokens(candidate))
+                    for candidate in candidates
+                ):
+                    continue
 
             score = 0.0
             best_candidate_term = None
@@ -413,6 +473,21 @@ class GuidelineGraphBuilder:
                 best_term = preferred or best_candidate_term
 
         return best_id, best_term, best_score
+
+    def _get_taxonomy_path_cached(self, concept_id: Optional[int]) -> List[int]:
+        if concept_id is None:
+            return []
+        if concept_id in self._taxonomy_path_cache:
+            return self._taxonomy_path_cache[concept_id]
+        path = self._extract_taxonomy_path(concept_id)
+        self._taxonomy_path_cache[concept_id] = path
+        return path
+
+    def _candidate_matches_role(self, concept_id: int, role: Optional[str]) -> bool:
+        if not role:
+            return True
+        path_ids = self._get_taxonomy_path_cached(concept_id)
+        return self._resolve_target_label_for_role(role, path_ids) is not None
 
     def _get_parents(self, concept_id: int) -> List[int]:
         relationships = self.snomed_explorer.get_relationships(concept_id)
@@ -677,8 +752,10 @@ class GuidelineGraphBuilder:
                 search_term = re.sub(
                     r"\bscheduled\b", "", search_term, flags=re.IGNORECASE
                 ).strip()
-            concept_id, preferred_term, score = self._search_best_concept(search_term)
-            path_ids = self._extract_taxonomy_path(concept_id)
+            concept_id, preferred_term, score = self._search_best_concept(
+                search_term, concept.role
+            )
+            path_ids = self._get_taxonomy_path_cached(concept_id)
             target_label = self._resolve_target_label(path_ids)
             if target_label is None and concept.role:
                 target_label = self._resolve_target_label_for_role(
