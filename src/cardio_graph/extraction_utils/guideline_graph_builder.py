@@ -435,6 +435,13 @@ class GuidelineGraphBuilder:
 
         search_start = time.perf_counter()
 
+        stripped_term = re.sub(r"\s*\([^)]*\)\s*", " ", term).strip()
+        paren_tokens = []
+        for group in re.findall(r"\(([^)]+)\)", term):
+            for token in re.findall(r"[A-Za-z0-9]+", group):
+                if token:
+                    paren_tokens.append(token)
+
         normalized_tokens = [
             t
             for t in self._normalize(term).split()
@@ -447,6 +454,9 @@ class GuidelineGraphBuilder:
         expanded_terms: List[str] = []
         if use_short_query:
             tokens = important_tokens[:MAX_QUERY_TOKENS]
+            for token in paren_tokens:
+                if token not in tokens:
+                    tokens.append(token)
             condensed = " ".join(tokens)
             if condensed:
                 search_terms.append(condensed)
@@ -462,6 +472,11 @@ class GuidelineGraphBuilder:
             search_terms.append(term)
             search_terms.extend(expanded_terms)
             search_terms.extend(normalized_tokens)
+            if stripped_term and stripped_term != term:
+                search_terms.append(stripped_term)
+                search_terms.extend(self._expand_term(stripped_term))
+            if paren_tokens:
+                search_terms.extend(paren_tokens)
 
         if not search_terms:
             search_terms = [term]
@@ -514,7 +529,14 @@ class GuidelineGraphBuilder:
             )
             concept_items = concept_items[:MAX_CONCEPT_CANDIDATES]
 
-        query_terms = ([term] + expanded_terms) if not use_short_query else tokens
+        if use_short_query:
+            query_terms = tokens
+        else:
+            query_terms = [term] + expanded_terms
+            if stripped_term and stripped_term != term:
+                query_terms.append(stripped_term)
+            if paren_tokens:
+                query_terms.extend(paren_tokens)
         if not query_terms:
             query_terms = [term]
 
@@ -539,10 +561,18 @@ class GuidelineGraphBuilder:
             score = 0.0
             best_candidate_term = None
             for candidate in candidates:
+                candidate_norm = self._normalize(candidate)
                 candidate_score = max(
                     (self._score(q, candidate) for q in query_terms if q),
                     default=0.0,
                 )
+                stripped_norm = self._normalize(stripped_term) if stripped_term else ""
+                if stripped_norm and stripped_norm in candidate_norm:
+                    candidate_score = min(1.0, candidate_score + 0.05)
+                if paren_tokens and any(
+                    token.lower() in candidate_norm for token in paren_tokens
+                ):
+                    candidate_score = min(1.0, candidate_score + 0.03)
                 if candidate_score > score:
                     score = candidate_score
                     best_candidate_term = candidate
