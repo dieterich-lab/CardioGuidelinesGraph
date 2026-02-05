@@ -242,6 +242,8 @@ class GuidelineGraphBuilder:
 
         self._preferred_term_cache: Dict[int, str] = {}
         self._taxonomy_path_cache: Dict[int, List[int]] = {}
+        self._relationships_cache: Dict[int, List[Dict[str, Any]]] = {}
+        self._search_cache: Dict[str, List[Dict[str, Any]]] = {}
         self.index = ConceptIndex(index_path=index_path)
         self.abbreviations = self._load_abbreviations(abbrv_path)
         self.min_match_score = min_match_score
@@ -444,10 +446,18 @@ class GuidelineGraphBuilder:
             if t in seen:
                 continue
             seen.add(t)
-            query_start = time.perf_counter()
-            results.extend(self.snomed_explorer.search_concepts_by_term(t, limit=limit))
-            query_elapsed = time.perf_counter() - query_start
-            logger.info("Timing: search_concepts_by_term '%s' took %.3fs", t, query_elapsed)
+            cached = self._search_cache.get(t)
+            if cached is None:
+                query_start = time.perf_counter()
+                cached = self.snomed_explorer.search_concepts_by_term(t, limit=limit)
+                query_elapsed = time.perf_counter() - query_start
+                logger.info(
+                    "Timing: search_concepts_by_term '%s' took %.3fs",
+                    t,
+                    query_elapsed,
+                )
+                self._search_cache[t] = cached
+            results.extend(cached)
 
         if not results:
             return None, None, 0.0
@@ -530,10 +540,14 @@ class GuidelineGraphBuilder:
         return self._resolve_target_label_for_role(role, path_ids) is not None
 
     def _get_parents(self, concept_id: int) -> List[int]:
-        start = time.perf_counter()
-        relationships = self.snomed_explorer.get_relationships(concept_id)
-        elapsed = time.perf_counter() - start
-        logger.info("Timing: get_relationships %s took %.3fs", concept_id, elapsed)
+        cached = self._relationships_cache.get(concept_id)
+        if cached is None:
+            start = time.perf_counter()
+            cached = self.snomed_explorer.get_relationships(concept_id)
+            elapsed = time.perf_counter() - start
+            logger.info("Timing: get_relationships %s took %.3fs", concept_id, elapsed)
+            self._relationships_cache[concept_id] = cached
+        relationships = cached
         parents = []
         for rel in relationships:
             rel_type = rel.get("typeid") or rel.get("typeId")
