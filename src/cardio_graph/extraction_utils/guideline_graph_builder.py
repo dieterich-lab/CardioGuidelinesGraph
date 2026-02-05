@@ -716,6 +716,42 @@ class GuidelineGraphBuilder:
             )
         return concepts
 
+    def _explode_or_conditions(
+        self, concepts: List[ExtractedConcept]
+    ) -> List[ExtractedConcept]:
+        expanded: List[ExtractedConcept] = []
+        for concept in concepts:
+            if concept.role not in {"Condition", "ClinicalParameter"}:
+                expanded.append(concept)
+                continue
+            text = concept.entity_standardized_candidate or concept.entity_original
+            if not text:
+                expanded.append(concept)
+                continue
+            if " or " not in text.lower():
+                expanded.append(concept)
+                continue
+            parts = [part.strip() for part in re.split(r"\bor\b", text, flags=re.IGNORECASE)]
+            parts = [part for part in parts if part]
+            if len(parts) < 2:
+                expanded.append(concept)
+                continue
+            for idx, part in enumerate(parts, start=1):
+                logic_structured = dict(concept.logic_structured or {})
+                logic_structured["logic_type"] = "OR"
+                logic_structured["logic_group"] = f"or_{concept.rule_id}_{idx}"
+                expanded.append(
+                    ExtractedConcept(
+                        rule_id=concept.rule_id,
+                        entity_original=concept.entity_original,
+                        entity_standardized_candidate=part,
+                        role=concept.role,
+                        logic=concept.logic,
+                        logic_structured=logic_structured,
+                    )
+                )
+        return expanded
+
     def extract_and_ground(
         self, sentence: str, source_type: str, guideline_title: str
     ) -> Tuple[List[ExtractedConcept], List[GroundedConcept]]:
@@ -728,6 +764,7 @@ class GuidelineGraphBuilder:
         extracted = self.extract_concepts(
             filtered_sentence, source_type, guideline_title
         )
+        extracted = self._explode_or_conditions(extracted)
         grounded: List[GroundedConcept] = []
         has_clinical_anchor = any(
             c.role in {"Condition", "Medication", "Procedure"} for c in extracted

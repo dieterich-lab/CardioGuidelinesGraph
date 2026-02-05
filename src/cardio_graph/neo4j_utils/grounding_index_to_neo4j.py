@@ -238,82 +238,157 @@ def _infer_recommendation_props(
 def _recommendation_relation(logic_structured: Dict[str, Any]) -> str:
     direction = (logic_structured.get("direction") or "").upper()
     if direction in {"NEGATIVE", "CONTRAINDICATED"}:
-        return "CONTRAINDICATES_USAGE"
-    return "RECOMMENDS_USAGE"
+        condition_concepts = []
+        action_concepts = []
+        for concept in concepts:
+            role = (concept.get("role") or "").strip()
+            if role in {"Condition", "ClinicalParameter"}:
+                condition_concepts.append(concept)
+            elif role in {"Medication", "Procedure"}:
+                action_concepts.append(concept)
 
+        or_groups: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        for concept in condition_concepts:
+            logic_structured = concept.get("logic_structured") or {}
+            group = logic_structured.get("logic_group")
+            if group:
+                or_groups[group].append(concept)
 
-def _rule_group_key(item: Dict[str, Any], allow_null_rule_ids: bool) -> Optional[str]:
-    rule_id = item.get("rule_id")
-    chunk_id = (
-        item.get("chunk_id")
-        or item.get("source_id")
-        or item.get("source_context")
-        or ""
-    )
-    if rule_id is None:
-        if not allow_null_rule_ids:
-            return None
-        if not chunk_id:
-            return None
-        return f"{chunk_id}_rule_null"
-    return f"{chunk_id}_{rule_id}" if chunk_id else str(rule_id)
+        if or_groups:
+            condition_groups = list(or_groups.values())
+            group_mode = "OR"
+        else:
+            condition_groups = [condition_concepts] if condition_concepts else []
+            group_mode = "AND"
 
+        for group_index, group in enumerate(condition_groups, start=1):
+            previous_decision = None
+            for step_index, concept in enumerate(group, start=1):
+                role = (concept.get("role") or "").strip()
+                logic_structured = concept.get("logic_structured") or {}
+                snomed_id = concept.get("snomed_id")
+                target_label = concept.get("target_label") or "Concept"
+                concept_name = concept.get("entity_standardized_candidate") or concept.get(
+                    "entity_original"
+                )
+                entity_original = concept.get("entity_original")
+                logic_type = "SINGLE"
+                if len(group) > 1:
+                    logic_type = "AND"
+                if group_mode == "OR":
+                    logic_type = "OR"
 
-@click.command()
-@click.option(
-    "--index-path",
-    default="/prj/doctoral_letters/guide/data/grounding_index.json",
-    show_default=True,
-    help="Path to grounding_index.json",
-)
-@click.option(
-    "--rules-path",
-    default=None,
-    help="Optional JSON or JSONL with per-concept rule_id/logic_structured",
-)
-@click.option(
-    "--allow-null-rule-ids/--no-allow-null-rule-ids",
-    default=True,
-    show_default=True,
-    help="Create logic nodes even when rule_id is missing by grouping per chunk",
-)
-@click.option("--uri", default=DEFAULT_URI, show_default=True, help="Neo4j URI")
-@click.option("--user", default=DEFAULT_AUTH[0], show_default=True, help="Neo4j user")
-@click.option(
-    "--password", default=DEFAULT_AUTH[1], show_default=True, help="Neo4j password"
-)
-def main(
-    index_path: str,
-    rules_path: Optional[str],
-    allow_null_rule_ids: bool,
-    uri: str,
-    user: str,
-    password: str,
-) -> None:
-    if not os.path.exists(index_path):
-        raise FileNotFoundError(f"Grounding index not found: {index_path}")
+                decision_id = f"{rule_key}::g{group_index}::s{step_index}"
 
-    entries = _load_grounding_index(index_path)
-    grouped = _group_by_label(entries)
-    rules = _load_rules(rules_path) if rules_path else []
+                if snomed_id:
+                    relation = "CHECKS_FOR" if role == "Condition" else "EVALUATES"
+                    session.run(
+                        f"""
+                        MERGE (c:`{target_label}` {{snomed_id: $snomed_id}})
+                        MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
+                        SET dec.concept = $concept,
+                            dec.operator = $operator,
+                            dec.threshold = $threshold,
+                            dec.unit = $unit,
+                            dec.condition_context = $condition_context,
+                            dec.entity_original = $entity_original,
+                            dec.logic_type = $logic_type
+                        MERGE (dec)-[r:{relation}]->(c)
+                        """,
+                        snomed_id=snomed_id,
+                        rule_key=str(rule_key),
+                        decision_id=decision_id,
+                        concept=concept_name,
+                        operator=logic_structured.get("operator"),
+                        threshold=logic_structured.get("threshold"),
+                        unit=logic_structured.get("unit"),
+                        condition_context=logic_structured.get("condition_context"),
+                        entity_original=entity_original,
+                        logic_type=logic_type,
+                    )
+                else:
+                    relation = "CHECKS_FOR" if role == "Condition" else "EVALUATES"
+                    session.run(
+                        f"""
+                        MERGE (u:UnresolvedConcept {{name: $name, target_label: $target_label}})
+                        SET u.entity_original = $entity_original
+                        MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
+                        SET dec.concept = $concept,
+                            dec.operator = $operator,
+                            dec.threshold = $threshold,
+                            dec.unit = $unit,
+                            dec.condition_context = $condition_context,
+                            dec.entity_original = $entity_original,
+                            dec.logic_type = $logic_type
+                        MERGE (dec)-[r:{relation}]->(u)
+                        """,
+                        name=concept_name,
+                        target_label=target_label,
+                        entity_original=entity_original,
+                        rule_key=str(rule_key),
+                        decision_id=decision_id,
+                        concept=concept_name,
+                        operator=logic_structured.get("operator"),
+                        threshold=logic_structured.get("threshold"),
+                        unit=logic_structured.get("unit"),
+                        condition_context=logic_structured.get("condition_context"),
+                        logic_type=logic_type,
+                    )
 
-    with GraphDatabase.driver(uri, auth=(user, password)) as driver:
-        driver.verify_connectivity()
-        with driver.session() as session:
-            for label, rows in grouped.items():
-                _merge_concepts(session, label, rows)
+                if previous_decision:
+                    session.run(
+                        """
+                        MATCH (prev:DecisionNode {rule_unique_id: $rule_key, decision_id: $prev_id})
+                        MATCH (curr:DecisionNode {rule_unique_id: $rule_key, decision_id: $curr_id})
+                        MERGE (prev)-[:LEADS_TO {condition_met: true}]->(curr)
+                        """,
+                        rule_key=str(rule_key),
+                        prev_id=previous_decision,
+                        curr_id=decision_id,
+                    )
 
-            _add_snomed_hierarchy(session, entries)
+                previous_decision = decision_id
 
-            if rules:
-                grouped_rules: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-                for item in rules:
-                    unique_key = _rule_group_key(item, allow_null_rule_ids)
-                    if unique_key is None:
-                        continue
-                    grouped_rules[unique_key].append(item)
-                _create_rule_nodes(session, grouped_rules)
+            if previous_decision:
+                session.run(
+                    """
+                    MATCH (dec:DecisionNode {rule_unique_id: $rule_key, decision_id: $decision_id})
+                    MATCH (rec:RecommendationNode {rule_unique_id: $rule_key})
+                    MERGE (dec)-[:RESULTS_IN {condition_met: true}]->(rec)
+                    """,
+                    rule_key=str(rule_key),
+                    decision_id=previous_decision,
+                )
 
-
-if __name__ == "__main__":
-    main()
+        for concept in action_concepts:
+            logic_structured = concept.get("logic_structured") or {}
+            snomed_id = concept.get("snomed_id")
+            target_label = concept.get("target_label") or "Concept"
+            concept_name = concept.get("entity_standardized_candidate") or concept.get(
+                "entity_original"
+            )
+            entity_original = concept.get("entity_original")
+            relation = _recommendation_relation(logic_structured)
+            if snomed_id:
+                session.run(
+                    f"""
+                    MERGE (a:`{target_label}` {{snomed_id: $snomed_id}})
+                    MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
+                    MERGE (rec)-[r:{relation}]->(a)
+                    """,
+                    snomed_id=snomed_id,
+                    rule_key=str(rule_key),
+                )
+            else:
+                session.run(
+                    f"""
+                    MERGE (u:UnresolvedConcept {{name: $name, target_label: $target_label}})
+                    SET u.entity_original = $entity_original
+                    MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
+                    MERGE (rec)-[r:{relation}]->(u)
+                    """,
+                    name=concept_name,
+                    target_label=target_label,
+                    entity_original=entity_original,
+                    rule_key=str(rule_key),
+                )
