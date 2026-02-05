@@ -1,27 +1,3 @@
-# Der Neue Workflow: "Text-First, SNOMED-Backed"
-# 1. Die Vorbereitung (Static Config)
-# Ihr ladet keine Millionen Knoten. Ihr habt nur eure ontology_config.yaml.
-# Sie enthält Root-Konzepte (z.B. ID für Cardiovascular Agent).
-# Sie ist der "Türsteher": Sie bestimmt, was überhaupt in den Graphen darf und welches Label (z.B. :Medication) es bekommt.
-# 2. Der Trigger (Guideline Parsing)
-# Euer LLM/Docling liest die Leitlinie (Text oder Tabelle).
-# Fund: "Patients on Bisoprolol showed improved outcomes..."
-# LLM Aufgabe: Extrahiere "Bisoprolol" als Entity und die Logik (Outcome: Improved).
-# 3. Der "Live"-Lookup (The Magic Step)
-# Bevor ihr irgendwas in Neo4j schreibt, fragt euer Python-Skript die SNOMED-API (oder lokale DB):
-# Frage: "Wer ist 'Bisoprolol'?"
-# Antwort: "ID 12345. Elternpfad: Bisoprolol -> Beta-Blocker -> ... -> Substance."
-# 4. Die Filterung & Konstruktion
-# Euer Skript prüft den Pfad gegen die Config (Schritt 1).
-# Check: "Ist einer der Vorfahren in unserer Config als 'Medication'-Root gelistet?"
-# Ergebnis: Ja! (Beta-Blocker oder Cardiovascular Agent passt).
-# Action: Ihr schreibt jetzt nur diesen relevanten Pfad in den Graphen.
-# 5. Das Ergebnis im Graph
-# Ihr habt jetzt einen Graphen, der:
-# Die medizinische Hierarchie kennt (Bisoprolol -IS_A-> Beta-Blocker).
-# Die klinische Regel kennt (Bisoprolol -[RECOMMENDED]-> Heart Failure).
-# Schlank ist (keine unnötigen Medikamente, die nicht in der Leitlinie stehen).
-
 project_name: "CardioGuidelinesGraph"
 version: "2.0.0"
 description: "Hybrid Ontology for Cardiology Guidelines combining Semantic Medical Entities with Guideline Decision Logic."
