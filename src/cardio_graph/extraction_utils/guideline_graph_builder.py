@@ -12,6 +12,8 @@ import json
 import logging
 import os
 import re
+import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
@@ -23,8 +25,14 @@ import yaml
 from cardio_graph.extraction_utils.clients import create_client_registry
 from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(line_buffering=True)
+
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+    force=True,
 )
 logger = logging.getLogger("GuidelineGraphBuilder")
 
@@ -407,7 +415,10 @@ class GuidelineGraphBuilder:
     def _get_preferred_term(self, concept_id: int) -> Optional[str]:
         if concept_id in self._preferred_term_cache:
             return self._preferred_term_cache[concept_id]
+        start = time.perf_counter()
         term = self.snomed_explorer.get_preferred_term(concept_id)
+        elapsed = time.perf_counter() - start
+        logger.info("Timing: get_preferred_term %s took %.3fs", concept_id, elapsed)
         if term:
             self._preferred_term_cache[concept_id] = term
         return term
@@ -417,6 +428,8 @@ class GuidelineGraphBuilder:
     ) -> Tuple[Optional[int], Optional[str], float]:
         if not term:
             return None, None, 0.0
+
+        search_start = time.perf_counter()
 
         expanded_terms = self._expand_term(term)
         expanded_terms.extend(self._expand_term_variants(term))
@@ -431,7 +444,10 @@ class GuidelineGraphBuilder:
             if t in seen:
                 continue
             seen.add(t)
+            query_start = time.perf_counter()
             results.extend(self.snomed_explorer.search_concepts_by_term(t, limit=limit))
+            query_elapsed = time.perf_counter() - query_start
+            logger.info("Timing: search_concepts_by_term '%s' took %.3fs", t, query_elapsed)
 
         if not results:
             return None, None, 0.0
@@ -490,6 +506,9 @@ class GuidelineGraphBuilder:
         if self._has_disallowed_semantic_tag(best_term):
             return None, None, 0.0
 
+        total_elapsed = time.perf_counter() - search_start
+        logger.info("Timing: search_best_concept '%s' took %.3fs", term, total_elapsed)
+
         return best_id, best_term, best_score
 
     def _get_taxonomy_path_cached(self, concept_id: Optional[int]) -> List[int]:
@@ -497,7 +516,10 @@ class GuidelineGraphBuilder:
             return []
         if concept_id in self._taxonomy_path_cache:
             return self._taxonomy_path_cache[concept_id]
+        start = time.perf_counter()
         path = self._extract_taxonomy_path(concept_id)
+        elapsed = time.perf_counter() - start
+        logger.info("Timing: extract_taxonomy_path %s took %.3fs", concept_id, elapsed)
         self._taxonomy_path_cache[concept_id] = path
         return path
 
@@ -508,7 +530,10 @@ class GuidelineGraphBuilder:
         return self._resolve_target_label_for_role(role, path_ids) is not None
 
     def _get_parents(self, concept_id: int) -> List[int]:
+        start = time.perf_counter()
         relationships = self.snomed_explorer.get_relationships(concept_id)
+        elapsed = time.perf_counter() - start
+        logger.info("Timing: get_relationships %s took %.3fs", concept_id, elapsed)
         parents = []
         for rel in relationships:
             rel_type = rel.get("typeid") or rel.get("typeId")
@@ -668,6 +693,47 @@ class GuidelineGraphBuilder:
                 return {"raw": result.json()}
         return {"raw": str(result)}
 
+    def _log_extracted_concepts(self, extracted: List[ExtractedConcept]) -> None:
+        if not extracted:
+            logger.info("Extracted concepts: []")
+            return
+        payload = []
+        for concept in extracted:
+            payload.append(
+                {
+                    "rule_id": concept.rule_id,
+                    "entity_original": concept.entity_original,
+                    "entity_standardized_candidate": concept.entity_standardized_candidate,
+                    "role": concept.role,
+                    "logic": concept.logic,
+                    "logic_structured": concept.logic_structured,
+                }
+            )
+        logger.info("Extracted concepts: %s", json.dumps(payload))
+
+    def _log_grounded_concepts(self, grounded: List[GroundedConcept]) -> None:
+        if not grounded:
+            logger.info("Grounded concepts: []")
+            return
+        payload = []
+        for concept in grounded:
+            payload.append(
+                {
+                    "rule_id": concept.rule_id,
+                    "entity_original": concept.entity_original,
+                    "entity_standardized_candidate": concept.entity_standardized_candidate,
+                    "role": concept.role,
+                    "logic": concept.logic,
+                    "logic_structured": concept.logic_structured,
+                    "snomed_id": concept.snomed_id,
+                    "preferred_term": concept.preferred_term,
+                    "score": concept.score,
+                    "taxonomy_path": concept.taxonomy_path,
+                    "target_label": concept.target_label,
+                }
+            )
+        logger.info("Grounded concepts: %s", json.dumps(payload))
+
     def extract_concepts(
         self, sentence: str, source_type: str, guideline_title: str
     ) -> List[ExtractedConcept]:
@@ -765,6 +831,7 @@ class GuidelineGraphBuilder:
             filtered_sentence, source_type, guideline_title
         )
         extracted = self._explode_or_conditions(extracted)
+        self._log_extracted_concepts(extracted)
         grounded: List[GroundedConcept] = []
         has_clinical_anchor = any(
             c.role in {"Condition", "Medication", "Procedure"} for c in extracted
@@ -875,8 +942,22 @@ class GuidelineGraphBuilder:
                     "target_label": target_label,
                 }
             )
+            logger.info(
+                "Index output entry: %s",
+                json.dumps(
+                    {
+                        "entity_standardized_candidate": concept.entity_standardized_candidate,
+                        "snomed_id": concept_id,
+                        "preferred_term": preferred_term,
+                        "score": score,
+                        "taxonomy_path": taxonomy_path,
+                        "target_label": target_label,
+                    }
+                ),
+            )
 
         self.index.save()
+        self._log_grounded_concepts(grounded)
         return extracted, grounded
 
     def ground_sentence(
@@ -988,6 +1069,11 @@ class GuidelineGraphBuilder:
             with open(table_json_path, "r", encoding="utf-8") as f:
                 table_jsons.append(json.load(f))
 
+        logger.info("Docling table inputs: %s", ";".join(docling_table_jsons))
+        logger.info("Docling table header: Columns: Recommendations | Class | Level")
+        if footnotes:
+            logger.info("Docling table footnotes: %s", footnotes.strip())
+
         if whole_table:
             table_text = self._format_docling_table_full(
                 table_jsons, footnotes=footnotes
@@ -1018,6 +1104,7 @@ class GuidelineGraphBuilder:
                 if table_id:
                     row_text = f"DOC_TABLE: {table_id}\nDOC_ROW: {row_id}\n" + row_text
                 chunk_label = f"{table_id}:{row_id}" if table_id else row_id
+                logger.info("Docling table row input %s: %s", chunk_label, row_text)
                 extracted, grounded = self.extract_and_ground(
                     row_text, source_type="table", guideline_title=guideline_title
                 )
@@ -1130,6 +1217,7 @@ class GuidelineGraphBuilder:
                 "source_type": source_type,
                 "guideline_title": guideline_title,
             }
+            logger.info("Rules output entry: %s", json.dumps(entry))
             fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     def _resolve_target_label_for_role(
