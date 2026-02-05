@@ -341,6 +341,7 @@ class GuidelineGraphBuilder:
         score: float,
         target_label: Optional[str],
         has_clinical_anchor: bool,
+        allow_unmapped: bool = False,
     ) -> bool:
         if self._is_noise_phrase(concept.entity_standardized_candidate):
             return True
@@ -354,7 +355,7 @@ class GuidelineGraphBuilder:
             return True
         if self._is_statistic_term(concept) and not has_clinical_anchor:
             return True
-        if score < self.min_match_score:
+        if score < self.min_match_score and not allow_unmapped:
             return True
         if target_label is None and concept.role not in ALLOWED_ROLES:
             return True
@@ -450,8 +451,7 @@ class GuidelineGraphBuilder:
 
             if important_query_tokens:
                 if not any(
-                    important_query_tokens
-                    & set(self._important_tokens(candidate))
+                    important_query_tokens & set(self._important_tokens(candidate))
                     for candidate in candidates
                 ):
                     continue
@@ -765,8 +765,16 @@ class GuidelineGraphBuilder:
                 target_label = self._fallback_target_label_for_role(concept.role)
             taxonomy_path = self._format_taxonomy_path(path_ids)
 
+            if concept_id is None or score < self.min_match_score:
+                concept_id = None
+                preferred_term = None
+                score = 0.0
+                path_ids = []
+                taxonomy_path = []
+                target_label = self._fallback_target_label_for_role(concept.role)
+
             if self._should_skip_concept(
-                concept, score, target_label, has_clinical_anchor
+                concept, score, target_label, has_clinical_anchor, allow_unmapped=True
             ):
                 continue
 
