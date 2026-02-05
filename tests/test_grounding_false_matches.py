@@ -103,6 +103,7 @@ class GroundingFalseMatchTests(unittest.TestCase):
         builder = _build_builder(
             FakeSnomedExplorer(results, preferred_terms, parent_map)
         )
+        builder.index.lookup = lambda _: None
         extracted = [
             ExtractedConcept(
                 rule_id=1,
