@@ -427,34 +427,27 @@ class GuidelineGraphBuilder:
                     continue
         return parents
 
-    def _extract_taxonomy_path(self, concept_id: int) -> List[int]:
+    def _extract_taxonomy_path(self, concept_id: int, max_depth: int = 10) -> List[int]:
         if concept_id is None:
             return []
 
-        target_roots = set(self.root_concepts)
-        visited = set([concept_id])
+        visited = set()
         queue: List[Tuple[int, List[int]]] = [(concept_id, [concept_id])]
-        best_path: List[int] = [concept_id]
+        full_path: List[int] = []
 
-        while queue:
+        while queue and len(full_path) < max_depth:
             current, path = queue.pop(0)
-            if current in target_roots:
-                return path
-
-            if len(path) > len(best_path):
-                best_path = path
+            if current in visited:
+                continue
+            visited.add(current)
+            full_path = path
 
             parents = self._get_parents(current)
-            if not parents and len(path) > len(best_path):
-                best_path = path
-
             for parent in parents:
-                if parent in visited:
-                    continue
-                visited.add(parent)
-                queue.append((parent, path + [parent]))
+                if parent not in visited:
+                    queue.append((parent, path + [parent]))
 
-        return best_path
+        return full_path
 
     def _resolve_target_label(self, path_ids: List[int]) -> Optional[str]:
         if not path_ids:
