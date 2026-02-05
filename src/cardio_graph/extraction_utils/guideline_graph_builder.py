@@ -973,6 +973,7 @@ class GuidelineGraphBuilder:
             if not target_label:
                 target_label = self._fallback_target_label_for_role(concept.role)
             entry = {
+                "entity_original": concept.entity_original,
                 "entity_standardized_candidate": concept.entity_standardized_candidate,
                 "snomed_id": snomed_id,
                 "role": concept.role,

@@ -16,6 +16,7 @@ from neo4j import GraphDatabase
 
 from cardio_graph.neo4j_utils.feedneo4jdb import AUTH as DEFAULT_AUTH
 from cardio_graph.neo4j_utils.feedneo4jdb import URI as DEFAULT_URI
+from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
 
 
 def _load_grounding_index(index_path: str) -> List[Dict[str, Any]]:
@@ -82,6 +83,32 @@ def _merge_concepts(session, label: str, rows: List[Dict[str, Any]]) -> None:
             )
 
 
+def _add_snomed_hierarchy(session, entries: List[Dict[str, Any]]) -> None:
+    """Add SNOMED CT IS_A relationships for concepts in the index."""
+    explorer = SnomedExplorer()
+    IS_A_TYPE_ID = 116680003
+    snomed_ids = {str(entry["snomed_id"]) for entry in entries if entry.get("snomed_id")}
+    
+    for snomed_id in snomed_ids:
+        try:
+            relationships = explorer.get_relationships(int(snomed_id))
+            for rel in relationships:
+                rel_type = rel.get("typeid") or rel.get("typeId")
+                dest_id = rel.get("destinationid") or rel.get("destinationId")
+                if rel_type == IS_A_TYPE_ID and dest_id is not None:
+                    session.run(
+                        """
+                        MERGE (c:Concept {snomed_id: $child_id})
+                        MERGE (p:Concept {snomed_id: $parent_id})
+                        MERGE (c)-[:IS_A]->(p)
+                        """,
+                        child_id=snomed_id,
+                        parent_id=str(dest_id),
+                    )
+        except Exception as e:
+            print(f"Error adding hierarchy for {snomed_id}: {e}")
+
+
 def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) -> None:
     for rule_key, concepts in grouped_rules.items():
         rec_props = _infer_recommendation_props(concepts)
@@ -114,6 +141,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
             concept_name = concept.get("entity_standardized_candidate") or concept.get(
                 "entity_original"
             )
+            entity_original = concept.get("entity_original")
 
             if role in {"Condition", "ClinicalParameter"}:
                 if snomed_id:
@@ -124,13 +152,15 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         SET dec.operator = $operator,
                             dec.threshold = $threshold,
                             dec.unit = $unit,
-                            dec.condition_context = $condition_context
+                            dec.condition_context = $condition_context,
+                            dec.entity_original = $entity_original
                         MERGE (c)-[:HAS_RULE]->(dec)
                         MERGE (dec)-[:RESULTS_IN {{condition_met: true}}]->(rec)
                         """,
                         snomed_id=snomed_id,
                         rule_key=str(rule_key),
                         concept=concept_name,
+                        entity_original=entity_original,
                         operator=logic_structured.get("operator"),
                         threshold=logic_structured.get("threshold"),
                         unit=logic_structured.get("unit"),
@@ -140,16 +170,19 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                     session.run(
                         """
                         MERGE (u:UnresolvedConcept {name: $name, target_label: $target_label})
+                        SET u.entity_original = $entity_original
                         MERGE (dec:DecisionNode {rule_unique_id: $rule_key, concept: $concept})
                         SET dec.operator = $operator,
                             dec.threshold = $threshold,
                             dec.unit = $unit,
-                            dec.condition_context = $condition_context
+                            dec.condition_context = $condition_context,
+                            dec.entity_original = $entity_original
                         MERGE (u)-[:HAS_RULE]->(dec)
                         MERGE (dec)-[:RESULTS_IN {condition_met: true}]->(rec)
                         """,
                         name=concept_name,
                         target_label=target_label,
+                        entity_original=entity_original,
                         rule_key=str(rule_key),
                         concept=concept_name,
                         operator=logic_structured.get("operator"),
@@ -174,11 +207,13 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                     session.run(
                         f"""
                         MERGE (u:UnresolvedConcept {{name: $name, target_label: $target_label}})
+                        SET u.entity_original = $entity_original
                         MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
                         MERGE (rec)-[r:{relation}]->(u)
                         """,
                         name=concept_name,
                         target_label=target_label,
+                        entity_original=entity_original,
                         rule_key=str(rule_key),
                     )
 
@@ -267,6 +302,8 @@ def main(
         with driver.session() as session:
             for label, rows in grouped.items():
                 _merge_concepts(session, label, rows)
+
+            _add_snomed_hierarchy(session, entries)
 
             if rules:
                 grouped_rules: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
