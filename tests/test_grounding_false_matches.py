@@ -94,6 +94,42 @@ class GroundingFalseMatchTests(unittest.TestCase):
             parent_id=49601007,
         )
 
+    def test_stress_imaging_not_occupation(self):
+        self._assert_unmapped(
+            term="Stress Imaging",
+            role="Procedure",
+            concept_id=136522006,
+            preferred_term="Stressman (occupation)",
+            parent_id=272379006,
+        )
+
+    def test_operative_mortality_not_perinatal_death(self):
+        self._assert_unmapped(
+            term="Operative Mortality",
+            role="Condition",
+            concept_id=10588007,
+            preferred_term="Perinatal death (event)",
+            parent_id=272379006,
+        )
+
+    def test_mid_term_mortality_not_maternal_death(self):
+        self._assert_unmapped(
+            term="Mid-term mortality",
+            role="Condition",
+            concept_id=59283008,
+            preferred_term="Maternal death (event)",
+            parent_id=272379006,
+        )
+
+    def test_geriatric_population_not_ethnic_group(self):
+        self._assert_unmapped(
+            term="Geriatric population",
+            role="Condition",
+            concept_id=48393004,
+            preferred_term="Ethnic group finding (finding)",
+            parent_id=404684003,
+        )
+
     def test_unmapped_terms_are_retained(self):
         term = "Heart Team Consultation"
         role = "Procedure"
@@ -132,6 +168,41 @@ class GroundingFalseMatchTests(unittest.TestCase):
         self.assertIsNone(grounded[0].snomed_id)
         self.assertEqual(grounded[0].entity_standardized_candidate, term)
         self.assertEqual(grounded[0].target_label, "Procedure")
+
+    def test_other_role_kept_unmapped(self):
+        term = "Heart Team"
+        results = [{"conceptid": 22298006, "term": "Myocardial infarction"}]
+        preferred_terms = {22298006: "Myocardial infarction (disorder)"}
+        parent_map = {22298006: 49601007}
+        builder = _build_builder(
+            FakeSnomedExplorer(results, preferred_terms, parent_map)
+        )
+        builder.index.lookup = lambda _: None
+        extracted = [
+            ExtractedConcept(
+                rule_id=1,
+                entity_original=term,
+                entity_standardized_candidate=term,
+                role="Other",
+                logic="",
+                logic_structured={
+                    "strength": "Class I",
+                    "level": "C",
+                    "direction": "POSITIVE",
+                    "operator": None,
+                    "threshold": None,
+                    "unit": None,
+                    "condition_context": None,
+                },
+            )
+        ]
+
+        with patch.object(builder, "extract_concepts", return_value=extracted):
+            _, grounded = builder.extract_and_ground("Heart Team", "text", "Test")
+
+        self.assertEqual(len(grounded), 1)
+        self.assertIsNone(grounded[0].snomed_id)
+        self.assertEqual(grounded[0].entity_standardized_candidate, term)
 
 
 if __name__ == "__main__":

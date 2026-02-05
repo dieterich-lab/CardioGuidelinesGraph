@@ -67,6 +67,12 @@ STOPWORD_TOKENS = {
     "to",
     "with",
 }
+DISALLOWED_SEMANTIC_TAGS = {
+    "occupation",
+    "ethnic group finding",
+    "qualifier value",
+    "event",
+}
 ALLOWED_ROLES = {
     "Condition",
     "ClinicalParameter",
@@ -296,6 +302,15 @@ class GuidelineGraphBuilder:
         tokens = re.findall(r"[a-z0-9]+", self._normalize(text))
         return [t for t in tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
 
+    def _has_disallowed_semantic_tag(self, term: Optional[str]) -> bool:
+        if not term:
+            return False
+        match = re.search(r"\(([^)]+)\)\s*$", term)
+        if not match:
+            return False
+        tag = match.group(1).strip().lower()
+        return tag in DISALLOWED_SEMANTIC_TAGS
+
     def _score(self, query: str, candidate: str) -> float:
         q = self._normalize(query)
         c = self._normalize(candidate)
@@ -471,6 +486,9 @@ class GuidelineGraphBuilder:
                 best_score = score
                 best_id = concept_id
                 best_term = preferred or best_candidate_term
+
+        if self._has_disallowed_semantic_tag(best_term):
+            return None, None, 0.0
 
         return best_id, best_term, best_score
 
@@ -718,6 +736,23 @@ class GuidelineGraphBuilder:
         for concept in extracted:
             if (concept.role or "").strip() == "Recommendation":
                 concept.role = "Condition"
+            if (concept.role or "").strip() == "Other":
+                grounded.append(
+                    GroundedConcept(
+                        rule_id=concept.rule_id,
+                        entity_original=concept.entity_original,
+                        entity_standardized_candidate=concept.entity_standardized_candidate,
+                        role=concept.role,
+                        logic=concept.logic,
+                        logic_structured=concept.logic_structured,
+                        snomed_id=None,
+                        preferred_term=None,
+                        score=0.0,
+                        taxonomy_path=[],
+                        target_label=self._fallback_target_label_for_role("Other"),
+                    )
+                )
+                continue
             cached = self.index.lookup(concept.entity_standardized_candidate)
             if cached:
                 if cached.get("target_label") is None and concept.role:
