@@ -47,6 +47,8 @@ DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/extracted_rules.jsonl"
 DEFAULT_MIN_MATCH_SCORE = 0.7
 MIN_TERM_LEN = 3
+MAX_QUERY_TOKENS = 6
+MAX_CONCEPT_CANDIDATES = 50
 STOPWORD_TOKENS = {
     "a",
     "an",
@@ -433,12 +435,36 @@ class GuidelineGraphBuilder:
 
         search_start = time.perf_counter()
 
-        expanded_terms = self._expand_term(term)
-        expanded_terms.extend(self._expand_term_variants(term))
-        search_terms = [term]
-        search_terms.extend(expanded_terms)
-        tokens = [t for t in self._normalize(term).split() if len(t) > 2]
-        search_terms.extend(tokens)
+        normalized_tokens = [
+            t
+            for t in self._normalize(term).split()
+            if len(t) > 2 and t not in STOPWORD_TOKENS
+        ]
+        important_tokens = self._important_tokens(term)
+        use_short_query = len(normalized_tokens) > MAX_QUERY_TOKENS
+
+        search_terms: List[str] = []
+        expanded_terms: List[str] = []
+        if use_short_query:
+            tokens = important_tokens[:MAX_QUERY_TOKENS]
+            condensed = " ".join(tokens)
+            if condensed:
+                search_terms.append(condensed)
+            search_terms.extend(tokens)
+            logger.info(
+                "Grounding short-query tokens for '%s': %s",
+                term,
+                tokens,
+            )
+        else:
+            expanded_terms = self._expand_term(term)
+            expanded_terms.extend(self._expand_term_variants(term))
+            search_terms.append(term)
+            search_terms.extend(expanded_terms)
+            search_terms.extend(normalized_tokens)
+
+        if not search_terms:
+            search_terms = [term]
 
         results = []
         seen = set()
@@ -478,11 +504,24 @@ class GuidelineGraphBuilder:
         best_term = None
         best_score = 0.0
 
-        query_terms = [term] + expanded_terms
+        concept_items = list(concept_terms.items())
+        if len(concept_items) > MAX_CONCEPT_CANDIDATES:
+            logger.info(
+                "Truncating concept candidates from %d to %d for '%s'",
+                len(concept_items),
+                MAX_CONCEPT_CANDIDATES,
+                term,
+            )
+            concept_items = concept_items[:MAX_CONCEPT_CANDIDATES]
+
+        query_terms = ([term] + expanded_terms) if not use_short_query else tokens
+        if not query_terms:
+            query_terms = [term]
+
         important_query_tokens = set()
         for q in query_terms:
             important_query_tokens.update(self._important_tokens(q))
-        for concept_id, terms in concept_terms.items():
+        for concept_id, terms in concept_items:
             if role and not self._candidate_matches_role(concept_id, role):
                 continue
             preferred = self._get_preferred_term(concept_id)
