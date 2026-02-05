@@ -431,23 +431,18 @@ class GuidelineGraphBuilder:
         if concept_id is None:
             return []
 
-        visited = set()
-        queue: List[Tuple[int, List[int]]] = [(concept_id, [concept_id])]
-        full_path: List[int] = []
-
-        while queue and len(full_path) < max_depth:
-            current, path = queue.pop(0)
-            if current in visited:
-                continue
-            visited.add(current)
-            full_path = path
-
+        def traverse_up(current: int, path: List[int], depth: int) -> List[int]:
+            if depth >= max_depth or current in path:
+                return path
+            path = path + [current]
             parents = self._get_parents(current)
-            for parent in parents:
-                if parent not in visited:
-                    queue.append((parent, path + [parent]))
+            if not parents:
+                return path
+            # Since it's a taxonomy, take the first parent for the path, but to get full, perhaps collect all
+            # For simplicity, follow one path
+            return traverse_up(parents[0], path, depth + 1)
 
-        return full_path
+        return traverse_up(concept_id, [], 0)
 
     def _resolve_target_label(self, path_ids: List[int]) -> Optional[str]:
         if not path_ids:
