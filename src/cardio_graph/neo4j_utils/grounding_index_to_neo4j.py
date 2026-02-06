@@ -59,9 +59,18 @@ def _merge_concepts(session, label: str, rows: List[Dict[str, Any]]) -> None:
         n.target_label = row.target_label
     SET n:Concept
     """
-    session.run(query, rows=rows)
-
+    normalized_rows = []
     for row in rows:
+        snomed_id = row.get("snomed_id")
+        if snomed_id is None:
+            continue
+        normalized = dict(row)
+        normalized["snomed_id"] = str(snomed_id)
+        normalized_rows.append(normalized)
+
+    session.run(query, rows=normalized_rows)
+
+    for row in normalized_rows:
         path = row.get("taxonomy_path") or []
         if len(path) < 2:
             continue
@@ -104,7 +113,7 @@ def _add_snomed_hierarchy(session, entries: List[Dict[str, Any]]) -> None:
                         MERGE (p:Concept {snomed_id: $parent_id})
                         MERGE (c)-[:IS_A]->(p)
                         """,
-                        child_id=snomed_id,
+                        child_id=str(snomed_id),
                         parent_id=str(dest_id),
                     )
         except Exception as e:
@@ -223,7 +232,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                                 dec.logic_type = $logic_type
                             MERGE (dec)-[r:{relation}]->(c)
                             """,
-                            snomed_id=snomed_id,
+                            snomed_id=str(snomed_id),
                             rule_key=str(rule_key),
                             decision_id=decision_id,
                             concept=concept_name,
@@ -307,7 +316,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             dec.logic_type = $logic_type
                         MERGE (dec)-[r:{relation}]->(c)
                         """,
-                        snomed_id=snomed_id,
+                        snomed_id=str(snomed_id),
                         rule_key=str(rule_key),
                         decision_id=decision_id,
                         concept=concept_name,
@@ -403,7 +412,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                     MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
                     MERGE (rec)-[r:{relation}]->(a)
                     """,
-                    snomed_id=snomed_id,
+                    snomed_id=str(snomed_id),
                     rule_key=str(rule_key),
                 )
             else:
