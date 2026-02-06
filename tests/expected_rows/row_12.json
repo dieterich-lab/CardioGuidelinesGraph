@@ -1,0 +1,30 @@
+{
+  "row_id": "row_12",
+  "class": null,
+  "level": null,
+  "recommendation_text": "In chronic coronary syndrome patients with left ventricular ejection fraction ≤ 35%",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "left ventricular ejection fraction ≤ 35%",
+          "entity_standardized_candidate": "Left Ventricular Ejection Fraction",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": "<=",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": "reduced",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": null,
+            "level": null,
+            "direction": "POSITIVE"
+          }
+        }
+      ],
+      "actions": []
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "row_id": "row_14",
+  "class": null,
+  "level": null,
+  "recommendation_text": "In surgically eligible chronic coronary syndrome (CCS) patients with multivessel coronary artery disease (CAD) and left ventricular ejection fraction (LVEF) ≤ 35%, myocardial revascularization with coronary artery bypass grafting (CABG) is recommended over medical therapy alone to improve long-term survival. 53,54,749,861 | Class: I | Level: B",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "surgically eligible chronic coronary syndrome (CCS) patients",
+          "entity_standardized_candidate": "Chronic coronary syndrome",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "surgically eligible",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "left ventricular ejection fraction (LVEF) ≤ 35%",
+          "entity_standardized_candidate": "Left ventricular ejection fraction",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": "≤",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "multivessel coronary artery disease (CAD)",
+          "entity_standardized_candidate": "Multivessel coronary artery disease",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "left ventricular ejection fraction (LVEF) ≤ 35%",
+          "entity_standardized_candidate": "left ventricular ejection fraction",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": "<=",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": "reduced",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "multivessel coronary artery disease (CAD)",
+          "entity_standardized_candidate": "multivessel coronary artery disease",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "multivessel",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "surgically eligible chronic coronary syndrome (CCS) patients",
+          "entity_standardized_candidate": "surgically eligible chronic coronary syndrome patients",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "surgically eligible",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "myocardial revascularization with coronary artery bypass grafting (CABG)",
+          "entity_standardized_candidate": "coronary artery bypass grafting",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "revascularization",
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

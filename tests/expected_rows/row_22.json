@@ -1,0 +1,111 @@
+{
+  "row_id": "row_22",
+  "class": null,
+  "level": null,
+  "recommendation_text": "Intracoronary imaging guidance by intravascular ultrasound (IVUS) or OCTis recommended when performing percutaneous coronary intervention (PCI) on anatomically complex lesions, in particular left main stem, true bifurcations, and long lesions. 866,337,810,840,841 | Class: I | Level: A",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "anatomically complex lesions, in particular left main stem, true bifurcations, and long lesions",
+          "entity_standardized_candidate": "Anatomically complex lesion",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "left main stem, true bifurcations, long lesions",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "anatomically complex lesions",
+          "entity_standardized_candidate": "anatomically complex lesions",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "left main stem",
+          "entity_standardized_candidate": "left main stem",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "long lesions",
+          "entity_standardized_candidate": "long lesions",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "true bifurcations",
+          "entity_standardized_candidate": "true bifurcations",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "UNKNOWN"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "Intracoronary imaging guidance by intravascular ultrasound (IVUS) or OCT",
+          "entity_standardized_candidate": "Intravascular ultrasound or optical coherence tomography guidance",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

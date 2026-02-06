@@ -1,0 +1,63 @@
+{
+  "row_id": "row_25",
+  "class": null,
+  "level": null,
+  "recommendation_text": "• should be considered at the end of the procedure to identify patients at high risk of persistent angina and subsequent clinical events; 828,830,831,868 | Class: IIa | Level: B",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "patients at high risk of persistent angina and subsequent clinical events",
+          "entity_standardized_candidate": "High risk persistent angina",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "at high risk",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class IIa",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "patients at high risk of persistent angina and subsequent clinical events",
+          "entity_standardized_candidate": "high risk of persistent angina and subsequent clinical events",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "high risk",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class IIa",
+            "level": "B",
+            "direction": "UNKNOWN"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "should be considered at the end of the procedure",
+          "entity_standardized_candidate": "Procedure",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "at end of procedure",
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class IIa",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

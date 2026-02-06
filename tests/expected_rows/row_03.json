@@ -1,0 +1,79 @@
+{
+  "row_id": "row_03",
+  "class": null,
+  "level": null,
+  "recommendation_text": "For complex clinical cases, to define the optimal treatment strategy, in particular when coronary artery bypass grafting (CABG) and percutaneous coronary intervention (PCI) hold the same level of recommendation, a Heart Team discussion is recommended, including representatives from interventional cardiology, cardiac surgery, non-interventional cardiology, and other specialties if indicated, aimed at selecting the most appropriate treatment to improve patient outcomes and quality of life. | Class: I | Level: C",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "CABG and PCI hold the same level of recommendation",
+          "entity_standardized_candidate": "CABG and PCI same recommendation level",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "C",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "complex clinical cases",
+          "entity_standardized_candidate": "Complex Clinical Cases",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "C",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "complex clinical cases",
+          "entity_standardized_candidate": "Complex clinical case",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "C",
+            "direction": "POSITIVE"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "Heart Team discussion",
+          "entity_standardized_candidate": "Heart Team discussion",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "C",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

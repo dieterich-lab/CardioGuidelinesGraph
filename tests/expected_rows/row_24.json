@@ -1,0 +1,63 @@
+{
+  "row_id": "row_24",
+  "class": null,
+  "level": null,
+  "recommendation_text": "• is recommended to guide lesion selection for intervention in patients with multivessel disease; 308,826,866,867 | Class: I | Level: A",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "multivessel disease",
+          "entity_standardized_candidate": "Multivessel disease",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "patients with",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "multivessel disease",
+          "entity_standardized_candidate": "Multivessel disease",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "patients with",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "guide lesion selection for intervention",
+          "entity_standardized_candidate": "Lesion selection guidance for intervention",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

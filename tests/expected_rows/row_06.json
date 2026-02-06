@@ -1,0 +1,47 @@
+{
+  "row_id": "row_06",
+  "class": null,
+  "level": null,
+  "recommendation_text": "It is recommended that the Heart Team (on site or with a partner institution) develop institutional protocols to implement the appropriate revascularization strategy in accordance with current guidelines. 855,856,858 | Class: I | Level: C",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "Heart Team (on site or with a partner institution)",
+          "entity_standardized_candidate": "Heart Team",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "on site or with a partner institution",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "C",
+            "direction": "POSITIVE"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "develop institutional protocols to implement the appropriate revascularization strategy in accordance with current guidelines",
+          "entity_standardized_candidate": "Revascularization protocol development",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "in accordance with current guidelines",
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "C",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

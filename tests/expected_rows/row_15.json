@@ -1,0 +1,175 @@
+{
+  "row_id": "row_15",
+  "class": null,
+  "level": null,
+  "recommendation_text": "In selected chronic coronary syndrome (CCS) patients with functionally significant multivessel disease (MVD) and left ventricular ejection fraction (LVEF) ≤ 35% who are at high surgical risk or not operable, percutaneous coronary intervention (PCI) may be considered as an alternative to coronary artery bypass grafting (CABG). 526,729 | Class: IIb | Level: B",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "chronic coronary syndrome (CCS)",
+          "entity_standardized_candidate": "Chronic coronary syndrome",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "selected",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "high surgical risk",
+          "entity_standardized_candidate": "High surgical risk",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "left ventricular ejection fraction (LVEF) ≤ 35%",
+          "entity_standardized_candidate": "Left ventricular ejection fraction",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": "LE",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "multivessel disease (MVD)",
+          "entity_standardized_candidate": "Multivessel disease",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "functionally significant",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "not operable",
+          "entity_standardized_candidate": "Not operable",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "chronic coronary syndrome patients with functionally significant multivessel disease",
+          "entity_standardized_candidate": "chronic coronary syndrome patients with functionally significant multivessel disease",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "functionally significant",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "high surgical risk or not operable",
+          "entity_standardized_candidate": "high surgical risk",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "OR",
+            "logic_group": "or_1",
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "left ventricular ejection fraction",
+          "entity_standardized_candidate": "left ventricular ejection fraction",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": "<=",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "high surgical risk or not operable",
+          "entity_standardized_candidate": "not operable",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "OR",
+            "logic_group": "or_1",
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "percutaneous coronary intervention",
+          "entity_standardized_candidate": "percutaneous coronary intervention",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class IIb",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

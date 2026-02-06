@@ -1,0 +1,47 @@
+{
+  "row_id": "row_21",
+  "class": null,
+  "level": null,
+  "recommendation_text": "In patients with multivessel obstructive coronary artery disease (CAD), calculation of the SYNTAX score (SYNTAX) score is recommended to assess the anatomical complexity of disease. 786,865 | Class: I | Level: B",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "multivessel obstructive coronary artery disease (CAD)",
+          "entity_standardized_candidate": "multivessel obstructive coronary artery disease",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "obstructive",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "SYNTAX score (SYNTAX) score",
+          "entity_standardized_candidate": "SYNTAX score",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "row_id": "row_17",
+  "class": null,
+  "level": null,
+  "recommendation_text": "In chronic coronary syndrome (CCS) patients with persistent angina or anginal equivalent, despite guideline-directed medical treatment, myocardial revascularization of functionally significant obstructive coronary artery disease (CAD) is recommended to improve symptoms. 50,321,402,732,734,757 | Class: I | Level: A",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "chronic coronary syndrome (CCS) patients with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
+          "entity_standardized_candidate": "Chronic coronary syndrome",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "chronic coronary syndrome (CCS) patients with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
+          "entity_standardized_candidate": "Chronic coronary syndrome with persistent angina despite guideline-directed medical treatment",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "UNKNOWN"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "myocardial revascularization of functionally significant obstructive coronary artery disease (CAD)",
+          "entity_standardized_candidate": "Myocardial revascularization",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "of functionally significant obstructive coronary artery disease (CAD)",
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "row_id": "row_20",
+  "class": null,
+  "level": null,
+  "recommendation_text": "Calculation of the society of thoracic surgeons score (STS) score is recommended to estimate in-hospital morbidity and 30-day mortality after coronary artery bypass grafting (CABG). 777,862-864 | Class: I | Level: B",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "coronary artery bypass grafting (CABG)",
+          "entity_standardized_candidate": "Coronary artery bypass grafting",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "patients undergoing",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "patients undergoing coronary artery bypass grafting (CABG)",
+          "entity_standardized_candidate": "patients undergoing coronary artery bypass grafting (CABG)",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "after",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "B",
+            "direction": "UNKNOWN"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "calculation of the society of thoracic surgeons score (STS) score",
+          "entity_standardized_candidate": "Society of Thoracic Surgeons score",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "after coronary artery bypass grafting",
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "B",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

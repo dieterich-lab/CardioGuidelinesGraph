@@ -1,0 +1,63 @@
+{
+  "row_id": "row_02",
+  "class": null,
+  "level": null,
+  "recommendation_text": "It is recommended that patients scheduled for percutaneous or surgical revascularization receive complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization, as part of shared clinical decision-making. 847,848,857 | Class: I | Level: C",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "patients scheduled for percutaneous or surgical revascularization",
+          "entity_standardized_candidate": "Patients scheduled for revascularization",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "C",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "patients scheduled for percutaneous or surgical revascularization",
+          "entity_standardized_candidate": "Patients scheduled for revascularization",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "scheduled for",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "C",
+            "direction": "UNKNOWN"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization",
+          "entity_standardized_candidate": "Information about revascularization benefits, risks, and alternatives",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "C",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

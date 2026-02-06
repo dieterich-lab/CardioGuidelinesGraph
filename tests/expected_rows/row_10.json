@@ -1,0 +1,95 @@
+{
+  "row_id": "row_10",
+  "class": null,
+  "level": null,
+  "recommendation_text": "In chronic coronary syndrome (CCS) patients with left ventricular ejection fraction (LVEF) > 35%, myocardial revascularization is recommended, in addition to guideline-directed medical therapy, for patients with functionally significant three-vessel disease to improve long-term survival and to reduce long-term cardiovascular mortality and the risk of spontaneous myocardial infarction. 55,56,317,732-734 | Class: I | Level: A",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "chronic coronary syndrome (CCS) patients",
+          "entity_standardized_candidate": "Chronic Coronary Syndrome",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": null,
+            "level": null,
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "chronic coronary syndrome (CCS) patients with left ventricular ejection fraction (LVEF) > 35%",
+          "entity_standardized_candidate": "Chronic Coronary Syndrome, Left Ventricular Ejection Fraction",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": ">",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": "chronic",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "left ventricular ejection fraction (LVEF) > 35%",
+          "entity_standardized_candidate": "Left Ventricular Ejection Fraction",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": ">",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": "chronic coronary syndrome",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": null,
+            "level": null,
+            "direction": "UNKNOWN"
+          }
+        },
+        {
+          "entity_original": "functionally significant three-vessel disease",
+          "entity_standardized_candidate": "Three-Vessel Disease",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": "functionally significant",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": null,
+            "level": null,
+            "direction": "UNKNOWN"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "myocardial revascularization",
+          "entity_standardized_candidate": "Myocardial Revascularization",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}

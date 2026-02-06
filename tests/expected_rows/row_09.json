@@ -1,0 +1,95 @@
+{
+  "row_id": "row_09",
+  "class": null,
+  "level": null,
+  "recommendation_text": "In chronic coronary syndrome (CCS) patients with left ventricular ejection fraction (LVEF) > 35%, myocardial revascularization is recommended, in addition to guideline-directed medical therapy, for patients with functionally significant left main stem stenosis to improve survival. 718,719,859,860 | Class: I | Level: A",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "chronic coronary syndrome (CCS) patients",
+          "entity_standardized_candidate": "Chronic Coronary Syndrome",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "patients",
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "left ventricular ejection fraction (LVEF) > 35%",
+          "entity_standardized_candidate": "Left Ventricular Ejection Fraction",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": ">",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "chronic coronary syndrome (CCS) patients",
+          "entity_standardized_candidate": "chronic coronary syndrome patients",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        },
+        {
+          "entity_original": "left ventricular ejection fraction (LVEF) > 35%",
+          "entity_standardized_candidate": "left ventricular ejection fraction > 35%",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": ">",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1",
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "myocardial revascularization",
+          "entity_standardized_candidate": "myocardial revascularization",
+          "role": "Procedure",
+          "logic_structured": {
+            "operator": null,
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": null,
+            "logic_group": null,
+            "strength": "Class I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}
