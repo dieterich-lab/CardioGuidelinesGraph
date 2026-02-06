@@ -1,203 +1,120 @@
-# Guideline parsing and grounding workflow
+## Graph builder: row-level extraction to Neo4j
 
-This folder contains the parsing, extraction, and grounding pipeline used to turn guideline documents into a SNOMED-backed concept index. The process is deterministic except for the LLM extraction step. This README documents the full workflow, intermediate artifacts, and how to run the pipeline end-to-end.
+The main script is:
+- /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extraction_utils/guideline_graph_builder.py
 
-## Overview
+This script takes a single row (or full table), runs multi-pass BAML extraction, grounds concepts, and writes two outputs:
+- grounding_index_*.json (concept cache)
+- extracted_rules_*.jsonl (logic-preserving rule entries)
 
-**Goal:** Convert guideline PDFs/markdown into structured text chunks and tables, extract clinical concepts, ground them to SNOMED CT, and build a reusable JSON index.
+### Multi-pass extraction (row-level)
 
-**Primary outputs:**
-- Grounding index: /prj/doctoral_letters/guide/data/grounding_index.json
-- Timestamped snapshots: /prj/doctoral_letters/guide/data/grounding_index_YYYYMMDD_HHMMSS.json
-- Extracted rules: /prj/doctoral_letters/guide/data/extracted_rules.jsonl
-- Chunked guideline text: /prj/doctoral_letters/guide/data/guidelines/markdown/chunks
-- Chunked tables: /prj/doctoral_letters/guide/data/guidelines/markdown/chunks/tables
+Each table row is formatted as a tagged block:
+- [GUIDELINE: <title>]
+- [SOURCE_TYPE: table]
+- [FOCUS: <pass>]
 
-**Why split grounding_index vs extracted_rules?**
-- grounding_index.json is the stable SNOMED-backed dictionary for concepts (used across runs and for Neo4j concept nodes).
-- extracted_rules.jsonl is the per-chunk, per-mention output that preserves logic and provenance (used to create decision/recommendation nodes and edges).
-- This split keeps the reusable concept cache small and deterministic while allowing rule-level logic to evolve independently.
+We run two passes on the same row text:
+1) MAIN: full rule extraction (conditions/parameters + actions)
+2) POPULATION: population/cohort conditions only (no actions)
 
-## Intermediate steps and files
+The two passes are merged and deduplicated before OR-splitting. This avoids hardcoding while improving recall for population clauses like "In chronic coronary syndrome patients...".
 
-1) **Collect guideline PDFs**
-- Input: /prj/doctoral_letters/guide/data/guidelines/pdf
+### Expected output structure (JSON)
 
-2) **Parse PDFs to text / markdown**
-- Script: /home/pwiesenbach/CardioGuidelinesGraph/slurm/parse_guidelines_to_text.sh
-- Output (examples):
-  - /prj/doctoral_letters/guide/data/guidelines/text
-  - /prj/doctoral_letters/guide/data/guidelines/markdown
+The tests compare row_10 against a structure-only reference (grounding ignored). The expected JSON lives at:
+- /home/pwiesenbach/CardioGuidelinesGraph/tests/expected_row_10_structure.json
 
-3) **Extract tables and structures**
-- Script: /home/pwiesenbach/CardioGuidelinesGraph/slurm/parse_markdown_tables_to_structures.sh
-- Script: /home/pwiesenbach/CardioGuidelinesGraph/slurm/parse_structures_from_pdf.sh
-- Output:
-  - /prj/doctoral_letters/guide/data/guidelines/structures
+Shape (structure-only):
 
-4) **Chunk guideline markdown into manageable pieces**
-- Module: markdown_chunks.py
-- Output:
-  - /prj/doctoral_letters/guide/data/guidelines/markdown/chunks
-  - /prj/doctoral_letters/guide/data/guidelines/markdown/chunks/tables
+```json
+{
+  "row_id": "row_10",
+  "class": "I",
+  "level": "A",
+  "recommendation_text": "...",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "CCS",
+          "entity_standardized_candidate": "chronic coronary syndrome",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "myocardial revascularization",
+          "entity_standardized_candidate": "myocardial revascularization",
+          "role": "Procedure",
+          "logic_structured": {
+            "strength": "I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
 
-5) **LLM concept extraction (tagged) + SNOMED grounding**
-- Module: entity_grounding_service_new.py
-- BAML prompt: /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/baml_src/extract_concepts.baml
-- SNOMED schema mapping: /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/snomedct_utils/guideline_graph_schema.yaml
-- Abbreviation expansion: /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/snomedct_utils/abbrv.txt
+### How rules map into Neo4j
 
-6) **Index creation and caching**
-- Output index: /prj/doctoral_letters/guide/data/grounding_index.json
-- Output rules (JSONL): /prj/doctoral_letters/guide/data/extracted_rules.jsonl
-- The index is keyed by both SNOMED ID and normalized standardized term.
-- Noisy lines are filtered prior to extraction, and low-score matches are skipped.
-
-## Example: build the full grounding index
-
-Use the SLURM wrapper:
-- /home/pwiesenbach/CardioGuidelinesGraph/slurm/grounding_index.sh
-
-Direct run (no SLURM):
-- poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extraction_utils/entity_grounding_service_new.py \
-  --chunks-dir /prj/doctoral_letters/guide/data/guidelines/markdown/chunks \
-  --tables-dir /prj/doctoral_letters/guide/data/guidelines/markdown/chunks/tables \
-  --guideline-title "2024 ESC Guidelines for the management of chronic coronary syndromes" \
-  --model Qwen17b
-
-Single-sentence example:
-- poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extraction_utils/entity_grounding_service_new.py \
-  --sentence "MACE was reduced with ACE-I in patients with CAD." \
-  --guideline-title "2024 ESC Guidelines for the management of chronic coronary syndromes" \
-  --model Qwen17b
-
-## Detailed workflow description
-
-1) **Parse guideline files**
-- PDF and markdown are created from raw guideline sources. This step produces cleaned text, sections, and tables.
-
-2) **Chunking**
-- Long markdown is segmented into paragraph chunks and table chunks to keep LLM extraction stable and to track provenance.
-
-3) **Tagged extraction**
-- Each chunk is wrapped with tags:
-  - [GUIDELINE: <title>]
-  - [SOURCE_TYPE: text|table]
-- The LLM (BAML) extracts:
-  - `entity_original`
-  - `entity_standardized_candidate`
-  - `role` (Condition/Medication/Procedure/ClinicalParameter)
-  - `logic` and `logic_structured`
-
-4) **Abbreviation expansion**
-- Terms are expanded using abbrv.txt (e.g., MACE ↔ major adverse cardiovascular events) during SNOMED search.
-
-5) **SNOMED search and scoring**
-- Candidate terms are searched in the SNOMED database.
-- The best match is selected by normalized string similarity score.
-- Matches below the threshold are skipped.
-
-6) **Taxonomy path and target label**
-- The SNOMED is-a path is traversed to a configured root.
-- The path determines the `target_label` (ClinicalCondition, Medication, Procedure, ClinicalParameter).
-
-7) **Index write-through**
-- Results are saved to grounding_index.json (by SNOMED ID and standardized term).
-- Extracted rules are saved to extracted_rules.jsonl (one rule per line, if present in the chunk).
-- Subsequent runs reuse cached matches for speed and consistency.
-
-## Upload into Neo4j (concepts + optional rules)
-
-- Loader script: /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/neo4j_utils/grounding_index_to_neo4j.py
-- SLURM wrapper: /home/pwiesenbach/CardioGuidelinesGraph/slurm/load_grounding_index_to_neo4j.sh
-
-The loader ingests grounding_index.json as concept nodes, and if extracted_rules.jsonl is present it adds decision/recommendation nodes plus rule edges. By default it targets the Neo4j URI configured in feedneo4jdb.py.
-
-## Example: one sentence to index entry
-
-**Input sentence:**
-- "MACE was reduced with ACE-I in patients with CAD."
-
-**Step 1 — Tagged input passed to the LLM**
-- [GUIDELINE: 2024 ESC Guidelines for the management of chronic coronary syndromes]
-- [SOURCE_TYPE: text]
-- MACE was reduced with ACE-I in patients with CAD.
-
-**Step 2 — LLM extracts concepts**
-- entity_original: "MACE"
-  - entity_standardized_candidate: "major adverse cardiovascular events"
-  - role: ClinicalParameter
-- entity_original: "ACE-I"
-  - entity_standardized_candidate: "angiotensin-converting enzyme inhibitor"
-  - role: Medication
-- entity_original: "CAD"
-  - entity_standardized_candidate: "coronary artery disease"
-  - role: Condition
-
-**Step 3 — Abbreviation expansion and SNOMED search**
-- "MACE" expands to "major adverse cardiovascular events" for SNOMED search.
-- "ACE-I" expands to "angiotensin-converting enzyme inhibitor" for SNOMED search.
-- "CAD" expands to "coronary artery disease" for SNOMED search.
-
-**Step 4 — Example grounded entries written to the index (all three terms)**
-
-- grounding_index.json (by standardized term):
-  - entity_standardized_candidate: "major adverse cardiovascular events"
-  - snomed_id: <resolved SNOMED concept id>
-  - preferred_term: <SNOMED preferred term>
-  - score: <similarity score>
-  - taxonomy_path: [{"concept_id": "...", "term": "..."}, ...]
-  - target_label: ClinicalParameter
-  - role: ClinicalParameter
-
-- grounding_index.json (by standardized term):
-  - entity_standardized_candidate: "angiotensin-converting enzyme inhibitor"
-  - snomed_id: <resolved SNOMED concept id>
-  - preferred_term: <SNOMED preferred term>
-  - score: <similarity score>
-  - taxonomy_path: [{"concept_id": "...", "term": "..."}, ...]
-  - target_label: Medication
-  - role: Medication
-
-- grounding_index.json (by standardized term):
-  - entity_standardized_candidate: "coronary artery disease"
-  - snomed_id: <resolved SNOMED concept id>
-  - preferred_term: <SNOMED preferred term>
-  - score: <similarity score>
-  - taxonomy_path: [{"concept_id": "...", "term": "..."}, ...]
-  - target_label: ClinicalCondition
-  - role: Condition
-
-**Impact summary for the three terms**
-
-- MACE → standardized to "major adverse cardiovascular events" and grounded as a ClinicalParameter.
-- ACE-I → standardized to "angiotensin-converting enzyme inhibitor" and grounded as a Medication.
-- CAD → standardized to "coronary artery disease" and grounded as a ClinicalCondition.
-
-**Mini graph (example triples)**
-
-Below is a minimal graph that links grounded entities using only relations explicitly stated in the same chunk. In this sentence, the only relation supported by the text is the reduction of MACE with ACE-I.
-
-- Asserted triple (within-chunk): (angiotensin-converting enzyme inhibitor) --reducesRiskOf--> (major adverse cardiovascular events)
-
-**Mini graph (Mermaid view)**
+The loader uses extracted_rules.jsonl to build rule logic. The intended graph structure is:
 
 ```mermaid
 graph LR
-  CAD["Coronary artery disease\n(ClinicalCondition)"]
-  MACE["Major adverse cardiovascular events\n(ClinicalParameter)"]
-  ACEI["ACE inhibitor\n(Medication)"]
+  C1[ClinicalCondition]
+  C2[ClinicalParameter]
+  C3[ClinicalCondition]
+  D1[DecisionNode]
+  D2[DecisionNode]
+  D3[DecisionNode]
+  R[RecommendationNode]
+  A[Procedure]
 
-  ACEI -- reducesRiskOf --> MACE
+  D1 -->|CHECKS_FOR| C1
+  D2 -->|EVALUATES| C2
+  D3 -->|CHECKS_FOR| C3
+
+  D1 -->|LEADS_TO| D2
+  D2 -->|LEADS_TO| D3
+  D3 -->|RESULTS_IN| R
+
+  R -->|RECOMMENDS_PROCEDURE| A
 ```
 
-## Example: complex recommendation + contraindication
+Notes:
+- Conditions use CHECKS_FOR; clinical parameters use EVALUATES.
+- AND logic is represented via LEADS_TO chains.
 
-**Input sentence:**
-- "In patients with symptomatic HFrEF and LVEF ≤ 40%, an ACE-Inhibitor is recommended (Class I, Level A) to reduce mortality. However, in patients with a history of Angioedema, ACE-Inhibitors are contraindicated."
+### Running a single row extraction
 
-**Step 1 — Tagged input passed to the LLM**
-- [GUIDELINE: 2024 ESC Guidelines for the management of chronic coronary syndromes]
+The SLURM wrapper for table_000 is intentionally untracked. Run it locally or submit via SLURM in your environment:
+
+```bash
+poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extraction_utils/guideline_graph_builder.py \
+  --docling-table-json /prj/doctoral_letters/guide/data/guidelines/docling/pdf_pages/_62/tables/table_000.json \
+  --docling-table-json /prj/doctoral_letters/guide/data/guidelines/docling/pdf_pages/_63/tables/table_000.json \
+  --docling-table-id _62_63/table_000.json \
+  --docling-footnotes-path /tmp/docling_table_footnotes.txt \
+  --min-match-score 0.6 \
+  --guideline-title "2024 ESC Guidelines for the management of chronic coronary syndromes" \
+  --index-path /prj/doctoral_letters/guide/data/grounding_index_docling_table_000.json \
+  --rules-out-path /prj/doctoral_letters/guide/data/extracted_rules_docling_table_000.jsonl \
+  --node g5 \
+  --model Qwen30b
+```
 - [SOURCE_TYPE: text]
 - In patients with symptomatic HFrEF and LVEF ≤ 40%, an ACE-Inhibitor is recommended (Class I, Level A) to reduce mortality. However, in patients with a history of Angioedema, ACE-Inhibitors are contraindicated.
 
