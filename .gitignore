@@ -62,4 +62,8 @@ outputs/
 **/__pycache__
 *.sh
 
+!slurm/
+!slurm/run_row10_structure_tests.sh
+!tests/expected_row_10_structure.json
+
 .coverage

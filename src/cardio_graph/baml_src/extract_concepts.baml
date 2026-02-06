@@ -51,10 +51,12 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
     3. **Direction**: POSITIVE for recommendations/indications, NEGATIVE for contraindications/avoid. Use UNKNOWN only if there is no action.
      4. **Roles + action**: IF part uses 'Condition' or 'ClinicalParameter'; THEN part uses 'Medication' or 'Procedure'.
        - If [FOCUS: MAIN], include at least one action per rule_id. Never use role 'Recommendation'.
-       - If [FOCUS: POPULATION], output ONLY population/eligibility conditions or parameters; no actions.
-    5. **Strength/level**: Populate logic_structured.strength and logic_structured.level when present.
+       - If [FOCUS: POPULATION], output ONLY population/eligibility conditions or parameters; no actions. Always return at least one population condition when such a cohort is stated.
+     5. **Strength/level**: Populate logic_structured.strength and logic_structured.level when present.
+       - For class strength, always output "Class I", "Class IIa", "Class IIb", or "Class III" (add the "Class" prefix if only a Roman numeral is shown).
     6. **SNOMED-style terms**: Output short, specific noun phrases (singular). Avoid full sentences, lists, and parenthetical abbreviations like "(PCI)". If text uses abbreviations, output the expanded clinical term only. Do not emit GuidelineSource/Recommendation nodes.
-    7. **Population conditions**: If the sentence specifies a patient population or cohort (e.g., chronic disease state, eligibility criteria, or subgroup), include it as a Condition in the IF part. This should be captured even if it is not a numeric parameter.
+     7. **Population conditions**: If the sentence specifies a patient population or cohort (e.g., chronic disease state, eligibility criteria, or subgroup), include it as a Condition in the IF part. This should be captured even if it is not a numeric parameter.
+       - Example forms to capture (generalized): "In [population] patients...", "Among patients with [condition]...", "Eligible [subgroup] patients...".
 
     Sentence: {{text}}
 
