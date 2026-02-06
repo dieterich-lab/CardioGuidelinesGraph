@@ -8,6 +8,13 @@ from cardio_graph.extraction_utils.guideline_graph_builder import (
 
 
 class LogicGroupTests(unittest.TestCase):
+    def _assert_verbose(self, query, expected, actual, health_note):
+        print("\nQUERY:\n" + query)
+        print("EXPECTED:\n" + str(expected))
+        print("ACTUAL:\n" + str(actual))
+        print("HEALTH NOTE:\n" + health_note)
+        self.assertEqual(actual, expected)
+
     def test_or_condition_is_split_into_groups(self):
         concept = ExtractedConcept(
             rule_id=1,
@@ -21,9 +28,27 @@ class LogicGroupTests(unittest.TestCase):
             },
         )
 
-        with patch(
-            "cardio_graph.extraction_utils.guideline_graph_builder.create_client_registry",
-            return_value=None,
+            query = "_explode_or_conditions([ExtractedConcept(... OR ...)])"
+            self._assert_verbose(
+                query,
+                2,
+                len(expanded),
+                "OR conditions must be split to preserve logical branching in the graph.",
+            )
+            logic_types = [c.logic_structured.get("logic_type") for c in expanded]
+            self._assert_verbose(
+                query + " -> logic_type",
+                ["OR", "OR"],
+                logic_types,
+                "All expanded concepts must carry logic_type=OR for correct grouping.",
+            )
+            group_flags = [bool(c.logic_structured.get("logic_group")) for c in expanded]
+            self._assert_verbose(
+                query + " -> logic_group",
+                [True, True],
+                group_flags,
+                "Each expanded concept must have a shared logic_group identifier.",
+            )
         ), patch(
             "cardio_graph.extraction_utils.guideline_graph_builder.SnomedExplorer",
         ):

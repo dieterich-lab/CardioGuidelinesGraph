@@ -35,28 +35,51 @@ class FakeSnomedExplorer:
 
 
 def _build_builder(fake_explorer):
-    with patch(
-        "cardio_graph.extraction_utils.guideline_graph_builder.SnomedExplorer",
-        return_value=fake_explorer,
-    ), patch(
-        "cardio_graph.extraction_utils.guideline_graph_builder.create_client_registry",
-        return_value=None,
+    with (
+        patch(
+            "cardio_graph.extraction_utils.guideline_graph_builder.SnomedExplorer",
+            return_value=fake_explorer,
+        ),
+        patch(
+            "cardio_graph.extraction_utils.guideline_graph_builder.create_client_registry",
+            return_value=None,
+        ),
     ):
         return GuidelineGraphBuilder(model="Qwen30b", node="g5")
 
 
 class GroundingFalseMatchTests(unittest.TestCase):
+    def _assert_verbose(self, query, expected, actual, health_note):
+        print("\nQUERY:\n" + query)
+        print("EXPECTED:\n" + str(expected))
+        print("ACTUAL:\n" + str(actual))
+        print("HEALTH NOTE:\n" + health_note)
+        self.assertEqual(actual, expected)
+
     def _assert_unmapped(self, term, role, concept_id, preferred_term, parent_id):
         results = [{"conceptid": concept_id, "term": preferred_term}]
         preferred_terms = {concept_id: preferred_term}
         parent_map = {concept_id: parent_id}
-        builder = _build_builder(FakeSnomedExplorer(results, preferred_terms, parent_map))
+        builder = _build_builder(
+            FakeSnomedExplorer(results, preferred_terms, parent_map)
+        )
 
         best_id, best_term, score = builder._search_best_concept(term, role)
-
-        self.assertIsNone(best_id)
-        self.assertIsNone(best_term)
-        self.assertEqual(score, 0.0)
+        query = (
+            "_search_best_concept(term={term}, role={role}) with candidate "
+            "{preferred_term} ({concept_id})"
+        ).format(
+            term=term,
+            role=role,
+            preferred_term=preferred_term,
+            concept_id=concept_id,
+        )
+        self._assert_verbose(
+            query,
+            (None, None, 0.0),
+            (best_id, best_term, score),
+            "False positives must be rejected so noisy SNOMED matches do not pollute the graph.",
+        )
 
     def test_complex_cad_not_caries(self):
         self._assert_unmapped(
@@ -163,11 +186,31 @@ class GroundingFalseMatchTests(unittest.TestCase):
             _, grounded = builder.extract_and_ground(
                 "Heart Team Consultation", "text", "Test Guideline"
             )
-
-        self.assertEqual(len(grounded), 1)
-        self.assertIsNone(grounded[0].snomed_id)
-        self.assertEqual(grounded[0].entity_standardized_candidate, term)
-        self.assertEqual(grounded[0].target_label, "Procedure")
+        query = "extract_and_ground(Heart Team Consultation)"
+        self._assert_verbose(
+            query + " -> grounded count",
+            1,
+            len(grounded),
+            "Unmapped concepts should still be retained as unresolved graph nodes.",
+        )
+        self._assert_verbose(
+            query + " -> snomed_id",
+            None,
+            grounded[0].snomed_id,
+            "Unmapped concepts must keep snomed_id=None for downstream handling.",
+        )
+        self._assert_verbose(
+            query + " -> standardized",
+            term,
+            grounded[0].entity_standardized_candidate,
+            "Standardized candidate should remain the original term when unmapped.",
+        )
+        self._assert_verbose(
+            query + " -> target_label",
+            "Procedure",
+            grounded[0].target_label,
+            "Role should map to Procedure even when unresolved.",
+        )
 
     def test_other_role_kept_unmapped(self):
         term = "Heart Team"
@@ -199,10 +242,25 @@ class GroundingFalseMatchTests(unittest.TestCase):
 
         with patch.object(builder, "extract_concepts", return_value=extracted):
             _, grounded = builder.extract_and_ground("Heart Team", "text", "Test")
-
-        self.assertEqual(len(grounded), 1)
-        self.assertIsNone(grounded[0].snomed_id)
-        self.assertEqual(grounded[0].entity_standardized_candidate, term)
+        query = "extract_and_ground(Heart Team)"
+        self._assert_verbose(
+            query + " -> grounded count",
+            1,
+            len(grounded),
+            "Other-role concepts should remain in the graph for traceability.",
+        )
+        self._assert_verbose(
+            query + " -> snomed_id",
+            None,
+            grounded[0].snomed_id,
+            "Other-role concepts must remain unmapped to avoid incorrect links.",
+        )
+        self._assert_verbose(
+            query + " -> standardized",
+            term,
+            grounded[0].entity_standardized_candidate,
+            "Other-role standardized text should stay unchanged when unmapped.",
+        )
 
 
 if __name__ == "__main__":
