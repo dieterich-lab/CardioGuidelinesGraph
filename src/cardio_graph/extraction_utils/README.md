@@ -115,6 +115,8 @@ poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extra
   --node g5 \
   --model Qwen30b
 ```
+**Step 1 — Tagged input passed to the LLM**
+- [GUIDELINE: 2024 ESC Guidelines for the management of chronic coronary syndromes]
 - [SOURCE_TYPE: text]
 - In patients with symptomatic HFrEF and LVEF ≤ 40%, an ACE-Inhibitor is recommended (Class I, Level A) to reduce mortality. However, in patients with a history of Angioedema, ACE-Inhibitors are contraindicated.
 
