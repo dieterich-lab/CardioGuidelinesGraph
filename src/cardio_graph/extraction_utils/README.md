@@ -1,20 +1,24 @@
 ## Graph builder: row-level extraction to Neo4j
 
 The main script is:
+
 - /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extraction_utils/guideline_graph_builder.py
 
 This script takes a single row (or full table), runs multi-pass BAML extraction, grounds concepts, and writes two outputs:
+
 - grounding_index_*.json (concept cache)
 - extracted_rules_*.jsonl (logic-preserving rule entries)
 
 ### Multi-pass extraction (row-level)
 
 Each table row is formatted as a tagged block:
+
 - [GUIDELINE: <title>]
 - [SOURCE_TYPE: table]
 - [FOCUS: <pass>]
 
 We run two passes on the same row text:
+
 1) MAIN: full rule extraction (conditions/parameters + actions)
 2) POPULATION: population/cohort conditions only (no actions)
 
@@ -23,6 +27,7 @@ The two passes are merged and deduplicated before OR-splitting. This avoids hard
 ### Expected output structure (JSON)
 
 The tests compare row_10 against a structure-only reference (grounding ignored). The expected JSON lives at:
+
 - /home/pwiesenbach/CardioGuidelinesGraph/tests/expected_row_10_structure.json
 
 Shape (structure-only):
@@ -95,6 +100,7 @@ graph LR
 ```
 
 Notes:
+
 - Conditions use CHECKS_FOR; clinical parameters use EVALUATES.
 - AND logic is represented via LEADS_TO chains.
 
@@ -115,12 +121,15 @@ poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extra
   --node g5 \
   --model Qwen30b
 ```
+
 **Step 1 — Tagged input passed to the LLM**
+
 - [GUIDELINE: 2024 ESC Guidelines for the management of chronic coronary syndromes]
 - [SOURCE_TYPE: text]
 - In patients with symptomatic HFrEF and LVEF ≤ 40%, an ACE-Inhibitor is recommended (Class I, Level A) to reduce mortality. However, in patients with a history of Angioedema, ACE-Inhibitors are contraindicated.
 
 **Step 2 — LLM extracts concepts and logic**
+
 - entity_original: "HFrEF"
   - entity_standardized_candidate: "heart failure with reduced ejection fraction"
   - role: Condition
@@ -142,12 +151,14 @@ poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extra
   - logic_structured: {"type": "CONTRAINDICATION", "class": "III"}
 
 **Step 3 — Abbreviation expansion and SNOMED search**
+
 - "HFrEF" expands to "heart failure with reduced ejection fraction" for SNOMED search.
 - "LVEF" expands to "left ventricular ejection fraction" for SNOMED search.
 - "ACE-Inhibitor" expands to "angiotensin-converting enzyme inhibitor" for SNOMED search.
 - "Angioedema" is searched directly for SNOMED grounding.
 
 **Step 4 — Outputs written**
+
 - grounding_index.json (concepts grounded as usual)
 - extracted_rules.jsonl (rules emitted with references to grounded concepts)
 
