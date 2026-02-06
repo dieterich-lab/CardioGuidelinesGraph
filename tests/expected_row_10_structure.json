@@ -1,0 +1,64 @@
+{
+  "row_id": "row_10",
+  "class": "I",
+  "level": "A",
+  "recommendation_text": "In chronic coronary syndrome (CCS) patients with left ventricular ejection fraction (LVEF) > 35%, myocardial revascularization is recommended, in addition to guideline-directed medical therapy, for patients with functionally significant three-vessel disease to improve long-term survival and to reduce long-term cardiovascular mortality and the risk of spontaneous myocardial infarction.",
+  "rules": [
+    {
+      "rule_id": 1,
+      "conditions": [
+        {
+          "entity_original": "CCS",
+          "entity_standardized_candidate": "chronic coronary syndrome",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1"
+          }
+        },
+        {
+          "entity_original": "LVEF > 35%",
+          "entity_standardized_candidate": "left ventricular ejection fraction",
+          "role": "ClinicalParameter",
+          "logic_structured": {
+            "operator": ">",
+            "threshold": "35",
+            "unit": "%",
+            "condition_context": null,
+            "logic_type": "AND",
+            "logic_group": "and_1"
+          }
+        },
+        {
+          "entity_original": "functionally significant three-vessel disease",
+          "entity_standardized_candidate": "three-vessel coronary disease",
+          "role": "Condition",
+          "logic_structured": {
+            "operator": "PRESENT",
+            "threshold": null,
+            "unit": null,
+            "condition_context": "functionally significant",
+            "logic_type": "AND",
+            "logic_group": "and_1"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "entity_original": "myocardial revascularization",
+          "entity_standardized_candidate": "myocardial revascularization",
+          "role": "Procedure",
+          "logic_structured": {
+            "strength": "I",
+            "level": "A",
+            "direction": "POSITIVE"
+          }
+        }
+      ]
+    }
+  ]
+}
