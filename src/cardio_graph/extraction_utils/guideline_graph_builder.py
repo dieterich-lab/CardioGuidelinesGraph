@@ -419,10 +419,7 @@ class GuidelineGraphBuilder:
     def _get_preferred_term(self, concept_id: int) -> Optional[str]:
         if concept_id in self._preferred_term_cache:
             return self._preferred_term_cache[concept_id]
-        start = time.perf_counter()
         term = self.snomed_explorer.get_preferred_term(concept_id)
-        elapsed = time.perf_counter() - start
-        logger.info("Timing: get_preferred_term %s took %.3fs", concept_id, elapsed)
         if term:
             self._preferred_term_cache[concept_id] = term
         return term
@@ -489,14 +486,7 @@ class GuidelineGraphBuilder:
             seen.add(t)
             cached = self._search_cache.get(t)
             if cached is None:
-                query_start = time.perf_counter()
                 cached = self.snomed_explorer.search_concepts_by_term(t, limit=limit)
-                query_elapsed = time.perf_counter() - query_start
-                logger.info(
-                    "Timing: search_concepts_by_term '%s' took %.3fs",
-                    t,
-                    query_elapsed,
-                )
                 self._search_cache[t] = cached
             results.extend(cached)
 
@@ -585,8 +575,7 @@ class GuidelineGraphBuilder:
         if self._has_disallowed_semantic_tag(best_term):
             return None, None, 0.0
 
-        total_elapsed = time.perf_counter() - search_start
-        logger.info("Timing: search_best_concept '%s' took %.3fs", term, total_elapsed)
+        _ = time.perf_counter() - search_start
 
         return best_id, best_term, best_score
 
@@ -595,10 +584,7 @@ class GuidelineGraphBuilder:
             return []
         if concept_id in self._taxonomy_path_cache:
             return self._taxonomy_path_cache[concept_id]
-        start = time.perf_counter()
         path = self._extract_taxonomy_path(concept_id)
-        elapsed = time.perf_counter() - start
-        logger.info("Timing: extract_taxonomy_path %s took %.3fs", concept_id, elapsed)
         self._taxonomy_path_cache[concept_id] = path
         return path
 
@@ -611,10 +597,7 @@ class GuidelineGraphBuilder:
     def _get_parents(self, concept_id: int) -> List[int]:
         cached = self._relationships_cache.get(concept_id)
         if cached is None:
-            start = time.perf_counter()
             cached = self.snomed_explorer.get_relationships(concept_id)
-            elapsed = time.perf_counter() - start
-            logger.info("Timing: get_relationships %s took %.3fs", concept_id, elapsed)
             self._relationships_cache[concept_id] = cached
         relationships = cached
         parents = []
@@ -777,45 +760,10 @@ class GuidelineGraphBuilder:
         return {"raw": str(result)}
 
     def _log_extracted_concepts(self, extracted: List[ExtractedConcept]) -> None:
-        if not extracted:
-            logger.info("Extracted concepts: []")
-            return
-        payload = []
-        for concept in extracted:
-            payload.append(
-                {
-                    "rule_id": concept.rule_id,
-                    "entity_original": concept.entity_original,
-                    "entity_standardized_candidate": concept.entity_standardized_candidate,
-                    "role": concept.role,
-                    "logic": concept.logic,
-                    "logic_structured": concept.logic_structured,
-                }
-            )
-        logger.info("Extracted concepts: %s", json.dumps(payload))
+        return
 
     def _log_grounded_concepts(self, grounded: List[GroundedConcept]) -> None:
-        if not grounded:
-            logger.info("Grounded concepts: []")
-            return
-        payload = []
-        for concept in grounded:
-            payload.append(
-                {
-                    "rule_id": concept.rule_id,
-                    "entity_original": concept.entity_original,
-                    "entity_standardized_candidate": concept.entity_standardized_candidate,
-                    "role": concept.role,
-                    "logic": concept.logic,
-                    "logic_structured": concept.logic_structured,
-                    "snomed_id": concept.snomed_id,
-                    "preferred_term": concept.preferred_term,
-                    "score": concept.score,
-                    "taxonomy_path": concept.taxonomy_path,
-                    "target_label": concept.target_label,
-                }
-            )
-        logger.info("Grounded concepts: %s", json.dumps(payload))
+        return
 
     def extract_concepts(
         self, sentence: str, source_type: str, guideline_title: str
@@ -836,9 +784,7 @@ class GuidelineGraphBuilder:
                 exc,
             )
             return []
-        parsed_payload = self._serialize_baml_result(result)
-        logger.info("---Parsed Response (class ExtractConceptsResult)---")
-        logger.info(json.dumps(parsed_payload, ensure_ascii=False, indent=2))
+        _ = self._serialize_baml_result(result)
 
         concepts = []
         for concept in result.concepts or []:
@@ -1156,8 +1102,7 @@ class GuidelineGraphBuilder:
 
         logger.info("Docling table inputs: %s", ";".join(docling_table_jsons))
         logger.info("Docling table header: Columns: Recommendations | Class | Level")
-        if footnotes:
-            logger.info("Docling table footnotes: %s", footnotes.strip())
+        # Footnotes content is large and not logged.
 
         if whole_table:
             table_text = self._format_docling_table_full(
@@ -1189,7 +1134,7 @@ class GuidelineGraphBuilder:
                 if table_id:
                     row_text = f"DOC_TABLE: {table_id}\nDOC_ROW: {row_id}\n" + row_text
                 chunk_label = f"{table_id}:{row_id}" if table_id else row_id
-                logger.info("Docling table row input %s: %s", chunk_label, row_text)
+                logger.info("Docling table row input %s", chunk_label)
                 extracted, grounded = self.extract_and_ground(
                     row_text, source_type="table", guideline_title=guideline_title
                 )
@@ -1239,14 +1184,7 @@ class GuidelineGraphBuilder:
                 source_type,
                 len(grounded),
             )
-        for concept in grounded:
-            logger.info(
-                "  - %s | role=%s | snomed_id=%s | target_label=%s",
-                concept.entity_standardized_candidate,
-                concept.role,
-                concept.snomed_id,
-                concept.target_label,
-            )
+        # Per-concept grounded logs removed to reduce noise.
 
     def _write_rules_entries(
         self,
@@ -1324,7 +1262,7 @@ class GuidelineGraphBuilder:
                 "source_type": source_type,
                 "guideline_title": guideline_title,
             }
-            logger.info("Rules output entry: %s", json.dumps(entry))
+            # Detailed rules entry logs removed to reduce noise.
             fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     def _resolve_target_label_for_role(
