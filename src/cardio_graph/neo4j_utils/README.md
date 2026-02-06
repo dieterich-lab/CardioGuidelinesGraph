@@ -54,11 +54,12 @@ If a rules file is supplied:
 
 `_create_rule_nodes()` then creates:
 - `RecommendationNode` with `rule_unique_id`, plus `class`, `level`, `direction`, and `original_rule_id`.
-- `DecisionNode` for Conditions/ClinicalParameters with operator/threshold/unit/context.
+- `DecisionNode` per condition/parameter, chained to mirror AND/OR logic.
 - Edges:
-  - `(:Concept/ClinicalCondition)-[:HAS_RULE]->(:DecisionNode)`
+  - `(:DecisionNode)-[:CHECKS_FOR|:EVALUATES]->(:ClinicalCondition|:ClinicalParameter)`
+  - `(:DecisionNode)-[:LEADS_TO {condition_met:true}]->(:DecisionNode)`
   - `(:DecisionNode)-[:RESULTS_IN {condition_met:true}]->(:RecommendationNode)`
-  - `(:RecommendationNode)-[:RECOMMENDS_USAGE|:CONTRAINDICATES_USAGE]->(:Medication|:Procedure)`
+  - `(:RecommendationNode)-[:RECOMMENDS_USAGE|:RECOMMENDS_PROCEDURE|:CONTRAINDICATES]->(:Medication|:Procedure)`
 
 ## Usage
 

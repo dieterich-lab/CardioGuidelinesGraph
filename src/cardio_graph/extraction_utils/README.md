@@ -280,10 +280,10 @@ graph TD
 
     %% --- CONNECTIONS ---
 
-    %% 1. Linking Semantics to Decisions (EVALUATES / CHECKS_FOR)
-    S_HFrEF ---|CHECKS_FOR| D_HasHFrEF
-    S_LVEF ---|EVALUATES| D_LVEFCheck
-    S_Angio ---|CHECKS_FOR| D_HasAngio
+    %% 1. Linking Decisions to Semantics (EVALUATES / CHECKS_FOR)
+    D_HasHFrEF -->|CHECKS_FOR| S_HFrEF
+    D_LVEFCheck -->|EVALUATES| S_LVEF
+    D_HasAngio -->|CHECKS_FOR| S_Angio
 
     %% 2. The Indication Flow (AND Logic)
     %% Start bei HFrEF -> Wenn JA, pruefe LVEF -> Wenn JA, Empfehlung

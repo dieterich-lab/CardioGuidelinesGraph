@@ -880,7 +880,9 @@ class GuidelineGraphBuilder:
             if " or " not in text.lower():
                 expanded.append(concept)
                 continue
-            parts = [part.strip() for part in re.split(r"\bor\b", text, flags=re.IGNORECASE)]
+            parts = [
+                part.strip() for part in re.split(r"\bor\b", text, flags=re.IGNORECASE)
+            ]
             parts = [part for part in parts if part]
             if len(parts) < 2:
                 expanded.append(concept)
@@ -888,7 +890,7 @@ class GuidelineGraphBuilder:
             for idx, part in enumerate(parts, start=1):
                 logic_structured = dict(concept.logic_structured or {})
                 logic_structured["logic_type"] = "OR"
-                logic_structured["logic_group"] = f"or_{concept.rule_id}_{idx}"
+                logic_structured["logic_group"] = f"or_{concept.rule_id}"
                 expanded.append(
                     ExtractedConcept(
                         rule_id=concept.rule_id,
@@ -1256,12 +1258,23 @@ class GuidelineGraphBuilder:
         guideline_title: str,
     ) -> None:
         for concept in grounded:
+            logic_structured = dict(concept.logic_structured or {})
+            if (concept.role or "").strip() in {
+                "Condition",
+                "ClinicalParameter",
+            } and not logic_structured.get("logic_type"):
+                logic_structured["logic_type"] = "AND"
+            if (concept.role or "").strip() in {
+                "Condition",
+                "ClinicalParameter",
+            } and not logic_structured.get("logic_group"):
+                logic_structured["logic_group"] = f"and_{concept.rule_id}"
             entry = {
                 "entity_standardized_candidate": concept.entity_standardized_candidate,
                 "snomed_id": concept.snomed_id,
                 "role": concept.role,
                 "target_label": concept.target_label,
-                "logic_structured": concept.logic_structured,
+                "logic_structured": logic_structured,
                 "rule_id": concept.rule_id,
                 "chunk_id": chunk_id,
                 "source_context": source_context,
@@ -1287,13 +1300,24 @@ class GuidelineGraphBuilder:
                 target_label = cached.get("target_label")
             if not target_label:
                 target_label = self._fallback_target_label_for_role(concept.role)
+            logic_structured = dict(concept.logic_structured or {})
+            if (concept.role or "").strip() in {
+                "Condition",
+                "ClinicalParameter",
+            } and not logic_structured.get("logic_type"):
+                logic_structured["logic_type"] = "AND"
+            if (concept.role or "").strip() in {
+                "Condition",
+                "ClinicalParameter",
+            } and not logic_structured.get("logic_group"):
+                logic_structured["logic_group"] = f"and_{concept.rule_id}"
             entry = {
                 "entity_original": concept.entity_original,
                 "entity_standardized_candidate": concept.entity_standardized_candidate,
                 "snomed_id": snomed_id,
                 "role": concept.role,
                 "target_label": target_label,
-                "logic_structured": concept.logic_structured,
+                "logic_structured": logic_structured,
                 "rule_id": concept.rule_id,
                 "chunk_id": chunk_id,
                 "source_context": source_context,
