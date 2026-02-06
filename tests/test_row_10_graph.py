@@ -9,6 +9,12 @@ class Row10GraphTests(unittest.TestCase):
     RULE_KEY = "_62_63/table_000.json:row_10::1"
     CONDITION_IDS = {"6121001", "250908004"}
     ACTION_ID = "275227003"
+    EXPECTED_DECISION_COUNT = 3
+    CCS_TERMS = {
+        "chronic coronary syndrome",
+        "chronic coronary syndrome (ccs)",
+        "ccs",
+    }
 
     @classmethod
     def setUpClass(cls):
@@ -71,9 +77,24 @@ class Row10GraphTests(unittest.TestCase):
         dec_count = self._fetch_single_value(query, rule=self.RULE_KEY)
         self._assert_verbose(
             query,
-            2,
+            self.EXPECTED_DECISION_COUNT,
             dec_count,
-            "Row_10 has two conditions, so we expect two DecisionNodes.",
+            "Row_10 should include CCS, LVEF, and three-vessel disease decisions.",
+        )
+
+    def test_ccs_decision_present(self):
+        query = (
+            "MATCH (dec:DecisionNode {rule_unique_id: $rule}) "
+            "RETURN toLower(dec.concept) AS concept"
+        )
+        concepts = self._fetch_set(query, "concept", rule=self.RULE_KEY)
+        expected = True
+        actual = any(term in concepts for term in self.CCS_TERMS)
+        self._assert_verbose(
+            query,
+            expected,
+            actual,
+            "Row_10 should include a CCS decision node when the population is specified.",
         )
 
     def test_decisions_link_to_conditions(self):

@@ -766,14 +766,19 @@ class GuidelineGraphBuilder:
         return
 
     def extract_concepts(
-        self, sentence: str, source_type: str, guideline_title: str
+        self,
+        sentence: str,
+        source_type: str,
+        guideline_title: str,
+        focus: Optional[str] = None,
     ) -> List[ExtractedConcept]:
         from cardio_graph.baml_client.sync_client import b
 
         baml_options = {"client_registry": self.client_registry}
         os.environ["BAML_LOG"] = "OFF"
+        focus_tag = f"[FOCUS: {focus}] " if focus else ""
         tagged_text = (
-            f"[GUIDELINE: {guideline_title}] "
+            f"{focus_tag}[GUIDELINE: {guideline_title}] "
             f"[SOURCE_TYPE: {source_type}]\n{sentence}"
         )
         try:
@@ -810,6 +815,33 @@ class GuidelineGraphBuilder:
                 )
             )
         return concepts
+
+    def _merge_extracted_concepts(
+        self, primary: List[ExtractedConcept], secondary: List[ExtractedConcept]
+    ) -> List[ExtractedConcept]:
+        merged: List[ExtractedConcept] = []
+        seen = set()
+
+        def concept_key(
+            concept: ExtractedConcept,
+        ) -> Tuple[str, str, str, str, str, str]:
+            logic = concept.logic_structured or {}
+            return (
+                self._normalize(concept.entity_standardized_candidate or ""),
+                (concept.role or "").strip(),
+                str(logic.get("operator") or ""),
+                str(logic.get("threshold") or ""),
+                str(logic.get("unit") or ""),
+                str(logic.get("condition_context") or ""),
+            )
+
+        for concept in primary + secondary:
+            key = concept_key(concept)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(concept)
+        return merged
 
     def _explode_or_conditions(
         self, concepts: List[ExtractedConcept]
@@ -858,9 +890,18 @@ class GuidelineGraphBuilder:
             filtered_sentence = self._filter_text_block(sentence)
         if not filtered_sentence:
             return [], []
-        extracted = self.extract_concepts(
-            filtered_sentence, source_type, guideline_title
+        extracted_main = self.extract_concepts(
+            filtered_sentence, source_type, guideline_title, focus="MAIN"
         )
+        extracted_population = self.extract_concepts(
+            filtered_sentence, source_type, guideline_title, focus="POPULATION"
+        )
+        if extracted_main and extracted_population:
+            primary_rule_id = extracted_main[0].rule_id
+            for concept in extracted_population:
+                if concept.rule_id is None:
+                    concept.rule_id = primary_rule_id
+        extracted = self._merge_extracted_concepts(extracted_main, extracted_population)
         extracted = self._explode_or_conditions(extracted)
         self._log_extracted_concepts(extracted)
         grounded: List[GroundedConcept] = []
@@ -1238,13 +1279,16 @@ class GuidelineGraphBuilder:
                 target_label = cached.get("target_label")
             if not target_label:
                 target_label = self._fallback_target_label_for_role(concept.role)
+            role = concept.role
+            if target_label == "ClinicalParameter":
+                role = "ClinicalParameter"
             logic_structured = dict(concept.logic_structured or {})
-            if (concept.role or "").strip() in {
+            if (role or "").strip() in {
                 "Condition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_type"):
                 logic_structured["logic_type"] = "AND"
-            if (concept.role or "").strip() in {
+            if (role or "").strip() in {
                 "Condition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_group"):
@@ -1253,7 +1297,7 @@ class GuidelineGraphBuilder:
                 "entity_original": concept.entity_original,
                 "entity_standardized_candidate": concept.entity_standardized_candidate,
                 "snomed_id": snomed_id,
-                "role": concept.role,
+                "role": role,
                 "target_label": target_label,
                 "logic_structured": logic_structured,
                 "rule_id": concept.rule_id,

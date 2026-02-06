@@ -41,15 +41,20 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
     
     Context:
     - [GUIDELINE: ...] tags indicate context.
+    - [FOCUS: MAIN] means extract full rules (conditions/parameters + actions).
+    - [FOCUS: POPULATION] means extract only population/eligibility conditions or parameters; do NOT output actions.
     - Group related concepts (e.g., a specific condition and its resulting medication) using the same 'rule_id'.
     
     Requirements:
     1. **Grouping**: Assign the same 'rule_id' to all concepts that form a single logical statement (IF X AND Y -> THEN Z). Start at 1 and increment per distinct rule in this sentence.
     2. **Logic**: For thresholds, fill 'operator', 'threshold', and 'unit'. Use operator "PRESENT" when a condition is stated without a numeric threshold.
     3. **Direction**: POSITIVE for recommendations/indications, NEGATIVE for contraindications/avoid. Use UNKNOWN only if there is no action.
-    4. **Roles + action**: IF part uses 'Condition' or 'ClinicalParameter'; THEN part uses 'Medication' or 'Procedure'. Include at least one action per rule_id. Never use role 'Recommendation'.
+     4. **Roles + action**: IF part uses 'Condition' or 'ClinicalParameter'; THEN part uses 'Medication' or 'Procedure'.
+       - If [FOCUS: MAIN], include at least one action per rule_id. Never use role 'Recommendation'.
+       - If [FOCUS: POPULATION], output ONLY population/eligibility conditions or parameters; no actions.
     5. **Strength/level**: Populate logic_structured.strength and logic_structured.level when present.
     6. **SNOMED-style terms**: Output short, specific noun phrases (singular). Avoid full sentences, lists, and parenthetical abbreviations like "(PCI)". If text uses abbreviations, output the expanded clinical term only. Do not emit GuidelineSource/Recommendation nodes.
+    7. **Population conditions**: If the sentence specifies a patient population or cohort (e.g., chronic disease state, eligibility criteria, or subgroup), include it as a Condition in the IF part. This should be captured even if it is not a numeric parameter.
 
     Sentence: {{text}}
 
