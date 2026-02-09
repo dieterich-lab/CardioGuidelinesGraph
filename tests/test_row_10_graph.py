@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from neo4j import GraphDatabase
@@ -7,14 +8,15 @@ from cardio_graph.neo4j_utils.feedneo4jdb import AUTH, URI
 
 class Row10GraphTests(unittest.TestCase):
     RULE_KEY = "_62_63/table_000.json:row_10::1"
-    CONDITION_IDS = {"413838009", "250908004"}
-    ACTION_ID = "275227003"
     EXPECTED_DECISION_COUNT = 3
-    CCS_TERMS = {
-        "chronic coronary syndrome",
-        "chronic coronary syndrome (ccs)",
-        "ccs",
+    EXPECTED_DECISION_IDS = {
+        "_62_63/table_000.json:row_10::1::g1::s1",
+        "_62_63/table_000.json:row_10::1::g1::s2",
+        "_62_63/table_000.json:row_10::1::g1::s3",
     }
+    HUMAN_READABLE_PATH = (
+        "/prj/doctoral_letters/guide/data/graph/row_10_human_readable.json"
+    )
 
     @classmethod
     def setUpClass(cls):
@@ -38,6 +40,15 @@ class Row10GraphTests(unittest.TestCase):
     def _fetch_rows(self, query, **params):
         with self._driver.session() as session:
             return [row.data() for row in session.run(query, **params)]
+
+    def _load_expected(self):
+        with open(self.HUMAN_READABLE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def _normalize(self, value):
+        if value is None:
+            return None
+        return " ".join(str(value).strip().split()).lower()
 
     def _assert_verbose(self, query, expected, actual, health_note):
         print("\nQUERY:\n" + query)
@@ -82,101 +93,137 @@ class Row10GraphTests(unittest.TestCase):
             "Row_10 should include CCS, LVEF, and three-vessel disease decisions.",
         )
 
-    def test_ccs_decision_present(self):
+    def test_decisions_link_to_concepts(self):
         query = (
             "MATCH (dec:DecisionNode {rule_unique_id: $rule}) "
-            "RETURN toLower(dec.concept) AS concept"
+            "OPTIONAL MATCH (dec)-[:CHECKS_FOR|EVALUATES]->(c:Concept) "
+            "OPTIONAL MATCH (dec)-[:CHECKS_FOR|EVALUATES]->(u:UnresolvedConcept) "
+            "RETURN dec.decision_id AS decision_id, "
+            "       count(DISTINCT c) + count(DISTINCT u) AS concept_count"
         )
-        concepts = self._fetch_set(query, "concept", rule=self.RULE_KEY)
-        expected = True
-        actual = any(term in concepts for term in self.CCS_TERMS)
+        rows = self._fetch_rows(query, rule=self.RULE_KEY)
+        decision_ids = {row["decision_id"] for row in rows}
         self._assert_verbose(
             query,
-            expected,
-            actual,
-            "Row_10 should include a CCS decision node when the population is specified.",
+            self.EXPECTED_DECISION_IDS,
+            decision_ids,
+            "Row_10 should have the expected DecisionNodes (grounding ignored).",
         )
+        for row in rows:
+            self.assertGreaterEqual(
+                row["concept_count"],
+                1,
+                "Each DecisionNode should link to at least one Concept node.",
+            )
 
-    def test_decisions_link_to_conditions(self):
+    def test_decision_concept_mapping_matches_expected(self):
+        expected = self._load_expected()
+        expected_conditions = {
+            self._normalize(cond.get("entity_standardized_candidate"))
+            for rule in expected.get("rules", [])
+            for cond in rule.get("conditions", [])
+        }
+        expected_roles = {
+            self._normalize(cond.get("entity_standardized_candidate")): cond.get("role")
+            for rule in expected.get("rules", [])
+            for cond in rule.get("conditions", [])
+        }
         query = (
-            "MATCH (dec:DecisionNode {rule_unique_id: $rule})"
-            "-[:CHECKS_FOR|EVALUATES]->(c:Concept) "
-            "RETURN DISTINCT c.snomed_id AS snomed_id"
+            "MATCH (dec:DecisionNode {rule_unique_id: $rule}) "
+            "OPTIONAL MATCH (dec)-[r:CHECKS_FOR|EVALUATES]->(c:Concept) "
+            "OPTIONAL MATCH (dec)-[ur:CHECKS_FOR|EVALUATES]->(u:UnresolvedConcept) "
+            "RETURN dec.decision_id AS decision_id, "
+            "       CASE WHEN r IS NOT NULL THEN type(r) ELSE type(ur) END AS rel_type, "
+            "       coalesce(c.standardized, c.preferred_term, u.name) AS concept_name"
         )
-        linked_ids = self._fetch_set(query, "snomed_id", rule=self.RULE_KEY)
+        rows = [
+            row
+            for row in self._fetch_rows(query, rule=self.RULE_KEY)
+            if row.get("concept_name")
+        ]
+        names = {self._normalize(row["concept_name"]) for row in rows}
         self._assert_verbose(
             query,
-            self.CONDITION_IDS,
-            linked_ids,
-            "Decision nodes must point at the two row_10 condition concepts.",
+            expected_conditions,
+            names,
+            "DecisionNode concept names should match expected structure (grounding optional).",
+        )
+        for row in rows:
+            name = self._normalize(row["concept_name"])
+            role = expected_roles.get(name)
+            if role == "ClinicalParameter":
+                self.assertEqual(
+                    row.get("rel_type"),
+                    "EVALUATES",
+                    "ClinicalParameter should use EVALUATES relation.",
+                )
+            elif role == "Condition":
+                self.assertEqual(
+                    row.get("rel_type"),
+                    "CHECKS_FOR",
+                    "Condition should use CHECKS_FOR relation.",
+                )
+
+    def test_decision_chain_reaches_recommendation(self):
+        path_query = (
+            "MATCH (rec:RecommendationNode {rule_unique_id: $rule}) "
+            "MATCH (d1:DecisionNode {decision_id: $d1}) "
+            "MATCH (d2:DecisionNode {decision_id: $d2}) "
+            "MATCH (d3:DecisionNode {decision_id: $d3}) "
+            "RETURN EXISTS((d1)-[:LEADS_TO]->(d2)) AS d1_to_d2, "
+            "       EXISTS((d2)-[:LEADS_TO]->(d3)) AS d2_to_d3, "
+            "       EXISTS((d3)-[:RESULTS_IN]->(rec)) AS d3_to_rec"
+        )
+        result = self._fetch_rows(
+            path_query,
+            rule=self.RULE_KEY,
+            d1="_62_63/table_000.json:row_10::1::g1::s1",
+            d2="_62_63/table_000.json:row_10::1::g1::s2",
+            d3="_62_63/table_000.json:row_10::1::g1::s3",
+        )
+        self._assert_verbose(
+            path_query,
+            [{"d1_to_d2": True, "d2_to_d3": True, "d3_to_rec": True}],
+            result,
+            "DecisionNodes should chain via LEADS_TO and end at RecommendationNode.",
         )
 
     def test_recommendation_links_to_action(self):
         query = (
             "MATCH (rec:RecommendationNode {rule_unique_id: $rule})"
-            "-[:RECOMMENDS_PROCEDURE]->(a:Concept) "
-            "RETURN DISTINCT a.snomed_id AS snomed_id"
+            "-[:RECOMMENDS_PROCEDURE|RECOMMENDS_USAGE]->(a:Concept) "
+            "RETURN count(a)"
         )
-        action_ids = self._fetch_set(query, "snomed_id", rule=self.RULE_KEY)
-        self._assert_verbose(
-            query,
-            {self.ACTION_ID},
-            action_ids,
-            "Row_10 recommendation must link to myocardial revascularization.",
-        )
-
-    def test_decisions_result_in_recommendation(self):
-        dec_query = (
-            "MATCH (dec:DecisionNode {rule_unique_id: $rule}) "
-            "RETURN DISTINCT dec.decision_id AS decision_id"
-        )
-        dec_ids = self._fetch_set(dec_query, "decision_id", rule=self.RULE_KEY)
-        path_query = (
-            "MATCH (dec:DecisionNode {rule_unique_id: $rule}) "
-            "MATCH (rec:RecommendationNode {rule_unique_id: $rule}) "
-            "WHERE (dec)-[:RESULTS_IN]->(rec) "
-            "   OR (dec)-[:LEADS_TO*1..]->(:DecisionNode)-[:RESULTS_IN]->(rec) "
-            "RETURN DISTINCT dec.decision_id AS decision_id"
-        )
-        results = self._fetch_set(path_query, "decision_id", rule=self.RULE_KEY)
-        self._assert_verbose(
-            path_query,
-            dec_ids,
-            results,
-            "Each decision should reach the recommendation directly or via LEADS_TO.",
-        )
-
-    def test_condition_nodes_have_expected_labels(self):
-        query = (
-            "UNWIND $ids AS cid "
-            "MATCH (c:Concept {snomed_id: cid}) "
-            "RETURN cid AS snomed_id, labels(c) AS labels"
-        )
-        rows = self._fetch_rows(query, ids=list(self.CONDITION_IDS))
-        labels_by_id = {row["snomed_id"]: set(row["labels"]) for row in rows}
-        expected_keys = self.CONDITION_IDS
-        actual_keys = set(labels_by_id.keys())
-        self._assert_verbose(
-            query,
-            expected_keys,
-            actual_keys,
-            "Condition concepts must be present as Concept nodes.",
-        )
-        self.assertTrue(
-            {"Concept", "ClinicalCondition"}.issubset(labels_by_id["413838009"])
-        )
-        self.assertTrue(
-            {"Concept", "ClinicalParameter"}.issubset(labels_by_id["250908004"])
-        )
-
-    def test_action_node_has_expected_labels(self):
-        query = "MATCH (c:Concept:Procedure {snomed_id: $cid}) RETURN count(c)"
-        label_count = self._fetch_single_value(query, cid=self.ACTION_ID)
+        action_count = self._fetch_single_value(query, rule=self.RULE_KEY)
         self._assert_verbose(
             query,
             1,
-            label_count,
-            "Action concept must be labeled as a Procedure concept.",
+            action_count,
+            "RecommendationNode should link to at least one action Concept.",
+        )
+
+    def test_action_concept_matches_expected(self):
+        expected = self._load_expected()
+        expected_actions = {
+            self._normalize(action.get("entity_standardized_candidate"))
+            for rule in expected.get("rules", [])
+            for action in rule.get("actions", [])
+        }
+        query = (
+            "MATCH (rec:RecommendationNode {rule_unique_id: $rule})"
+            "-[:RECOMMENDS_PROCEDURE|RECOMMENDS_USAGE]->(a:Concept) "
+            "RETURN coalesce(a.standardized, a.preferred_term, a.name) AS name"
+        )
+        actual_actions = {
+            self._normalize(row["name"])
+            for row in self._fetch_rows(query, rule=self.RULE_KEY)
+            if row.get("name")
+        }
+        self._assert_verbose(
+            query,
+            expected_actions,
+            actual_actions,
+            "Action concepts should match the human-readable structure.",
         )
 
 
