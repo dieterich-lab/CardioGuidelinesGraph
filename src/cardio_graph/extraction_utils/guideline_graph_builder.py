@@ -43,12 +43,12 @@ DEFAULT_CONFIG_PATH = os.path.join(
 DEFAULT_ABBRV_PATH = os.path.join(
     os.path.dirname(__file__), "../snomedct_utils/abbrv.txt"
 )
-DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/grounding_index.json"
-DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/extracted_rules.jsonl"
+DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
+DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
 DEFAULT_MIN_MATCH_SCORE = 0.7
 MIN_TERM_LEN = 3
 MAX_QUERY_TOKENS = 6
-MAX_CONCEPT_CANDIDATES = 50
+MAX_CONCEPT_CANDIDATES = 200
 STOPWORD_TOKENS = {
     "a",
     "an",
@@ -332,6 +332,14 @@ class GuidelineGraphBuilder:
             return 1.0
         return SequenceMatcher(None, q, c).ratio()
 
+    def _token_overlap_ratio(self, tokens: set, term: Optional[str]) -> float:
+        if not tokens or not term:
+            return 0.0
+        term_tokens = set(self._important_tokens(term))
+        if not term_tokens:
+            return 0.0
+        return len(tokens & term_tokens) / max(len(tokens), 1)
+
     def _is_noise_phrase(self, text: str) -> bool:
         if not text:
             return True
@@ -433,6 +441,7 @@ class GuidelineGraphBuilder:
         search_start = time.perf_counter()
 
         stripped_term = re.sub(r"\s*\([^)]*\)\s*", " ", term).strip()
+        normalized_term = self._normalize(term)
         paren_tokens = []
         for group in re.findall(r"\(([^)]+)\)", term):
             for token in re.findall(r"[A-Za-z0-9]+", group):
@@ -474,6 +483,12 @@ class GuidelineGraphBuilder:
                 search_terms.extend(self._expand_term(stripped_term))
             if paren_tokens:
                 search_terms.extend(paren_tokens)
+
+        if "coronary syndrome" in normalized_term:
+            ischemic_variant = normalized_term.replace(
+                "coronary syndrome", "ischemic heart disease"
+            )
+            search_terms.append(ischemic_variant)
 
         if not search_terms:
             search_terms = [term]
@@ -527,6 +542,8 @@ class GuidelineGraphBuilder:
                 query_terms.append(stripped_term)
             if paren_tokens:
                 query_terms.extend(paren_tokens)
+            if "coronary syndrome" in normalized_term:
+                query_terms.append(ischemic_variant)
         if not query_terms:
             query_terms = [term]
 
@@ -563,9 +580,21 @@ class GuidelineGraphBuilder:
                     token.lower() in candidate_norm for token in paren_tokens
                 ):
                     candidate_score = min(1.0, candidate_score + 0.03)
+                overlap_ratio = self._token_overlap_ratio(
+                    important_query_tokens, candidate
+                )
+                if overlap_ratio:
+                    candidate_score = min(1.0, candidate_score + overlap_ratio * 0.1)
                 if candidate_score > score:
                     score = candidate_score
                     best_candidate_term = candidate
+
+            preferred_overlap = self._token_overlap_ratio(
+                important_query_tokens, preferred or ""
+            )
+            if preferred and important_query_tokens:
+                if preferred_overlap < 0.5:
+                    continue
 
             if score > best_score:
                 best_score = score
@@ -843,6 +872,53 @@ class GuidelineGraphBuilder:
             merged.append(concept)
         return merged
 
+    def _drop_redundant_compound_conditions(
+        self, concepts: List[ExtractedConcept]
+    ) -> List[ExtractedConcept]:
+        condition_concepts = [
+            c
+            for c in concepts
+            if (c.role or "").strip() in {"Condition", "ClinicalParameter"}
+        ]
+        if not condition_concepts:
+            return concepts
+
+        normalized_conditions = [
+            self._normalize(c.entity_standardized_candidate or c.entity_original or "")
+            for c in condition_concepts
+        ]
+
+        filtered: List[ExtractedConcept] = []
+        for concept in concepts:
+            role = (concept.role or "").strip()
+            if role not in {"Condition", "ClinicalParameter"}:
+                filtered.append(concept)
+                continue
+            name = concept.entity_standardized_candidate or concept.entity_original
+            normalized = self._normalize(name or "")
+            if "," not in normalized and " and " not in normalized:
+                filtered.append(concept)
+                continue
+            parts = [
+                part.strip()
+                for part in re.split(r"\s*,\s*|\s+and\s+", normalized)
+                if part.strip()
+            ]
+            if len(parts) < 2:
+                filtered.append(concept)
+                continue
+            matches = 0
+            for other in normalized_conditions:
+                if other == normalized:
+                    continue
+                if any(part in other for part in parts):
+                    matches += 1
+            if matches >= 2:
+                continue
+            filtered.append(concept)
+
+        return filtered
+
     def _explode_or_conditions(
         self, concepts: List[ExtractedConcept]
     ) -> List[ExtractedConcept]:
@@ -903,6 +979,7 @@ class GuidelineGraphBuilder:
                     concept.rule_id = primary_rule_id
         extracted = self._merge_extracted_concepts(extracted_main, extracted_population)
         extracted = self._explode_or_conditions(extracted)
+        extracted = self._drop_redundant_compound_conditions(extracted)
         self._log_extracted_concepts(extracted)
         grounded: List[GroundedConcept] = []
         has_clinical_anchor = any(
@@ -930,6 +1007,22 @@ class GuidelineGraphBuilder:
                 )
                 continue
             cached = self.index.lookup(concept.entity_standardized_candidate)
+            if cached:
+                cache_term = cached.get("preferred_term") or cached.get(
+                    "entity_standardized_candidate"
+                )
+                cache_tokens = set(
+                    self._important_tokens(
+                        concept.entity_standardized_candidate
+                        or concept.entity_original
+                        or ""
+                    )
+                )
+                if (
+                    cache_tokens
+                    and self._token_overlap_ratio(cache_tokens, cache_term) < 0.5
+                ):
+                    cached = None
             if cached:
                 if cached.get("target_label") is None and concept.role:
                     fallback_label = self._fallback_target_label_for_role(concept.role)

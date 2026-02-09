@@ -7,7 +7,7 @@ from cardio_graph.neo4j_utils.feedneo4jdb import AUTH, URI
 
 class Row10GraphTests(unittest.TestCase):
     RULE_KEY = "_62_63/table_000.json:row_10::1"
-    CONDITION_IDS = {"6121001", "250908004"}
+    CONDITION_IDS = {"413838009", "250908004"}
     ACTION_ID = "275227003"
     EXPECTED_DECISION_COUNT = 3
     CCS_TERMS = {
@@ -163,7 +163,7 @@ class Row10GraphTests(unittest.TestCase):
             "Condition concepts must be present as Concept nodes.",
         )
         self.assertTrue(
-            {"Concept", "ClinicalCondition"}.issubset(labels_by_id["6121001"])
+            {"Concept", "ClinicalCondition"}.issubset(labels_by_id["413838009"])
         )
         self.assertTrue(
             {"Concept", "ClinicalParameter"}.issubset(labels_by_id["250908004"])

@@ -120,8 +120,8 @@ def _add_snomed_hierarchy(session, entries: List[Dict[str, Any]]) -> None:
             print(f"Error adding hierarchy for {snomed_id}: {e}")
 
 
-DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/grounding_index.json"
-DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/extracted_rules.jsonl"
+DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
+DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
 
 
 def _group_rules(
@@ -433,17 +433,42 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
 def _infer_recommendation_props(
     concepts: List[Dict[str, Any]],
 ) -> Dict[str, Optional[str]]:
-    for concept in concepts:
+    def _normalize_value(value: Optional[str]) -> Optional[str]:
+        if value in {None, "", "Unknown", "UNKNOWN"}:
+            return None
+        return value
+
+    def _extract_props(concept: Dict[str, Any]) -> Dict[str, Optional[str]]:
         logic_structured = concept.get("logic_structured") or {}
-        strength = logic_structured.get("strength")
-        level = logic_structured.get("level")
-        direction = logic_structured.get("direction")
+        strength = _normalize_value(
+            logic_structured.get("strength") or concept.get("strength")
+        )
+        level = _normalize_value(logic_structured.get("level") or concept.get("level"))
+        direction = _normalize_value(
+            logic_structured.get("direction") or concept.get("direction")
+        )
         if strength or level or direction:
             return {
                 "class": strength,
                 "level": level,
                 "direction": direction,
             }
+        return {}
+
+    action_roles = {"Medication", "Procedure"}
+    for concept in concepts:
+        role = (concept.get("role") or "").strip()
+        if role not in action_roles:
+            continue
+        props = _extract_props(concept)
+        if props:
+            return props
+
+    for concept in concepts:
+        props = _extract_props(concept)
+        if props:
+            return props
+
     return {"class": None, "level": None, "direction": None}
 
 
