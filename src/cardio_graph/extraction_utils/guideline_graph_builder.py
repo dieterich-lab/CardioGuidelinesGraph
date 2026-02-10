@@ -83,6 +83,12 @@ DISALLOWED_SEMANTIC_TAGS = {
     "qualifier value",
     "event",
 }
+ALLOWED_SEMANTIC_TAGS_BY_ROLE = {
+    "Condition": {"disorder", "finding"},
+    "ClinicalParameter": {"observable entity"},
+    "Medication": {"substance", "product"},
+    "Procedure": {"procedure"},
+}
 ALLOWED_ROLES = {
     "Condition",
     "ClinicalParameter",
@@ -225,6 +231,9 @@ class GuidelineGraphBuilder:
         index_path: str = DEFAULT_INDEX_PATH,
         abbrv_path: str = DEFAULT_ABBRV_PATH,
         min_match_score: float = DEFAULT_MIN_MATCH_SCORE,
+        enable_domain_filter: bool = True,
+        enable_semantic_tag_filter: bool = False,
+        off_domain_min_score: Optional[float] = None,
     ):
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Config file not found at: {config_path}")
@@ -246,9 +255,27 @@ class GuidelineGraphBuilder:
         self._taxonomy_path_cache: Dict[int, List[int]] = {}
         self._relationships_cache: Dict[int, List[Dict[str, Any]]] = {}
         self._search_cache: Dict[str, List[Dict[str, Any]]] = {}
+        self._allowed_root_concepts_by_label: Dict[str, set] = {}
+        for rule in self.mapping_rules:
+            label = rule.get("target_label")
+            if not label:
+                continue
+            roots = set()
+            for root in rule.get("root_concepts", []) or []:
+                try:
+                    roots.add(int(root))
+                except (TypeError, ValueError):
+                    continue
+            if roots:
+                self._allowed_root_concepts_by_label.setdefault(label, set()).update(
+                    roots
+                )
         self.index = ConceptIndex(index_path=index_path)
         self.abbreviations = self._load_abbreviations(abbrv_path)
         self.min_match_score = min_match_score
+        self.enable_domain_filter = enable_domain_filter
+        self.enable_semantic_tag_filter = enable_semantic_tag_filter
+        self.off_domain_min_score = off_domain_min_score
 
     def _collect_root_concepts(self, mapping_rules: List[Dict]) -> List[int]:
         roots = []
@@ -322,6 +349,20 @@ class GuidelineGraphBuilder:
             return False
         tag = match.group(1).strip().lower()
         return tag in DISALLOWED_SEMANTIC_TAGS
+
+    def _has_allowed_semantic_tag(
+        self, role: Optional[str], term: Optional[str]
+    ) -> bool:
+        if not role or not term:
+            return True
+        allowed = ALLOWED_SEMANTIC_TAGS_BY_ROLE.get(role)
+        if not allowed:
+            return True
+        match = re.search(r"\(([^)]+)\)\s*$", term)
+        if not match:
+            return False
+        tag = match.group(1).strip().lower()
+        return tag in allowed
 
     def _score(self, query: str, candidate: str) -> float:
         q = self._normalize(query)
@@ -524,7 +565,17 @@ class GuidelineGraphBuilder:
         best_term = None
         best_score = 0.0
 
-        concept_items = list(concept_terms.items())
+        concept_items_all = list(concept_terms.items())
+        concept_items_allowed = concept_items_all
+        if self.enable_domain_filter and role:
+            allowed_roots = self._allowed_root_concepts_for_role(role)
+            if allowed_roots:
+                concept_items_allowed = [
+                    (concept_id, terms)
+                    for concept_id, terms in concept_items_all
+                    if self._concept_in_allowed_roots(concept_id, allowed_roots)
+                ]
+        concept_items = concept_items_allowed
         if len(concept_items) > MAX_CONCEPT_CANDIDATES:
             logger.info(
                 "Truncating concept candidates from %d to %d for '%s'",
@@ -550,58 +601,85 @@ class GuidelineGraphBuilder:
         important_query_tokens = set()
         for q in query_terms:
             important_query_tokens.update(self._important_tokens(q))
-        for concept_id, terms in concept_items:
-            if role and not self._candidate_matches_role(concept_id, role):
-                continue
-            preferred = self._get_preferred_term(concept_id)
-            candidates = list(terms)
-            if preferred:
-                candidates.append(preferred)
 
-            if important_query_tokens:
-                if not any(
-                    important_query_tokens & set(self._important_tokens(candidate))
-                    for candidate in candidates
+        def score_candidates(concept_items_to_score, role_filter):
+            local_best_id = None
+            local_best_term = None
+            local_best_score = 0.0
+            for concept_id, terms in concept_items_to_score:
+                if role_filter and not self._candidate_matches_role(
+                    concept_id, role_filter
                 ):
                     continue
+                preferred = self._get_preferred_term(concept_id)
+                candidates = list(terms)
+                if preferred:
+                    candidates.append(preferred)
 
-            score = 0.0
-            best_candidate_term = None
-            for candidate in candidates:
-                candidate_norm = self._normalize(candidate)
-                candidate_score = max(
-                    (self._score(q, candidate) for q in query_terms if q),
-                    default=0.0,
+                if important_query_tokens:
+                    if not any(
+                        important_query_tokens & set(self._important_tokens(candidate))
+                        for candidate in candidates
+                    ):
+                        continue
+
+                score = 0.0
+                best_candidate_term = None
+                for candidate in candidates:
+                    candidate_norm = self._normalize(candidate)
+                    candidate_score = max(
+                        (self._score(q, candidate) for q in query_terms if q),
+                        default=0.0,
+                    )
+                    stripped_norm = (
+                        self._normalize(stripped_term) if stripped_term else ""
+                    )
+                    if stripped_norm and stripped_norm in candidate_norm:
+                        candidate_score = min(1.0, candidate_score + 0.05)
+                    if paren_tokens and any(
+                        token.lower() in candidate_norm for token in paren_tokens
+                    ):
+                        candidate_score = min(1.0, candidate_score + 0.03)
+                    overlap_ratio = self._token_overlap_ratio(
+                        important_query_tokens, candidate
+                    )
+                    if overlap_ratio:
+                        candidate_score = min(
+                            1.0, candidate_score + overlap_ratio * 0.1
+                        )
+                    if candidate_score > score:
+                        score = candidate_score
+                        best_candidate_term = candidate
+
+                preferred_overlap = self._token_overlap_ratio(
+                    important_query_tokens, preferred or ""
                 )
-                stripped_norm = self._normalize(stripped_term) if stripped_term else ""
-                if stripped_norm and stripped_norm in candidate_norm:
-                    candidate_score = min(1.0, candidate_score + 0.05)
-                if paren_tokens and any(
-                    token.lower() in candidate_norm for token in paren_tokens
-                ):
-                    candidate_score = min(1.0, candidate_score + 0.03)
-                overlap_ratio = self._token_overlap_ratio(
-                    important_query_tokens, candidate
-                )
-                if overlap_ratio:
-                    candidate_score = min(1.0, candidate_score + overlap_ratio * 0.1)
-                if candidate_score > score:
-                    score = candidate_score
-                    best_candidate_term = candidate
+                if preferred and important_query_tokens:
+                    if preferred_overlap < 0.5:
+                        continue
 
-            preferred_overlap = self._token_overlap_ratio(
-                important_query_tokens, preferred or ""
-            )
-            if preferred and important_query_tokens:
-                if preferred_overlap < 0.5:
-                    continue
+                if score > local_best_score:
+                    local_best_score = score
+                    local_best_id = concept_id
+                    local_best_term = preferred or best_candidate_term
+            return local_best_id, local_best_term, local_best_score
 
-            if score > best_score:
-                best_score = score
-                best_id = concept_id
-                best_term = preferred or best_candidate_term
+        best_id, best_term, best_score = score_candidates(concept_items, role)
+
+        if self.off_domain_min_score is not None and role:
+            if best_score < self.off_domain_min_score:
+                fallback_items = concept_items_all
+                if len(fallback_items) > MAX_CONCEPT_CANDIDATES:
+                    fallback_items = fallback_items[:MAX_CONCEPT_CANDIDATES]
+                off_id, off_term, off_score = score_candidates(fallback_items, None)
+                if off_score >= self.off_domain_min_score and off_score > best_score:
+                    best_id, best_term, best_score = off_id, off_term, off_score
 
         if self._has_disallowed_semantic_tag(best_term):
+            return None, None, 0.0
+        if self.enable_semantic_tag_filter and not self._has_allowed_semantic_tag(
+            role, best_term
+        ):
             return None, None, 0.0
 
         _ = time.perf_counter() - search_start
@@ -620,8 +698,18 @@ class GuidelineGraphBuilder:
     def _candidate_matches_role(self, concept_id: int, role: Optional[str]) -> bool:
         if not role:
             return True
+        if not self.enable_domain_filter:
+            return True
+        allowed_roots = self._allowed_root_concepts_for_role(role)
+        if not allowed_roots:
+            return True
+        return self._concept_in_allowed_roots(concept_id, allowed_roots)
+
+    def _concept_in_allowed_roots(self, concept_id: int, allowed_roots: set) -> bool:
+        if not allowed_roots:
+            return True
         path_ids = self._get_taxonomy_path_cached(concept_id)
-        return self._resolve_target_label_for_role(role, path_ids) is not None
+        return bool(set(path_ids) & allowed_roots)
 
     def _get_parents(self, concept_id: int) -> List[int]:
         cached = self._relationships_cache.get(concept_id)
@@ -1428,6 +1516,19 @@ class GuidelineGraphBuilder:
                 return mapped_label
         return None
 
+    def _allowed_root_concepts_for_role(self, role: str) -> set:
+        role_map = {
+            "Condition": "ClinicalCondition",
+            "ClinicalParameter": "ClinicalParameter",
+            "Medication": "Medication",
+            "Procedure": "Procedure",
+            "Other": "ClinicalCondition",
+        }
+        label = role_map.get(role)
+        if not label:
+            return set()
+        return set(self._allowed_root_concepts_by_label.get(label, set()))
+
     def _fallback_target_label_for_role(self, role: str) -> Optional[str]:
         role_map = {
             "Condition": "ClinicalCondition",
@@ -1508,6 +1609,24 @@ class GuidelineGraphBuilder:
     help="Minimum similarity score for SNOMED grounding",
 )
 @click.option(
+    "--domain-filter/--no-domain-filter",
+    default=True,
+    show_default=True,
+    help="Filter candidate SNOMED concepts by allowed domain roots",
+)
+@click.option(
+    "--semantic-tag-filter/--no-semantic-tag-filter",
+    default=False,
+    show_default=True,
+    help="Filter candidate SNOMED concepts by allowed semantic tags",
+)
+@click.option(
+    "--off-domain-min-score",
+    default=None,
+    type=float,
+    help="Allow off-domain candidates if score meets this threshold",
+)
+@click.option(
     "--guideline-title",
     default="2024 ESC Guidelines for the management of chronic coronary syndromes",
     help="Guideline title for extraction context",
@@ -1529,6 +1648,9 @@ def main(
     docling_footnotes_path: Optional[str],
     docling_whole_table: bool,
     min_match_score: float,
+    domain_filter: bool,
+    semantic_tag_filter: bool,
+    off_domain_min_score: Optional[float],
     guideline_title: str,
     model: str,
     node: str,
@@ -1542,6 +1664,9 @@ def main(
         index_path=index_path,
         abbrv_path=abbrv_path,
         min_match_score=min_match_score,
+        enable_domain_filter=domain_filter,
+        enable_semantic_tag_filter=semantic_tag_filter,
+        off_domain_min_score=off_domain_min_score,
     )
     footnotes = docling_footnotes
     if docling_footnotes_path:
