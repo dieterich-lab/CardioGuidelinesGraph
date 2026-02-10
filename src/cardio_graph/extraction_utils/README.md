@@ -57,6 +57,18 @@ Merge result (dedupe + OR-split):
 - If the row contains "high surgical risk or not operable", split into two
   Condition concepts with OR logic group (same rule_id).
 
+```mermaid
+flowchart TD
+  A[Row text with recommendation and cohort] --> B[Pass MAIN extracts actions and core conditions]
+  A --> C[Pass POPULATION extracts cohort conditions only]
+  B --> D[MAIN set: action plus some conditions]
+  C --> E[POPULATION set: cohort conditions]
+  D --> F[Merge and dedupe by normalized term plus role]
+  E --> F
+  F --> G[Split OR phrases into separate Condition entries]
+  G --> H[Final concept set: cohort constraints plus actions]
+```
+
 3) **Grounding + filtering**
    - Abbreviations are expanded (see abbrv.txt).
    - SNOMED concepts are retrieved by term search.
