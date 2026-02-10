@@ -18,6 +18,45 @@ Pipeline summary (sentence + header + footnotes -> LLM x2 -> JSON -> Neo4j):
    - POPULATION: cohort and population conditions only.
    - Results are merged and deduplicated, then OR conditions are split.
 
+Example (two-pass extraction and merge):
+
+Input (row text):
+"In chronic coronary syndrome patients with LVEF <= 35% who are high surgical risk or not operable, PCI may be considered (Class IIb, Level B)."
+
+MAIN pass output (actions + conditions):
+- entity_original: "chronic coronary syndrome patients"
+  entity_standardized_candidate: "chronic coronary syndrome patients"
+  role: Condition
+- entity_original: "LVEF <= 35%"
+  entity_standardized_candidate: "left ventricular ejection fraction <= 35%"
+  role: ClinicalParameter
+  logic_structured: {"operator": "<=", "threshold": "35", "unit": "%"}
+- entity_original: "high surgical risk"
+  entity_standardized_candidate: "high surgical risk"
+  role: Condition
+- entity_original: "not operable"
+  entity_standardized_candidate: "not operable"
+  role: Condition
+- entity_original: "PCI"
+  entity_standardized_candidate: "percutaneous coronary intervention"
+  role: Procedure
+  logic_structured: {"strength": "Class IIb", "level": "B", "direction": "POSITIVE"}
+
+POPULATION pass output (population conditions only):
+- entity_original: "chronic coronary syndrome patients"
+  entity_standardized_candidate: "chronic coronary syndrome patients"
+  role: Condition
+- entity_original: "LVEF <= 35%"
+  entity_standardized_candidate: "left ventricular ejection fraction <= 35%"
+  role: ClinicalParameter
+  logic_structured: {"operator": "<=", "threshold": "35", "unit": "%"}
+
+Merge result (dedupe + OR-split):
+- Keep one copy of shared population conditions from both passes.
+- Keep action from MAIN (PCI).
+- If the row contains "high surgical risk or not operable", split into two
+  Condition concepts with OR logic group (same rule_id).
+
 3) **Grounding + filtering**
    - Abbreviations are expanded (see abbrv.txt).
    - SNOMED concepts are retrieved by term search.
@@ -115,7 +154,7 @@ The loader reads the JSON index and rules and builds:
   - RESULTS_IN (decision to recommendation)
   - RECOMMENDS_PROCEDURE / RECOMMENDS_MEDICATION
 
-### Example: whole-table extraction (docling)
+### Example: row-wise extraction (docling)
 
 ```bash
 poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extraction_utils/guideline_graph_builder.py \
@@ -123,14 +162,13 @@ poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extra
   --docling-table-json /prj/doctoral_letters/guide/data/guidelines/docling/pdf_pages/_63/tables/table_000.json \
   --docling-table-id _62_63/table_000.json \
   --docling-footnotes-path /tmp/docling_table_footnotes.txt \
-  --docling-whole-table \
   --min-match-score 0.6 \
   --domain-filter \
   --semantic-tag-filter \
   --off-domain-min-score 0.9 \
   --guideline-title "2024 ESC Guidelines for the management of chronic coronary syndromes" \
-  --index-path /prj/doctoral_letters/guide/data/graph/grounding_index_docling_table_000_whole.json \
-  --rules-out-path /prj/doctoral_letters/guide/data/graph/extracted_rules_docling_table_000_whole.jsonl \
+  --index-path /prj/doctoral_letters/guide/data/graph/grounding_index_docling_table_000.json \
+  --rules-out-path /prj/doctoral_letters/guide/data/graph/extracted_rules_docling_table_000.jsonl \
   --node g5 \
   --model Qwen30b
 ```
@@ -139,17 +177,17 @@ poetry run python /home/pwiesenbach/CardioGuidelinesGraph/src/cardio_graph/extra
 
 ```mermaid
 flowchart TD
-  A[Docling table JSON] --> B[Header + footnotes + row text]
-  B --> C[Tagged input: GUIDELINE + SOURCE_TYPE + FOCUS]
+  A[Docling table JSON] --> B[Header plus footnotes plus row text]
+  B --> C[Tagged input: GUIDELINE plus SOURCE_TYPE plus FOCUS]
   C --> D[LLM extraction pass: MAIN]
   C --> E[LLM extraction pass: POPULATION]
   D --> F[Merge, dedupe, split OR conditions]
   E --> F
-  F --> G[Normalize + abbreviations]
+  F --> G[Normalize and abbreviations]
   G --> H[SNOMED term search]
   H --> I[Score best match]
-  I --> J{Filters pass?}
-  J -- No --> K[Keep unmapped or drop (noise rules)]
+  I --> J{Filters pass}
+  J -- No --> K[Keep unmapped or drop noise rules]
   J -- Yes --> L[Resolve target label]
   L --> M[Write grounding_index.json]
   F --> N[Write extracted_rules.jsonl]
