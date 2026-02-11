@@ -28,7 +28,7 @@ langchain-core = ">=0.1.28,<0.2.0"
 langchain-text-splitters = ">=0.0.1,<0.1.0"
 langchain-community = ">=0.0.21,<0.1.0"
 langsmith = ">=0.1.0,<0.2.0"
-ollama = "^0.1.7"
+ollama = "^0.6.1"
 
 # PDF processing
 pypdf2 = "^3.0.1"
