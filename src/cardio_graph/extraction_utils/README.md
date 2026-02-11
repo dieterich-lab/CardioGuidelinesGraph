@@ -9,9 +9,9 @@ Pipeline summary (sentence + header + footnotes -> LLM x2 -> JSON -> Neo4j):
 1) **Input assembly**
    - Docling table rows are formatted with header and optional footnotes.
    - A table row or the entire table is tagged with:
-     - [GUIDELINE: <title>]
-     - [SOURCE_TYPE: table]
-     - [FOCUS: <pass>]
+     - GUIDELINE: title
+     - SOURCE_TYPE: table
+     - FOCUS: pass
 
 2) **LLM extraction (two passes)**
    - MAIN: conditions/parameters + actions.
@@ -58,7 +58,7 @@ Merge result (dedupe + OR-split):
   Condition concepts with OR logic group (same rule_id).
 
 ```mermaid
-flowchart TD
+graph TD
   A[Row text with recommendation and cohort] --> B[Pass MAIN extracts actions and core conditions]
   A --> C[Pass POPULATION extracts cohort conditions only]
   B --> D[MAIN set: action plus some conditions]
@@ -90,9 +90,9 @@ flowchart TD
 
 Each input is tagged before calling BAML:
 
-- [GUIDELINE: <title>]
-- [SOURCE_TYPE: table]
-- [FOCUS: MAIN]
+- GUIDELINE: title
+- SOURCE_TYPE: table
+- FOCUS: MAIN
   (or POPULATION)
 
 ### Grounding filters and scoring
