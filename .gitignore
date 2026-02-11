@@ -65,4 +65,8 @@ outputs/
 **/__pycache__
 *.sh
 
+# Allow tracked Slurm wrappers
+!slurm/
+!slurm/run_row10_tests.sh
+
 .coverage
