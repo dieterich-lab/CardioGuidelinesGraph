@@ -45,7 +45,7 @@ DEFAULT_ABBRV_PATH = os.path.join(
 )
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
-DEFAULT_MIN_MATCH_SCORE = 0.7
+DEFAULT_MIN_MATCH_SCORE = 0.6
 MIN_TERM_LEN = 3
 MAX_QUERY_TOKENS = 6
 MAX_CONCEPT_CANDIDATES = 200
@@ -1622,7 +1622,7 @@ class GuidelineGraphBuilder:
 )
 @click.option(
     "--off-domain-min-score",
-    default=None,
+    default=0.9,
     type=float,
     help="Allow off-domain candidates if score meets this threshold",
 )
