@@ -6,7 +6,6 @@ data/
 outputs/
 outputs2/
 baml_client/
-slurm/
 .ipynb_checkpoints/
 .mypy_cache/
 
@@ -63,10 +62,7 @@ slurm/
 
 outputs/
 **/__pycache__
+slurm/
 *.sh
-
-# Allow tracked Slurm wrappers
-!slurm/
-!slurm/run_row10_tests.sh
 
 .coverage
