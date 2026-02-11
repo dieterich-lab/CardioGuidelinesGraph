@@ -1622,7 +1622,7 @@ class GuidelineGraphBuilder:
 )
 @click.option(
     "--off-domain-min-score",
-    default=0.9,
+    default=None,
     type=float,
     help="Allow off-domain candidates if score meets this threshold",
 )
