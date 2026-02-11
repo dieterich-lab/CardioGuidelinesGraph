@@ -5,7 +5,7 @@ description = "A project for knowledge graph construction from German cardiovasc
 authors = ["pwiesenbach <pwiesenbach@example.com>"]
 readme = "README.md"
 repository = "https://github.com/dieterich-lab/CardioGuidelinesGraph"
-packages = [{include = "cardio_graph", from = "src"}]
+packages = [{include = "cardio_graph_core", from = "src"}]
 license = "MIT"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -81,19 +81,10 @@ sphinx = "^7.2.6"
 sphinx-rtd-theme = "^2.0.0"
 
 [tool.poetry.scripts]
-parse-pdfs = "cardio_graph.parsing_utils.parse_pdfs_with_docling:cli"
-parse-structures = "cardio_graph.extraction_utils.parse_structures_from_markdown_or_pdfs:cli"
-split-pages = "cardio_graph.parsing_utils.split_pages:cli"
-pdf-to-markdown = "cardio_graph.parsing_utils.parse_pdf_as_markdown:main"
-feed-neo4j = "cardio_graph.neo4j_utils.feedneo4jdb:main"
-extract = "cardio_graph.extraction_utils.extract:main"
-generate-graph = "cardio_graph.extraction_utils.generate_graph:main"
-v2-generate-graph = "cardio_graph.extraction_utils.new_graph_construction:main"
-query = "cardio_graph.extraction_utils.query_interpreter:main"
-run-ollama = "cardio_graph.ollama_utils.runollama:main"
-snomed-explorer = "cardio_graph.snomedct_utils.snomed_query:main"
-generate-cardio-ontology = "cardio_graph.snomedct_utils.generate_cardio_ontology:main"
-ground-entities = "cardio_graph.extraction_utils.entity_grounding_service:cli"
+parse-pdfs = "cardio_graph_core.parsing.docling.parse_pdfs_with_docling:cli"
+build-graph = "cardio_graph_core.extraction.guideline_graph_builder:main"
+load-neo4j = "cardio_graph_core.neo4j.grounding_index_to_neo4j:main"
+snomed-explorer = "cardio_graph_core.snomedct.snomed_query:main"
 
 [build-system]
 requires = ["poetry-core"]
@@ -120,4 +111,4 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 python_classes = "Test*"
-addopts = "--cov=src.cardio_graph"
+addopts = "--cov=src.cardio_graph_core"

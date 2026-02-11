@@ -114,8 +114,8 @@ def create_client_registry(
                 "max_tokens": max_tokens,
                 "temperature": 0.0,
                 "format": "json",
-                "timeout": 900,
-                "request_timeout": 900,
+                "timeout": 600,
+                "request_timeout": 600,
             },
         )
         clients_added.append(model_name)

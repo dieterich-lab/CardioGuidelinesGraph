@@ -18,6 +18,9 @@ slurm/
 *.pdf
 *.json
 *.owl
+!tests/expected_row_10_structure.json
+!tests/expected_rows/
+!tests/expected_rows/*.json
 # Allow SECURITY.md
 !SECURITY.md
 ### Linux ###

@@ -9,7 +9,7 @@ from sqlalchemy import and_, create_engine, distinct, or_, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-from cardio_graph.snomedct_utils.models import (
+from cardio_graph_core.snomedct.models import (
     SnapDescription,
     SnapRefsetLanguage,
     SnapRelationship,
