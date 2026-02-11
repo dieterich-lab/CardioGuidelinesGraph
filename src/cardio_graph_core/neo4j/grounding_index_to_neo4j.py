@@ -14,9 +14,9 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import click
 from neo4j import GraphDatabase
 
-from cardio_graph.neo4j_utils.feedneo4jdb import AUTH as DEFAULT_AUTH
-from cardio_graph.neo4j_utils.feedneo4jdb import URI as DEFAULT_URI
-from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
+from cardio_graph_core.neo4j.feedneo4jdb import AUTH as DEFAULT_AUTH
+from cardio_graph_core.neo4j.feedneo4jdb import URI as DEFAULT_URI
+from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 
 def _load_grounding_index(index_path: str) -> List[Dict[str, Any]]:

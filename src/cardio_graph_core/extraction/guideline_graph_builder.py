@@ -22,8 +22,8 @@ from typing import Dict, List, Optional, Tuple
 import click
 import yaml
 
-from cardio_graph.extraction_utils.clients import create_client_registry
-from cardio_graph.snomedct_utils.snomed_query import SnomedExplorer
+from cardio_graph_core.extraction.clients import create_client_registry
+from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(line_buffering=True)
@@ -38,10 +38,10 @@ logger = logging.getLogger("GuidelineGraphBuilder")
 
 IS_A_TYPE_ID = 116680003
 DEFAULT_CONFIG_PATH = os.path.join(
-    os.path.dirname(__file__), "../snomedct_utils/guideline_graph_schema.yaml"
+    os.path.dirname(__file__), "../snomedct/guideline_graph_schema.yaml"
 )
 DEFAULT_ABBRV_PATH = os.path.join(
-    os.path.dirname(__file__), "../snomedct_utils/abbrv.txt"
+    os.path.dirname(__file__), "../snomedct/abbrv.txt"
 )
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
@@ -889,7 +889,7 @@ class GuidelineGraphBuilder:
         guideline_title: str,
         focus: Optional[str] = None,
     ) -> List[ExtractedConcept]:
-        from cardio_graph.baml_client.sync_client import b
+        from cardio_graph_core.extraction.baml_client.sync_client import b
 
         baml_options = {"client_registry": self.client_registry}
         os.environ["BAML_LOG"] = "OFF"

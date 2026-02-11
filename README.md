@@ -2,179 +2,224 @@
 
 # CardioGuidelinesGraph
 
-<div align="center">
-<b>Comprehensive Knowledge Graph Construction and Reasoning for Cardiovascular Guidelines</b><br>
-<i>Integrating SNOMED CT, logic, and LLMs for patient-centric clinical decision support</i>
-</div>
+Comprehensive knowledge graph construction and reasoning for cardiovascular guidelines, focused on a lean, reproducible pipeline that converts guideline tables into logic-aware Neo4j graphs.
 
----
+## Table of contents
 
-## 🚀 Project Vision
+- [Project vision](#project-vision)
+- [High-level pipeline](#high-level-pipeline)
+- [Compact project layout](#compact-project-layout)
+- [Extraction and grounding pipeline details](#extraction-and-grounding-pipeline-details)
+- [LLM tagging format](#llm-tagging-format)
+- [Two-pass extraction and merge](#two-pass-extraction-and-merge)
+- [Grounding and filtering](#grounding-and-filtering)
+- [Full pipeline flowchart](#full-pipeline-flowchart)
+- [Outputs](#outputs)
+- [Neo4j mapping](#neo4j-mapping)
+- [Quickstart](#quickstart)
+- [Key configuration](#key-configuration)
 
-CardioGuidelinesGraph is a research-driven framework to transform cardiovascular guidelines into a computable, queryable, and explainable knowledge graph. It enables:
-- **Semantic interoperability** via SNOMED CT integration
-- **Logic-aware reasoning** for complex clinical recommendations
-- **Patient-specific question answering** and evidence tracing
-- **Rapid extension** to new guidelines, domains, and research questions
+## Project vision
 
-<details>
-<summary><b>Why is this important?</b></summary>
+CardioGuidelinesGraph transforms guideline tables into a computable, queryable, and explainable knowledge graph. It enables:
 
-Clinical guidelines are the backbone of evidence-based medicine, but their logic is often buried in prose and tables. CardioGuidelinesGraph makes this knowledge explicit, computable, and accessible for both humans and machines.
-</details>
+- Semantic interoperability via SNOMED CT integration
+- Logic-aware reasoning for complex clinical recommendations
+- Patient-specific question answering and evidence tracing
+- Rapid extension to new guidelines and tables
 
----
-
----
-
-
-## 1. High-Level Pipeline
-
-```mermaid
-flowchart TD
-  A[Guideline Documents PDF or Markdown] --> B[Parsing and Chunking]
-  B --> C[Statement Extraction and Logic Mapping]
-  C --> D[Entity Grounding NER and SNOMED CT]
-  D --> E[Ontology Construction OWL or RDF]
-  E --> F[Knowledge Graph Construction Neo4j]
-  F --> G[Querying and Reasoning]
-  G --> H[Patient Specific Answers and Evidence]
-```
-
----
-
----
-
-
-## 2. Architecture & Main Components
-
-
-### Ontology & Entity Grounding
-- <b>Ontology Generator</b> ([snomedct_utils/generate_cardio_ontology.py](src/cardio_graph/snomedct_utils/generate_cardio_ontology.py)): Extracts cardiovascular concepts from SNOMED CT, categorizes them (using LLMs), and builds an OWL ontology.
-- <b>Entity Grounding Service</b> ([extraction_utils/entity_grounding_service.py](src/cardio_graph/extraction_utils/entity_grounding_service.py)): Links text mentions to ontology classes using spaCy NER and a Whoosh-based search index.
-
-### Knowledge Extraction & Graph Construction
-- <b>Markdown/PDF Parsing</b> ([parsing_utils/](src/cardio_graph/parsing_utils/)): Extracts structured statements and tables from guideline documents.
-- <b>Statement Extraction & Embedding</b> ([extraction_utils/](src/cardio_graph/extraction_utils/)): Converts parsed text into logical statements, embeds them, and prepares them for graph construction.
-- <b>Graph Construction</b> ([extraction_utils/new_graph_construction.py](src/cardio_graph/extraction_utils/new_graph_construction.py)): Builds the Neo4j knowledge graph, representing statements, entities, and logical junctions.
-
-### Querying & Reasoning
-- <b>Query Interpreter</b> ([extraction_utils/query_interpreter.py](src/cardio_graph/extraction_utils/query_interpreter.py)): Accepts natural language or structured queries, extracts relevant subgraphs, and resolves logical junctions to answer clinical questions.
-- <b>Logic Handling</b> ([extraction_utils/query_copy.py](src/cardio_graph/extraction_utils/query_copy.py)): Implements logic for traversing AND/OR/NOT nodes and extracting relevant evidence paths.
-
-### Integration & RAG
-- <b>RAG Utilities</b> ([rag_utils/](src/cardio_graph/rag_utils/)): Supports retrieval-augmented generation and embedding-based search over the KG.
-- <b>Neo4j Utilities</b> ([neo4j_utils/](src/cardio_graph/neo4j_utils/)): Handles Cypher generation, database feeding, and graph utilities.
-
----
-
-
-## 3. Detailed Pipeline
+## High-level pipeline
 
 ```mermaid
 flowchart TD
-  A1[Load ontology_config.yaml] --> A2[Connect to SNOMED CT DB]
-  A2 --> A3[Extract concepts using search terms]
-  A3 --> A4[LLM based categorization]
-  A4 --> A5[Build OWL or RDF ontology]
-  A5 --> B3
-  B1[Parse guidelines PDF or Markdown] --> B2[Extract statements and tables]
-  B2 --> B3[Ground entities to ontology]
-  B3 --> B4[Map logic AND OR NOT]
-  B4 --> B5[Build Neo4j graph]
-  B5 --> C2
-  C1[User or system query] --> C2[Subgraph extraction]
-  C2 --> C3[Logic resolution]
-  C3 --> C4[Answer and evidence]
+  A[Guideline PDFs] --> B[Docling table extraction]
+  B --> C[Row text plus header plus footnotes]
+  C --> D[LLM extraction pass MAIN]
+  C --> E[LLM extraction pass POPULATION]
+  D --> F[Merge, dedupe, split OR conditions]
+  E --> F
+  F --> G[SNOMED grounding and filtering]
+  G --> H[grounding_index JSON plus extracted_rules JSONL]
+  H --> I[Neo4j loader]
+  I --> J[Queryable clinical graph]
 ```
 
----
+## Compact project layout
 
----
+Core modules are now in a single package:
 
+- [src/cardio_graph_core/extraction/guideline_graph_builder.py](src/cardio_graph_core/extraction/guideline_graph_builder.py)
+- [src/cardio_graph_core/neo4j/grounding_index_to_neo4j.py](src/cardio_graph_core/neo4j/grounding_index_to_neo4j.py)
+- [src/cardio_graph_core/parsing/docling/parse_pdfs_with_docling.py](src/cardio_graph_core/parsing/docling/parse_pdfs_with_docling.py)
+- [src/cardio_graph_core/snomedct/snomed_query.py](src/cardio_graph_core/snomedct/snomed_query.py)
 
-## 4. Example Use Cases & Research Scenarios
+Legacy modules are archived in [archive/cardio_graph_legacy](archive/cardio_graph_legacy).
 
+## Extraction and grounding pipeline details
 
-- **Patient-Specific Recommendations**: “Should a patient with HFrEF and diabetes receive a beta blocker?”
-- **Guideline Comparison**: “What are the differences in antiplatelet therapy recommendations between ESC and ACC/AHA guidelines?”
-- **Evidence Tracing**: “Show all evidence supporting CABG in patients with left main disease.”
-- **Logic Pathways**: “What logical conditions must be met for PCI to be recommended in NSTEMI?”
-- **Ontology Auditing**: “Which SNOMED CT concepts are not mapped to any core class?”
+### LLM tagging format
 
----
+Each row input is tagged before calling BAML:
 
+- GUIDELINE: title
+- SOURCE_TYPE: table
+- FOCUS: MAIN or POPULATION
 
-## 5. File & Module Structure
+### Two-pass extraction and merge
 
-- `src/cardio_graph/snomedct_utils/`: Ontology generation, SNOMED CT integration.
-- `src/cardio_graph/extraction_utils/`: Entity grounding, statement extraction, graph construction, querying.
-- `src/cardio_graph/parsing_utils/`: Markdown/PDF parsing.
-- `src/cardio_graph/neo4j_utils/`: Neo4j database utilities.
-- `src/cardio_graph/rag_utils/`: Retrieval-augmented generation and embedding search.
+We run two passes over the same row text:
 
----
+1) MAIN: conditions or parameters plus actions
+2) POPULATION: cohort and population conditions only
 
+The results are merged and deduplicated, then OR conditions are split.
 
-## 6. Getting Started
+Example (two-pass extraction and merge):
 
-This project uses Poetry for dependency management. Before using any scripts, set up your environment:
+Input row:
+"In chronic coronary syndrome patients with LVEF <= 35% who are high surgical risk or not operable, PCI may be considered."
+
+MAIN pass output:
+- Condition: chronic coronary syndrome patients
+- ClinicalParameter: left ventricular ejection fraction <= 35% with operator <= threshold 35 unit %
+- Condition: high surgical risk
+- Condition: not operable
+- Procedure: percutaneous coronary intervention with Class IIb Level B
+
+POPULATION pass output:
+- Condition: chronic coronary syndrome patients
+- ClinicalParameter: left ventricular ejection fraction <= 35% with operator <= threshold 35 unit %
+
+Merge result:
+- Keep one copy of shared population conditions
+- Keep action from MAIN
+- Split "high surgical risk or not operable" into two Condition concepts with OR logic group
+
+```mermaid
+graph TD
+  A[Row text with recommendation and cohort] --> B[Pass MAIN extracts actions and core conditions]
+  A --> C[Pass POPULATION extracts cohort conditions only]
+  B --> D[MAIN set: action plus some conditions]
+  C --> E[POPULATION set: cohort conditions]
+  D --> F[Merge and dedupe by normalized term plus role]
+  E --> F
+  F --> G[Split OR phrases into separate Condition entries]
+  G --> H[Final concept set: cohort constraints plus actions]
+```
+
+### Grounding and filtering
+
+Scoring selects the best candidate by composite similarity, then applies filters:
+
+- min match score: drop low-confidence mappings
+- domain filter: keep candidates whose taxonomy path intersects allowed root concepts per role
+- semantic tag filter: enforce FSN tag allowlist
+- off-domain minimum score: allow off-domain candidates only if they score >= threshold
+
+Example (scoring):
+
+```
+Input term: SYNTAX score
+Candidate A: Leukocyte alkaline phosphatase score (procedure) -> score 0.72
+Candidate B: SYNTAX score (procedure) -> score 0.93
+Result: Candidate B wins; if min match score is 0.9, candidate B is kept
+```
+
+Example (domain filter):
+
+```
+Role: ClinicalParameter
+Allowed roots: Observable entity
+Candidate term: Determination of ventricular ejection fraction (procedure)
+Taxonomy path: Procedure
+Result: Filtered out because no Observable entity in the path
+```
+
+### Full pipeline flowchart
+
+```mermaid
+flowchart TD
+  A[Docling table JSON] --> B[Header plus footnotes plus row text]
+  B --> C[Tagged input: GUIDELINE plus SOURCE_TYPE plus FOCUS]
+  C --> D[LLM extraction pass: MAIN]
+  C --> E[LLM extraction pass: POPULATION]
+  D --> F[Merge, dedupe, split OR conditions]
+  E --> F
+  F --> G[Normalize and abbreviations]
+  G --> H[SNOMED term search]
+  H --> I[Score best match]
+  I --> J{Filters pass}
+  J -- No --> K[Keep unmapped or drop noise rules]
+  J -- Yes --> L[Resolve target label]
+  L --> M[Write grounding_index.json]
+  F --> N[Write extracted_rules.jsonl]
+  M --> O[Neo4j loader]
+  N --> O
+```
+
+### Outputs
+
+- grounding_index JSON: SNOMED cache by ID
+- extracted_rules JSONL: logic-preserving rule entries
+
+Example grounding entry:
+
+```json
+{
+  "entity_standardized_candidate": "left ventricular ejection fraction <= 35%",
+  "snomed_id": 250908004,
+  "preferred_term": "Left ventricular ejection fraction (observable entity)",
+  "score": 0.91,
+  "taxonomy_path": [{"concept_id": "250908004", "term": "..."}],
+  "target_label": "ClinicalParameter"
+}
+```
+
+### Neo4j mapping
+
+The loader builds:
+
+- Concept nodes merged by snomed_id and labeled by target_label
+- Decision and recommendation nodes from rules
+- Edges: CHECKS_FOR, EVALUATES, LEADS_TO, RESULTS_IN, RECOMMENDS_PROCEDURE, RECOMMENDS_MEDICATION
+
+## Quickstart
 
 ```bash
-# Install project with dependencies
 poetry install
-
-# Activate the virtual environment
 poetry shell
-
-# Download the spaCy model for Named Entity Recognition
-poetry run python -m spacy download en_core_web_sm
-
-# Download the scispaCy biomedical models for sentence splitting and entity grounding
-poetry run pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_lg-0.5.4.tar.gz
-poetry run pip install https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_ner_bc5cdr_md-0.5.4.tar.gz
 ```
 
----
+Row-wise extraction example:
 
+```bash
+poetry run python src/cardio_graph_core/extraction/guideline_graph_builder.py \
+  --docling-table-json /prj/doctoral_letters/guide/data/guidelines/docling/pdf_pages/_62/tables/table_000.json \
+  --docling-table-json /prj/doctoral_letters/guide/data/guidelines/docling/pdf_pages/_63/tables/table_000.json \
+  --docling-table-id _62_63/table_000.json \
+  --docling-footnotes-path /tmp/docling_table_footnotes.txt \
+  --min-match-score 0.6 \
+  --domain-filter \
+  --off-domain-min-score 0.9 \
+  --guideline-title "2024 ESC Guidelines for the management of chronic coronary syndromes" \
+  --index-path /prj/doctoral_letters/guide/data/graph/grounding_index_docling_table_000.json \
+  --rules-out-path /prj/doctoral_letters/guide/data/graph/extracted_rules_docling_table_000.jsonl \
+  --node g5 \
+  --model Qwen30b
+```
 
-## 7. Advanced Topics & Extensibility
+Load into Neo4j:
 
-- **Extending the Ontology**: Add new classes or properties in `ontology_config.yaml`.
-- **Custom Query Logic**: Implement new logic in `query_copy.py` or `query_interpreter.py`.
-- **Integration with LLMs**: Use BAML and Ollama for advanced categorization and reasoning.
+```bash
+poetry run python src/cardio_graph_core/neo4j/grounding_index_to_neo4j.py \
+  --index-path /prj/doctoral_letters/guide/data/graph/grounding_index_docling_table_000.json \
+  --rules-path /prj/doctoral_letters/guide/data/graph/extracted_rules_docling_table_000.jsonl
+```
 
----
+## Key configuration
 
-
-## 8. Glossary & References
-
-**Glossary**
-
-- **Ontology**: A formal representation of knowledge as a set of concepts and relationships.
-- **SNOMED CT**: A comprehensive clinical terminology standard for health data.
-- **Entity Grounding**: Linking text mentions to canonical ontology concepts.
-- **Logic Junctions**: Logical operators (AND/OR/NOT) used to combine clinical statements.
-- **RAG (Retrieval-Augmented Generation)**: Combining retrieval from a knowledge base with generative models for answering queries.
-- **Neo4j**: A graph database platform used for storing and querying the knowledge graph.
-
----
-
-
-- See the submodule READMEs (e.g., [`src/cardio_graph/snomedct_utils/README.md`](src/cardio_graph/snomedct_utils/README.md)) for detailed documentation on ontology generation and SNOMED CT integration.
-- Example queries and advanced usage: see [`src/cardio_graph/extraction_utils/query_interpreter.py`](src/cardio_graph/extraction_utils/query_interpreter.py) and [`src/cardio_graph/extraction_utils/query_copy.py`](src/cardio_graph/extraction_utils/query_copy.py).
-
----
-
-## 9. How to Contribute
-
-We welcome contributions from the research and clinical informatics community! Please:
-- Open issues for bugs, feature requests, or questions
-- Submit pull requests for improvements or new modules
-- Add tests and documentation for new features
-
----
-
-<div align="center">
-<b>CardioGuidelinesGraph: Making Clinical Knowledge Computable</b>
-</div>
+- SNOMED mapping rules: [src/cardio_graph_core/snomedct/guideline_graph_schema.yaml](src/cardio_graph_core/snomedct/guideline_graph_schema.yaml)
+- Abbreviations: [src/cardio_graph_core/snomedct/abbrv.txt](src/cardio_graph_core/snomedct/abbrv.txt)
+- LLM model registry: [src/cardio_graph_core/extraction/clients.py](src/cardio_graph_core/extraction/clients.py)
+- SNOMED query: [src/cardio_graph_core/snomedct/snomed_query.py](src/cardio_graph_core/snomedct/snomed_query.py)
+- Neo4j loader: [src/cardio_graph_core/neo4j/grounding_index_to_neo4j.py](src/cardio_graph_core/neo4j/grounding_index_to_neo4j.py)
