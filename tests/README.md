@@ -29,6 +29,12 @@ poetry run python -m unittest tests.test_row_10_structure_rules
 poetry run python -m unittest tests.test_row_10_graph
 ```
 
+Lightweight pytest entrypoint:
+
+```bash
+poetry run test-row10
+```
+
 Grounding test (skips without a ground truth file):
 
 ```bash
