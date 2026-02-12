@@ -1,5 +1,19 @@
 # row_01 (mapped to row_02)
 
+Original table row text (ground truth):
+
+```json
+{
+  "Table Header": "Recommendations for revascularization in patients with chronic coronary syndrome",
+  "Section Header": "Informed and shared decisions",
+  "Recommendations": "It is recommended that patients scheduled for percutaneous or surgical revascularization receive complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization, as part of shared clinical decision-making. 847,848,857",
+  "input": "patients scheduled for percutaneous or surgical revascularization",
+  "recommendation": "patients receive complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization, as part of shared clinical decision-making.",
+  "Class a": "I",
+  "Level b": "C"
+}
+```
+
 Aligned JSON (expected vs actual):
 
 <table>
@@ -8,7 +22,7 @@ Aligned JSON (expected vs actual):
     <th align="left">Actual</th>
   </tr>
   <tr>
-    <td><pre>
+    <td valign="top"><pre>
 [
   {
     "entity": "benefits of revascularization",
@@ -103,7 +117,7 @@ Aligned JSON (expected vs actual):
   }
 ]
 </pre></td>
-    <td><pre>
+    <td valign="top"><pre>
 [
   {
     "entity": "information about revascularization benefits, risks, and alternatives",
