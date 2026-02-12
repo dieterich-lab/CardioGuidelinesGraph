@@ -346,6 +346,12 @@ def _sanitize_label(value):
     return str(value).replace('"', "'")
 
 
+def _sanitize_id(value):
+    if value is None:
+        return ""
+    return re.sub(r"[^a-zA-Z0-9_]", "_", str(value))
+
+
 def _group_entries(entries):
     grouped = {}
     for entry in entries:
@@ -368,12 +374,33 @@ def _build_mermaid(entries, title):
     actions = [
         entry for entry in entries if entry.get("role") in {"Procedure", "Medication"}
     ]
-    lines = ["graph LR"]
+    ordered_groups = []
     for group_name, group_entries in groups.items():
-        group_type = _group_type(group_name, group_entries)
-        group_id = _sanitize_label(group_name)
+        ordered_groups.append(
+            {
+                "group_name": group_name,
+                "group_entries": group_entries,
+                "group_type": _group_type(group_name, group_entries),
+            }
+        )
+
+    lines = ["graph LR", "  REC[RecommendationNode]"]
+
+    if actions:
+        for idx, action in enumerate(actions, start=1):
+            action_id = f"ACT{idx}"
+            label = _sanitize_label(action.get("entity"))
+            role = action.get("role") or "Action"
+            lines.append(f"  {action_id}[{role}: {label}]")
+            lines.append(f"  REC -->|RECOMMENDS_* / CONTRAINDICATES| {action_id}")
+
+    previous_decisions = []
+    for group in ordered_groups:
+        group_name = group["group_name"]
+        group_entries = group["group_entries"]
+        group_type = group["group_type"]
+        group_id = _sanitize_id(group_name)
         lines.append(f"  subgraph {title}_{group_id}_{group_type}")
-        lines.append("    REC[RecommendationNode]")
 
         condition_entries = [
             entry
@@ -381,34 +408,48 @@ def _build_mermaid(entries, title):
             if entry.get("role") in {"Condition", "ClinicalParameter"}
         ]
 
+        decision_ids = []
         for idx, entry in enumerate(condition_entries, start=1):
-            decision_id = f"D{idx}"
-            concept_id = f"C{idx}"
+            decision_id = f"D_{group_id}_{idx}"
+            concept_id = f"C_{group_id}_{idx}"
+            decision_ids.append(decision_id)
             role = entry.get("role") or "Concept"
             label = _sanitize_label(entry.get("entity"))
-            lines.append(f"    {decision_id}[DecisionNode g1 s{idx}]")
+            relation = "CHECKS_FOR" if role == "Condition" else "EVALUATES"
+            lines.append(f"    {decision_id}[DecisionNode {group_id} s{idx}]")
             lines.append(f"    {concept_id}[{role}: {label}]")
-            lines.append(f"    {decision_id} -->|CHECKS_FOR/EVALUATES| {concept_id}")
+            lines.append(f"    {decision_id} -->|{relation}| {concept_id}")
 
-        if group_type == "AND" and condition_entries:
-            for idx in range(1, len(condition_entries)):
-                lines.append(f"    D{idx} -->|LEADS_TO| D{idx + 1}")
-            lines.append(f"    D{len(condition_entries)} -->|RESULTS_IN| REC")
-        elif group_type == "OR" and condition_entries:
-            for idx in range(1, len(condition_entries) + 1):
-                lines.append(f"    D{idx} -->|RESULTS_IN| REC")
+        if previous_decisions and decision_ids:
+            if group_type == "OR":
+                for prev_id in previous_decisions:
+                    for curr_id in decision_ids:
+                        lines.append(f"    {prev_id} -->|LEADS_TO| {curr_id}")
+            else:
+                first_id = decision_ids[0]
+                for prev_id in previous_decisions:
+                    lines.append(f"    {prev_id} -->|LEADS_TO| {first_id}")
+
+        if group_type == "AND" and len(decision_ids) > 1:
+            for idx in range(1, len(decision_ids)):
+                lines.append(
+                    f"    {decision_ids[idx - 1]} -->|LEADS_TO| {decision_ids[idx]}"
+                )
 
         if not condition_entries:
             lines.append("    REC")
 
-        for idx, action in enumerate(actions, start=1):
-            action_id = f"ACT{idx}"
-            label = _sanitize_label(action.get("entity"))
-            role = action.get("role") or "Action"
-            lines.append(f"    {action_id}[{role}: {label}]")
-            lines.append(f"    REC -->|RECOMMENDS_* / CONTRAINDICATES| {action_id}")
-
         lines.append("  end")
+
+        if decision_ids:
+            if group_type == "OR":
+                previous_decisions = decision_ids
+            else:
+                previous_decisions = [decision_ids[-1]]
+
+    if previous_decisions:
+        for prev_id in previous_decisions:
+            lines.append(f"  {prev_id} -->|RESULTS_IN| REC")
 
     return "\n".join(lines)
 

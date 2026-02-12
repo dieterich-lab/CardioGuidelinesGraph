@@ -150,58 +150,46 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  ACT2[Procedure: intracoronary pressure measurement (ffr)]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  ACT3[Procedure: intracoronary pressure measurement (ifr)]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+  ACT4[Procedure: computation (qfr)]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: chronic coronary syndrome]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: intracoronary pressure measurement (ffr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: intracoronary pressure measurement (ifr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: computation (qfr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: chronic coronary syndrome]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: intracoronary pressure measurement (ffr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: intracoronary pressure measurement (ifr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: computation (qfr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
   end
+  D_and_1_1 -->|RESULTS_IN| REC
 ```
 
 Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: assess procedural risks and post-procedural outcomes]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: complex coronary artery disease]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[Condition: complex coronary artery disease]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D1 -->|LEADS_TO| D2
-    D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: assess procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: complex coronary artery disease]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: complex coronary artery disease]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
   end
   subgraph Actual_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: assess procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
+  D_and_1_2 -->|RESULTS_IN| REC
 ```
 
 Concepts:

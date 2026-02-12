@@ -93,38 +93,34 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: heart team]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: heart team]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
   end
+  D_and_1_1 -->|RESULTS_IN| REC
 ```
 
 Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: revascularization protocol development]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: heart team]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization protocol development]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: heart team]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   subgraph Actual_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: revascularization protocol development]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
+  D_and_1_1 -->|RESULTS_IN| REC
 ```
 
 Concepts:

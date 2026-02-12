@@ -205,21 +205,16 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: cabg]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  ACT2[Procedure: sts score]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: cabg]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: sts score]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: cabg]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: sts score]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
 ```
 
@@ -227,58 +222,53 @@ Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: percutaneous coronary intervention]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: chronic coronary syndrome patients with functionally significant multivessel disease]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[ClinicalParameter: left ventricular ejection fraction]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D3[DecisionNode g1 s3]
-    C3[Condition: chronic coronary syndrome]
-    D3 -->|CHECKS_FOR/EVALUATES| C3
-    D4[DecisionNode g1 s4]
-    C4[Condition: multivessel disease]
-    D4 -->|CHECKS_FOR/EVALUATES| C4
-    D5[DecisionNode g1 s5]
-    C5[ClinicalParameter: left ventricular ejection fraction]
-    D5 -->|CHECKS_FOR/EVALUATES| C5
-    D6[DecisionNode g1 s6]
-    C6[Condition: high surgical risk]
-    D6 -->|CHECKS_FOR/EVALUATES| C6
-    D7[DecisionNode g1 s7]
-    C7[Condition: not operable]
-    D7 -->|CHECKS_FOR/EVALUATES| C7
-    D1 -->|LEADS_TO| D2
-    D2 -->|LEADS_TO| D3
-    D3 -->|LEADS_TO| D4
-    D4 -->|LEADS_TO| D5
-    D5 -->|LEADS_TO| D6
-    D6 -->|LEADS_TO| D7
-    D7 -->|RESULTS_IN| REC
-    ACT1[Procedure: percutaneous coronary intervention]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: chronic coronary syndrome patients with functionally significant multivessel disease]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_2 -->|EVALUATES| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[Condition: chronic coronary syndrome]
+    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
+    D_and_1_4[DecisionNode and_1 s4]
+    C_and_1_4[Condition: multivessel disease]
+    D_and_1_4 -->|CHECKS_FOR| C_and_1_4
+    D_and_1_5[DecisionNode and_1 s5]
+    C_and_1_5[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_5 -->|EVALUATES| C_and_1_5
+    D_and_1_6[DecisionNode and_1 s6]
+    C_and_1_6[Condition: high surgical risk]
+    D_and_1_6 -->|CHECKS_FOR| C_and_1_6
+    D_and_1_7[DecisionNode and_1 s7]
+    C_and_1_7[Condition: not operable]
+    D_and_1_7 -->|CHECKS_FOR| C_and_1_7
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_2 -->|LEADS_TO| D_and_1_3
+    D_and_1_3 -->|LEADS_TO| D_and_1_4
+    D_and_1_4 -->|LEADS_TO| D_and_1_5
+    D_and_1_5 -->|LEADS_TO| D_and_1_6
+    D_and_1_6 -->|LEADS_TO| D_and_1_7
   end
   subgraph Actual_or_1_OR
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: high surgical risk]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[Condition: not operable]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D1 -->|RESULTS_IN| REC
-    D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: percutaneous coronary intervention]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_or_1_1[DecisionNode or_1 s1]
+    C_or_1_1[Condition: high surgical risk]
+    D_or_1_1 -->|CHECKS_FOR| C_or_1_1
+    D_or_1_2[DecisionNode or_1 s2]
+    C_or_1_2[Condition: not operable]
+    D_or_1_2 -->|CHECKS_FOR| C_or_1_2
+    D_and_1_7 -->|LEADS_TO| D_or_1_1
+    D_and_1_7 -->|LEADS_TO| D_or_1_2
   end
   subgraph Actual_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: percutaneous coronary intervention]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
+  D_or_1_1 -->|RESULTS_IN| REC
+  D_or_1_2 -->|RESULTS_IN| REC
 ```
 
 Concepts:

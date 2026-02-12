@@ -262,135 +262,96 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: intervention]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  ACT2[Procedure: intracoronary pressure measurement (ffr)]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  ACT3[Procedure: intracoronary pressure measurement (ifr)]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+  ACT4[Procedure: computation (qfr)]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: multivessel disease]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: intervention]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: intracoronary pressure measurement (ffr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: intracoronary pressure measurement (ifr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: computation (qfr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: multivessel disease]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: intervention]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: intracoronary pressure measurement (ffr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: intracoronary pressure measurement (ifr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: computation (qfr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
   end
+  D_and_1_1 -->|RESULTS_IN| REC
 ```
 
 Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Actual_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: age]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: age]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   subgraph Actual_and_2_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: frailty]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_2_1[DecisionNode and_2 s1]
+    C_and_2_1[Condition: frailty]
+    D_and_2_1 -->|CHECKS_FOR| C_and_2_1
+    D_and_1_1 -->|LEADS_TO| D_and_2_1
   end
   subgraph Actual_and_3_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: cognitive status]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_3_1[DecisionNode and_3 s1]
+    C_and_3_1[Condition: cognitive status]
+    D_and_3_1 -->|CHECKS_FOR| C_and_3_1
+    D_and_2_1 -->|LEADS_TO| D_and_3_1
   end
   subgraph Actual_and_4_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: diabetes]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_4_1[DecisionNode and_4 s1]
+    C_and_4_1[Condition: diabetes]
+    D_and_4_1 -->|CHECKS_FOR| C_and_4_1
+    D_and_3_1 -->|LEADS_TO| D_and_4_1
   end
   subgraph Actual_and_5_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: other comorbidities]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_5_1[DecisionNode and_5 s1]
+    C_and_5_1[Condition: other comorbidities]
+    D_and_5_1 -->|CHECKS_FOR| C_and_5_1
+    D_and_4_1 -->|LEADS_TO| D_and_5_1
   end
   subgraph Actual_and_6_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: multivessel disease]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_6_1[DecisionNode and_6 s1]
+    C_and_6_1[Condition: multivessel disease]
+    D_and_6_1 -->|CHECKS_FOR| C_and_6_1
+    D_and_5_1 -->|LEADS_TO| D_and_6_1
   end
   subgraph Actual_and_7_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: left main stem involvement]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_7_1[DecisionNode and_7 s1]
+    C_and_7_1[Condition: left main stem involvement]
+    D_and_7_1 -->|CHECKS_FOR| C_and_7_1
+    D_and_6_1 -->|LEADS_TO| D_and_7_1
   end
   subgraph Actual_and_8_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: high anatomical complexity]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_8_1[DecisionNode and_8 s1]
+    C_and_8_1[Condition: high anatomical complexity]
+    D_and_8_1 -->|CHECKS_FOR| C_and_8_1
+    D_and_7_1 -->|LEADS_TO| D_and_8_1
   end
   subgraph Actual_and_9_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: likelihood of revascularization completeness]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_9_1[DecisionNode and_9 s1]
+    C_and_9_1[Condition: likelihood of revascularization completeness]
+    D_and_9_1 -->|CHECKS_FOR| C_and_9_1
+    D_and_8_1 -->|LEADS_TO| D_and_9_1
   end
   subgraph Actual_and_10_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: local expertise and outcomes]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_10_1[DecisionNode and_10 s1]
+    C_and_10_1[Condition: local expertise and outcomes]
+    D_and_10_1 -->|CHECKS_FOR| C_and_10_1
+    D_and_9_1 -->|LEADS_TO| D_and_10_1
   end
+  D_and_10_1 -->|RESULTS_IN| REC
 ```
 
 Concepts:

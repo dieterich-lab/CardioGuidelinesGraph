@@ -177,41 +177,26 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: percutaneous revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  ACT2[Procedure: surgical revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  ACT3[Procedure: benefits of revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+  ACT4[Procedure: risks of revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
+  ACT5[Procedure: therapeutic consequences of revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
+  ACT6[Procedure: treatment alternatives of revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
+  ACT7[Procedure: shared decision-making]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: percutaneous revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: surgical revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: benefits of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: risks of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: therapeutic consequences of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: treatment alternatives of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
-    ACT7[Procedure: shared decision-making]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: percutaneous revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: surgical revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: benefits of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: risks of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: therapeutic consequences of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: treatment alternatives of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
-    ACT7[Procedure: shared decision-making]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
   end
 ```
 
@@ -219,25 +204,22 @@ Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: information about revascularization benefits, risks, and alternatives]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: patients scheduled for revascularization]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[Condition: patients scheduled for revascularization]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D1 -->|LEADS_TO| D2
-    D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: information about revascularization benefits, risks, and alternatives]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: patients scheduled for revascularization]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: patients scheduled for revascularization]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
   end
   subgraph Actual_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: information about revascularization benefits, risks, and alternatives]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
+  D_and_1_2 -->|RESULTS_IN| REC
 ```
 
 Concepts:

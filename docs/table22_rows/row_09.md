@@ -220,78 +220,60 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: revascularization or medical therapy]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  ACT2[Procedure: evaluate coronary anatomy]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  ACT3[Procedure: evaluate correlation between coronary artery disease and lv dysfunction]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+  ACT4[Procedure: evaluate comorbidities]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
+  ACT5[Procedure: evaluate life expectancy]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
+  ACT6[Procedure: evaluate individual risk-to-benefit ratio]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
+  ACT7[Procedure: evaluate patient perspectives]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: ccs]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[ClinicalParameter: lvef]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D1 -->|LEADS_TO| D2
-    D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization or medical therapy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: evaluate coronary anatomy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: evaluate correlation between coronary artery disease and lv dysfunction]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: evaluate comorbidities]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: evaluate life expectancy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: evaluate individual risk-to-benefit ratio]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
-    ACT7[Procedure: evaluate patient perspectives]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: ccs]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalParameter: lvef]
+    D_and_1_2 -->|EVALUATES| C_and_1_2
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: revascularization or medical therapy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: evaluate coronary anatomy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: evaluate correlation between coronary artery disease and lv dysfunction]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: evaluate comorbidities]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: evaluate life expectancy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: evaluate individual risk-to-benefit ratio]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
-    ACT7[Procedure: evaluate patient perspectives]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
   end
+  D_and_1_2 -->|RESULTS_IN| REC
 ```
 
 Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: myocardial revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: chronic coronary syndrome]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[ClinicalParameter: left ventricular ejection fraction]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D3[DecisionNode g1 s3]
-    C3[Condition: three-vessel disease]
-    D3 -->|CHECKS_FOR/EVALUATES| C3
-    D1 -->|LEADS_TO| D2
-    D2 -->|LEADS_TO| D3
-    D3 -->|RESULTS_IN| REC
-    ACT1[Procedure: myocardial revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: chronic coronary syndrome]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_2 -->|EVALUATES| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[Condition: three-vessel disease]
+    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_2 -->|LEADS_TO| D_and_1_3
   end
   subgraph Actual_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: myocardial revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
+  D_and_1_3 -->|RESULTS_IN| REC
 ```
 
 Concepts:

@@ -205,74 +205,64 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: procedural risks]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  ACT2[Procedure: post-procedural outcomes]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  ACT3[Procedure: shared clinical decision-making]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: complex cad]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[Condition: revascularization is being considered]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D1 -->|LEADS_TO| D2
-    D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: procedural risks]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: shared clinical decision-making]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: complex cad]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: revascularization is being considered]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: procedural risks]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: shared clinical decision-making]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
   end
+  D_and_1_2 -->|RESULTS_IN| REC
 ```
 
 Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: coronary artery bypass grafting]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: surgically eligible chronic coronary syndrome patients]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[Condition: multivessel coronary artery disease]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D3[DecisionNode g1 s3]
-    C3[ClinicalParameter: left ventricular ejection fraction]
-    D3 -->|CHECKS_FOR/EVALUATES| C3
-    D4[DecisionNode g1 s4]
-    C4[Condition: chronic coronary syndrome]
-    D4 -->|CHECKS_FOR/EVALUATES| C4
-    D5[DecisionNode g1 s5]
-    C5[Condition: multivessel coronary artery disease]
-    D5 -->|CHECKS_FOR/EVALUATES| C5
-    D6[DecisionNode g1 s6]
-    C6[ClinicalParameter: left ventricular ejection fraction]
-    D6 -->|CHECKS_FOR/EVALUATES| C6
-    D1 -->|LEADS_TO| D2
-    D2 -->|LEADS_TO| D3
-    D3 -->|LEADS_TO| D4
-    D4 -->|LEADS_TO| D5
-    D5 -->|LEADS_TO| D6
-    D6 -->|RESULTS_IN| REC
-    ACT1[Procedure: coronary artery bypass grafting]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: surgically eligible chronic coronary syndrome patients]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: multivessel coronary artery disease]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_3 -->|EVALUATES| C_and_1_3
+    D_and_1_4[DecisionNode and_1 s4]
+    C_and_1_4[Condition: chronic coronary syndrome]
+    D_and_1_4 -->|CHECKS_FOR| C_and_1_4
+    D_and_1_5[DecisionNode and_1 s5]
+    C_and_1_5[Condition: multivessel coronary artery disease]
+    D_and_1_5 -->|CHECKS_FOR| C_and_1_5
+    D_and_1_6[DecisionNode and_1 s6]
+    C_and_1_6[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_6 -->|EVALUATES| C_and_1_6
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_2 -->|LEADS_TO| D_and_1_3
+    D_and_1_3 -->|LEADS_TO| D_and_1_4
+    D_and_1_4 -->|LEADS_TO| D_and_1_5
+    D_and_1_5 -->|LEADS_TO| D_and_1_6
   end
   subgraph Actual_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: coronary artery bypass grafting]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
+  D_and_1_6 -->|RESULTS_IN| REC
 ```
 
 Concepts:

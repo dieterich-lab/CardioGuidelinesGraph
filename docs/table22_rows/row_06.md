@@ -276,144 +276,106 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: myocardial revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  ACT2[Procedure: guideline-directed medical therapy]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: ccs]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[ClinicalParameter: lvef]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D3[DecisionNode g1 s3]
-    C3[Condition: functionally significant left main stem stenosis]
-    D3 -->|CHECKS_FOR/EVALUATES| C3
-    D1 -->|LEADS_TO| D2
-    D2 -->|LEADS_TO| D3
-    D3 -->|RESULTS_IN| REC
-    ACT1[Procedure: myocardial revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: guideline-directed medical therapy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: ccs]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalParameter: lvef]
+    D_and_1_2 -->|EVALUATES| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[Condition: functionally significant left main stem stenosis]
+    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_2 -->|LEADS_TO| D_and_1_3
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: myocardial revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: guideline-directed medical therapy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
+  D_and_1_3 -->|RESULTS_IN| REC
 ```
 
 Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Actual_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: age]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: age]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   subgraph Actual_and_2_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: frailty]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_2_1[DecisionNode and_2 s1]
+    C_and_2_1[Condition: frailty]
+    D_and_2_1 -->|CHECKS_FOR| C_and_2_1
+    D_and_1_1 -->|LEADS_TO| D_and_2_1
   end
   subgraph Actual_and_3_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: cognitive status]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_3_1[DecisionNode and_3 s1]
+    C_and_3_1[Condition: cognitive status]
+    D_and_3_1 -->|CHECKS_FOR| C_and_3_1
+    D_and_2_1 -->|LEADS_TO| D_and_3_1
   end
   subgraph Actual_and_4_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: diabetes]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_4_1[DecisionNode and_4 s1]
+    C_and_4_1[Condition: diabetes]
+    D_and_4_1 -->|CHECKS_FOR| C_and_4_1
+    D_and_3_1 -->|LEADS_TO| D_and_4_1
   end
   subgraph Actual_and_5_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: other comorbidities]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_5_1[DecisionNode and_5 s1]
+    C_and_5_1[Condition: other comorbidities]
+    D_and_5_1 -->|CHECKS_FOR| C_and_5_1
+    D_and_4_1 -->|LEADS_TO| D_and_5_1
   end
   subgraph Actual_and_6_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: multivessel disease]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_6_1[DecisionNode and_6 s1]
+    C_and_6_1[Condition: multivessel disease]
+    D_and_6_1 -->|CHECKS_FOR| C_and_6_1
+    D_and_5_1 -->|LEADS_TO| D_and_6_1
   end
   subgraph Actual_and_7_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: left main stem involvement]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_7_1[DecisionNode and_7 s1]
+    C_and_7_1[Condition: left main stem involvement]
+    D_and_7_1 -->|CHECKS_FOR| C_and_7_1
+    D_and_6_1 -->|LEADS_TO| D_and_7_1
   end
   subgraph Actual_and_8_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: high anatomical complexity]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_8_1[DecisionNode and_8 s1]
+    C_and_8_1[Condition: high anatomical complexity]
+    D_and_8_1 -->|CHECKS_FOR| C_and_8_1
+    D_and_7_1 -->|LEADS_TO| D_and_8_1
   end
   subgraph Actual_and_9_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: likelihood of revascularization completeness]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_9_1[DecisionNode and_9 s1]
+    C_and_9_1[Condition: likelihood of revascularization completeness]
+    D_and_9_1 -->|CHECKS_FOR| C_and_9_1
+    D_and_8_1 -->|LEADS_TO| D_and_9_1
   end
   subgraph Actual_and_10_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: local expertise]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_10_1[DecisionNode and_10 s1]
+    C_and_10_1[Condition: local expertise]
+    D_and_10_1 -->|CHECKS_FOR| C_and_10_1
+    D_and_9_1 -->|LEADS_TO| D_and_10_1
   end
   subgraph Actual_and_11_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: surgical and interventional risk]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_11_1[DecisionNode and_11 s1]
+    C_and_11_1[Condition: surgical and interventional risk]
+    D_and_11_1 -->|CHECKS_FOR| C_and_11_1
+    D_and_10_1 -->|LEADS_TO| D_and_11_1
   end
+  D_and_11_1 -->|RESULTS_IN| REC
 ```
 
 Concepts:

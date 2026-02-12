@@ -136,55 +136,50 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: pci]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: ccs]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[Condition: functionally significant mvd]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D3[DecisionNode g1 s3]
-    C3[ClinicalParameter: lvef]
-    D3 -->|CHECKS_FOR/EVALUATES| C3
-    D1 -->|LEADS_TO| D2
-    D2 -->|LEADS_TO| D3
-    D3 -->|RESULTS_IN| REC
-    ACT1[Procedure: pci]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: ccs]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: functionally significant mvd]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[ClinicalParameter: lvef]
+    D_and_1_3 -->|EVALUATES| C_and_1_3
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_2 -->|LEADS_TO| D_and_1_3
   end
   subgraph Expected_or_1_OR
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: high surgical risk]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[Condition: not operable]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D1 -->|RESULTS_IN| REC
-    D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: pci]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_or_1_1[DecisionNode or_1 s1]
+    C_or_1_1[Condition: high surgical risk]
+    D_or_1_1 -->|CHECKS_FOR| C_or_1_1
+    D_or_1_2[DecisionNode or_1 s2]
+    C_or_1_2[Condition: not operable]
+    D_or_1_2 -->|CHECKS_FOR| C_or_1_2
+    D_and_1_3 -->|LEADS_TO| D_or_1_1
+    D_and_1_3 -->|LEADS_TO| D_or_1_2
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: pci]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
+  D_or_1_1 -->|RESULTS_IN| REC
+  D_or_1_2 -->|RESULTS_IN| REC
 ```
 
 Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[ClinicalParameter: left ventricular ejection fraction]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_1 -->|EVALUATES| C_and_1_1
   end
+  D_and_1_1 -->|RESULTS_IN| REC
 ```
 
 Concepts:

@@ -136,50 +136,45 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: myocardial revascularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  ACT2[Procedure: guideline-directed medical therapy]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: ccs]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[ClinicalParameter: lvef]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D3[DecisionNode g1 s3]
-    C3[Condition: functionally significant three-vessel disease]
-    D3 -->|CHECKS_FOR/EVALUATES| C3
-    D1 -->|LEADS_TO| D2
-    D2 -->|LEADS_TO| D3
-    D3 -->|RESULTS_IN| REC
-    ACT1[Procedure: myocardial revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: guideline-directed medical therapy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: ccs]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalParameter: lvef]
+    D_and_1_2 -->|EVALUATES| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[Condition: functionally significant three-vessel disease]
+    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_2 -->|LEADS_TO| D_and_1_3
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: myocardial revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: guideline-directed medical therapy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
+  D_and_1_3 -->|RESULTS_IN| REC
 ```
 
 Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: chronic coronary syndrome]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[ClinicalParameter: left ventricular ejection fraction]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D1 -->|LEADS_TO| D2
-    D2 -->|RESULTS_IN| REC
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: chronic coronary syndrome]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_2 -->|EVALUATES| C_and_1_2
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
   end
+  D_and_1_2 -->|RESULTS_IN| REC
 ```
 
 Concepts:

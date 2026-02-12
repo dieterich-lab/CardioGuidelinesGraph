@@ -191,37 +191,24 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: revacularization]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  ACT2[Procedure: patient-centred decision]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  ACT3[Procedure: patient preferences]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+  ACT4[Procedure: health literacy]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
+  ACT5[Procedure: cultural circumstances]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
+  ACT6[Procedure: social support]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
   subgraph Expected_and_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: revacularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: patient-centred decision]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: patient preferences]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: health literacy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: cultural circumstances]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: social support]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
   end
   subgraph Expected_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: revacularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: patient-centred decision]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: patient preferences]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: health literacy]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: cultural circumstances]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: social support]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
   end
 ```
 
@@ -229,33 +216,30 @@ Mermaid (actual):
 
 ```mermaid
 graph LR
+  REC[RecommendationNode]
+  ACT1[Procedure: revascularization decision]
+  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   subgraph Actual_and_1_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: patient preferences]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[Condition: health literacy]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D3[DecisionNode g1 s3]
-    C3[Condition: cultural circumstances]
-    D3 -->|CHECKS_FOR/EVALUATES| C3
-    D4[DecisionNode g1 s4]
-    C4[Condition: social support]
-    D4 -->|CHECKS_FOR/EVALUATES| C4
-    D1 -->|LEADS_TO| D2
-    D2 -->|LEADS_TO| D3
-    D3 -->|LEADS_TO| D4
-    D4 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization decision]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: patient preferences]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: health literacy]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[Condition: cultural circumstances]
+    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
+    D_and_1_4[DecisionNode and_1 s4]
+    C_and_1_4[Condition: social support]
+    D_and_1_4 -->|CHECKS_FOR| C_and_1_4
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_2 -->|LEADS_TO| D_and_1_3
+    D_and_1_3 -->|LEADS_TO| D_and_1_4
   end
   subgraph Actual_group_1_AND
-    REC[RecommendationNode]
     REC
-    ACT1[Procedure: revascularization decision]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
+  D_and_1_4 -->|RESULTS_IN| REC
 ```
 
 Concepts:
