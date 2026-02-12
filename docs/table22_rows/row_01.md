@@ -25,20 +25,6 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "benefits of revascularization",
-    "entity_original": "provide information about benefits of revascularization",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
     "entity": "percutaneous revascularization",
     "entity_original": "patients scheduled for percutaneous revascularization",
     "role": "Procedure",
@@ -53,34 +39,6 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "risks of revascularization",
-    "entity_original": "provide information about risks of revascularization",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "shared decision-making",
-    "entity_original": "take part in shared clinical decision-making",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
     "entity": "surgical revascularization",
     "entity_original": "patients scheduled for surgical revascularization",
     "role": "Procedure",
@@ -93,6 +51,34 @@ Aligned JSON (expected vs actual):
     "strength": null,
     "level": null,
     "direction": null
+  },
+  {
+    "entity": "benefits of revascularization",
+    "entity_original": "provide information about benefits of revascularization",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "C",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "risks of revascularization",
+    "entity_original": "provide information about risks of revascularization",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "C",
+    "direction": "POSITIVE"
   },
   {
     "entity": "therapeutic consequences of revascularization",
@@ -121,11 +107,39 @@ Aligned JSON (expected vs actual):
     "strength": "I",
     "level": "C",
     "direction": "POSITIVE"
+  },
+  {
+    "entity": "shared decision-making",
+    "entity_original": "take part in shared clinical decision-making",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "C",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
     <td valign="top"><pre>
 [
+  {
+    "entity": "patients scheduled for revascularization",
+    "entity_original": "patients scheduled for percutaneous or surgical revascularization",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": "I",
+    "level": "C",
+    "direction": "POSITIVE"
+  },
   {
     "entity": "information about revascularization benefits, risks, and alternatives",
     "entity_original": "complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization",
@@ -153,20 +167,6 @@ Aligned JSON (expected vs actual):
     "strength": "I",
     "level": "C",
     "direction": "UNKNOWN"
-  },
-  {
-    "entity": "patients scheduled for revascularization",
-    "entity_original": "patients scheduled for percutaneous or surgical revascularization",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
   }
 ]
 </pre></td>
@@ -177,40 +177,40 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
-  subgraph Expected_group_1_AND
-    REC[RecommendationNode]
-    REC
-    ACT1[Procedure: benefits of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: percutaneous revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: risks of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: shared decision-making]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: surgical revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: therapeutic consequences of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
-    ACT7[Procedure: treatment alternatives of revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
-  end
   subgraph Expected_and_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: benefits of revascularization]
+    ACT1[Procedure: percutaneous revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: percutaneous revascularization]
+    ACT2[Procedure: surgical revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: risks of revascularization]
+    ACT3[Procedure: benefits of revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: shared decision-making]
+    ACT4[Procedure: risks of revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: surgical revascularization]
+    ACT5[Procedure: therapeutic consequences of revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: therapeutic consequences of revascularization]
+    ACT6[Procedure: treatment alternatives of revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
-    ACT7[Procedure: treatment alternatives of revascularization]
+    ACT7[Procedure: shared decision-making]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
+  end
+  subgraph Expected_group_1_AND
+    REC[RecommendationNode]
+    REC
+    ACT1[Procedure: percutaneous revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    ACT2[Procedure: surgical revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+    ACT3[Procedure: benefits of revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+    ACT4[Procedure: risks of revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
+    ACT5[Procedure: therapeutic consequences of revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
+    ACT6[Procedure: treatment alternatives of revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
+    ACT7[Procedure: shared decision-making]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
   end
 ```
@@ -219,12 +219,6 @@ Mermaid (actual):
 
 ```mermaid
 graph LR
-  subgraph Actual_group_1_AND
-    REC[RecommendationNode]
-    REC
-    ACT1[Procedure: information about revascularization benefits, risks, and alternatives]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
@@ -235,6 +229,12 @@ graph LR
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D1 -->|LEADS_TO| D2
     D2 -->|RESULTS_IN| REC
+    ACT1[Procedure: information about revascularization benefits, risks, and alternatives]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
+  subgraph Actual_group_1_AND
+    REC[RecommendationNode]
+    REC
     ACT1[Procedure: information about revascularization benefits, risks, and alternatives]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end

@@ -26,22 +26,36 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "cabg",
-    "entity_original": "myocardial revascularization with cabg over medical therapy alone to improve long-term survival",
-    "role": "Procedure",
-    "operator": null,
+    "entity": "ccs",
+    "entity_original": "ccs patient",
+    "role": "Condition",
+    "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "B",
-    "direction": "POSITIVE"
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
   },
   {
-    "entity": "ccs",
-    "entity_original": "ccs patient",
+    "entity": "surgically eligible",
+    "entity_original": "surgically eligible patient",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
+  },
+  {
+    "entity": "multivessel cad",
+    "entity_original": "multivessel cad",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -68,65 +82,23 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "multivessel cad",
-    "entity_original": "multivessel cad",
-    "role": "Condition",
-    "operator": "PRESENT",
+    "entity": "cabg",
+    "entity_original": "myocardial revascularization with cabg over medical therapy alone to improve long-term survival",
+    "role": "Procedure",
+    "operator": null,
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "surgically eligible",
-    "entity_original": "surgically eligible patient",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "B",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
     <td valign="top"><pre>
 [
-  {
-    "entity": "functionally significant single-vessel disease involving proximal left anterior descending artery",
-    "entity_original": "functionally significant single- or two-vessel disease involving the proximal left anterior descending artery (lad)",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": "proximal left anterior descending artery",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "B",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "left ventricular ejection fraction",
-    "entity_original": "left ventricular ejection fraction (lvef) > 35%",
-    "role": "ClinicalParameter",
-    "operator": ">",
-    "threshold": "35",
-    "unit": "%",
-    "condition_context": "ejection fraction",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "B",
-    "direction": "POSITIVE"
-  },
   {
     "entity": "left ventricular ejection fraction",
     "entity_original": "left ventricular ejection fraction (lvef) > 35%",
@@ -135,6 +107,20 @@ Aligned JSON (expected vs actual):
     "threshold": "35",
     "unit": "%",
     "condition_context": "elevated",
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": "I",
+    "level": "B",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "functionally significant single-vessel disease involving proximal left anterior descending artery",
+    "entity_original": "functionally significant single- or two-vessel disease involving the proximal left anterior descending artery (lad)",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": "proximal left anterior descending artery",
     "logic_type": "AND",
     "logic_group": "and_1",
     "strength": "I",
@@ -151,6 +137,20 @@ Aligned JSON (expected vs actual):
     "condition_context": null,
     "logic_type": null,
     "logic_group": null,
+    "strength": "I",
+    "level": "B",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction (lvef) > 35%",
+    "role": "ClinicalParameter",
+    "operator": ">",
+    "threshold": "35",
+    "unit": "%",
+    "condition_context": "ejection fraction",
+    "logic_type": "AND",
+    "logic_group": "and_1",
     "strength": "I",
     "level": "B",
     "direction": "POSITIVE"
@@ -192,30 +192,30 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
-  subgraph Expected_group_1_AND
-    REC[RecommendationNode]
-    REC
-    ACT1[Procedure: cabg]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
   subgraph Expected_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
     C1[Condition: ccs]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D2[DecisionNode g1 s2]
-    C2[ClinicalParameter: lvef]
+    C2[Condition: surgically eligible]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D3[DecisionNode g1 s3]
     C3[Condition: multivessel cad]
     D3 -->|CHECKS_FOR/EVALUATES| C3
     D4[DecisionNode g1 s4]
-    C4[Condition: surgically eligible]
+    C4[ClinicalParameter: lvef]
     D4 -->|CHECKS_FOR/EVALUATES| C4
     D1 -->|LEADS_TO| D2
     D2 -->|LEADS_TO| D3
     D3 -->|LEADS_TO| D4
     D4 -->|RESULTS_IN| REC
+    ACT1[Procedure: cabg]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
+  subgraph Expected_group_1_AND
+    REC[RecommendationNode]
+    REC
     ACT1[Procedure: cabg]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
@@ -228,10 +228,10 @@ graph LR
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: functionally significant single-vessel disease involving proximal left anterior descending artery]
+    C1[ClinicalParameter: left ventricular ejection fraction]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D2[DecisionNode g1 s2]
-    C2[ClinicalParameter: left ventricular ejection fraction]
+    C2[Condition: functionally significant single-vessel disease involving proximal left anterior descending artery]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D3[DecisionNode g1 s3]
     C3[ClinicalParameter: left ventricular ejection fraction]

@@ -57,20 +57,6 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "chronic coronary syndrome",
-    "entity_original": "chronic coronary syndrome (ccs)",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": "selected",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "IIb",
-    "level": "B",
-    "direction": "UNKNOWN"
-  },
-  {
     "entity": "chronic coronary syndrome patients with functionally significant multivessel disease",
     "entity_original": "chronic coronary syndrome patients with functionally significant multivessel disease",
     "role": "Condition",
@@ -78,6 +64,20 @@ Aligned JSON (expected vs actual):
     "threshold": null,
     "unit": null,
     "condition_context": "functionally significant",
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": "IIb",
+    "level": "B",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction",
+    "role": "ClinicalParameter",
+    "operator": "<=",
+    "threshold": "35",
+    "unit": "%",
+    "condition_context": null,
     "logic_type": "AND",
     "logic_group": "and_1",
     "strength": "IIb",
@@ -99,41 +99,41 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "high surgical risk",
-    "entity_original": "high surgical risk",
+    "entity": "not operable",
+    "entity_original": "high surgical risk or not operable",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "IIb",
-    "level": "B",
-    "direction": "UNKNOWN"
-  },
-  {
-    "entity": "left ventricular ejection fraction",
-    "entity_original": "left ventricular ejection fraction",
-    "role": "ClinicalParameter",
-    "operator": "<=",
-    "threshold": "35",
-    "unit": "%",
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
+    "logic_type": "OR",
+    "logic_group": "or_1",
     "strength": "IIb",
     "level": "B",
     "direction": "POSITIVE"
   },
   {
-    "entity": "left ventricular ejection fraction",
-    "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
-    "role": "ClinicalParameter",
-    "operator": "LE",
-    "threshold": "35",
-    "unit": "%",
+    "entity": "percutaneous coronary intervention",
+    "entity_original": "percutaneous coronary intervention",
+    "role": "Procedure",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
     "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "IIb",
+    "level": "B",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "chronic coronary syndrome",
+    "entity_original": "chronic coronary syndrome (ccs)",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": "selected",
     "logic_type": "AND",
     "logic_group": "and_1",
     "strength": "IIb",
@@ -155,18 +155,32 @@ Aligned JSON (expected vs actual):
     "direction": "UNKNOWN"
   },
   {
-    "entity": "not operable",
-    "entity_original": "high surgical risk or not operable",
+    "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
+    "role": "ClinicalParameter",
+    "operator": "LE",
+    "threshold": "35",
+    "unit": "%",
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": "IIb",
+    "level": "B",
+    "direction": "UNKNOWN"
+  },
+  {
+    "entity": "high surgical risk",
+    "entity_original": "high surgical risk",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": "OR",
-    "logic_group": "or_1",
+    "logic_type": "AND",
+    "logic_group": "and_1",
     "strength": "IIb",
     "level": "B",
-    "direction": "POSITIVE"
+    "direction": "UNKNOWN"
   },
   {
     "entity": "not operable",
@@ -181,20 +195,6 @@ Aligned JSON (expected vs actual):
     "strength": "IIb",
     "level": "B",
     "direction": "UNKNOWN"
-  },
-  {
-    "entity": "percutaneous coronary intervention",
-    "entity_original": "percutaneous coronary intervention",
-    "role": "Procedure",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "IIb",
-    "level": "B",
-    "direction": "POSITIVE"
   }
 ]
 </pre></td>
@@ -230,22 +230,22 @@ graph LR
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: chronic coronary syndrome]
+    C1[Condition: chronic coronary syndrome patients with functionally significant multivessel disease]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D2[DecisionNode g1 s2]
-    C2[Condition: chronic coronary syndrome patients with functionally significant multivessel disease]
+    C2[ClinicalParameter: left ventricular ejection fraction]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D3[DecisionNode g1 s3]
-    C3[Condition: high surgical risk]
+    C3[Condition: chronic coronary syndrome]
     D3 -->|CHECKS_FOR/EVALUATES| C3
     D4[DecisionNode g1 s4]
-    C4[ClinicalParameter: left ventricular ejection fraction]
+    C4[Condition: multivessel disease]
     D4 -->|CHECKS_FOR/EVALUATES| C4
     D5[DecisionNode g1 s5]
     C5[ClinicalParameter: left ventricular ejection fraction]
     D5 -->|CHECKS_FOR/EVALUATES| C5
     D6[DecisionNode g1 s6]
-    C6[Condition: multivessel disease]
+    C6[Condition: high surgical risk]
     D6 -->|CHECKS_FOR/EVALUATES| C6
     D7[DecisionNode g1 s7]
     C7[Condition: not operable]

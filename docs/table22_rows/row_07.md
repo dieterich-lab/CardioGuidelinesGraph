@@ -40,34 +40,6 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "functionally significant three-vessel disease",
-    "entity_original": "functionally significant three-vessel disease",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "guideline-directed medical therapy",
-    "entity_original": "guideline-directed medical therapy is recommended to improve long-term survival and to reduce long-term cardiovascular mortality and the risk of spontaneous myocardial infarction",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "A",
-    "direction": "POSITIVE"
-  },
-  {
     "entity": "lvef",
     "entity_original": "lvef > 35%",
     "role": "ClinicalParameter",
@@ -82,8 +54,36 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
+    "entity": "functionally significant three-vessel disease",
+    "entity_original": "functionally significant three-vessel disease",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
+  },
+  {
     "entity": "myocardial revascularization",
     "entity_original": "myocardial revascularization is recommended to improve long-term survival and to reduce long-term cardiovascular mortality and the risk of spontaneous myocardial infarction",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "A",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "guideline-directed medical therapy",
+    "entity_original": "guideline-directed medical therapy is recommended to improve long-term survival and to reduce long-term cardiovascular mortality and the risk of spontaneous myocardial infarction",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -142,25 +142,25 @@ graph LR
     C1[Condition: ccs]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D2[DecisionNode g1 s2]
-    C2[Condition: functionally significant three-vessel disease]
+    C2[ClinicalParameter: lvef]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D3[DecisionNode g1 s3]
-    C3[ClinicalParameter: lvef]
+    C3[Condition: functionally significant three-vessel disease]
     D3 -->|CHECKS_FOR/EVALUATES| C3
     D1 -->|LEADS_TO| D2
     D2 -->|LEADS_TO| D3
     D3 -->|RESULTS_IN| REC
-    ACT1[Procedure: guideline-directed medical therapy]
+    ACT1[Procedure: myocardial revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: myocardial revascularization]
+    ACT2[Procedure: guideline-directed medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
   subgraph Expected_group_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: guideline-directed medical therapy]
+    ACT1[Procedure: myocardial revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: myocardial revascularization]
+    ACT2[Procedure: guideline-directed medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
 ```

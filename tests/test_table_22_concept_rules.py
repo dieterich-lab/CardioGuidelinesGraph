@@ -479,8 +479,8 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     "mapped_actual_row": actual_row_id,
                     "match_score": score,
                     "ground_truth_text": truth_rows.get(expected_row_id, {}),
-                    "expected_entries": expected_sorted,
-                    "actual_entries": actual_sorted,
+                    "expected_entries": expected_entries,
+                    "actual_entries": actual_entries,
                     "concept_summary": {
                         "expected": len(expected_concepts),
                         "actual": len(actual_concepts),

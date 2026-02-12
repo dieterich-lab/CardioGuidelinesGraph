@@ -25,8 +25,22 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "anginal equivalent",
-    "entity_original": "anginal equivalent",
+    "entity": "ccs",
+    "entity_original": "ccs patient",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
+  },
+  {
+    "entity": "persistent angina",
+    "entity_original": "persistent angina",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -39,15 +53,15 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "ccs",
-    "entity_original": "ccs patient",
+    "entity": "anginal equivalent",
+    "entity_original": "anginal equivalent",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
+    "logic_type": "OR",
+    "logic_group": "or_1",
     "strength": null,
     "level": null,
     "direction": null
@@ -79,39 +93,11 @@ Aligned JSON (expected vs actual):
     "strength": "I",
     "level": "A",
     "direction": "POSITIVE"
-  },
-  {
-    "entity": "persistent angina",
-    "entity_original": "persistent angina",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "OR",
-    "logic_group": "or_1",
-    "strength": null,
-    "level": null,
-    "direction": null
   }
 ]
 </pre></td>
     <td valign="top"><pre>
 [
-  {
-    "entity": "chronic coronary syndrome with left ventricular ejection fraction",
-    "entity_original": "ccs patients with left ventricular ejection fraction (lvef) \u2264 35%",
-    "role": "Condition",
-    "operator": "<=",
-    "threshold": "35",
-    "unit": "%",
-    "condition_context": "chronic coronary syndrome",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
   {
     "entity": "left ventricular ejection fraction",
     "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
@@ -122,6 +108,20 @@ Aligned JSON (expected vs actual):
     "condition_context": null,
     "logic_type": "AND",
     "logic_group": "and_1",
+    "strength": "I",
+    "level": "C",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "revascularization",
+    "entity_original": "revascularization",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
     "strength": "I",
     "level": "C",
     "direction": "POSITIVE"
@@ -141,15 +141,15 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "revascularization",
-    "entity_original": "revascularization",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
+    "entity": "chronic coronary syndrome with left ventricular ejection fraction",
+    "entity_original": "ccs patients with left ventricular ejection fraction (lvef) \u2264 35%",
+    "role": "Condition",
+    "operator": "<=",
+    "threshold": "35",
+    "unit": "%",
+    "condition_context": "chronic coronary syndrome",
+    "logic_type": "AND",
+    "logic_group": "and_1",
     "strength": "I",
     "level": "C",
     "direction": "POSITIVE"
@@ -163,19 +163,6 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
-  subgraph Expected_or_1_OR
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: anginal equivalent]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D2[DecisionNode g1 s2]
-    C2[Condition: persistent angina]
-    D2 -->|CHECKS_FOR/EVALUATES| C2
-    D1 -->|RESULTS_IN| REC
-    D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: myocardial revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
   subgraph Expected_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
@@ -185,6 +172,19 @@ graph LR
     C2[Condition: despite guideline-directed medical treatment]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D1 -->|LEADS_TO| D2
+    D2 -->|RESULTS_IN| REC
+    ACT1[Procedure: myocardial revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
+  subgraph Expected_or_1_OR
+    REC[RecommendationNode]
+    D1[DecisionNode g1 s1]
+    C1[Condition: persistent angina]
+    D1 -->|CHECKS_FOR/EVALUATES| C1
+    D2[DecisionNode g1 s2]
+    C2[Condition: anginal equivalent]
+    D2 -->|CHECKS_FOR/EVALUATES| C2
+    D1 -->|RESULTS_IN| REC
     D2 -->|RESULTS_IN| REC
     ACT1[Procedure: myocardial revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
@@ -204,24 +204,24 @@ graph LR
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: chronic coronary syndrome with left ventricular ejection fraction]
+    C1[ClinicalParameter: left ventricular ejection fraction]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D2[DecisionNode g1 s2]
-    C2[ClinicalParameter: left ventricular ejection fraction]
+    C2[Condition: chronic coronary syndrome with left ventricular ejection fraction]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D1 -->|LEADS_TO| D2
     D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: medical therapy]
+    ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: revascularization]
+    ACT2[Procedure: medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
   subgraph Actual_group_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: medical therapy]
+    ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: revascularization]
+    ACT2[Procedure: medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
 ```

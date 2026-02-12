@@ -57,6 +57,20 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
+    "entity": "revascularization",
+    "entity_original": "revascularization",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": null,
+    "level": null,
+    "direction": "POSITIVE"
+  },
+  {
     "entity": "age",
     "entity_original": "age",
     "role": "Condition",
@@ -71,15 +85,15 @@ Aligned JSON (expected vs actual):
     "direction": "UNKNOWN"
   },
   {
-    "entity": "anatomical complexity",
-    "entity_original": "high anatomical complexity",
+    "entity": "frailty",
+    "entity_original": "frailty",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
-    "condition_context": "high",
+    "condition_context": null,
     "logic_type": "AND",
-    "logic_group": "and_7",
+    "logic_group": "and_2",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
@@ -113,29 +127,15 @@ Aligned JSON (expected vs actual):
     "direction": "UNKNOWN"
   },
   {
-    "entity": "frailty",
-    "entity_original": "frailty",
+    "entity": "other comorbidities",
+    "entity_original": "any other comorbidities",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
     "logic_type": "AND",
-    "logic_group": "and_2",
-    "strength": null,
-    "level": null,
-    "direction": "UNKNOWN"
-  },
-  {
-    "entity": "local expertise",
-    "entity_original": "local expertise and outcomes",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": "and outcomes",
-    "logic_type": "AND",
-    "logic_group": "and_9",
+    "logic_group": "and_5",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
@@ -155,32 +155,18 @@ Aligned JSON (expected vs actual):
     "direction": "UNKNOWN"
   },
   {
-    "entity": "other comorbidities",
-    "entity_original": "any other comorbidities",
+    "entity": "anatomical complexity",
+    "entity_original": "high anatomical complexity",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
-    "condition_context": null,
+    "condition_context": "high",
     "logic_type": "AND",
-    "logic_group": "and_5",
+    "logic_group": "and_7",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
-  },
-  {
-    "entity": "revascularization",
-    "entity_original": "revascularization",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": null,
-    "level": null,
-    "direction": "POSITIVE"
   },
   {
     "entity": "revascularization completeness",
@@ -192,6 +178,20 @@ Aligned JSON (expected vs actual):
     "condition_context": "likelihood of",
     "logic_type": "AND",
     "logic_group": "and_8",
+    "strength": null,
+    "level": null,
+    "direction": "UNKNOWN"
+  },
+  {
+    "entity": "local expertise",
+    "entity_original": "local expertise and outcomes",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": "and outcomes",
+    "logic_type": "AND",
+    "logic_group": "and_9",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
@@ -240,6 +240,12 @@ Mermaid (actual):
 
 ```mermaid
 graph LR
+  subgraph Actual_group_1_AND
+    REC[RecommendationNode]
+    REC
+    ACT1[Procedure: revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
@@ -249,10 +255,10 @@ graph LR
     ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
-  subgraph Actual_and_7_AND
+  subgraph Actual_and_2_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: anatomical complexity]
+    C1[Condition: frailty]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: revascularization]
@@ -276,19 +282,10 @@ graph LR
     ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
-  subgraph Actual_and_2_AND
+  subgraph Actual_and_5_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: frailty]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
-  subgraph Actual_and_9_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: local expertise]
+    C1[Condition: other comorbidities]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: revascularization]
@@ -303,18 +300,12 @@ graph LR
     ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
-  subgraph Actual_and_5_AND
+  subgraph Actual_and_7_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: other comorbidities]
+    C1[Condition: anatomical complexity]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
-  subgraph Actual_group_1_AND
-    REC[RecommendationNode]
-    REC
     ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
@@ -322,6 +313,15 @@ graph LR
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
     C1[Condition: revascularization completeness]
+    D1 -->|CHECKS_FOR/EVALUATES| C1
+    D1 -->|RESULTS_IN| REC
+    ACT1[Procedure: revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
+  subgraph Actual_and_9_AND
+    REC[RecommendationNode]
+    D1[DecisionNode g1 s1]
+    C1[Condition: local expertise]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: revascularization]

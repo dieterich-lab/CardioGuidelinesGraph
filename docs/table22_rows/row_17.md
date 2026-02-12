@@ -26,23 +26,23 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "computation (qfr)",
-    "entity_original": "computation (qfr) is recommended to guide lesion selection for intervention",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "A",
-    "direction": "POSITIVE"
-  },
-  {
     "entity": "intervention",
     "entity_original": "intervention",
     "role": "Procedure",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
+  },
+  {
+    "entity": "multivessel disease",
+    "entity_original": "patients with multivessel disease",
+    "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
@@ -82,23 +82,37 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "multivessel disease",
-    "entity_original": "patients with multivessel disease",
-    "role": "Condition",
-    "operator": "PRESENT",
+    "entity": "computation (qfr)",
+    "entity_original": "computation (qfr) is recommended to guide lesion selection for intervention",
+    "role": "Procedure",
+    "operator": null,
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "A",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
     <td valign="top"><pre>
 [
+  {
+    "entity": "assessment of procedural risks and post-procedural outcomes",
+    "entity_original": "assessment of procedural risks and post-procedural outcomes",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": null,
+    "level": null,
+    "direction": "POSITIVE"
+  },
   {
     "entity": "age",
     "entity_original": "age",
@@ -114,18 +128,18 @@ Aligned JSON (expected vs actual):
     "direction": "UNKNOWN"
   },
   {
-    "entity": "assessment of procedural risks and post-procedural outcomes",
-    "entity_original": "assessment of procedural risks and post-procedural outcomes",
-    "role": "Procedure",
-    "operator": null,
+    "entity": "frailty",
+    "entity_original": "frailty",
+    "role": "Condition",
+    "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
+    "logic_type": "AND",
+    "logic_group": "and_2",
     "strength": null,
     "level": null,
-    "direction": "POSITIVE"
+    "direction": "UNKNOWN"
   },
   {
     "entity": "cognitive status",
@@ -156,29 +170,29 @@ Aligned JSON (expected vs actual):
     "direction": "UNKNOWN"
   },
   {
-    "entity": "frailty",
-    "entity_original": "frailty",
+    "entity": "other comorbidities",
+    "entity_original": "any other comorbidities",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
     "logic_type": "AND",
-    "logic_group": "and_2",
+    "logic_group": "and_5",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
   },
   {
-    "entity": "high anatomical complexity",
-    "entity_original": "high anatomical complexity",
+    "entity": "multivessel disease",
+    "entity_original": "multivessel disease",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
     "logic_type": "AND",
-    "logic_group": "and_8",
+    "logic_group": "and_6",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
@@ -193,6 +207,20 @@ Aligned JSON (expected vs actual):
     "condition_context": null,
     "logic_type": "AND",
     "logic_group": "and_7",
+    "strength": null,
+    "level": null,
+    "direction": "UNKNOWN"
+  },
+  {
+    "entity": "high anatomical complexity",
+    "entity_original": "high anatomical complexity",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_8",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
@@ -224,34 +252,6 @@ Aligned JSON (expected vs actual):
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
-  },
-  {
-    "entity": "multivessel disease",
-    "entity_original": "multivessel disease",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_6",
-    "strength": null,
-    "level": null,
-    "direction": "UNKNOWN"
-  },
-  {
-    "entity": "other comorbidities",
-    "entity_original": "any other comorbidities",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_5",
-    "strength": null,
-    "level": null,
-    "direction": "UNKNOWN"
   }
 ]
 </pre></td>
@@ -262,31 +262,31 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
-  subgraph Expected_group_1_AND
-    REC[RecommendationNode]
-    REC
-    ACT1[Procedure: computation (qfr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: intervention]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: intracoronary pressure measurement (ffr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: intracoronary pressure measurement (ifr)]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-  end
   subgraph Expected_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
     C1[Condition: multivessel disease]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: computation (qfr)]
+    ACT1[Procedure: intervention]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: intervention]
+    ACT2[Procedure: intracoronary pressure measurement (ffr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: intracoronary pressure measurement (ffr)]
+    ACT3[Procedure: intracoronary pressure measurement (ifr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: intracoronary pressure measurement (ifr)]
+    ACT4[Procedure: computation (qfr)]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
+  end
+  subgraph Expected_group_1_AND
+    REC[RecommendationNode]
+    REC
+    ACT1[Procedure: intervention]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    ACT2[Procedure: intracoronary pressure measurement (ffr)]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+    ACT3[Procedure: intracoronary pressure measurement (ifr)]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+    ACT4[Procedure: computation (qfr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
   end
 ```
@@ -295,6 +295,12 @@ Mermaid (actual):
 
 ```mermaid
 graph LR
+  subgraph Actual_group_1_AND
+    REC[RecommendationNode]
+    REC
+    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
@@ -304,9 +310,12 @@ graph LR
     ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
-  subgraph Actual_group_1_AND
+  subgraph Actual_and_2_AND
     REC[RecommendationNode]
-    REC
+    D1[DecisionNode g1 s1]
+    C1[Condition: frailty]
+    D1 -->|CHECKS_FOR/EVALUATES| C1
+    D1 -->|RESULTS_IN| REC
     ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
@@ -328,19 +337,19 @@ graph LR
     ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
-  subgraph Actual_and_2_AND
+  subgraph Actual_and_5_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: frailty]
+    C1[Condition: other comorbidities]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
-  subgraph Actual_and_8_AND
+  subgraph Actual_and_6_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: high anatomical complexity]
+    C1[Condition: multivessel disease]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
@@ -350,6 +359,15 @@ graph LR
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
     C1[Condition: left main stem involvement]
+    D1 -->|CHECKS_FOR/EVALUATES| C1
+    D1 -->|RESULTS_IN| REC
+    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
+  subgraph Actual_and_8_AND
+    REC[RecommendationNode]
+    D1[DecisionNode g1 s1]
+    C1[Condition: high anatomical complexity]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
@@ -368,24 +386,6 @@ graph LR
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
     C1[Condition: local expertise and outcomes]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
-  subgraph Actual_and_6_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: multivessel disease]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
-  subgraph Actual_and_5_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: other comorbidities]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]

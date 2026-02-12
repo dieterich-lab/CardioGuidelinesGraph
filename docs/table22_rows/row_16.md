@@ -25,6 +25,20 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
+    "entity": "pci",
+    "entity_original": "pci",
+    "role": "Procedure",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
+  },
+  {
     "entity": "anatomically complex lesions",
     "entity_original": "anatomically complex lesions",
     "role": "Condition",
@@ -39,22 +53,22 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "ivus",
-    "entity_original": "intracoronary imaging guidance by ivus recommended",
-    "role": "Procedure",
-    "operator": null,
+    "entity": "left main stem lesions",
+    "entity_original": "left main stem lesions",
+    "role": "Condition",
+    "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "A",
-    "direction": "POSITIVE"
+    "logic_type": "OR",
+    "logic_group": "or_1",
+    "strength": null,
+    "level": null,
+    "direction": null
   },
   {
-    "entity": "left main stem lesions",
-    "entity_original": "left main stem lesions",
+    "entity": "true bifurcations lesions",
+    "entity_original": "true bifurcations lesions",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -81,8 +95,8 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "octis",
-    "entity_original": "intracoronary imaging guidance by octis recommended",
+    "entity": "ivus",
+    "entity_original": "intracoronary imaging guidance by ivus recommended",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -95,32 +109,18 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "pci",
-    "entity_original": "pci",
+    "entity": "octis",
+    "entity_original": "intracoronary imaging guidance by octis recommended",
     "role": "Procedure",
-    "operator": "PRESENT",
+    "operator": null,
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "true bifurcations lesions",
-    "entity_original": "true bifurcations lesions",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "OR",
-    "logic_group": "or_1",
-    "strength": null,
-    "level": null,
-    "direction": null
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "A",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
@@ -141,20 +141,6 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "chronic coronary syndrome with persistent angina despite guideline-directed medical treatment",
-    "entity_original": "chronic coronary syndrome (ccs) patients with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": "with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "A",
-    "direction": "UNKNOWN"
-  },
-  {
     "entity": "myocardial revascularization",
     "entity_original": "myocardial revascularization of functionally significant obstructive coronary artery disease (cad)",
     "role": "Procedure",
@@ -167,6 +153,20 @@ Aligned JSON (expected vs actual):
     "strength": "I",
     "level": "A",
     "direction": "POSITIVE"
+  },
+  {
+    "entity": "chronic coronary syndrome with persistent angina despite guideline-directed medical treatment",
+    "entity_original": "chronic coronary syndrome (ccs) patients with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": "with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": "I",
+    "level": "A",
+    "direction": "UNKNOWN"
   }
 ]
 </pre></td>
@@ -177,6 +177,16 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
+  subgraph Expected_and_1_AND
+    REC[RecommendationNode]
+    REC
+    ACT1[Procedure: pci]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    ACT2[Procedure: ivus]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+    ACT3[Procedure: octis]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+  end
   subgraph Expected_or_1_OR
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
@@ -186,40 +196,30 @@ graph LR
     C2[Condition: left main stem lesions]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D3[DecisionNode g1 s3]
-    C3[Condition: long lesions]
+    C3[Condition: true bifurcations lesions]
     D3 -->|CHECKS_FOR/EVALUATES| C3
     D4[DecisionNode g1 s4]
-    C4[Condition: true bifurcations lesions]
+    C4[Condition: long lesions]
     D4 -->|CHECKS_FOR/EVALUATES| C4
     D1 -->|RESULTS_IN| REC
     D2 -->|RESULTS_IN| REC
     D3 -->|RESULTS_IN| REC
     D4 -->|RESULTS_IN| REC
-    ACT1[Procedure: ivus]
+    ACT1[Procedure: pci]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: octis]
+    ACT2[Procedure: ivus]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: pci]
+    ACT3[Procedure: octis]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
   end
   subgraph Expected_group_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: ivus]
+    ACT1[Procedure: pci]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: octis]
+    ACT2[Procedure: ivus]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: pci]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-  end
-  subgraph Expected_and_1_AND
-    REC[RecommendationNode]
-    REC
-    ACT1[Procedure: ivus]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: octis]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-    ACT3[Procedure: pci]
+    ACT3[Procedure: octis]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
   end
 ```

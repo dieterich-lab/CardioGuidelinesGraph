@@ -26,6 +26,20 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
+    "entity": "revascularization",
+    "entity_original": "at the end of the revascularization",
+    "role": "Procedure",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
+  },
+  {
     "entity": "chronic coronary syndrome",
     "entity_original": "patients with chronic coronary syndrome",
     "role": "Condition",
@@ -38,20 +52,6 @@ Aligned JSON (expected vs actual):
     "strength": null,
     "level": null,
     "direction": null
-  },
-  {
-    "entity": "computation (qfr)",
-    "entity_original": "computation (qfr) is recommended to identify lesions potentially amenable to treatment with additional pci",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "IIb",
-    "level": "B",
-    "direction": "POSITIVE"
   },
   {
     "entity": "intracoronary pressure measurement (ffr)",
@@ -82,23 +82,37 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "revascularization",
-    "entity_original": "at the end of the revascularization",
+    "entity": "computation (qfr)",
+    "entity_original": "computation (qfr) is recommended to identify lesions potentially amenable to treatment with additional pci",
     "role": "Procedure",
-    "operator": "PRESENT",
+    "operator": null,
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "IIb",
+    "level": "B",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
     <td valign="top"><pre>
 [
+  {
+    "entity": "society of thoracic surgeons score",
+    "entity_original": "calculation of the society of thoracic surgeons score (sts) score",
+    "role": "Procedure",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": "after coronary artery bypass grafting",
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "B",
+    "direction": "POSITIVE"
+  },
   {
     "entity": "coronary artery bypass grafting",
     "entity_original": "coronary artery bypass grafting (cabg)",
@@ -126,20 +140,6 @@ Aligned JSON (expected vs actual):
     "strength": "I",
     "level": "B",
     "direction": "UNKNOWN"
-  },
-  {
-    "entity": "society of thoracic surgeons score",
-    "entity_original": "calculation of the society of thoracic surgeons score (sts) score",
-    "role": "Procedure",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": "after coronary artery bypass grafting",
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "B",
-    "direction": "POSITIVE"
   }
 ]
 </pre></td>
@@ -156,25 +156,25 @@ graph LR
     C1[Condition: chronic coronary syndrome]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: computation (qfr)]
+    ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
     ACT2[Procedure: intracoronary pressure measurement (ffr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
     ACT3[Procedure: intracoronary pressure measurement (ifr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: revascularization]
+    ACT4[Procedure: computation (qfr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
   end
   subgraph Expected_group_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: computation (qfr)]
+    ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
     ACT2[Procedure: intracoronary pressure measurement (ffr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
     ACT3[Procedure: intracoronary pressure measurement (ifr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: revascularization]
+    ACT4[Procedure: computation (qfr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
   end
 ```
@@ -183,6 +183,12 @@ Mermaid (actual):
 
 ```mermaid
 graph LR
+  subgraph Actual_group_1_AND
+    REC[RecommendationNode]
+    REC
+    ACT1[Procedure: society of thoracic surgeons score]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
@@ -193,12 +199,6 @@ graph LR
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D1 -->|LEADS_TO| D2
     D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: society of thoracic surgeons score]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
-  subgraph Actual_group_1_AND
-    REC[RecommendationNode]
-    REC
     ACT1[Procedure: society of thoracic surgeons score]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end

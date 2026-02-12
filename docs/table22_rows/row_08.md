@@ -40,6 +40,20 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
+    "entity": "lvef",
+    "entity_original": "lvef > 35%",
+    "role": "ClinicalParameter",
+    "operator": ">",
+    "threshold": "35",
+    "unit": "%",
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
+  },
+  {
     "entity": "functionally significant three-vessel disease",
     "entity_original": "functionally significant single-vessel disease involving the proximal lad",
     "role": "Condition",
@@ -68,8 +82,8 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "guideline-directed medical therapy",
-    "entity_original": "guideline-directed medical therapy to reduce long-term cardiovascular mortality",
+    "entity": "myocardial revascularization",
+    "entity_original": "myocardial revascularization to reduce long-term cardiovascular mortality",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -82,22 +96,8 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "lvef",
-    "entity_original": "lvef > 35%",
-    "role": "ClinicalParameter",
-    "operator": ">",
-    "threshold": "35",
-    "unit": "%",
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "myocardial revascularization",
-    "entity_original": "myocardial revascularization to reduce long-term cardiovascular mortality",
+    "entity": "guideline-directed medical therapy",
+    "entity_original": "guideline-directed medical therapy to reduce long-term cardiovascular mortality",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -114,40 +114,12 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "chronic coronary syndrome",
-    "entity_original": "chronic coronary syndrome (ccs) patients",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": "patients",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "A",
-    "direction": "POSITIVE"
-  },
-  {
     "entity": "chronic coronary syndrome patients",
     "entity_original": "chronic coronary syndrome (ccs) patients",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "A",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "left ventricular ejection fraction",
-    "entity_original": "left ventricular ejection fraction (lvef) > 35%",
-    "role": "ClinicalParameter",
-    "operator": ">",
-    "threshold": "35",
-    "unit": "%",
     "condition_context": null,
     "logic_type": "AND",
     "logic_group": "and_1",
@@ -182,6 +154,34 @@ Aligned JSON (expected vs actual):
     "strength": "I",
     "level": "A",
     "direction": "POSITIVE"
+  },
+  {
+    "entity": "chronic coronary syndrome",
+    "entity_original": "chronic coronary syndrome (ccs) patients",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": "patients",
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": "I",
+    "level": "A",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction (lvef) > 35%",
+    "role": "ClinicalParameter",
+    "operator": ">",
+    "threshold": "35",
+    "unit": "%",
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": "I",
+    "level": "A",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
@@ -202,9 +202,9 @@ graph LR
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D1 -->|LEADS_TO| D2
     D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: guideline-directed medical therapy]
+    ACT1[Procedure: myocardial revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: myocardial revascularization]
+    ACT2[Procedure: guideline-directed medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
   subgraph Expected_or_1_OR
@@ -217,17 +217,17 @@ graph LR
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D1 -->|RESULTS_IN| REC
     D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: guideline-directed medical therapy]
+    ACT1[Procedure: myocardial revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: myocardial revascularization]
+    ACT2[Procedure: guideline-directed medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
   subgraph Expected_group_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: guideline-directed medical therapy]
+    ACT1[Procedure: myocardial revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: myocardial revascularization]
+    ACT2[Procedure: guideline-directed medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
 ```
@@ -239,16 +239,16 @@ graph LR
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: chronic coronary syndrome]
+    C1[Condition: chronic coronary syndrome patients]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D2[DecisionNode g1 s2]
-    C2[Condition: chronic coronary syndrome patients]
+    C2[ClinicalParameter: left ventricular ejection fraction > 35%]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D3[DecisionNode g1 s3]
-    C3[ClinicalParameter: left ventricular ejection fraction]
+    C3[Condition: chronic coronary syndrome]
     D3 -->|CHECKS_FOR/EVALUATES| C3
     D4[DecisionNode g1 s4]
-    C4[ClinicalParameter: left ventricular ejection fraction > 35%]
+    C4[ClinicalParameter: left ventricular ejection fraction]
     D4 -->|CHECKS_FOR/EVALUATES| C4
     D1 -->|LEADS_TO| D2
     D2 -->|LEADS_TO| D3

@@ -40,8 +40,22 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "evaluate comorbidities",
-    "entity_original": "evaluate comorbidities preferably by the heart team",
+    "entity": "lvef",
+    "entity_original": "lvef \u2264 35%",
+    "role": "ClinicalParameter",
+    "operator": "\u2264",
+    "threshold": "35",
+    "unit": "%",
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
+  },
+  {
+    "entity": "revascularization or medical therapy",
+    "entity_original": "choose between revascularization or medical therapy alone",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -82,8 +96,8 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "evaluate individual risk-to-benefit ratio",
-    "entity_original": "evaluate individual risk-to-benefit ratio by the heart team",
+    "entity": "evaluate comorbidities",
+    "entity_original": "evaluate comorbidities preferably by the heart team",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -110,8 +124,8 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "evaluate patient perspectives",
-    "entity_original": "evaluate patient perspectives by the heart team",
+    "entity": "evaluate individual risk-to-benefit ratio",
+    "entity_original": "evaluate individual risk-to-benefit ratio by the heart team",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -124,22 +138,8 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "lvef",
-    "entity_original": "lvef \u2264 35%",
-    "role": "ClinicalParameter",
-    "operator": "\u2264",
-    "threshold": "35",
-    "unit": "%",
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "revascularization or medical therapy",
-    "entity_original": "choose between revascularization or medical therapy alone",
+    "entity": "evaluate patient perspectives",
+    "entity_original": "evaluate patient perspectives by the heart team",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -184,20 +184,6 @@ Aligned JSON (expected vs actual):
     "direction": "UNKNOWN"
   },
   {
-    "entity": "myocardial revascularization",
-    "entity_original": "myocardial revascularization",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "A",
-    "direction": "POSITIVE"
-  },
-  {
     "entity": "three-vessel disease",
     "entity_original": "functionally significant three-vessel disease",
     "role": "Condition",
@@ -210,6 +196,20 @@ Aligned JSON (expected vs actual):
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
+  },
+  {
+    "entity": "myocardial revascularization",
+    "entity_original": "myocardial revascularization",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "A",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
@@ -230,37 +230,37 @@ graph LR
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D1 -->|LEADS_TO| D2
     D2 -->|RESULTS_IN| REC
-    ACT1[Procedure: evaluate comorbidities]
+    ACT1[Procedure: revascularization or medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
     ACT2[Procedure: evaluate coronary anatomy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
     ACT3[Procedure: evaluate correlation between coronary artery disease and lv dysfunction]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: evaluate individual risk-to-benefit ratio]
+    ACT4[Procedure: evaluate comorbidities]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
     ACT5[Procedure: evaluate life expectancy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: evaluate patient perspectives]
+    ACT6[Procedure: evaluate individual risk-to-benefit ratio]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
-    ACT7[Procedure: revascularization or medical therapy]
+    ACT7[Procedure: evaluate patient perspectives]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
   end
   subgraph Expected_group_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: evaluate comorbidities]
+    ACT1[Procedure: revascularization or medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
     ACT2[Procedure: evaluate coronary anatomy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
     ACT3[Procedure: evaluate correlation between coronary artery disease and lv dysfunction]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: evaluate individual risk-to-benefit ratio]
+    ACT4[Procedure: evaluate comorbidities]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
     ACT5[Procedure: evaluate life expectancy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-    ACT6[Procedure: evaluate patient perspectives]
+    ACT6[Procedure: evaluate individual risk-to-benefit ratio]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
-    ACT7[Procedure: revascularization or medical therapy]
+    ACT7[Procedure: evaluate patient perspectives]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
   end
 ```

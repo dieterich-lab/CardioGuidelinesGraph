@@ -25,22 +25,22 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "cultural circumstances",
-    "entity_original": "the decision for revascularization and its modality consider cultural circumstances",
+    "entity": "revacularization",
+    "entity_original": "the decision for revascularization and its modality",
     "role": "Procedure",
-    "operator": null,
+    "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
   },
   {
-    "entity": "health literacy",
-    "entity_original": "the decision for revascularization and its modality consider health literacy",
+    "entity": "patient-centred decision",
+    "entity_original": "the decision for revascularization and its modality be patient-centred",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -67,8 +67,8 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "patient-centred decision",
-    "entity_original": "the decision for revascularization and its modality be patient-centred",
+    "entity": "health literacy",
+    "entity_original": "the decision for revascularization and its modality consider health literacy",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -81,18 +81,18 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "revacularization",
-    "entity_original": "the decision for revascularization and its modality",
+    "entity": "cultural circumstances",
+    "entity_original": "the decision for revascularization and its modality consider cultural circumstances",
     "role": "Procedure",
-    "operator": "PRESENT",
+    "operator": null,
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "C",
+    "direction": "POSITIVE"
   },
   {
     "entity": "social support",
@@ -113,8 +113,8 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "cultural circumstances",
-    "entity_original": "cultural circumstances",
+    "entity": "patient preferences",
+    "entity_original": "patient preferences",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -141,8 +141,22 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "patient preferences",
-    "entity_original": "patient preferences",
+    "entity": "cultural circumstances",
+    "entity_original": "cultural circumstances",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": "I",
+    "level": "C",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "social support",
+    "entity_original": "social support",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -167,20 +181,6 @@ Aligned JSON (expected vs actual):
     "strength": "I",
     "level": "C",
     "direction": "POSITIVE"
-  },
-  {
-    "entity": "social support",
-    "entity_original": "social support",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
   }
 ]
 </pre></td>
@@ -191,34 +191,34 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
-  subgraph Expected_group_1_AND
+  subgraph Expected_and_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: cultural circumstances]
+    ACT1[Procedure: revacularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: health literacy]
+    ACT2[Procedure: patient-centred decision]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
     ACT3[Procedure: patient preferences]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: patient-centred decision]
+    ACT4[Procedure: health literacy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: revacularization]
+    ACT5[Procedure: cultural circumstances]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
     ACT6[Procedure: social support]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
   end
-  subgraph Expected_and_1_AND
+  subgraph Expected_group_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: cultural circumstances]
+    ACT1[Procedure: revacularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: health literacy]
+    ACT2[Procedure: patient-centred decision]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
     ACT3[Procedure: patient preferences]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: patient-centred decision]
+    ACT4[Procedure: health literacy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-    ACT5[Procedure: revacularization]
+    ACT5[Procedure: cultural circumstances]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
     ACT6[Procedure: social support]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
@@ -232,13 +232,13 @@ graph LR
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: cultural circumstances]
+    C1[Condition: patient preferences]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D2[DecisionNode g1 s2]
     C2[Condition: health literacy]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D3[DecisionNode g1 s3]
-    C3[Condition: patient preferences]
+    C3[Condition: cultural circumstances]
     D3 -->|CHECKS_FOR/EVALUATES| C3
     D4[DecisionNode g1 s4]
     C4[Condition: social support]

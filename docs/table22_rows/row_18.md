@@ -26,6 +26,20 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
+    "entity": "revascularization",
+    "entity_original": "at the end of the revascularization",
+    "role": "Procedure",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": null
+  },
+  {
     "entity": "chronic coronary syndrome",
     "entity_original": "patients with chronic coronary syndrome",
     "role": "Condition",
@@ -38,20 +52,6 @@ Aligned JSON (expected vs actual):
     "strength": null,
     "level": null,
     "direction": null
-  },
-  {
-    "entity": "computation (qfr)",
-    "entity_original": "computation (qfr) is recommended to identify patients at high risk of persistent angina and subsequent clinical events",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "IIa",
-    "level": "B",
-    "direction": "POSITIVE"
   },
   {
     "entity": "intracoronary pressure measurement (ffr)",
@@ -82,37 +82,23 @@ Aligned JSON (expected vs actual):
     "direction": "POSITIVE"
   },
   {
-    "entity": "revascularization",
-    "entity_original": "at the end of the revascularization",
+    "entity": "computation (qfr)",
+    "entity_original": "computation (qfr) is recommended to identify patients at high risk of persistent angina and subsequent clinical events",
     "role": "Procedure",
-    "operator": "PRESENT",
+    "operator": null,
     "threshold": null,
     "unit": null,
     "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "IIa",
+    "level": "B",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
     <td valign="top"><pre>
 [
-  {
-    "entity": "assess procedural risks and post-procedural outcomes",
-    "entity_original": "assess procedural risks and post-procedural outcomes",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": "to guide shared clinical decision-making",
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
   {
     "entity": "complex coronary artery disease",
     "entity_original": "complex coronary artery disease (cad)",
@@ -123,6 +109,20 @@ Aligned JSON (expected vs actual):
     "condition_context": "in whom revascularization is being considered",
     "logic_type": "AND",
     "logic_group": "and_1",
+    "strength": "I",
+    "level": "C",
+    "direction": "POSITIVE"
+  },
+  {
+    "entity": "assess procedural risks and post-procedural outcomes",
+    "entity_original": "assess procedural risks and post-procedural outcomes",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": "to guide shared clinical decision-making",
+    "logic_type": null,
+    "logic_group": null,
     "strength": "I",
     "level": "C",
     "direction": "POSITIVE"
@@ -156,25 +156,25 @@ graph LR
     C1[Condition: chronic coronary syndrome]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: computation (qfr)]
+    ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
     ACT2[Procedure: intracoronary pressure measurement (ffr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
     ACT3[Procedure: intracoronary pressure measurement (ifr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: revascularization]
+    ACT4[Procedure: computation (qfr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
   end
   subgraph Expected_group_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: computation (qfr)]
+    ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
     ACT2[Procedure: intracoronary pressure measurement (ffr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
     ACT3[Procedure: intracoronary pressure measurement (ifr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-    ACT4[Procedure: revascularization]
+    ACT4[Procedure: computation (qfr)]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
   end
 ```
@@ -183,12 +183,6 @@ Mermaid (actual):
 
 ```mermaid
 graph LR
-  subgraph Actual_group_1_AND
-    REC[RecommendationNode]
-    REC
-    ACT1[Procedure: assess procedural risks and post-procedural outcomes]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
@@ -199,6 +193,12 @@ graph LR
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D1 -->|LEADS_TO| D2
     D2 -->|RESULTS_IN| REC
+    ACT1[Procedure: assess procedural risks and post-procedural outcomes]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
+  subgraph Actual_group_1_AND
+    REC[RecommendationNode]
+    REC
     ACT1[Procedure: assess procedural risks and post-procedural outcomes]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end

@@ -40,12 +40,12 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "functionally significant left main stem stenosis",
-    "entity_original": "functionally significant left main stem stenosis",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
+    "entity": "lvef",
+    "entity_original": "lvef > 35%",
+    "role": "ClinicalParameter",
+    "operator": ">",
+    "threshold": "35",
+    "unit": "%",
     "condition_context": null,
     "logic_type": "AND",
     "logic_group": "and_1",
@@ -54,26 +54,12 @@ Aligned JSON (expected vs actual):
     "direction": null
   },
   {
-    "entity": "guideline-directed medical therapy",
-    "entity_original": "guideline-directed medical therapy to improve survival",
-    "role": "Procedure",
-    "operator": null,
+    "entity": "functionally significant left main stem stenosis",
+    "entity_original": "functionally significant left main stem stenosis",
+    "role": "Condition",
+    "operator": "PRESENT",
     "threshold": null,
     "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "A",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "lvef",
-    "entity_original": "lvef > 35%",
-    "role": "ClinicalParameter",
-    "operator": ">",
-    "threshold": "35",
-    "unit": "%",
     "condition_context": null,
     "logic_type": "AND",
     "logic_group": "and_1",
@@ -94,11 +80,39 @@ Aligned JSON (expected vs actual):
     "strength": "I",
     "level": "A",
     "direction": "POSITIVE"
+  },
+  {
+    "entity": "guideline-directed medical therapy",
+    "entity_original": "guideline-directed medical therapy to improve survival",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "A",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
     <td valign="top"><pre>
 [
+  {
+    "entity": "revascularization",
+    "entity_original": "revascularization to improve outcomes",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": null,
+    "level": null,
+    "direction": "POSITIVE"
+  },
   {
     "entity": "age",
     "entity_original": "age",
@@ -109,6 +123,20 @@ Aligned JSON (expected vs actual):
     "condition_context": null,
     "logic_type": "AND",
     "logic_group": "and_1",
+    "strength": null,
+    "level": null,
+    "direction": "UNKNOWN"
+  },
+  {
+    "entity": "frailty",
+    "entity_original": "frailty",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_2",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
@@ -142,29 +170,29 @@ Aligned JSON (expected vs actual):
     "direction": "UNKNOWN"
   },
   {
-    "entity": "frailty",
-    "entity_original": "frailty",
+    "entity": "other comorbidities",
+    "entity_original": "any other comorbidities",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
     "logic_type": "AND",
-    "logic_group": "and_2",
+    "logic_group": "and_5",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
   },
   {
-    "entity": "high anatomical complexity",
-    "entity_original": "high anatomical complexity",
+    "entity": "multivessel disease",
+    "entity_original": "multivessel disease",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
     "unit": null,
     "condition_context": null,
     "logic_type": "AND",
-    "logic_group": "and_8",
+    "logic_group": "and_6",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
@@ -179,6 +207,20 @@ Aligned JSON (expected vs actual):
     "condition_context": null,
     "logic_type": "AND",
     "logic_group": "and_7",
+    "strength": null,
+    "level": null,
+    "direction": "UNKNOWN"
+  },
+  {
+    "entity": "high anatomical complexity",
+    "entity_original": "high anatomical complexity",
+    "role": "Condition",
+    "operator": "PRESENT",
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": "AND",
+    "logic_group": "and_8",
     "strength": null,
     "level": null,
     "direction": "UNKNOWN"
@@ -212,48 +254,6 @@ Aligned JSON (expected vs actual):
     "direction": "UNKNOWN"
   },
   {
-    "entity": "multivessel disease",
-    "entity_original": "multivessel disease",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_6",
-    "strength": null,
-    "level": null,
-    "direction": "UNKNOWN"
-  },
-  {
-    "entity": "other comorbidities",
-    "entity_original": "any other comorbidities",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_5",
-    "strength": null,
-    "level": null,
-    "direction": "UNKNOWN"
-  },
-  {
-    "entity": "revascularization",
-    "entity_original": "revascularization to improve outcomes",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": null,
-    "level": null,
-    "direction": "POSITIVE"
-  },
-  {
     "entity": "surgical and interventional risk",
     "entity_original": "surgical and interventional risk",
     "role": "Condition",
@@ -282,25 +282,25 @@ graph LR
     C1[Condition: ccs]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D2[DecisionNode g1 s2]
-    C2[Condition: functionally significant left main stem stenosis]
+    C2[ClinicalParameter: lvef]
     D2 -->|CHECKS_FOR/EVALUATES| C2
     D3[DecisionNode g1 s3]
-    C3[ClinicalParameter: lvef]
+    C3[Condition: functionally significant left main stem stenosis]
     D3 -->|CHECKS_FOR/EVALUATES| C3
     D1 -->|LEADS_TO| D2
     D2 -->|LEADS_TO| D3
     D3 -->|RESULTS_IN| REC
-    ACT1[Procedure: guideline-directed medical therapy]
+    ACT1[Procedure: myocardial revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: myocardial revascularization]
+    ACT2[Procedure: guideline-directed medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
   subgraph Expected_group_1_AND
     REC[RecommendationNode]
     REC
-    ACT1[Procedure: guideline-directed medical therapy]
+    ACT1[Procedure: myocardial revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: myocardial revascularization]
+    ACT2[Procedure: guideline-directed medical therapy]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
 ```
@@ -309,10 +309,25 @@ Mermaid (actual):
 
 ```mermaid
 graph LR
+  subgraph Actual_group_1_AND
+    REC[RecommendationNode]
+    REC
+    ACT1[Procedure: revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
   subgraph Actual_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
     C1[Condition: age]
+    D1 -->|CHECKS_FOR/EVALUATES| C1
+    D1 -->|RESULTS_IN| REC
+    ACT1[Procedure: revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
+  subgraph Actual_and_2_AND
+    REC[RecommendationNode]
+    D1[DecisionNode g1 s1]
+    C1[Condition: frailty]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: revascularization]
@@ -336,19 +351,19 @@ graph LR
     ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
-  subgraph Actual_and_2_AND
+  subgraph Actual_and_5_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: frailty]
+    C1[Condition: other comorbidities]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end
-  subgraph Actual_and_8_AND
+  subgraph Actual_and_6_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
-    C1[Condition: high anatomical complexity]
+    C1[Condition: multivessel disease]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: revascularization]
@@ -358,6 +373,15 @@ graph LR
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
     C1[Condition: left main stem involvement]
+    D1 -->|CHECKS_FOR/EVALUATES| C1
+    D1 -->|RESULTS_IN| REC
+    ACT1[Procedure: revascularization]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  end
+  subgraph Actual_and_8_AND
+    REC[RecommendationNode]
+    D1[DecisionNode g1 s1]
+    C1[Condition: high anatomical complexity]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
     ACT1[Procedure: revascularization]
@@ -378,30 +402,6 @@ graph LR
     C1[Condition: local expertise]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
-  subgraph Actual_and_6_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: multivessel disease]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
-  subgraph Actual_and_5_AND
-    REC[RecommendationNode]
-    D1[DecisionNode g1 s1]
-    C1[Condition: other comorbidities]
-    D1 -->|CHECKS_FOR/EVALUATES| C1
-    D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: revascularization]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  end
-  subgraph Actual_group_1_AND
-    REC[RecommendationNode]
-    REC
     ACT1[Procedure: revascularization]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
   end

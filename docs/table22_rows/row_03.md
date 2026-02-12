@@ -25,20 +25,6 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "communicate proposal",
-    "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
     "entity": "heart team",
     "entity_original": "heart team",
     "role": "Condition",
@@ -65,6 +51,20 @@ Aligned JSON (expected vs actual):
     "strength": null,
     "level": null,
     "direction": null
+  },
+  {
+    "entity": "communicate proposal",
+    "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
+    "role": "Procedure",
+    "operator": null,
+    "threshold": null,
+    "unit": null,
+    "condition_context": null,
+    "logic_type": null,
+    "logic_group": null,
+    "strength": "I",
+    "level": "C",
+    "direction": "POSITIVE"
   }
 ]
 </pre></td>
@@ -93,23 +93,23 @@ Mermaid (expected):
 
 ```mermaid
 graph LR
-  subgraph Expected_group_1_AND
-    REC[RecommendationNode]
-    REC
-    ACT1[Procedure: communicate proposal]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: proposal]
-    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-  end
   subgraph Expected_and_1_AND
     REC[RecommendationNode]
     D1[DecisionNode g1 s1]
     C1[Condition: heart team]
     D1 -->|CHECKS_FOR/EVALUATES| C1
     D1 -->|RESULTS_IN| REC
-    ACT1[Procedure: communicate proposal]
+    ACT1[Procedure: proposal]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-    ACT2[Procedure: proposal]
+    ACT2[Procedure: communicate proposal]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  end
+  subgraph Expected_group_1_AND
+    REC[RecommendationNode]
+    REC
+    ACT1[Procedure: proposal]
+    REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+    ACT2[Procedure: communicate proposal]
     REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
   end
 ```
