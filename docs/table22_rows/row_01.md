@@ -26,6 +26,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "benefits of revascularization",
+    "entity_original": "provide information about benefits of revascularization",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -39,6 +40,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "percutaneous revascularization",
+    "entity_original": "patients scheduled for percutaneous revascularization",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -52,6 +54,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "risks of revascularization",
+    "entity_original": "provide information about risks of revascularization",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -65,6 +68,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "shared decision-making",
+    "entity_original": "take part in shared clinical decision-making",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -78,6 +82,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "surgical revascularization",
+    "entity_original": "patients scheduled for surgical revascularization",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -91,6 +96,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "therapeutic consequences of revascularization",
+    "entity_original": "receive information about therapeutic consequences of revascularization",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -104,6 +110,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "treatment alternatives of revascularization",
+    "entity_original": "provide information about treatment alternatives of revascularization",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -121,6 +128,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "information about revascularization benefits, risks, and alternatives",
+    "entity_original": "complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -134,6 +142,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "patients scheduled for revascularization",
+    "entity_original": "patients scheduled for percutaneous or surgical revascularization",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -147,6 +156,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "patients scheduled for revascularization",
+    "entity_original": "patients scheduled for percutaneous or surgical revascularization",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,

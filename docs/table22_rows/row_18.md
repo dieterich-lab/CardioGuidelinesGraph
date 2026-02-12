@@ -27,6 +27,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "chronic coronary syndrome",
+    "entity_original": "patients with chronic coronary syndrome",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -40,6 +41,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "computation (qfr)",
+    "entity_original": "computation (qfr) is recommended to identify patients at high risk of persistent angina and subsequent clinical events",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -53,6 +55,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "intracoronary pressure measurement (ffr)",
+    "entity_original": "intracoronary pressure measurement (ffr) is recommended to identify patients at high risk of persistent angina and subsequent clinical events",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -66,6 +69,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "intracoronary pressure measurement (ifr)",
+    "entity_original": "intracoronary pressure measurement (ifr) is recommended to identify patients at high risk of persistent angina and subsequent clinical events",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -79,6 +83,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "revascularization",
+    "entity_original": "at the end of the revascularization",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -96,6 +101,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "assess procedural risks and post-procedural outcomes",
+    "entity_original": "assess procedural risks and post-procedural outcomes",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -109,6 +115,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "complex coronary artery disease",
+    "entity_original": "complex coronary artery disease (cad)",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -122,6 +129,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "complex coronary artery disease",
+    "entity_original": "complex coronary artery disease (cad) in whom revascularization is being considered",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,

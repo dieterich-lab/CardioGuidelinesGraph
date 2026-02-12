@@ -27,6 +27,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "computation (qfr)",
+    "entity_original": "computation (qfr) is recommended to guide lesion selection for intervention",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -40,6 +41,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "intervention",
+    "entity_original": "intervention",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -53,6 +55,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "intracoronary pressure measurement (ffr)",
+    "entity_original": "intracoronary pressure measurement (ffr) is recommended to guide lesion selection for intervention",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -66,6 +69,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "intracoronary pressure measurement (ifr)",
+    "entity_original": "intracoronary pressure measurement (ifr) is recommended to guide lesion selection for intervention",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -79,6 +83,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "multivessel disease",
+    "entity_original": "patients with multivessel disease",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -96,6 +101,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "age",
+    "entity_original": "age",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -109,6 +115,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "assessment of procedural risks and post-procedural outcomes",
+    "entity_original": "assessment of procedural risks and post-procedural outcomes",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -122,6 +129,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "cognitive status",
+    "entity_original": "cognitive status",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -135,6 +143,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "diabetes",
+    "entity_original": "diabetes",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -148,6 +157,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "frailty",
+    "entity_original": "frailty",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -161,6 +171,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "high anatomical complexity",
+    "entity_original": "high anatomical complexity",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -174,6 +185,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "left main stem involvement",
+    "entity_original": "left main stem involvement",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -187,6 +199,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "likelihood of revascularization completeness",
+    "entity_original": "likelihood of revascularization completeness",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -200,6 +213,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "local expertise and outcomes",
+    "entity_original": "local expertise and outcomes",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -213,6 +227,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "multivessel disease",
+    "entity_original": "multivessel disease",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -226,6 +241,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "other comorbidities",
+    "entity_original": "any other comorbidities",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,

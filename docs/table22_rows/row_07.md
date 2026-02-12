@@ -27,6 +27,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "ccs",
+    "entity_original": "ccs patient",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -40,6 +41,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "functionally significant three-vessel disease",
+    "entity_original": "functionally significant three-vessel disease",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -53,6 +55,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "guideline-directed medical therapy",
+    "entity_original": "guideline-directed medical therapy is recommended to improve long-term survival and to reduce long-term cardiovascular mortality and the risk of spontaneous myocardial infarction",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -66,6 +69,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "lvef",
+    "entity_original": "lvef > 35%",
     "role": "ClinicalParameter",
     "operator": ">",
     "threshold": "35",
@@ -79,6 +83,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "myocardial revascularization",
+    "entity_original": "myocardial revascularization is recommended to improve long-term survival and to reduce long-term cardiovascular mortality and the risk of spontaneous myocardial infarction",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -96,6 +101,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "chronic coronary syndrome",
+    "entity_original": "chronic coronary syndrome patients",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -109,6 +115,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction > 35%",
     "role": "ClinicalParameter",
     "operator": ">",
     "threshold": "35",

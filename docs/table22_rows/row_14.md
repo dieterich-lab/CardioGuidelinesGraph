@@ -26,6 +26,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "cabg",
+    "entity_original": "cabg",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -39,6 +40,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "sts score",
+    "entity_original": "calculation of the sts score to estimate in-hospital morbidity and 30-day mortality after cabg",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -56,6 +58,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "chronic coronary syndrome",
+    "entity_original": "chronic coronary syndrome (ccs)",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -69,6 +72,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "chronic coronary syndrome patients with functionally significant multivessel disease",
+    "entity_original": "chronic coronary syndrome patients with functionally significant multivessel disease",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -82,6 +86,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "high surgical risk",
+    "entity_original": "high surgical risk or not operable",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -95,6 +100,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "high surgical risk",
+    "entity_original": "high surgical risk",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -108,6 +114,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction",
     "role": "ClinicalParameter",
     "operator": "<=",
     "threshold": "35",
@@ -121,6 +128,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
     "role": "ClinicalParameter",
     "operator": "LE",
     "threshold": "35",
@@ -134,6 +142,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "multivessel disease",
+    "entity_original": "multivessel disease (mvd)",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -147,6 +156,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "not operable",
+    "entity_original": "high surgical risk or not operable",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -160,6 +170,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "not operable",
+    "entity_original": "not operable",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -173,6 +184,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "percutaneous coronary intervention",
+    "entity_original": "percutaneous coronary intervention",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,

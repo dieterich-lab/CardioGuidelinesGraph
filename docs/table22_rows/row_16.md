@@ -26,6 +26,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "anatomically complex lesions",
+    "entity_original": "anatomically complex lesions",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -39,6 +40,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "ivus",
+    "entity_original": "intracoronary imaging guidance by ivus recommended",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -52,6 +54,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "left main stem lesions",
+    "entity_original": "left main stem lesions",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -65,6 +68,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "long lesions",
+    "entity_original": "long lesions",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -78,6 +82,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "octis",
+    "entity_original": "intracoronary imaging guidance by octis recommended",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -91,6 +96,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "pci",
+    "entity_original": "pci",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -104,6 +110,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "true bifurcations lesions",
+    "entity_original": "true bifurcations lesions",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -121,6 +128,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "chronic coronary syndrome",
+    "entity_original": "chronic coronary syndrome (ccs) patients with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -134,6 +142,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "chronic coronary syndrome with persistent angina despite guideline-directed medical treatment",
+    "entity_original": "chronic coronary syndrome (ccs) patients with persistent angina or anginal equivalent, despite guideline-directed medical treatment",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -147,6 +156,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "myocardial revascularization",
+    "entity_original": "myocardial revascularization of functionally significant obstructive coronary artery disease (cad)",
     "role": "Procedure",
     "operator": null,
     "threshold": null,

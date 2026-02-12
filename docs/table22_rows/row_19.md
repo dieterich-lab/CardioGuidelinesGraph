@@ -27,6 +27,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "chronic coronary syndrome",
+    "entity_original": "patients with chronic coronary syndrome",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -40,6 +41,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "computation (qfr)",
+    "entity_original": "computation (qfr) is recommended to identify lesions potentially amenable to treatment with additional pci",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -53,6 +55,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "intracoronary pressure measurement (ffr)",
+    "entity_original": "intracoronary pressure measurement (ffr) is recommended to identify lesions potentially amenable to treatment with additional pci",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -66,6 +69,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "intracoronary pressure measurement (ifr)",
+    "entity_original": "intracoronary pressure measurement (ifr) is recommended to identify lesions potentially amenable to treatment with additional pci",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -79,6 +83,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "revascularization",
+    "entity_original": "at the end of the revascularization",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -96,6 +101,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "coronary artery bypass grafting",
+    "entity_original": "coronary artery bypass grafting (cabg)",
     "role": "ClinicalParameter",
     "operator": "PRESENT",
     "threshold": null,
@@ -109,6 +115,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "patients undergoing coronary artery bypass grafting (cabg)",
+    "entity_original": "patients undergoing coronary artery bypass grafting (cabg)",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -122,6 +129,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "society of thoracic surgeons score",
+    "entity_original": "calculation of the society of thoracic surgeons score (sts) score",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,

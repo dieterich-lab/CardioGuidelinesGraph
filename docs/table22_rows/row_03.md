@@ -26,6 +26,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "communicate proposal",
+    "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -39,6 +40,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "heart team",
+    "entity_original": "heart team",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -52,6 +54,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "proposal",
+    "entity_original": "proposal",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -69,6 +72,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "patient communication of heart team recommendations",
+    "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
     "role": "Procedure",
     "operator": null,
     "threshold": null,

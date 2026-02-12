@@ -26,6 +26,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "heart team",
+    "entity_original": "the heart team",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -39,6 +40,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "protocols for revascularization",
+    "entity_original": "develop institutional protocols to implement the appropriate revascularization strategy in accordance with current guidelines",
     "role": "string",
     "operator": null,
     "threshold": null,
@@ -56,6 +58,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "heart team",
+    "entity_original": "heart team (on site or with a partner institution)",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -69,6 +72,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "revascularization protocol development",
+    "entity_original": "develop institutional protocols to implement the appropriate revascularization strategy in accordance with current guidelines",
     "role": "Procedure",
     "operator": null,
     "threshold": null,

@@ -27,6 +27,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "ccs",
+    "entity_original": "ccs patient",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -40,6 +41,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "functionally significant mvd",
+    "entity_original": "functionally significant mvd",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -53,6 +55,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "high surgical risk",
+    "entity_original": "patient with high surgical risk",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -66,6 +69,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "lvef",
+    "entity_original": "lvef \u2264 35%",
     "role": "ClinicalParameter",
     "operator": "\u2264",
     "threshold": "35",
@@ -79,6 +83,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "not operable",
+    "entity_original": "not operable patient",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -92,6 +97,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "pci",
+    "entity_original": "pci may be considered as an alternative to cabg",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -109,6 +115,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction \u2264 35%",
     "role": "ClinicalParameter",
     "operator": "<=",
     "threshold": "35",

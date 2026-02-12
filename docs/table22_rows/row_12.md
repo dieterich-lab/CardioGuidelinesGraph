@@ -26,6 +26,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "anginal equivalent",
+    "entity_original": "anginal equivalent",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -39,6 +40,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "ccs",
+    "entity_original": "ccs patient",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -52,6 +54,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "despite guideline-directed medical treatment",
+    "entity_original": "despite guideline-directed medical treatment",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -65,6 +68,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "myocardial revascularization",
+    "entity_original": "myocardial revascularization of functionally significant obstructive cad is recommended to improve symptoms",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -78,6 +82,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "persistent angina",
+    "entity_original": "persistent angina",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -95,6 +100,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "chronic coronary syndrome with left ventricular ejection fraction",
+    "entity_original": "ccs patients with left ventricular ejection fraction (lvef) \u2264 35%",
     "role": "Condition",
     "operator": "<=",
     "threshold": "35",
@@ -108,6 +114,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
     "role": "ClinicalParameter",
     "operator": "<=",
     "threshold": "35",
@@ -121,6 +128,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "medical therapy",
+    "entity_original": "medical therapy",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -134,6 +142,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "revascularization",
+    "entity_original": "revascularization",
     "role": "Procedure",
     "operator": null,
     "threshold": null,

@@ -130,10 +130,11 @@ def _normalize_logic(logic):
     }
 
 
-def _build_entry(entity, role, logic):
+def _build_entry(entity, entity_original, role, logic):
     normalized_logic = _normalize_logic(logic or {})
     return {
         "entity": _normalize_text(entity),
+        "entity_original": _normalize_text(entity_original),
         "role": _normalize_role(role),
         **normalized_logic,
     }
@@ -147,7 +148,12 @@ def _summarize_rules(rules_rows):
         if not row_id or row_id in SKIP_ROWS:
             continue
         entity = row.get("entity_standardized_candidate") or row.get("entity_original")
-        entry = _build_entry(entity, row.get("role"), row.get("logic_structured") or {})
+        entry = _build_entry(
+            entity,
+            row.get("entity_original"),
+            row.get("role"),
+            row.get("logic_structured") or {},
+        )
         grouped.setdefault(row_id, []).append(entry)
     return grouped
 
@@ -170,6 +176,7 @@ def _summarize_ground_truth(truth):
                         continue
                     entry = _build_entry(
                         entity,
+                        condition.get("entity_original"),
                         condition.get("role"),
                         condition.get("logic_structured") or {},
                     )
@@ -182,6 +189,7 @@ def _summarize_ground_truth(truth):
                         continue
                     entry = _build_entry(
                         entity,
+                        action.get("entity_original"),
                         action.get("role"),
                         action.get("logic_structured") or {},
                     )

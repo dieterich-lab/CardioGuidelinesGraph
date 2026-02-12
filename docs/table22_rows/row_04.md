@@ -26,6 +26,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "cultural circumstances",
+    "entity_original": "the decision for revascularization and its modality consider cultural circumstances",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -39,6 +40,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "health literacy",
+    "entity_original": "the decision for revascularization and its modality consider health literacy",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -52,6 +54,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "patient preferences",
+    "entity_original": "the decision for revascularization and its modality consider patient preferences",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -65,6 +68,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "patient-centred decision",
+    "entity_original": "the decision for revascularization and its modality be patient-centred",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -78,6 +82,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "revacularization",
+    "entity_original": "the decision for revascularization and its modality",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -91,6 +96,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "social support",
+    "entity_original": "the decision for revascularization and its modality consider social support",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -108,6 +114,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "cultural circumstances",
+    "entity_original": "cultural circumstances",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -121,6 +128,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "health literacy",
+    "entity_original": "health literacy",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -134,6 +142,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "patient preferences",
+    "entity_original": "patient preferences",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -147,6 +156,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "revascularization decision",
+    "entity_original": "decision for revascularization and its modality",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -160,6 +170,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "social support",
+    "entity_original": "social support",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,

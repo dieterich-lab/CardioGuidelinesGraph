@@ -27,6 +27,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "ccs",
+    "entity_original": "ccs patient",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -40,6 +41,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "evaluate comorbidities",
+    "entity_original": "evaluate comorbidities preferably by the heart team",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -53,6 +55,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "evaluate coronary anatomy",
+    "entity_original": "evaluate coronary anatomy preferably by the heart team",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -66,6 +69,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "evaluate correlation between coronary artery disease and lv dysfunction",
+    "entity_original": "evaluate correlation between coronary artery disease and lv dysfunction preferably by the heart team",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -79,6 +83,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "evaluate individual risk-to-benefit ratio",
+    "entity_original": "evaluate individual risk-to-benefit ratio by the heart team",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -92,6 +97,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "evaluate life expectancy",
+    "entity_original": "evaluate life expectancy by the heart team",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -105,6 +111,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "evaluate patient perspectives",
+    "entity_original": "evaluate patient perspectives by the heart team",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -118,6 +125,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "lvef",
+    "entity_original": "lvef \u2264 35%",
     "role": "ClinicalParameter",
     "operator": "\u2264",
     "threshold": "35",
@@ -131,6 +139,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "revascularization or medical therapy",
+    "entity_original": "choose between revascularization or medical therapy alone",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -148,6 +157,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "chronic coronary syndrome",
+    "entity_original": "chronic coronary syndrome (ccs) patients",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -161,6 +171,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction (lvef) > 35%",
     "role": "ClinicalParameter",
     "operator": ">",
     "threshold": "35",
@@ -174,6 +185,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "myocardial revascularization",
+    "entity_original": "myocardial revascularization",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -187,6 +199,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "three-vessel disease",
+    "entity_original": "functionally significant three-vessel disease",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,

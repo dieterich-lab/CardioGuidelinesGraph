@@ -27,6 +27,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "cabg",
+    "entity_original": "myocardial revascularization with cabg over medical therapy alone to improve long-term survival",
     "role": "Procedure",
     "operator": null,
     "threshold": null,
@@ -40,6 +41,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "ccs",
+    "entity_original": "ccs patient",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -53,6 +55,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "lvef",
+    "entity_original": "lvef \u2264 35%",
     "role": "ClinicalParameter",
     "operator": "\u2264",
     "threshold": "35",
@@ -66,6 +69,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "multivessel cad",
+    "entity_original": "multivessel cad",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -79,6 +83,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "surgically eligible",
+    "entity_original": "surgically eligible patient",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -96,6 +101,7 @@ Aligned JSON (expected vs actual):
 [
   {
     "entity": "functionally significant single-vessel disease involving proximal left anterior descending artery",
+    "entity_original": "functionally significant single- or two-vessel disease involving the proximal left anterior descending artery (lad)",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -109,6 +115,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction (lvef) > 35%",
     "role": "ClinicalParameter",
     "operator": ">",
     "threshold": "35",
@@ -122,6 +129,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "left ventricular ejection fraction",
+    "entity_original": "left ventricular ejection fraction (lvef) > 35%",
     "role": "ClinicalParameter",
     "operator": ">",
     "threshold": "35",
@@ -135,6 +143,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "myocardial revascularization",
+    "entity_original": "myocardial revascularization",
     "role": "Procedure",
     "operator": "PRESENT",
     "threshold": null,
@@ -148,6 +157,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "single-",
+    "entity_original": "functionally significant single- or two-vessel disease involving the proximal left anterior descending artery (lad)",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
@@ -161,6 +171,7 @@ Aligned JSON (expected vs actual):
   },
   {
     "entity": "two-vessel disease involving proximal left anterior descending artery",
+    "entity_original": "functionally significant single- or two-vessel disease involving the proximal left anterior descending artery (lad)",
     "role": "Condition",
     "operator": "PRESENT",
     "threshold": null,
