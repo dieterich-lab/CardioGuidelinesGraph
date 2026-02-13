@@ -166,9 +166,9 @@ graph LR
     D_and_1_2[DecisionNode and_1 s2]
     C_and_1_2[Condition: chronic coronary syndrome]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
-  D_and_1_2 -->|RESULTS_IN (condition_met=true)| REC
+  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Mermaid (LLM Generated):
@@ -185,9 +185,9 @@ graph LR
     D_and_1_2[DecisionNode and_1 s2]
     C_and_1_2[Condition: complex coronary artery disease]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
-  D_and_1_2 -->|RESULTS_IN (condition_met=true)| REC
+  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

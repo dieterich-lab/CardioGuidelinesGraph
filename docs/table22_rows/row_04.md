@@ -210,7 +210,7 @@ graph LR
     C_and_1_1[Procedure: revacularization]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
-  D_and_1_1 -->|RESULTS_IN (condition_met=true)| REC
+  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Mermaid (LLM Generated):
@@ -233,11 +233,11 @@ graph LR
     D_and_1_4[DecisionNode and_1 s4]
     C_and_1_4[Condition: social support]
     D_and_1_4 -->|CHECKS_FOR| C_and_1_4
-    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
-    D_and_1_2 -->|LEADS_TO (condition_met=true)| D_and_1_3
-    D_and_1_3 -->|LEADS_TO (condition_met=true)| D_and_1_4
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
+    D_and_1_3 -->|LEADS_TO condition_met=true| D_and_1_4
   end
-  D_and_1_4 -->|RESULTS_IN (condition_met=true)| REC
+  D_and_1_4 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

@@ -577,19 +577,19 @@ def _build_mermaid(entries, title):
                 for prev_id in previous_decisions:
                     for curr_id in decision_ids:
                         lines.append(
-                            f"    {prev_id} -->|LEADS_TO (condition_met=true)| {curr_id}"
+                            f"    {prev_id} -->|LEADS_TO condition_met=true| {curr_id}"
                         )
             else:
                 first_id = decision_ids[0]
                 for prev_id in previous_decisions:
                     lines.append(
-                        f"    {prev_id} -->|LEADS_TO (condition_met=true)| {first_id}"
+                        f"    {prev_id} -->|LEADS_TO condition_met=true| {first_id}"
                     )
 
         if group_type == "AND" and len(decision_ids) > 1:
             for idx in range(1, len(decision_ids)):
                 lines.append(
-                    f"    {decision_ids[idx - 1]} -->|LEADS_TO (condition_met=true)| {decision_ids[idx]}"
+                    f"    {decision_ids[idx - 1]} -->|LEADS_TO condition_met=true| {decision_ids[idx]}"
                 )
 
         if not condition_entries:
@@ -605,7 +605,7 @@ def _build_mermaid(entries, title):
 
     if previous_decisions:
         for prev_id in previous_decisions:
-            lines.append(f"  {prev_id} -->|RESULTS_IN (condition_met=true)| REC")
+            lines.append(f"  {prev_id} -->|RESULTS_IN condition_met=true| REC")
 
     return "\n".join(lines)
 

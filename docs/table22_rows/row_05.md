@@ -104,7 +104,7 @@ graph LR
     C_and_1_1[Condition: heart team]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
-  D_and_1_1 -->|RESULTS_IN (condition_met=true)| REC
+  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Mermaid (LLM Generated):
@@ -119,7 +119,7 @@ graph LR
     C_and_1_1[Condition: heart team]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
-  D_and_1_1 -->|RESULTS_IN (condition_met=true)| REC
+  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:
