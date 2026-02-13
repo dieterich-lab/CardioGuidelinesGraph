@@ -174,7 +174,7 @@ def _build_entry(entity, entity_original, role, logic):
 
 def _summarize_rules(rules_rows):
     grouped = {}
-    for row in rules_rows:
+    for index, row in enumerate(rules_rows):
         chunk_id = row.get("chunk_id") or ""
         row_id = chunk_id.split(":")[-1] if ":" in chunk_id else None
         if not row_id or row_id in SKIP_ROWS:
@@ -186,6 +186,7 @@ def _summarize_rules(rules_rows):
             row.get("role"),
             row.get("logic_structured") or {},
         )
+        entry["_source_index"] = index
         grouped.setdefault(row_id, []).append(entry)
     return grouped
 
@@ -277,6 +278,13 @@ def _sorted_entries(entries):
             json.dumps(entry, sort_keys=True),
         ),
     )
+
+
+def _strip_internal_keys(entries):
+    cleaned = []
+    for entry in entries:
+        cleaned.append({key: value for key, value in entry.items() if not key.startswith("_")})
+    return cleaned
 
 
 def _concept_key(entry):
@@ -568,10 +576,13 @@ class Table22ConceptRulesTests(unittest.TestCase):
         for expected_row_id, expected_entries in expected_rows:
             expected_index = int(expected_row_id.split("_")[-1])
             actual_row_id = f"row_{expected_index + 1:02d}"
-            actual_entries = dict(actual_rows).get(actual_row_id, [])
+            actual_entries_raw = dict(actual_rows).get(actual_row_id, [])
+            actual_entries_ordered = _strip_internal_keys(
+                sorted(actual_entries_raw, key=lambda entry: entry.get("_source_index", 0))
+            )
 
             expected_sorted = _sorted_entries(expected_entries)
-            actual_sorted = _sorted_entries(actual_entries)
+            actual_sorted = _sorted_entries(actual_entries_ordered)
 
             expected_concepts = {_concept_key(entry) for entry in expected_sorted}
             actual_concepts = {_concept_key(entry) for entry in actual_sorted}
@@ -585,7 +596,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
             rule_missing = expected_rules - actual_rules
             rule_extra = actual_rules - expected_rules
 
-            score = _row_match_score(expected_entries, actual_entries)
+            score = _row_match_score(expected_entries, actual_entries_ordered)
             report_rows.append(
                 {
                     "row_id": expected_row_id,
@@ -593,7 +604,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     "match_score": score,
                     "ground_truth_text": truth_rows.get(expected_row_id, {}),
                     "expected_entries": expected_entries,
-                    "actual_entries": actual_entries,
+                    "actual_entries": actual_entries_ordered,
                     "concept_summary": {
                         "expected": len(expected_concepts),
                         "actual": len(actual_concepts),
