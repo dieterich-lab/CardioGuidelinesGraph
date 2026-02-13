@@ -4,12 +4,7 @@ Original table row text (ground truth):
 
 ```json
 {
-  "Table Header": "Recommendations for revascularization in patients with chronic coronary syndrome",
-  "Section Header": "Assessment of procedural risks and post-procedural outcomes",
-  "Sub Header": "Intracoronary pressure measurement (FFR or iFR) or computation (QFR) :",
   "Recommendations": "\u2022 should be considered at the end of the procedure to identify patients at high risk of persistent angina and subsequent clinical events; 828,830,831,868",
-  "input": "at the end of the revascularization in patients with chronic coronary syndrome",
-  "recommendation": "Intracoronary pressure measurement (FFR or iFR) or computation (QFR) should be considered at the end of the procedure to identify patients at high risk of persistent angina and subsequent clinical events",
   "Class a": "IIa",
   "Level b": "B"
 }
@@ -19,8 +14,8 @@ Aligned JSON (expected vs actual):
 
 <table>
   <tr>
-    <th align="left">Expected</th>
-    <th align="left">Actual</th>
+    <th align="left">Human Annotation</th>
+    <th align="left">LLM Generated</th>
   </tr>
   <tr>
     <td valign="top"><pre>

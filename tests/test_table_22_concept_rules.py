@@ -25,6 +25,19 @@ GROUND_TRUTH_PATH = Path(
         DATA_DIR / "evaluation" / "table_22_manual_full_graph.json",
     )
 )
+DOCLING_TABLE_62_PATH = Path(
+    os.environ.get(
+        "CARDIO_GRAPH_TABLE22_DOCLING_62",
+        "/prj/doctoral_letters/guide/data/guidelines/docling/pdf_pages/_62/tables/table_000.json",
+    )
+)
+DOCLING_TABLE_63_PATH = Path(
+    os.environ.get(
+        "CARDIO_GRAPH_TABLE22_DOCLING_63",
+        "/prj/doctoral_letters/guide/data/guidelines/docling/pdf_pages/_63/tables/table_000.json",
+    )
+)
+DOCLING_TABLE_PATHS = [DOCLING_TABLE_62_PATH, DOCLING_TABLE_63_PATH]
 TABLE_IDS_RAW = os.environ.get("CARDIO_GRAPH_TABLE22_TABLE_IDS", "0")
 TABLE_IDS = {int(value.strip()) for value in TABLE_IDS_RAW.split(",") if value.strip()}
 SKIP_ROWS_RAW = os.environ.get("CARDIO_GRAPH_TABLE22_SKIP_ROWS", "row_01")
@@ -69,10 +82,29 @@ def _load_ground_truth():
         return json.load(f)
 
 
+def _load_docling_rows():
+    rows = []
+    for path in DOCLING_TABLE_PATHS:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        rows.extend(payload.get("data", []))
+    return rows
+
+
 def _normalize_text(value):
     if value is None:
         return None
     return " ".join(str(value).strip().split()).lower()
+
+
+def _docling_row_values(row):
+    values = []
+    for value in row.values():
+        if isinstance(value, str):
+            normalized = _normalize_text(value)
+            if normalized:
+                values.append(normalized)
+    return values
 
 
 def _normalize_role(role):
@@ -328,6 +360,15 @@ def _ground_truth_row_text(row):
     return payload
 
 
+def _ground_truth_match_text(row):
+    for key in ("Recommendations", "recommendation", "Recommendation"):
+        value = row.get(key)
+        normalized = _normalize_text(value)
+        if normalized:
+            return normalized
+    return None
+
+
 def _collect_ground_truth_rows(truth):
     rows = {}
     for table in truth.get("tables", []):
@@ -338,6 +379,30 @@ def _collect_ground_truth_rows(truth):
             row_id = f"row_{index:02d}"
             rows[row_id] = _ground_truth_row_text(row)
     return rows
+
+
+def _collect_docling_rows(truth):
+    docling_rows = _load_docling_rows()
+    docling_values = [set(_docling_row_values(row)) for row in docling_rows]
+    result = {}
+    cursor = 0
+
+    for table in truth.get("tables", []):
+        table_id = table.get("table_id")
+        if TABLE_IDS and table_id not in TABLE_IDS:
+            continue
+        for index, row in enumerate(table.get("data", []), start=1):
+            row_id = f"row_{index:02d}"
+            match_text = _ground_truth_match_text(row)
+            matched_row = None
+            if match_text:
+                for doc_index in range(cursor, len(docling_rows)):
+                    if match_text in docling_values[doc_index]:
+                        matched_row = docling_rows[doc_index]
+                        cursor = doc_index + 1
+                        break
+            result[row_id] = matched_row or {}
+    return result
 
 
 def _sanitize_label(value):
@@ -468,6 +533,13 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 + str(GROUND_TRUTH_PATH)
                 + ". Set CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH."
             )
+        missing_docling = [path for path in DOCLING_TABLE_PATHS if not path.is_file()]
+        if missing_docling:
+            self.skipTest(
+                "Missing docling table(s): "
+                + ", ".join(str(path) for path in missing_docling)
+                + ". Set CARDIO_GRAPH_TABLE22_DOCLING_62/63."
+            )
 
     def _assert_verbose(self, label, expected, actual, note):
         print("\nCHECK: " + label)
@@ -480,7 +552,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
         rules_rows = _load_rules()
         truth = _load_ground_truth()
 
-        truth_rows = _collect_ground_truth_rows(truth)
+        truth_rows = _collect_docling_rows(truth)
         expected_rows = _ordered_rows(_summarize_ground_truth(truth))
         actual_rows = _ordered_rows(_summarize_rules(rules_rows))
 
@@ -606,8 +678,8 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 f.write("Aligned JSON (expected vs actual):\n\n")
                 f.write("<table>\n")
                 f.write("  <tr>\n")
-                f.write('    <th align="left">Expected</th>\n')
-                f.write('    <th align="left">Actual</th>\n')
+                f.write('    <th align="left">Human Annotation</th>\n')
+                f.write('    <th align="left">LLM Generated</th>\n')
                 f.write("  </tr>\n")
                 f.write("  <tr>\n")
                 f.write('    <td valign="top"><pre>\n')

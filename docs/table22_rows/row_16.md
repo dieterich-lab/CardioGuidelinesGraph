@@ -4,11 +4,7 @@ Original table row text (ground truth):
 
 ```json
 {
-  "Table Header": "Recommendations for revascularization in patients with chronic coronary syndrome",
-  "Section Header": "Assessment of procedural risks and post-procedural outcomes",
   "Recommendations": "Intracoronary imaging guidance by IVUS or OCTis recommended when performing PCI on anatomically complex lesions, in particular left main stem, true bifurcations, and long lesions. 866,337,810,840,841",
-  "input": "when performing PCI on anatomically complex lesions, in particular left main stem, true bifurcations, and long lesions",
-  "recommendation": "Intracoronary imaging guidance by IVUS or OCTis recommended",
   "Class a": "I",
   "Level b": "A"
 }
@@ -18,8 +14,8 @@ Aligned JSON (expected vs actual):
 
 <table>
   <tr>
-    <th align="left">Expected</th>
-    <th align="left">Actual</th>
+    <th align="left">Human Annotation</th>
+    <th align="left">LLM Generated</th>
   </tr>
   <tr>
     <td valign="top"><pre>

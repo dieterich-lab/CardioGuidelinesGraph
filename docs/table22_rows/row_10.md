@@ -4,12 +4,7 @@ Original table row text (ground truth):
 
 ```json
 {
-  "Table Header": "Recommendations for revascularization in patients with chronic coronary syndrome",
-  "Section Header": "Revascularization to improve outcomes",
-  "Sub Header": "In chronic coronary syndrome patients with left ventricular ejection fraction \u2264 35%",
   "Recommendations": "In surgically eligible CCS patients with multivessel CAD and LVEF \u2264 35%, myocardial revascularization with CABG is recommended over medical therapy alone to improve long-term survival. 53,54,749,861",
-  "input": "surgically eligible CCS patients with multivessel CAD and LVEF \u2264 35%",
-  "recommendation": "myocardial revascularization with CABG is recommended over medical therapy alone to improve long-term survival",
   "Class a": "I",
   "Level b": "B"
 }
@@ -19,8 +14,8 @@ Aligned JSON (expected vs actual):
 
 <table>
   <tr>
-    <th align="left">Expected</th>
-    <th align="left">Actual</th>
+    <th align="left">Human Annotation</th>
+    <th align="left">LLM Generated</th>
   </tr>
   <tr>
     <td valign="top"><pre>
