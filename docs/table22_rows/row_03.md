@@ -98,17 +98,17 @@ Mermaid (Human Annotation):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: communicate proposal]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: heart team]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
     C_and_1_2[Procedure: proposal]
-    D_and_1_2 -->|EVALUATES| C_and_1_2
-    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
   end
-  D_and_1_2 -->|RESULTS_IN| REC
+  D_and_1_2 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Mermaid (LLM Generated):
@@ -117,7 +117,7 @@ Mermaid (LLM Generated):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: patient communication of heart team recommendations]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
 ```
 
 Concepts:

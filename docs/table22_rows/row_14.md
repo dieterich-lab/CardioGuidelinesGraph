@@ -210,13 +210,13 @@ Mermaid (Human Annotation):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: sts score]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Procedure: cabg]
-    D_and_1_1 -->|EVALUATES| C_and_1_1
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
-  D_and_1_1 -->|RESULTS_IN| REC
+  D_and_1_1 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Mermaid (LLM Generated):
@@ -225,7 +225,7 @@ Mermaid (LLM Generated):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: percutaneous coronary intervention]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph LLM_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: chronic coronary syndrome patients with functionally significant multivessel disease]
@@ -248,12 +248,12 @@ graph LR
     D_and_1_7[DecisionNode and_1 s7]
     C_and_1_7[Condition: not operable]
     D_and_1_7 -->|CHECKS_FOR| C_and_1_7
-    D_and_1_1 -->|LEADS_TO| D_and_1_2
-    D_and_1_2 -->|LEADS_TO| D_and_1_3
-    D_and_1_3 -->|LEADS_TO| D_and_1_4
-    D_and_1_4 -->|LEADS_TO| D_and_1_5
-    D_and_1_5 -->|LEADS_TO| D_and_1_6
-    D_and_1_6 -->|LEADS_TO| D_and_1_7
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
+    D_and_1_2 -->|LEADS_TO (condition_met=true)| D_and_1_3
+    D_and_1_3 -->|LEADS_TO (condition_met=true)| D_and_1_4
+    D_and_1_4 -->|LEADS_TO (condition_met=true)| D_and_1_5
+    D_and_1_5 -->|LEADS_TO (condition_met=true)| D_and_1_6
+    D_and_1_6 -->|LEADS_TO (condition_met=true)| D_and_1_7
   end
   subgraph LLM_or_1_OR
     D_or_1_1[DecisionNode or_1 s1]
@@ -262,11 +262,11 @@ graph LR
     D_or_1_2[DecisionNode or_1 s2]
     C_or_1_2[Condition: not operable]
     D_or_1_2 -->|CHECKS_FOR| C_or_1_2
-    D_and_1_7 -->|LEADS_TO| D_or_1_1
-    D_and_1_7 -->|LEADS_TO| D_or_1_2
+    D_and_1_7 -->|LEADS_TO (condition_met=true)| D_or_1_1
+    D_and_1_7 -->|LEADS_TO (condition_met=true)| D_or_1_2
   end
-  D_or_1_1 -->|RESULTS_IN| REC
-  D_or_1_2 -->|RESULTS_IN| REC
+  D_or_1_1 -->|RESULTS_IN (condition_met=true)| REC
+  D_or_1_2 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Concepts:

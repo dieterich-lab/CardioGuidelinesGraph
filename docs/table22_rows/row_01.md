@@ -182,25 +182,25 @@ Mermaid (Human Annotation):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: benefits of revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   ACT2[Procedure: risks of revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  REC -->|RECOMMENDS_PROCEDURE| ACT2
   ACT3[Procedure: therapeutic consequences of revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
+  REC -->|RECOMMENDS_PROCEDURE| ACT3
   ACT4[Procedure: treatment alternatives of revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
+  REC -->|RECOMMENDS_PROCEDURE| ACT4
   ACT5[Procedure: shared decision-making]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
+  REC -->|RECOMMENDS_PROCEDURE| ACT5
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Procedure: percutaneous revascularization]
-    D_and_1_1 -->|EVALUATES| C_and_1_1
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
     C_and_1_2[Procedure: surgical revascularization]
-    D_and_1_2 -->|EVALUATES| C_and_1_2
-    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
   end
-  D_and_1_2 -->|RESULTS_IN| REC
+  D_and_1_2 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Mermaid (LLM Generated):
@@ -209,7 +209,7 @@ Mermaid (LLM Generated):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: information about revascularization benefits, risks, and alternatives]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph LLM_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: patients scheduled for revascularization]
@@ -217,9 +217,9 @@ graph LR
     D_and_1_2[DecisionNode and_1 s2]
     C_and_1_2[Condition: patients scheduled for revascularization]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
   end
-  D_and_1_2 -->|RESULTS_IN| REC
+  D_and_1_2 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Concepts:

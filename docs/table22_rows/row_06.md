@@ -280,9 +280,9 @@ Mermaid (Human Annotation):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: myocardial revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   ACT2[Procedure: guideline-directed medical therapy]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  REC -->|RECOMMENDS_PROCEDURE| ACT2
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: ccs]
@@ -293,10 +293,10 @@ graph LR
     D_and_1_3[DecisionNode and_1 s3]
     C_and_1_3[Condition: functionally significant left main stem stenosis]
     D_and_1_3 -->|CHECKS_FOR| C_and_1_3
-    D_and_1_1 -->|LEADS_TO| D_and_1_2
-    D_and_1_2 -->|LEADS_TO| D_and_1_3
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
+    D_and_1_2 -->|LEADS_TO (condition_met=true)| D_and_1_3
   end
-  D_and_1_3 -->|RESULTS_IN| REC
+  D_and_1_3 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Mermaid (LLM Generated):
@@ -305,7 +305,7 @@ Mermaid (LLM Generated):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph LLM_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: age]
@@ -315,63 +315,63 @@ graph LR
     D_and_2_1[DecisionNode and_2 s1]
     C_and_2_1[Condition: frailty]
     D_and_2_1 -->|CHECKS_FOR| C_and_2_1
-    D_and_1_1 -->|LEADS_TO| D_and_2_1
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_2_1
   end
   subgraph LLM_and_3_AND
     D_and_3_1[DecisionNode and_3 s1]
     C_and_3_1[Condition: cognitive status]
     D_and_3_1 -->|CHECKS_FOR| C_and_3_1
-    D_and_2_1 -->|LEADS_TO| D_and_3_1
+    D_and_2_1 -->|LEADS_TO (condition_met=true)| D_and_3_1
   end
   subgraph LLM_and_4_AND
     D_and_4_1[DecisionNode and_4 s1]
     C_and_4_1[Condition: diabetes]
     D_and_4_1 -->|CHECKS_FOR| C_and_4_1
-    D_and_3_1 -->|LEADS_TO| D_and_4_1
+    D_and_3_1 -->|LEADS_TO (condition_met=true)| D_and_4_1
   end
   subgraph LLM_and_5_AND
     D_and_5_1[DecisionNode and_5 s1]
     C_and_5_1[Condition: other comorbidities]
     D_and_5_1 -->|CHECKS_FOR| C_and_5_1
-    D_and_4_1 -->|LEADS_TO| D_and_5_1
+    D_and_4_1 -->|LEADS_TO (condition_met=true)| D_and_5_1
   end
   subgraph LLM_and_6_AND
     D_and_6_1[DecisionNode and_6 s1]
     C_and_6_1[Condition: multivessel disease]
     D_and_6_1 -->|CHECKS_FOR| C_and_6_1
-    D_and_5_1 -->|LEADS_TO| D_and_6_1
+    D_and_5_1 -->|LEADS_TO (condition_met=true)| D_and_6_1
   end
   subgraph LLM_and_7_AND
     D_and_7_1[DecisionNode and_7 s1]
     C_and_7_1[Condition: left main stem involvement]
     D_and_7_1 -->|CHECKS_FOR| C_and_7_1
-    D_and_6_1 -->|LEADS_TO| D_and_7_1
+    D_and_6_1 -->|LEADS_TO (condition_met=true)| D_and_7_1
   end
   subgraph LLM_and_8_AND
     D_and_8_1[DecisionNode and_8 s1]
     C_and_8_1[Condition: high anatomical complexity]
     D_and_8_1 -->|CHECKS_FOR| C_and_8_1
-    D_and_7_1 -->|LEADS_TO| D_and_8_1
+    D_and_7_1 -->|LEADS_TO (condition_met=true)| D_and_8_1
   end
   subgraph LLM_and_9_AND
     D_and_9_1[DecisionNode and_9 s1]
     C_and_9_1[Condition: likelihood of revascularization completeness]
     D_and_9_1 -->|CHECKS_FOR| C_and_9_1
-    D_and_8_1 -->|LEADS_TO| D_and_9_1
+    D_and_8_1 -->|LEADS_TO (condition_met=true)| D_and_9_1
   end
   subgraph LLM_and_10_AND
     D_and_10_1[DecisionNode and_10 s1]
     C_and_10_1[Condition: local expertise]
     D_and_10_1 -->|CHECKS_FOR| C_and_10_1
-    D_and_9_1 -->|LEADS_TO| D_and_10_1
+    D_and_9_1 -->|LEADS_TO (condition_met=true)| D_and_10_1
   end
   subgraph LLM_and_11_AND
     D_and_11_1[DecisionNode and_11 s1]
     C_and_11_1[Condition: surgical and interventional risk]
     D_and_11_1 -->|CHECKS_FOR| C_and_11_1
-    D_and_10_1 -->|LEADS_TO| D_and_11_1
+    D_and_10_1 -->|LEADS_TO (condition_met=true)| D_and_11_1
   end
-  D_and_11_1 -->|RESULTS_IN| REC
+  D_and_11_1 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Concepts:

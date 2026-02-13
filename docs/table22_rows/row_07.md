@@ -140,9 +140,9 @@ Mermaid (Human Annotation):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: myocardial revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   ACT2[Procedure: guideline-directed medical therapy]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  REC -->|RECOMMENDS_PROCEDURE| ACT2
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: ccs]
@@ -153,10 +153,10 @@ graph LR
     D_and_1_3[DecisionNode and_1 s3]
     C_and_1_3[Condition: functionally significant three-vessel disease]
     D_and_1_3 -->|CHECKS_FOR| C_and_1_3
-    D_and_1_1 -->|LEADS_TO| D_and_1_2
-    D_and_1_2 -->|LEADS_TO| D_and_1_3
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
+    D_and_1_2 -->|LEADS_TO (condition_met=true)| D_and_1_3
   end
-  D_and_1_3 -->|RESULTS_IN| REC
+  D_and_1_3 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Mermaid (LLM Generated):
@@ -171,9 +171,9 @@ graph LR
     D_and_1_2[DecisionNode and_1 s2]
     C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
     D_and_1_2 -->|EVALUATES| C_and_1_2
-    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
   end
-  D_and_1_2 -->|RESULTS_IN| REC
+  D_and_1_2 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Concepts:

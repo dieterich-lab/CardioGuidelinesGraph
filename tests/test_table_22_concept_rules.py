@@ -540,8 +540,15 @@ def _build_mermaid(entries, title):
             action_id = f"ACT{idx}"
             label = _sanitize_label(action.get("entity"))
             role = action.get("role") or "Action"
+            direction = str(action.get("direction") or "").strip().upper()
+            if direction in {"NEGATIVE", "CONTRAINDICATED", "DO_NOT_USE"}:
+                relation = "CONTRAINDICATES"
+            elif role == "Procedure":
+                relation = "RECOMMENDS_PROCEDURE"
+            else:
+                relation = "RECOMMENDS_USAGE"
             lines.append(f"  {action_id}[{role}: {label}]")
-            lines.append(f"  REC -->|RECOMMENDS_* / CONTRAINDICATES| {action_id}")
+            lines.append(f"  REC -->|{relation}| {action_id}")
 
     previous_decisions = []
     for group in ordered_groups:
@@ -560,7 +567,7 @@ def _build_mermaid(entries, title):
             decision_ids.append(decision_id)
             role = entry.get("role") or "Concept"
             label = _sanitize_label(entry.get("entity"))
-            relation = "CHECKS_FOR" if role == "Condition" else "EVALUATES"
+            relation = "EVALUATES" if role == "ClinicalParameter" else "CHECKS_FOR"
             lines.append(f"    {decision_id}[DecisionNode {group_id} s{idx}]")
             lines.append(f"    {concept_id}[{role}: {label}]")
             lines.append(f"    {decision_id} -->|{relation}| {concept_id}")
@@ -569,16 +576,20 @@ def _build_mermaid(entries, title):
             if group_type == "OR":
                 for prev_id in previous_decisions:
                     for curr_id in decision_ids:
-                        lines.append(f"    {prev_id} -->|LEADS_TO| {curr_id}")
+                        lines.append(
+                            f"    {prev_id} -->|LEADS_TO (condition_met=true)| {curr_id}"
+                        )
             else:
                 first_id = decision_ids[0]
                 for prev_id in previous_decisions:
-                    lines.append(f"    {prev_id} -->|LEADS_TO| {first_id}")
+                    lines.append(
+                        f"    {prev_id} -->|LEADS_TO (condition_met=true)| {first_id}"
+                    )
 
         if group_type == "AND" and len(decision_ids) > 1:
             for idx in range(1, len(decision_ids)):
                 lines.append(
-                    f"    {decision_ids[idx - 1]} -->|LEADS_TO| {decision_ids[idx]}"
+                    f"    {decision_ids[idx - 1]} -->|LEADS_TO (condition_met=true)| {decision_ids[idx]}"
                 )
 
         if not condition_entries:
@@ -594,7 +605,7 @@ def _build_mermaid(entries, title):
 
     if previous_decisions:
         for prev_id in previous_decisions:
-            lines.append(f"  {prev_id} -->|RESULTS_IN| REC")
+            lines.append(f"  {prev_id} -->|RESULTS_IN (condition_met=true)| REC")
 
     return "\n".join(lines)
 

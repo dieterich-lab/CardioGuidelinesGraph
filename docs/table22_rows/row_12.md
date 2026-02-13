@@ -168,7 +168,7 @@ Mermaid (Human Annotation):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: myocardial revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: ccs]
@@ -176,7 +176,7 @@ graph LR
     D_and_1_2[DecisionNode and_1 s2]
     C_and_1_2[Condition: despite guideline-directed medical treatment]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
   end
   subgraph Human_or_1_OR
     D_or_1_1[DecisionNode or_1 s1]
@@ -185,11 +185,11 @@ graph LR
     D_or_1_2[DecisionNode or_1 s2]
     C_or_1_2[Condition: anginal equivalent]
     D_or_1_2 -->|CHECKS_FOR| C_or_1_2
-    D_and_1_2 -->|LEADS_TO| D_or_1_1
-    D_and_1_2 -->|LEADS_TO| D_or_1_2
+    D_and_1_2 -->|LEADS_TO (condition_met=true)| D_or_1_1
+    D_and_1_2 -->|LEADS_TO (condition_met=true)| D_or_1_2
   end
-  D_or_1_1 -->|RESULTS_IN| REC
-  D_or_1_2 -->|RESULTS_IN| REC
+  D_or_1_1 -->|RESULTS_IN (condition_met=true)| REC
+  D_or_1_2 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Mermaid (LLM Generated):
@@ -198,9 +198,9 @@ Mermaid (LLM Generated):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   ACT2[Procedure: medical therapy]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
+  REC -->|RECOMMENDS_PROCEDURE| ACT2
   subgraph LLM_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[ClinicalParameter: left ventricular ejection fraction]
@@ -208,9 +208,9 @@ graph LR
     D_and_1_2[DecisionNode and_1 s2]
     C_and_1_2[Condition: chronic coronary syndrome with left ventricular ejection fraction]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO| D_and_1_2
+    D_and_1_1 -->|LEADS_TO (condition_met=true)| D_and_1_2
   end
-  D_and_1_2 -->|RESULTS_IN| REC
+  D_and_1_2 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Concepts:

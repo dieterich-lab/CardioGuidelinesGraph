@@ -98,13 +98,13 @@ Mermaid (Human Annotation):
 graph LR
   REC[RecommendationNode]
   ACT1[string: protocols for revascularization]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_USAGE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: heart team]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
-  D_and_1_1 -->|RESULTS_IN| REC
+  D_and_1_1 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Mermaid (LLM Generated):
@@ -113,13 +113,13 @@ Mermaid (LLM Generated):
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: revascularization protocol development]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph LLM_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: heart team]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
-  D_and_1_1 -->|RESULTS_IN| REC
+  D_and_1_1 -->|RESULTS_IN (condition_met=true)| REC
 ```
 
 Concepts:
