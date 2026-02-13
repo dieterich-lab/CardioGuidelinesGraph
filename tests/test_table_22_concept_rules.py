@@ -201,6 +201,7 @@ def _summarize_ground_truth(truth):
             row_id = f"row_{index:02d}"
             row_entries = []
             for rule in row.get("rules", []):
+                rule_id = rule.get("rule_id")
                 for condition in rule.get("conditions", []):
                     entity = condition.get(
                         "entity_standardized_candidate"
@@ -213,6 +214,8 @@ def _summarize_ground_truth(truth):
                         condition.get("role"),
                         condition.get("logic_structured") or {},
                     )
+                    entry["side"] = "condition"
+                    entry["rule_id"] = rule_id
                     row_entries.append(entry)
                 for action in rule.get("actions", []):
                     entity = action.get("entity_standardized_candidate") or action.get(
@@ -226,9 +229,69 @@ def _summarize_ground_truth(truth):
                         action.get("role"),
                         action.get("logic_structured") or {},
                     )
+                    entry["side"] = "action"
+                    entry["rule_id"] = rule_id
                     row_entries.append(entry)
             if row_entries:
                 grouped[row_id] = row_entries
+    return grouped
+
+
+def _summarize_ground_truth_grouped(truth):
+    grouped = {}
+    for table in truth.get("tables", []):
+        table_id = table.get("table_id")
+        if TABLE_IDS and table_id not in TABLE_IDS:
+            continue
+        for index, row in enumerate(table.get("data", []), start=1):
+            row_id = f"row_{index:02d}"
+            rules_payload = []
+            for rule in row.get("rules", []):
+                rule_id = rule.get("rule_id")
+                conditions = []
+                actions = []
+
+                for condition in rule.get("conditions", []):
+                    entity = condition.get(
+                        "entity_standardized_candidate"
+                    ) or condition.get("entity_original")
+                    if _normalize_text(entity) == "string":
+                        continue
+                    conditions.append(
+                        _build_entry(
+                            entity,
+                            condition.get("entity_original"),
+                            condition.get("role"),
+                            condition.get("logic_structured") or {},
+                        )
+                    )
+
+                for action in rule.get("actions", []):
+                    entity = action.get("entity_standardized_candidate") or action.get(
+                        "entity_original"
+                    )
+                    if _normalize_text(entity) == "string":
+                        continue
+                    actions.append(
+                        _build_entry(
+                            entity,
+                            action.get("entity_original"),
+                            action.get("role"),
+                            action.get("logic_structured") or {},
+                        )
+                    )
+
+                if conditions or actions:
+                    rules_payload.append(
+                        {
+                            "rule_id": rule_id,
+                            "conditions": conditions,
+                            "actions": actions,
+                        }
+                    )
+
+            if rules_payload:
+                grouped[row_id] = rules_payload
     return grouped
 
 
@@ -564,6 +627,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
 
         truth_rows = _collect_docling_rows(truth)
         expected_rows = _ordered_rows(_summarize_ground_truth(truth))
+        expected_rows_grouped = _summarize_ground_truth_grouped(truth)
         actual_rows = _ordered_rows(_summarize_rules(rules_rows))
 
         if len(actual_rows) < len(expected_rows):
@@ -608,6 +672,9 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     "match_score": score,
                     "ground_truth_text": truth_rows.get(expected_row_id, {}),
                     "expected_entries": expected_entries,
+                    "expected_entries_display": expected_rows_grouped.get(
+                        expected_row_id, expected_entries
+                    ),
                     "actual_entries": actual_entries_ordered,
                     "concept_summary": {
                         "expected": len(expected_concepts),
@@ -698,7 +765,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 f.write("  </tr>\n")
                 f.write("  <tr>\n")
                 f.write('    <td valign="top"><pre>\n')
-                f.write(json.dumps(row["expected_entries"], indent=2))
+                f.write(json.dumps(row.get("expected_entries_display"), indent=2))
                 f.write("\n</pre></td>\n")
                 f.write('    <td valign="top"><pre>\n')
                 f.write(json.dumps(row["actual_entries"], indent=2))

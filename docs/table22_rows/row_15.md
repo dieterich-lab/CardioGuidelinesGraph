@@ -21,32 +21,39 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "multivessel obstructive cad",
-    "entity_original": "patients with multivessel obstructive cad",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "syntax score",
-    "entity_original": "calculation of the syntax score is recommended to assess the anatomical complexity of disease",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "B",
-    "direction": "POSITIVE"
+    "rule_id": 1,
+    "conditions": [
+      {
+        "entity": "multivessel obstructive cad",
+        "entity_original": "patients with multivessel obstructive cad",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "syntax score",
+        "entity_original": "calculation of the syntax score is recommended to assess the anatomical complexity of disease",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "B",
+        "direction": "POSITIVE"
+      }
+    ]
   }
 ]
 </pre></td>

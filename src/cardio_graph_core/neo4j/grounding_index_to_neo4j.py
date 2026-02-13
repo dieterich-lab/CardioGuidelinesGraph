@@ -174,9 +174,16 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
         action_concepts = []
         for concept in concepts:
             role = (concept.get("role") or "").strip()
-            if role in {"Condition", "ClinicalParameter"}:
+            side = (concept.get("logic") or "").strip().lower()
+
+            is_condition = (
+                role in {"Condition", "ClinicalParameter"} or side == "condition"
+            )
+            is_action = role in {"Medication", "Procedure"} or side == "action"
+
+            if is_condition:
                 condition_concepts.append(concept)
-            elif role in {"Medication", "Procedure"}:
+            elif is_action:
                 action_concepts.append(concept)
 
         ordered_groups: List[Dict[str, Any]] = []

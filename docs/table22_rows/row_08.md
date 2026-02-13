@@ -21,88 +21,95 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "ccs",
-    "entity_original": "ccs patient",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "lvef",
-    "entity_original": "lvef > 35%",
-    "role": "ClinicalParameter",
-    "operator": ">",
-    "threshold": "35",
-    "unit": "%",
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "functionally significant three-vessel disease",
-    "entity_original": "functionally significant single-vessel disease involving the proximal lad",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "OR",
-    "logic_group": "or_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "functionally significant three-vessel disease",
-    "entity_original": "functionally significant two-vessel disease involving the proximal lad",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "OR",
-    "logic_group": "or_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "myocardial revascularization",
-    "entity_original": "myocardial revascularization to reduce long-term cardiovascular mortality",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "B",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "guideline-directed medical therapy",
-    "entity_original": "guideline-directed medical therapy to reduce long-term cardiovascular mortality",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "B",
-    "direction": "POSITIVE"
+    "rule_id": 1,
+    "conditions": [
+      {
+        "entity": "ccs",
+        "entity_original": "ccs patient",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "lvef",
+        "entity_original": "lvef > 35%",
+        "role": "ClinicalParameter",
+        "operator": ">",
+        "threshold": "35",
+        "unit": "%",
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "functionally significant three-vessel disease",
+        "entity_original": "functionally significant single-vessel disease involving the proximal lad",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "OR",
+        "logic_group": "or_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "functionally significant three-vessel disease",
+        "entity_original": "functionally significant two-vessel disease involving the proximal lad",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "OR",
+        "logic_group": "or_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "myocardial revascularization",
+        "entity_original": "myocardial revascularization to reduce long-term cardiovascular mortality",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "B",
+        "direction": "POSITIVE"
+      },
+      {
+        "entity": "guideline-directed medical therapy",
+        "entity_original": "guideline-directed medical therapy to reduce long-term cardiovascular mortality",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "B",
+        "direction": "POSITIVE"
+      }
+    ]
   }
 ]
 </pre></td>

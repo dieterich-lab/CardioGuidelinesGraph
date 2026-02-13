@@ -21,74 +21,81 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "complex cad",
-    "entity_original": "patients with complex cad",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "revascularization is being considered",
-    "entity_original": "patients in whom revascularization is being considered",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "procedural risks",
-    "entity_original": "assess procedural risks",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "post-procedural outcomes",
-    "entity_original": "assess post-procedural outcomes",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "shared clinical decision-making",
-    "entity_original": "take part in shared clinical decision-making",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
+    "rule_id": 1,
+    "conditions": [
+      {
+        "entity": "complex cad",
+        "entity_original": "patients with complex cad",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "revascularization is being considered",
+        "entity_original": "patients in whom revascularization is being considered",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "procedural risks",
+        "entity_original": "assess procedural risks",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE"
+      },
+      {
+        "entity": "post-procedural outcomes",
+        "entity_original": "assess post-procedural outcomes",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE"
+      },
+      {
+        "entity": "shared clinical decision-making",
+        "entity_original": "take part in shared clinical decision-making",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE"
+      }
+    ]
   }
 ]
 </pre></td>

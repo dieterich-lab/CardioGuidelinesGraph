@@ -21,74 +21,81 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "ccs",
-    "entity_original": "ccs patient",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "surgically eligible",
-    "entity_original": "surgically eligible patient",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "multivessel cad",
-    "entity_original": "multivessel cad",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "lvef",
-    "entity_original": "lvef \u2264 35%",
-    "role": "ClinicalParameter",
-    "operator": "\u2264",
-    "threshold": "35",
-    "unit": "%",
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "cabg",
-    "entity_original": "myocardial revascularization with cabg over medical therapy alone to improve long-term survival",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "B",
-    "direction": "POSITIVE"
+    "rule_id": 1,
+    "conditions": [
+      {
+        "entity": "ccs",
+        "entity_original": "ccs patient",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "surgically eligible",
+        "entity_original": "surgically eligible patient",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "multivessel cad",
+        "entity_original": "multivessel cad",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "lvef",
+        "entity_original": "lvef \u2264 35%",
+        "role": "ClinicalParameter",
+        "operator": "\u2264",
+        "threshold": "35",
+        "unit": "%",
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "cabg",
+        "entity_original": "myocardial revascularization with cabg over medical therapy alone to improve long-term survival",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "B",
+        "direction": "POSITIVE"
+      }
+    ]
   }
 ]
 </pre></td>

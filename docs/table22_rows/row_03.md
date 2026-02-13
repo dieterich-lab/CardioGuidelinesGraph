@@ -21,46 +21,53 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "heart team",
-    "entity_original": "heart team",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "proposal",
-    "entity_original": "proposal",
-    "role": "Procedure",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "communicate proposal",
-    "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
+    "rule_id": 1,
+    "conditions": [
+      {
+        "entity": "heart team",
+        "entity_original": "heart team",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "proposal",
+        "entity_original": "proposal",
+        "role": "Procedure",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "communicate proposal",
+        "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE"
+      }
+    ]
   }
 ]
 </pre></td>

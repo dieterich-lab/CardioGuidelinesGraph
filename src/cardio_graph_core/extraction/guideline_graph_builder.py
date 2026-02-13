@@ -40,9 +40,7 @@ IS_A_TYPE_ID = 116680003
 DEFAULT_CONFIG_PATH = os.path.join(
     os.path.dirname(__file__), "../snomedct/guideline_graph_schema.yaml"
 )
-DEFAULT_ABBRV_PATH = os.path.join(
-    os.path.dirname(__file__), "../snomedct/abbrv.txt"
-)
+DEFAULT_ABBRV_PATH = os.path.join(os.path.dirname(__file__), "../snomedct/abbrv.txt")
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
 DEFAULT_MIN_MATCH_SCORE = 0.6
@@ -898,6 +896,64 @@ class GuidelineGraphBuilder:
             f"{focus_tag}[GUIDELINE: {guideline_title}] "
             f"[SOURCE_TYPE: {source_type}]\n{sentence}"
         )
+        concepts: List[ExtractedConcept] = []
+
+        def _default_logic_structured() -> Dict[str, Optional[str]]:
+            return {
+                "strength": "Unknown",
+                "level": "Unknown",
+                "direction": "UNKNOWN",
+                "operator": None,
+                "threshold": None,
+                "unit": None,
+                "condition_context": None,
+                "logic_type": None,
+                "logic_group": None,
+            }
+
+        try:
+            rules_result = b.ExtractRulesV2(tagged_text, baml_options=baml_options)
+            _ = self._serialize_baml_result(rules_result)
+            for rule in getattr(rules_result, "rules", []) or []:
+                rule_id = getattr(rule, "rule_id", None)
+                for condition in getattr(rule, "conditions", []) or []:
+                    logic_structured = _default_logic_structured()
+                    logic = getattr(condition, "logic", None)
+                    if logic is not None:
+                        logic_structured.update(logic.model_dump())
+                    concepts.append(
+                        ExtractedConcept(
+                            rule_id=rule_id,
+                            entity_original=condition.entity_original,
+                            entity_standardized_candidate=condition.entity_standardized_candidate,
+                            role=condition.role,
+                            logic="condition",
+                            logic_structured=logic_structured,
+                        )
+                    )
+                for action in getattr(rule, "actions", []) or []:
+                    logic_structured = _default_logic_structured()
+                    recommendation = getattr(action, "recommendation", None)
+                    if recommendation is not None:
+                        logic_structured.update(recommendation.model_dump())
+                    concepts.append(
+                        ExtractedConcept(
+                            rule_id=rule_id,
+                            entity_original=action.entity_original,
+                            entity_standardized_candidate=action.entity_standardized_candidate,
+                            role=action.role,
+                            logic="action",
+                            logic_structured=logic_structured,
+                        )
+                    )
+            if concepts:
+                return concepts
+        except Exception as exc:
+            logger.warning(
+                "BAML ExtractRulesV2 failed; falling back to ExtractConcepts. Error: %s",
+                exc,
+            )
+
         try:
             result = b.ExtractConcepts(tagged_text, baml_options=baml_options)
         except Exception as exc:
@@ -908,17 +964,8 @@ class GuidelineGraphBuilder:
             return []
         _ = self._serialize_baml_result(result)
 
-        concepts = []
         for concept in result.concepts or []:
-            logic_structured = {
-                "strength": "Unknown",
-                "level": "Unknown",
-                "direction": "UNKNOWN",
-                "operator": None,
-                "threshold": None,
-                "unit": None,
-                "condition_context": None,
-            }
+            logic_structured = _default_logic_structured()
             if getattr(concept, "logic_structured", None):
                 logic_structured.update(concept.logic_structured.model_dump())
             concepts.append(
@@ -963,11 +1010,12 @@ class GuidelineGraphBuilder:
     def _drop_redundant_compound_conditions(
         self, concepts: List[ExtractedConcept]
     ) -> List[ExtractedConcept]:
-        condition_concepts = [
-            c
-            for c in concepts
-            if (c.role or "").strip() in {"Condition", "ClinicalParameter"}
-        ]
+        def is_condition(concept: ExtractedConcept) -> bool:
+            role = (concept.role or "").strip()
+            side = (concept.logic or "").strip().lower()
+            return role in {"Condition", "ClinicalParameter"} or side == "condition"
+
+        condition_concepts = [c for c in concepts if is_condition(c)]
         if not condition_concepts:
             return concepts
 
@@ -979,7 +1027,7 @@ class GuidelineGraphBuilder:
         filtered: List[ExtractedConcept] = []
         for concept in concepts:
             role = (concept.role or "").strip()
-            if role not in {"Condition", "ClinicalParameter"}:
+            if not is_condition(concept):
                 filtered.append(concept)
                 continue
             name = concept.entity_standardized_candidate or concept.entity_original
@@ -1012,7 +1060,11 @@ class GuidelineGraphBuilder:
     ) -> List[ExtractedConcept]:
         expanded: List[ExtractedConcept] = []
         for concept in concepts:
-            if concept.role not in {"Condition", "ClinicalParameter"}:
+            side = (concept.logic or "").strip().lower()
+            if (concept.role or "").strip() not in {
+                "Condition",
+                "ClinicalParameter",
+            } and side != "condition":
                 expanded.append(concept)
                 continue
             text = concept.entity_standardized_candidate or concept.entity_original

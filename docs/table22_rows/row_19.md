@@ -21,74 +21,81 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "revascularization",
-    "entity_original": "at the end of the revascularization",
-    "role": "Procedure",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "chronic coronary syndrome",
-    "entity_original": "patients with chronic coronary syndrome",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "intracoronary pressure measurement (ffr)",
-    "entity_original": "intracoronary pressure measurement (ffr) is recommended to identify lesions potentially amenable to treatment with additional pci",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "IIb",
-    "level": "B",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "intracoronary pressure measurement (ifr)",
-    "entity_original": "intracoronary pressure measurement (ifr) is recommended to identify lesions potentially amenable to treatment with additional pci",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "IIb",
-    "level": "B",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "computation (qfr)",
-    "entity_original": "computation (qfr) is recommended to identify lesions potentially amenable to treatment with additional pci",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "IIb",
-    "level": "B",
-    "direction": "POSITIVE"
+    "rule_id": 1,
+    "conditions": [
+      {
+        "entity": "revascularization",
+        "entity_original": "at the end of the revascularization",
+        "role": "Procedure",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "chronic coronary syndrome",
+        "entity_original": "patients with chronic coronary syndrome",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "intracoronary pressure measurement (ffr)",
+        "entity_original": "intracoronary pressure measurement (ffr) is recommended to identify lesions potentially amenable to treatment with additional pci",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "IIb",
+        "level": "B",
+        "direction": "POSITIVE"
+      },
+      {
+        "entity": "intracoronary pressure measurement (ifr)",
+        "entity_original": "intracoronary pressure measurement (ifr) is recommended to identify lesions potentially amenable to treatment with additional pci",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "IIb",
+        "level": "B",
+        "direction": "POSITIVE"
+      },
+      {
+        "entity": "computation (qfr)",
+        "entity_original": "computation (qfr) is recommended to identify lesions potentially amenable to treatment with additional pci",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "IIb",
+        "level": "B",
+        "direction": "POSITIVE"
+      }
+    ]
   }
 ]
 </pre></td>

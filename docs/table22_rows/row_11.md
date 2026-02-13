@@ -21,88 +21,95 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "ccs",
-    "entity_original": "ccs patient",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "high surgical risk",
-    "entity_original": "patient with high surgical risk",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "OR",
-    "logic_group": "or_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "not operable",
-    "entity_original": "not operable patient",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "OR",
-    "logic_group": "or_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "functionally significant mvd",
-    "entity_original": "functionally significant mvd",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "lvef",
-    "entity_original": "lvef \u2264 35%",
-    "role": "ClinicalParameter",
-    "operator": "\u2264",
-    "threshold": "35",
-    "unit": "%",
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "pci",
-    "entity_original": "pci may be considered as an alternative to cabg",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "IIb",
-    "level": "B",
-    "direction": "POSITIVE"
+    "rule_id": 1,
+    "conditions": [
+      {
+        "entity": "ccs",
+        "entity_original": "ccs patient",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "high surgical risk",
+        "entity_original": "patient with high surgical risk",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "OR",
+        "logic_group": "or_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "not operable",
+        "entity_original": "not operable patient",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "OR",
+        "logic_group": "or_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "functionally significant mvd",
+        "entity_original": "functionally significant mvd",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "lvef",
+        "entity_original": "lvef \u2264 35%",
+        "role": "ClinicalParameter",
+        "operator": "\u2264",
+        "threshold": "35",
+        "unit": "%",
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "pci",
+        "entity_original": "pci may be considered as an alternative to cabg",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "IIb",
+        "level": "B",
+        "direction": "POSITIVE"
+      }
+    ]
   }
 ]
 </pre></td>

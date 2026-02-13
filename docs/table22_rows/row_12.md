@@ -21,74 +21,81 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "ccs",
-    "entity_original": "ccs patient",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "persistent angina",
-    "entity_original": "persistent angina",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "OR",
-    "logic_group": "or_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "anginal equivalent",
-    "entity_original": "anginal equivalent",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "OR",
-    "logic_group": "or_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "despite guideline-directed medical treatment",
-    "entity_original": "despite guideline-directed medical treatment",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "myocardial revascularization",
-    "entity_original": "myocardial revascularization of functionally significant obstructive cad is recommended to improve symptoms",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "A",
-    "direction": "POSITIVE"
+    "rule_id": 1,
+    "conditions": [
+      {
+        "entity": "ccs",
+        "entity_original": "ccs patient",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "persistent angina",
+        "entity_original": "persistent angina",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "OR",
+        "logic_group": "or_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "anginal equivalent",
+        "entity_original": "anginal equivalent",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "OR",
+        "logic_group": "or_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      },
+      {
+        "entity": "despite guideline-directed medical treatment",
+        "entity_original": "despite guideline-directed medical treatment",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "myocardial revascularization",
+        "entity_original": "myocardial revascularization of functionally significant obstructive cad is recommended to improve symptoms",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "A",
+        "direction": "POSITIVE"
+      }
+    ]
   }
 ]
 </pre></td>

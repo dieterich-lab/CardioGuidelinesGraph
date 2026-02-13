@@ -21,88 +21,95 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "entity": "revacularization",
-    "entity_original": "the decision for revascularization and its modality",
-    "role": "Procedure",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": null
-  },
-  {
-    "entity": "patient-centred decision",
-    "entity_original": "the decision for revascularization and its modality be patient-centred",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "patient preferences",
-    "entity_original": "the decision for revascularization and its modality consider patient preferences",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "health literacy",
-    "entity_original": "the decision for revascularization and its modality consider health literacy",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "cultural circumstances",
-    "entity_original": "the decision for revascularization and its modality consider cultural circumstances",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "social support",
-    "entity_original": "the decision for revascularization and its modality consider social support",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
+    "rule_id": 1,
+    "conditions": [
+      {
+        "entity": "revacularization",
+        "entity_original": "the decision for revascularization and its modality",
+        "role": "Procedure",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": "AND",
+        "logic_group": "and_1",
+        "strength": null,
+        "level": null,
+        "direction": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "patient-centred decision",
+        "entity_original": "the decision for revascularization and its modality be patient-centred",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE"
+      },
+      {
+        "entity": "patient preferences",
+        "entity_original": "the decision for revascularization and its modality consider patient preferences",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE"
+      },
+      {
+        "entity": "health literacy",
+        "entity_original": "the decision for revascularization and its modality consider health literacy",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE"
+      },
+      {
+        "entity": "cultural circumstances",
+        "entity_original": "the decision for revascularization and its modality consider cultural circumstances",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE"
+      },
+      {
+        "entity": "social support",
+        "entity_original": "the decision for revascularization and its modality consider social support",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE"
+      }
+    ]
   }
 ]
 </pre></td>
