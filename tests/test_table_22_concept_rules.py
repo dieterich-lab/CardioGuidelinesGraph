@@ -508,10 +508,21 @@ def _group_type(group_name, entries):
 
 
 def _build_mermaid(entries, title):
-    groups = _group_entries(entries)
-    actions = [
-        entry for entry in entries if entry.get("role") in {"Procedure", "Medication"}
-    ]
+    def is_condition(entry):
+        side = (entry.get("side") or "").strip().lower()
+        if side:
+            return side == "condition"
+        return entry.get("role") in {"Condition", "ClinicalParameter"}
+
+    def is_action(entry):
+        side = (entry.get("side") or "").strip().lower()
+        if side:
+            return side == "action"
+        return entry.get("role") in {"Procedure", "Medication"}
+
+    condition_entries_all = [entry for entry in entries if is_condition(entry)]
+    groups = _group_entries(condition_entries_all)
+    actions = [entry for entry in entries if is_action(entry)]
     ordered_groups = []
     for group_name, group_entries in groups.items():
         ordered_groups.append(
@@ -540,11 +551,7 @@ def _build_mermaid(entries, title):
         group_id = _sanitize_id(group_name)
         lines.append(f"  subgraph {title}_{group_id}_{group_type}")
 
-        condition_entries = [
-            entry
-            for entry in group_entries
-            if entry.get("role") in {"Condition", "ClinicalParameter"}
-        ]
+        condition_entries = list(group_entries)
 
         decision_ids = []
         for idx, entry in enumerate(condition_entries, start=1):
@@ -773,14 +780,14 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 f.write("  </tr>\n")
                 f.write("</table>\n\n")
 
-                f.write("Mermaid (expected):\n\n")
+                f.write("Mermaid (Human Annotation):\n\n")
                 f.write("```mermaid\n")
-                f.write(_build_mermaid(row["expected_entries"], "Expected"))
+                f.write(_build_mermaid(row["expected_entries"], "Human"))
                 f.write("\n```\n\n")
 
-                f.write("Mermaid (actual):\n\n")
+                f.write("Mermaid (LLM Generated):\n\n")
                 f.write("```mermaid\n")
-                f.write(_build_mermaid(row["actual_entries"], "Actual"))
+                f.write(_build_mermaid(row["actual_entries"], "LLM"))
                 f.write("\n```\n\n")
 
                 f.write("Concepts:\n")

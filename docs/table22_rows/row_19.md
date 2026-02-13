@@ -148,41 +148,37 @@ Aligned JSON (expected vs actual):
   </tr>
 </table>
 
-Mermaid (expected):
+Mermaid (Human Annotation):
 
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: revascularization]
+  ACT1[Procedure: intracoronary pressure measurement (ffr)]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  ACT2[Procedure: intracoronary pressure measurement (ffr)]
+  ACT2[Procedure: intracoronary pressure measurement (ifr)]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-  ACT3[Procedure: intracoronary pressure measurement (ifr)]
+  ACT3[Procedure: computation (qfr)]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-  ACT4[Procedure: computation (qfr)]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-  subgraph Expected_and_1_AND
+  subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: chronic coronary syndrome]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    C_and_1_1[Procedure: revascularization]
+    D_and_1_1 -->|EVALUATES| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: chronic coronary syndrome]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO| D_and_1_2
   end
-  subgraph Expected_group_1_AND
-    REC
-  end
-  D_and_1_1 -->|RESULTS_IN| REC
+  D_and_1_2 -->|RESULTS_IN| REC
 ```
 
-Mermaid (actual):
+Mermaid (LLM Generated):
 
 ```mermaid
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: society of thoracic surgeons score]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  subgraph Actual_group_1_AND
-    REC
-  end
-  subgraph Actual_and_1_AND
+  subgraph LLM_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[ClinicalParameter: coronary artery bypass grafting]
     D_and_1_1 -->|EVALUATES| C_and_1_1

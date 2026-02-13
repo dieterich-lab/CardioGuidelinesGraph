@@ -214,7 +214,7 @@ Aligned JSON (expected vs actual):
   </tr>
 </table>
 
-Mermaid (expected):
+Mermaid (Human Annotation):
 
 ```mermaid
 graph LR
@@ -233,7 +233,7 @@ graph LR
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
   ACT7[Procedure: evaluate patient perspectives]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT7
-  subgraph Expected_and_1_AND
+  subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: ccs]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
@@ -242,20 +242,17 @@ graph LR
     D_and_1_2 -->|EVALUATES| C_and_1_2
     D_and_1_1 -->|LEADS_TO| D_and_1_2
   end
-  subgraph Expected_group_1_AND
-    REC
-  end
   D_and_1_2 -->|RESULTS_IN| REC
 ```
 
-Mermaid (actual):
+Mermaid (LLM Generated):
 
 ```mermaid
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: myocardial revascularization]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  subgraph Actual_and_1_AND
+  subgraph LLM_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: chronic coronary syndrome]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
@@ -267,9 +264,6 @@ graph LR
     D_and_1_3 -->|CHECKS_FOR| C_and_1_3
     D_and_1_1 -->|LEADS_TO| D_and_1_2
     D_and_1_2 -->|LEADS_TO| D_and_1_3
-  end
-  subgraph Actual_group_1_AND
-    REC
   end
   D_and_1_3 -->|RESULTS_IN| REC
 ```

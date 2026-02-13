@@ -204,31 +204,29 @@ Aligned JSON (expected vs actual):
   </tr>
 </table>
 
-Mermaid (expected):
+Mermaid (Human Annotation):
 
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: cabg]
+  ACT1[Procedure: sts score]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  ACT2[Procedure: sts score]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-  subgraph Expected_and_1_AND
-    REC
+  subgraph Human_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Procedure: cabg]
+    D_and_1_1 -->|EVALUATES| C_and_1_1
   end
-  subgraph Expected_group_1_AND
-    REC
-  end
+  D_and_1_1 -->|RESULTS_IN| REC
 ```
 
-Mermaid (actual):
+Mermaid (LLM Generated):
 
 ```mermaid
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: percutaneous coronary intervention]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  subgraph Actual_and_1_AND
+  subgraph LLM_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: chronic coronary syndrome patients with functionally significant multivessel disease]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
@@ -257,7 +255,7 @@ graph LR
     D_and_1_5 -->|LEADS_TO| D_and_1_6
     D_and_1_6 -->|LEADS_TO| D_and_1_7
   end
-  subgraph Actual_or_1_OR
+  subgraph LLM_or_1_OR
     D_or_1_1[DecisionNode or_1 s1]
     C_or_1_1[Condition: high surgical risk]
     D_or_1_1 -->|CHECKS_FOR| C_or_1_1
@@ -266,9 +264,6 @@ graph LR
     D_or_1_2 -->|CHECKS_FOR| C_or_1_2
     D_and_1_7 -->|LEADS_TO| D_or_1_1
     D_and_1_7 -->|LEADS_TO| D_or_1_2
-  end
-  subgraph Actual_group_1_AND
-    REC
   end
   D_or_1_1 -->|RESULTS_IN| REC
   D_or_1_2 -->|RESULTS_IN| REC

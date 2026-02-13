@@ -190,39 +190,37 @@ Aligned JSON (expected vs actual):
   </tr>
 </table>
 
-Mermaid (expected):
+Mermaid (Human Annotation):
 
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: revacularization]
+  ACT1[Procedure: patient-centred decision]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  ACT2[Procedure: patient-centred decision]
+  ACT2[Procedure: patient preferences]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT2
-  ACT3[Procedure: patient preferences]
+  ACT3[Procedure: health literacy]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT3
-  ACT4[Procedure: health literacy]
+  ACT4[Procedure: cultural circumstances]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT4
-  ACT5[Procedure: cultural circumstances]
+  ACT5[Procedure: social support]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT5
-  ACT6[Procedure: social support]
-  REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT6
-  subgraph Expected_and_1_AND
-    REC
+  subgraph Human_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Procedure: revacularization]
+    D_and_1_1 -->|EVALUATES| C_and_1_1
   end
-  subgraph Expected_group_1_AND
-    REC
-  end
+  D_and_1_1 -->|RESULTS_IN| REC
 ```
 
-Mermaid (actual):
+Mermaid (LLM Generated):
 
 ```mermaid
 graph LR
   REC[RecommendationNode]
   ACT1[Procedure: revascularization decision]
   REC -->|RECOMMENDS_* / CONTRAINDICATES| ACT1
-  subgraph Actual_and_1_AND
+  subgraph LLM_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[Condition: patient preferences]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
@@ -238,9 +236,6 @@ graph LR
     D_and_1_1 -->|LEADS_TO| D_and_1_2
     D_and_1_2 -->|LEADS_TO| D_and_1_3
     D_and_1_3 -->|LEADS_TO| D_and_1_4
-  end
-  subgraph Actual_group_1_AND
-    REC
   end
   D_and_1_4 -->|RESULTS_IN| REC
 ```
