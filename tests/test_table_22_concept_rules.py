@@ -4,6 +4,8 @@ import re
 import unittest
 from pathlib import Path
 
+from cardio_graph_core.extraction.guideline_graph_builder import GuidelineGraphBuilder
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
 DATA_DIR = Path(os.environ.get("CARDIO_GRAPH_DATA_DIR", DEFAULT_DATA_DIR))
@@ -40,12 +42,22 @@ DOCLING_TABLE_63_PATH = Path(
 DOCLING_TABLE_PATHS = [DOCLING_TABLE_62_PATH, DOCLING_TABLE_63_PATH]
 TABLE_IDS_RAW = os.environ.get("CARDIO_GRAPH_TABLE22_TABLE_IDS", "0")
 TABLE_IDS = {int(value.strip()) for value in TABLE_IDS_RAW.split(",") if value.strip()}
+TARGET_ROWS_RAW = os.environ.get("CARDIO_GRAPH_TABLE22_TARGET_ROWS", "")
+TARGET_ROWS = {value.strip() for value in TARGET_ROWS_RAW.split(",") if value.strip()}
 SKIP_ROWS_RAW = os.environ.get("CARDIO_GRAPH_TABLE22_SKIP_ROWS", "row_01")
 SKIP_ROWS = {value.strip() for value in SKIP_ROWS_RAW.split(",") if value.strip()}
 MIN_ROW_MATCH = float(os.environ.get("CARDIO_GRAPH_TABLE22_MIN_ROW_MATCH", "0.2"))
 ENTRY_MATCH_THRESHOLD = float(
     os.environ.get("CARDIO_GRAPH_TABLE22_ENTRY_MATCH_THRESHOLD", "0.6")
 )
+LIVE_LLM = os.environ.get("CARDIO_GRAPH_TABLE22_LIVE_LLM", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+}
+LLM_MODEL = os.environ.get("CARDIO_GRAPH_TABLE22_LLM_MODEL", "Qwen30b")
+LLM_NODE = os.environ.get("CARDIO_GRAPH_TABLE22_LLM_NODE", "g5")
+LLM_PORT = int(os.environ.get("CARDIO_GRAPH_TABLE22_LLM_PORT", "11435"))
 REPORT_MD_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_MD",
@@ -95,6 +107,12 @@ def _normalize_text(value):
     if value is None:
         return None
     return " ".join(str(value).strip().split()).lower()
+
+
+def _row_text(row_dict):
+    return " | ".join(
+        str(v).strip() for v in row_dict.values() if isinstance(v, str) and v.strip()
+    )
 
 
 def _docling_row_values(row):
@@ -172,6 +190,14 @@ def _build_entry(entity, entity_original, role, logic):
     }
 
 
+def _build_entry_with_side(entity, entity_original, role, logic, side, rule_id):
+    entry = _build_entry(entity, entity_original, role, logic)
+    entry["rule_id"] = rule_id
+    if side:
+        entry["side"] = side
+    return entry
+
+
 def _summarize_rules(rules_rows):
     grouped = {}
     for index, row in enumerate(rules_rows):
@@ -189,6 +215,41 @@ def _summarize_rules(rules_rows):
         entry["_source_index"] = index
         grouped.setdefault(row_id, []).append(entry)
     return grouped
+
+
+def _extract_entries_live(row_text_dict, builder):
+    if not row_text_dict:
+        return []
+    text = _row_text(row_text_dict)
+    concepts = builder.extract_concepts(
+        text, source_type="table_row", guideline_title="ESC Guidelines"
+    )
+    entries = []
+    for concept in concepts:
+        logic_structured = getattr(concept, "logic_structured", None) or {}
+        logic_side = (getattr(concept, "logic", None) or "").strip().lower()
+        side = None
+        if logic_side == "condition":
+            side = "condition"
+        elif logic_side == "action":
+            side = "action"
+        else:
+            role = getattr(concept, "role", None)
+            if role in {"Condition", "ClinicalParameter"}:
+                side = "condition"
+            elif role in {"Procedure", "Medication"}:
+                side = "action"
+        entry = _build_entry_with_side(
+            getattr(concept, "entity_standardized_candidate", None)
+            or getattr(concept, "entity_original", ""),
+            getattr(concept, "entity_original", ""),
+            getattr(concept, "role", None),
+            logic_structured,
+            side,
+            getattr(concept, "rule_id", None),
+        )
+        entries.append(entry)
+    return entries
 
 
 def _summarize_ground_truth(truth):
@@ -498,6 +559,20 @@ def _group_entries(entries):
     return grouped
 
 
+def _group_entries_by_rule(entries):
+    grouped = {}
+    for entry in entries:
+        rule_id = entry.get("rule_id")
+        if rule_id not in grouped:
+            grouped[rule_id] = {"conditions": [], "actions": []}
+        side = (entry.get("side") or "").lower()
+        if side == "condition":
+            grouped[rule_id]["conditions"].append(entry)
+        elif side == "action":
+            grouped[rule_id]["actions"].append(entry)
+    return grouped
+
+
 def _group_type(group_name, entries):
     if str(group_name).lower().startswith("or"):
         return "OR"
@@ -612,12 +687,13 @@ def _build_mermaid(entries, title):
 
 class Table22ConceptRulesTests(unittest.TestCase):
     def setUp(self):
-        if not RULES_PATH.is_file():
-            self.skipTest(
-                "Missing rules file: "
-                + str(RULES_PATH)
-                + ". Set CARDIO_GRAPH_TABLE22_RULES_PATH."
-            )
+        if not LIVE_LLM:
+            if not RULES_PATH.is_file():
+                self.skipTest(
+                    "Missing rules file: "
+                    + str(RULES_PATH)
+                    + ". Set CARDIO_GRAPH_TABLE22_RULES_PATH."
+                )
         if not GROUND_TRUTH_PATH.is_file():
             self.skipTest(
                 "Missing ground-truth file: "
@@ -640,15 +716,35 @@ class Table22ConceptRulesTests(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_table_22_rules_match_ground_truth(self):
-        rules_rows = _load_rules()
+        rules_rows = [] if LIVE_LLM else _load_rules()
         truth = _load_ground_truth()
 
-        truth_rows = _collect_docling_rows(truth)
-        expected_rows = _ordered_rows(_summarize_ground_truth(truth))
-        expected_rows_grouped = _summarize_ground_truth_grouped(truth)
-        actual_rows = _ordered_rows(_summarize_rules(rules_rows))
+        builder = (
+            GuidelineGraphBuilder(model=LLM_MODEL, node=LLM_NODE, port=LLM_PORT)
+            if LIVE_LLM
+            else None
+        )
 
-        if len(actual_rows) < len(expected_rows):
+        truth_rows = _collect_docling_rows(truth)
+        expected_rows_full = _ordered_rows(_summarize_ground_truth(truth))
+        if TARGET_ROWS:
+            expected_rows = [
+                (row_id, entries)
+                for row_id, entries in expected_rows_full
+                if row_id in TARGET_ROWS
+            ]
+            expected_rows_grouped = {
+                row_id: entries
+                for row_id, entries in _summarize_ground_truth_grouped(truth).items()
+                if row_id in TARGET_ROWS
+            }
+        else:
+            expected_rows = expected_rows_full
+            expected_rows_grouped = _summarize_ground_truth_grouped(truth)
+
+        actual_rows = [] if LIVE_LLM else _ordered_rows(_summarize_rules(rules_rows))
+
+        if (not LIVE_LLM) and len(actual_rows) < len(expected_rows):
             self.fail(
                 "Extracted rows are fewer than expected. "
                 + str(len(actual_rows))
@@ -658,14 +754,24 @@ class Table22ConceptRulesTests(unittest.TestCase):
 
         report_rows = []
         for expected_row_id, expected_entries in expected_rows:
-            expected_index = int(expected_row_id.split("_")[-1])
-            actual_row_id = f"row_{expected_index + 1:02d}"
-            actual_entries_raw = dict(actual_rows).get(actual_row_id, [])
-            actual_entries_ordered = _strip_internal_keys(
-                sorted(
-                    actual_entries_raw, key=lambda entry: entry.get("_source_index", 0)
+            if LIVE_LLM:
+                actual_row_id = expected_row_id
+                actual_entries_raw = _extract_entries_live(
+                    truth_rows.get(expected_row_id, {}), builder
                 )
-            )
+                actual_entries_ordered = _strip_internal_keys(
+                    _sorted_entries(actual_entries_raw)
+                )
+            else:
+                expected_index = int(expected_row_id.split("_")[-1])
+                actual_row_id = f"row_{expected_index + 1:02d}"
+                actual_entries_raw = dict(actual_rows).get(actual_row_id, [])
+                actual_entries_ordered = _strip_internal_keys(
+                    sorted(
+                        actual_entries_raw,
+                        key=lambda entry: entry.get("_source_index", 0),
+                    )
+                )
 
             expected_sorted = _sorted_entries(expected_entries)
             actual_sorted = _sorted_entries(actual_entries_ordered)
@@ -694,6 +800,9 @@ class Table22ConceptRulesTests(unittest.TestCase):
                         expected_row_id, expected_entries
                     ),
                     "actual_entries": actual_entries_ordered,
+                    "actual_entries_display": _group_entries_by_rule(
+                        actual_entries_ordered
+                    ),
                     "concept_summary": {
                         "expected": len(expected_concepts),
                         "actual": len(actual_concepts),
@@ -725,7 +834,11 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 {
                     "ground_truth": str(GROUND_TRUTH_PATH),
                     "extracted_rules": str(RULES_PATH),
-                    "mapping": "truth row_N -> extracted row_{N+1} (skip extracted row_01 header)",
+                    "mapping": (
+                        "live LLM"
+                        if LIVE_LLM
+                        else "truth row_N -> extracted row_{N+1} (skip extracted row_01 header)"
+                    ),
                     "rows": report_rows,
                 },
                 indent=2,
@@ -753,9 +866,12 @@ class Table22ConceptRulesTests(unittest.TestCase):
             f.write("# Table 22 row-wise comparison (concepts and rules)\n\n")
             f.write(f"Ground truth: {GROUND_TRUTH_PATH}\n")
             f.write(f"Extracted rules: {RULES_PATH}\n")
-            f.write(
-                "Mapping: truth row_N -> extracted row_{N+1} (skip extracted row_01 header)\n\n"
+            mapping_text = (
+                "Live LLM extraction"
+                if LIVE_LLM
+                else "Mapping: truth row_N -> extracted row_{N+1} (skip extracted row_01 header)"
             )
+            f.write(mapping_text + "\n\n")
             f.write(f"Summary CSV: {REPORT_CSV_PATH.relative_to(PROJECT_ROOT)}\n")
             f.write(f"Aligned JSON: {REPORT_JSON_PATH.relative_to(PROJECT_ROOT)}\n\n")
             f.write("Per-row reports:\n\n")
@@ -786,7 +902,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 f.write(json.dumps(row.get("expected_entries_display"), indent=2))
                 f.write("\n</pre></td>\n")
                 f.write('    <td valign="top"><pre>\n')
-                f.write(json.dumps(row["actual_entries"], indent=2))
+                f.write(json.dumps(row.get("actual_entries_display"), indent=2))
                 f.write("\n</pre></td>\n")
                 f.write("  </tr>\n")
                 f.write("</table>\n\n")
