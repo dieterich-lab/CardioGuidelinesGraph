@@ -70,7 +70,7 @@ nodes:
       - name: "question"
         type: "string" # e.g., "Is LVEF < 40%?"
       - name: "operator"
-        type: "string" # e.g., "<", ">", "=", "PRESENT", "ABSENT"
+        type: "string" # e.g., "<", ">", "=", "PRESENT", "ABSENT", "PLANNED"
       - name: "threshold_value"
         type: "float"  # e.g., 40.0
       - name: "logic_type"

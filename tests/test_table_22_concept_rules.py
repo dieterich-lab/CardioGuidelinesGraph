@@ -283,7 +283,9 @@ def _sorted_entries(entries):
 def _strip_internal_keys(entries):
     cleaned = []
     for entry in entries:
-        cleaned.append({key: value for key, value in entry.items() if not key.startswith("_")})
+        cleaned.append(
+            {key: value for key, value in entry.items() if not key.startswith("_")}
+        )
     return cleaned
 
 
@@ -578,7 +580,9 @@ class Table22ConceptRulesTests(unittest.TestCase):
             actual_row_id = f"row_{expected_index + 1:02d}"
             actual_entries_raw = dict(actual_rows).get(actual_row_id, [])
             actual_entries_ordered = _strip_internal_keys(
-                sorted(actual_entries_raw, key=lambda entry: entry.get("_source_index", 0))
+                sorted(
+                    actual_entries_raw, key=lambda entry: entry.get("_source_index", 0)
+                )
             )
 
             expected_sorted = _sorted_entries(expected_entries)
