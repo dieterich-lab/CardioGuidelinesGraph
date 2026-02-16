@@ -93,9 +93,14 @@ def create_client_registry(
     elif node:
         actual_port = port_dict.get(node, 34)
         actual_node = node
+    else:
+        raise ValueError("Node must be provided for Ollama models")
 
-    # Add Ollama models for the specified node
-    base_url = f"http://{ip_dict[node]}:114{actual_port}/v1"
+    # Build base_url; accept full ports (e.g., 11435) or suffix ports (e.g., 35)
+    if actual_port >= 1000:
+        base_url = f"http://{ip_dict.get(actual_node, actual_node)}:{actual_port}/v1"
+    else:
+        base_url = f"http://{ip_dict.get(actual_node, actual_node)}:114{actual_port}/v1"
 
     # Add the requested Ollama model if it exists
     if model_name in ollama_models:

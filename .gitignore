@@ -6,7 +6,6 @@ data/
 outputs/
 outputs2/
 baml_client/
-slurm/
 .ipynb_checkpoints/
 .mypy_cache/
 
@@ -63,6 +62,7 @@ slurm/
 
 outputs/
 **/__pycache__
+slurm/
 *.sh
 
 .coverage
