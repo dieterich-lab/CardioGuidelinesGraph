@@ -145,23 +145,60 @@ Aligned JSON (expected vs actual):
         "level": "Unknown",
         "direction": "UNKNOWN",
         "rule_id": 1,
-        "side": "condition"
-      },
-      {
-        "entity": "revascularization procedure",
-        "entity_original": "percutaneous or surgical revascularization",
-        "role": "Procedure",
-        "operator": "PLANNED",
-        "threshold": null,
-        "unit": null,
-        "condition_context": "scheduled",
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "Unknown",
-        "level": "Unknown",
-        "direction": "UNKNOWN",
-        "rule_id": 1,
-        "side": "condition"
+        "side": "condition",
+        "name": "Heart revascularization (procedure)",
+        "preferred_term": "Heart revascularization (procedure)",
+        "synonyms": [
+          "Heart revascularisation",
+          "Heart revascularization"
+        ],
+        "alt_names": [
+          "Heart revascularisation",
+          "Heart revascularization"
+        ],
+        "snomed_id": 81266008,
+        "target_label": "Procedure",
+        "taxonomy_path": [
+          {
+            "concept_id": "81266008",
+            "term": "Heart revascularization (procedure)"
+          },
+          {
+            "concept_id": "31413008",
+            "term": "Operative procedure on coronary artery (procedure)"
+          },
+          {
+            "concept_id": "118806004",
+            "term": "Procedure on coronary arteries (procedure)"
+          },
+          {
+            "concept_id": "118797008",
+            "term": "Procedure on heart (procedure)"
+          },
+          {
+            "concept_id": "118672003",
+            "term": "Procedure on cardiovascular system (procedure)"
+          },
+          {
+            "concept_id": "118664000",
+            "term": "Procedure on body system (procedure)"
+          },
+          {
+            "concept_id": "362958002",
+            "term": "Procedure by site (procedure)"
+          },
+          {
+            "concept_id": "71388002",
+            "term": "Procedure (procedure)"
+          },
+          {
+            "concept_id": "138875005",
+            "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+          }
+        ],
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
       },
       {
         "entity": "surgical revascularization",
@@ -177,7 +214,103 @@ Aligned JSON (expected vs actual):
         "level": "Unknown",
         "direction": "UNKNOWN",
         "rule_id": 1,
-        "side": "condition"
+        "side": "condition",
+        "name": "Bronchial revascularization (procedure)",
+        "preferred_term": "Bronchial revascularization (procedure)",
+        "synonyms": [
+          "Bronchial revascularization",
+          "Bronchial revascularisation"
+        ],
+        "alt_names": [
+          "Bronchial revascularization",
+          "Bronchial revascularisation"
+        ],
+        "snomed_id": 277437006,
+        "target_label": "Procedure",
+        "taxonomy_path": [
+          {
+            "concept_id": "277437006",
+            "term": "Bronchial revascularization (procedure)"
+          },
+          {
+            "concept_id": "26476002",
+            "term": "Operation on bronchus (procedure)"
+          },
+          {
+            "concept_id": "118793007",
+            "term": "Procedure on bronchus (procedure)"
+          },
+          {
+            "concept_id": "129254006",
+            "term": "Procedure on tracheobronchial tree (procedure)"
+          },
+          {
+            "concept_id": "118717007",
+            "term": "Procedure on organ (procedure)"
+          },
+          {
+            "concept_id": "362958002",
+            "term": "Procedure by site (procedure)"
+          },
+          {
+            "concept_id": "71388002",
+            "term": "Procedure (procedure)"
+          },
+          {
+            "concept_id": "138875005",
+            "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+          }
+        ],
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      },
+      {
+        "entity": "revascularization procedure",
+        "entity_original": "percutaneous or surgical revascularization",
+        "role": "Procedure",
+        "operator": "PLANNED",
+        "threshold": null,
+        "unit": null,
+        "condition_context": "scheduled",
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "Unknown",
+        "level": "Unknown",
+        "direction": "UNKNOWN",
+        "rule_id": 1,
+        "side": "condition",
+        "name": "Limb revascularization (procedure)",
+        "preferred_term": "Limb revascularization (procedure)",
+        "synonyms": [],
+        "alt_names": [],
+        "snomed_id": 233497001,
+        "target_label": "Procedure",
+        "taxonomy_path": [
+          {
+            "concept_id": "233497001",
+            "term": "Limb revascularization (procedure)"
+          },
+          {
+            "concept_id": "22701007",
+            "term": "Operative procedure on artery of extremity (procedure)"
+          },
+          {
+            "concept_id": "363187007",
+            "term": "Limb operation (procedure)"
+          },
+          {
+            "concept_id": "387713003",
+            "term": "Surgical procedure (procedure)"
+          },
+          {
+            "concept_id": "71388002",
+            "term": "Procedure (procedure)"
+          }
+        ],
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
       }
     ],
     "actions": [
@@ -195,7 +328,42 @@ Aligned JSON (expected vs actual):
         "level": "C",
         "direction": "POSITIVE",
         "rule_id": 1,
-        "side": "action"
+        "side": "action",
+        "name": "Evaluation of decision-making capacity (procedure)",
+        "preferred_term": "Evaluation of decision-making capacity (procedure)",
+        "synonyms": [
+          "Evaluation of decision-making capacity"
+        ],
+        "alt_names": [
+          "Evaluation of decision-making capacity"
+        ],
+        "snomed_id": 12121000202107,
+        "target_label": "Procedure",
+        "taxonomy_path": [
+          {
+            "concept_id": "12121000202107",
+            "term": "Evaluation of decision-making capacity (procedure)"
+          },
+          {
+            "concept_id": "386053000",
+            "term": "Evaluation procedure (procedure)"
+          },
+          {
+            "concept_id": "128927009",
+            "term": "Procedure by method (procedure)"
+          },
+          {
+            "concept_id": "71388002",
+            "term": "Procedure (procedure)"
+          },
+          {
+            "concept_id": "138875005",
+            "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+          }
+        ],
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
       },
       {
         "entity": "shared decision-making information",
@@ -211,7 +379,42 @@ Aligned JSON (expected vs actual):
         "level": "C",
         "direction": "POSITIVE",
         "rule_id": 1,
-        "side": "action"
+        "side": "action",
+        "name": "Evaluation of decision-making capacity (procedure)",
+        "preferred_term": "Evaluation of decision-making capacity (procedure)",
+        "synonyms": [
+          "Evaluation of decision-making capacity"
+        ],
+        "alt_names": [
+          "Evaluation of decision-making capacity"
+        ],
+        "snomed_id": 12121000202107,
+        "target_label": "Procedure",
+        "taxonomy_path": [
+          {
+            "concept_id": "12121000202107",
+            "term": "Evaluation of decision-making capacity (procedure)"
+          },
+          {
+            "concept_id": "386053000",
+            "term": "Evaluation procedure (procedure)"
+          },
+          {
+            "concept_id": "128927009",
+            "term": "Procedure by method (procedure)"
+          },
+          {
+            "concept_id": "71388002",
+            "term": "Procedure (procedure)"
+          },
+          {
+            "concept_id": "138875005",
+            "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+          }
+        ],
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
       }
     ]
   }
@@ -291,8 +494,56 @@ Grounding summary (optional):
       "entity": "percutaneous revascularization",
       "entity_original": "scheduled for percutaneous or surgical revascularization",
       "role": "Procedure",
+      "name": "Heart revascularization (procedure)",
+      "preferred_term": "Heart revascularization (procedure)",
+      "synonyms": [
+        "Heart revascularisation",
+        "Heart revascularization"
+      ],
+      "alt_names": [
+        "Heart revascularisation",
+        "Heart revascularization"
+      ],
       "snomed_id": 81266008,
       "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "81266008",
+          "term": "Heart revascularization (procedure)"
+        },
+        {
+          "concept_id": "31413008",
+          "term": "Operative procedure on coronary artery (procedure)"
+        },
+        {
+          "concept_id": "118806004",
+          "term": "Procedure on coronary arteries (procedure)"
+        },
+        {
+          "concept_id": "118797008",
+          "term": "Procedure on heart (procedure)"
+        },
+        {
+          "concept_id": "118672003",
+          "term": "Procedure on cardiovascular system (procedure)"
+        },
+        {
+          "concept_id": "118664000",
+          "term": "Procedure on body system (procedure)"
+        },
+        {
+          "concept_id": "362958002",
+          "term": "Procedure by site (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        },
+        {
+          "concept_id": "138875005",
+          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+        }
+      ],
       "root_hit": {
         "root_concept_id": "71388002",
         "root_concept_term": "Procedure (procedure)",
@@ -303,8 +554,52 @@ Grounding summary (optional):
       "entity": "surgical revascularization",
       "entity_original": "scheduled for percutaneous or surgical revascularization",
       "role": "Procedure",
+      "name": "Bronchial revascularization (procedure)",
+      "preferred_term": "Bronchial revascularization (procedure)",
+      "synonyms": [
+        "Bronchial revascularization",
+        "Bronchial revascularisation"
+      ],
+      "alt_names": [
+        "Bronchial revascularization",
+        "Bronchial revascularisation"
+      ],
       "snomed_id": 277437006,
       "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "277437006",
+          "term": "Bronchial revascularization (procedure)"
+        },
+        {
+          "concept_id": "26476002",
+          "term": "Operation on bronchus (procedure)"
+        },
+        {
+          "concept_id": "118793007",
+          "term": "Procedure on bronchus (procedure)"
+        },
+        {
+          "concept_id": "129254006",
+          "term": "Procedure on tracheobronchial tree (procedure)"
+        },
+        {
+          "concept_id": "118717007",
+          "term": "Procedure on organ (procedure)"
+        },
+        {
+          "concept_id": "362958002",
+          "term": "Procedure by site (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        },
+        {
+          "concept_id": "138875005",
+          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+        }
+      ],
       "root_hit": {
         "root_concept_id": "71388002",
         "root_concept_term": "Procedure (procedure)",
@@ -315,8 +610,38 @@ Grounding summary (optional):
       "entity": "shared clinical decision-making",
       "entity_original": "complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization",
       "role": "Procedure",
+      "name": "Evaluation of decision-making capacity (procedure)",
+      "preferred_term": "Evaluation of decision-making capacity (procedure)",
+      "synonyms": [
+        "Evaluation of decision-making capacity"
+      ],
+      "alt_names": [
+        "Evaluation of decision-making capacity"
+      ],
       "snomed_id": 12121000202107,
       "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "12121000202107",
+          "term": "Evaluation of decision-making capacity (procedure)"
+        },
+        {
+          "concept_id": "386053000",
+          "term": "Evaluation procedure (procedure)"
+        },
+        {
+          "concept_id": "128927009",
+          "term": "Procedure by method (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        },
+        {
+          "concept_id": "138875005",
+          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+        }
+      ],
       "root_hit": {
         "root_concept_id": "71388002",
         "root_concept_term": "Procedure (procedure)",
@@ -327,8 +652,34 @@ Grounding summary (optional):
       "entity": "Revascularization procedure",
       "entity_original": "percutaneous or surgical revascularization",
       "role": "Procedure",
+      "name": "Limb revascularization (procedure)",
+      "preferred_term": "Limb revascularization (procedure)",
+      "synonyms": [],
+      "alt_names": [],
       "snomed_id": 233497001,
       "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "233497001",
+          "term": "Limb revascularization (procedure)"
+        },
+        {
+          "concept_id": "22701007",
+          "term": "Operative procedure on artery of extremity (procedure)"
+        },
+        {
+          "concept_id": "363187007",
+          "term": "Limb operation (procedure)"
+        },
+        {
+          "concept_id": "387713003",
+          "term": "Surgical procedure (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        }
+      ],
       "root_hit": {
         "root_concept_id": "71388002",
         "root_concept_term": "Procedure (procedure)",
@@ -339,8 +690,38 @@ Grounding summary (optional):
       "entity": "Shared decision-making information",
       "entity_original": "complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization",
       "role": "Procedure",
+      "name": "Evaluation of decision-making capacity (procedure)",
+      "preferred_term": "Evaluation of decision-making capacity (procedure)",
+      "synonyms": [
+        "Evaluation of decision-making capacity"
+      ],
+      "alt_names": [
+        "Evaluation of decision-making capacity"
+      ],
       "snomed_id": 12121000202107,
       "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "12121000202107",
+          "term": "Evaluation of decision-making capacity (procedure)"
+        },
+        {
+          "concept_id": "386053000",
+          "term": "Evaluation procedure (procedure)"
+        },
+        {
+          "concept_id": "128927009",
+          "term": "Procedure by method (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        },
+        {
+          "concept_id": "138875005",
+          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+        }
+      ],
       "root_hit": {
         "root_concept_id": "71388002",
         "root_concept_term": "Procedure (procedure)",
