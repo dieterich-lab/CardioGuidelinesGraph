@@ -256,7 +256,7 @@ def _extract_root_hit(taxonomy_path, root_map):
 
 def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False):
     if not row_text_dict:
-        return [], None
+        return [], None, None
     text = _row_text(row_text_dict)
     concepts = []
     grounded = []
