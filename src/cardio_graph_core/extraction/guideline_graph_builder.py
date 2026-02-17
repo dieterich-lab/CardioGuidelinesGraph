@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import click
 import yaml
@@ -157,6 +157,7 @@ class GroundedConcept:
     logic_structured: Dict[str, str]
     snomed_id: Optional[int]
     preferred_term: Optional[str]
+    alt_names: List[str]
     score: float
     taxonomy_path: List[Dict[str, str]]
     target_label: Optional[str]
@@ -250,6 +251,7 @@ class GuidelineGraphBuilder:
         self.snomed_explorer.connect()
 
         self._preferred_term_cache: Dict[int, str] = {}
+        self._alt_names_cache: Dict[int, List[str]] = {}
         self._taxonomy_path_cache: Dict[int, List[int]] = {}
         self._relationships_cache: Dict[int, List[Dict[str, Any]]] = {}
         self._search_cache: Dict[str, List[Dict[str, Any]]] = {}
@@ -470,6 +472,29 @@ class GuidelineGraphBuilder:
         if term:
             self._preferred_term_cache[concept_id] = term
         return term
+
+    def _get_alt_names(
+        self, concept_id: int, preferred_term: Optional[str]
+    ) -> List[str]:
+        if concept_id in self._alt_names_cache:
+            return self._alt_names_cache[concept_id]
+        descriptions = self.snomed_explorer.get_descriptions_for_concept(concept_id)
+        seen = set()
+        alt_names: List[str] = []
+        normalized_preferred = self._normalize(preferred_term or "")
+        for description in descriptions:
+            term = (description.get("term") or "").strip()
+            if not term:
+                continue
+            normalized_term = self._normalize(term)
+            if normalized_preferred and normalized_term == normalized_preferred:
+                continue
+            if normalized_term in seen:
+                continue
+            seen.add(normalized_term)
+            alt_names.append(term)
+        self._alt_names_cache[concept_id] = alt_names
+        return alt_names
 
     def _search_best_concept(
         self, term: str, role: Optional[str], limit: int = 100
@@ -1140,6 +1165,7 @@ class GuidelineGraphBuilder:
                         logic_structured=concept.logic_structured,
                         snomed_id=None,
                         preferred_term=None,
+                        alt_names=[],
                         score=0.0,
                         taxonomy_path=[],
                         target_label=self._fallback_target_label_for_role("Other"),
@@ -1185,6 +1211,7 @@ class GuidelineGraphBuilder:
                         logic_structured=concept.logic_structured,
                         snomed_id=cached.get("snomed_id"),
                         preferred_term=cached.get("preferred_term"),
+                        alt_names=cached.get("alt_names", []),
                         score=cached.get("score", 1.0),
                         taxonomy_path=cached.get("taxonomy_path", []),
                         target_label=cached.get("target_label"),
@@ -1208,6 +1235,7 @@ class GuidelineGraphBuilder:
             if target_label is None and concept.role and len(path_ids) <= 1:
                 target_label = self._fallback_target_label_for_role(concept.role)
             taxonomy_path = self._format_taxonomy_path(path_ids)
+            alt_names: List[str] = []
 
             if concept_id is None or score < self.min_match_score:
                 concept_id = None
@@ -1215,7 +1243,10 @@ class GuidelineGraphBuilder:
                 score = 0.0
                 path_ids = []
                 taxonomy_path = []
+                alt_names = []
                 target_label = self._fallback_target_label_for_role(concept.role)
+            else:
+                alt_names = self._get_alt_names(concept_id, preferred_term)
 
             if self._should_skip_concept(
                 concept, score, target_label, has_clinical_anchor, allow_unmapped=True
@@ -1231,6 +1262,7 @@ class GuidelineGraphBuilder:
                 logic_structured=concept.logic_structured,
                 snomed_id=concept_id,
                 preferred_term=preferred_term,
+                alt_names=alt_names,
                 score=score,
                 taxonomy_path=taxonomy_path,
                 target_label=target_label,
@@ -1242,6 +1274,7 @@ class GuidelineGraphBuilder:
                     "entity_standardized_candidate": concept.entity_standardized_candidate,
                     "snomed_id": concept_id,
                     "preferred_term": preferred_term,
+                    "alt_names": alt_names,
                     "score": score,
                     "taxonomy_path": taxonomy_path,
                     "target_label": target_label,
@@ -1254,6 +1287,7 @@ class GuidelineGraphBuilder:
                         "entity_standardized_candidate": concept.entity_standardized_candidate,
                         "snomed_id": concept_id,
                         "preferred_term": preferred_term,
+                        "alt_names": alt_names,
                         "score": score,
                         "taxonomy_path": taxonomy_path,
                         "target_label": target_label,

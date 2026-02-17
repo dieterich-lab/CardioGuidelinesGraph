@@ -8,15 +8,79 @@ Load grounding_index.json into Neo4j and (optionally) create rule logic nodes.
 
 import json
 import os
+import re
 from collections import defaultdict
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import click
+import yaml
 from neo4j import GraphDatabase
 
 from cardio_graph_core.neo4j.feedneo4jdb import AUTH as DEFAULT_AUTH
 from cardio_graph_core.neo4j.feedneo4jdb import URI as DEFAULT_URI
 from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
+
+DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
+DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
+DEFAULT_SCHEMA_PATH = str(
+    Path(__file__).resolve().parent.parent / "snomedct" / "guideline_graph_schema.yaml"
+)
+
+REQUIRED_NODE_LABELS = {
+    "ClinicalCondition",
+    "Medication",
+    "ClinicalParameter",
+    "Procedure",
+    "GuidelineSource",
+    "DecisionNode",
+    "RecommendationNode",
+}
+
+REQUIRED_RELATIONSHIP_TYPES = {
+    "EVALUATES",
+    "CHECKS_FOR",
+    "LEADS_TO",
+    "RESULTS_IN",
+    "RECOMMENDS_USAGE",
+    "CONTRAINDICATES",
+    "RECOMMENDS_PROCEDURE",
+    "MENTIONED_IN",
+}
+
+
+def _load_graph_schema(schema_path: str) -> Dict[str, Any]:
+    with open(schema_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _validate_graph_schema_contract(
+    schema: Dict[str, Any], strict: bool = True
+) -> None:
+    nodes = schema.get("nodes", []) or []
+    relationships = schema.get("relationships", []) or []
+    node_labels = {node.get("label") for node in nodes if node.get("label")}
+    relationship_types = {rel.get("type") for rel in relationships if rel.get("type")}
+
+    missing_labels = sorted(REQUIRED_NODE_LABELS - node_labels)
+    missing_relationships = sorted(REQUIRED_RELATIONSHIP_TYPES - relationship_types)
+    problems: List[str] = []
+    if missing_labels:
+        problems.append("Missing node labels in schema: " + ", ".join(missing_labels))
+    if missing_relationships:
+        problems.append(
+            "Missing relationship types in schema: " + ", ".join(missing_relationships)
+        )
+
+    if not strict:
+        if problems:
+            click.echo("Schema warnings:")
+            for message in problems:
+                click.echo(f"- {message}")
+        return
+
+    if problems:
+        raise click.ClickException("; ".join(problems))
 
 
 def _load_grounding_index(index_path: str) -> List[Dict[str, Any]]:
@@ -54,9 +118,16 @@ def _merge_concepts(session, label: str, rows: List[Dict[str, Any]]) -> None:
     query = f"""
     UNWIND $rows AS row
     MERGE (n:`{label}` {{snomed_id: row.snomed_id}})
-    SET n.preferred_term = row.preferred_term,
-        n.standardized = row.entity_standardized_candidate,
-        n.target_label = row.target_label
+    SET n.name = row.name,
+        n.preferred_term = row.preferred_term,
+        n.entity = row.entity,
+        n.entity_original = row.entity_original,
+        n.entity_standardized_candidate = row.entity_standardized_candidate,
+        n.target_label = row.target_label,
+        n.alt_names = row.alt_names,
+        n.synonyms = row.synonyms,
+        n.drug_class = row.drug_class,
+        n.unit = row.unit
     SET n:Concept
     """
     normalized_rows = []
@@ -66,6 +137,24 @@ def _merge_concepts(session, label: str, rows: List[Dict[str, Any]]) -> None:
             continue
         normalized = dict(row)
         normalized["snomed_id"] = str(snomed_id)
+        normalized["entity"] = (
+            normalized.get("entity")
+            or normalized.get("entity_standardized_candidate")
+            or normalized.get("preferred_term")
+            or normalized.get("entity_original")
+        )
+        normalized["name"] = (
+            normalized.get("preferred_term")
+            or normalized.get("entity_standardized_candidate")
+            or normalized.get("entity_original")
+            or normalized.get("entity")
+        )
+        normalized["alt_names"] = normalized.get("alt_names") or []
+        normalized["synonyms"] = (
+            normalized.get("synonyms") or normalized.get("alt_names") or []
+        )
+        normalized["drug_class"] = normalized.get("drug_class")
+        normalized["unit"] = normalized.get("unit")
         normalized_rows.append(normalized)
 
     session.run(query, rows=normalized_rows)
@@ -120,10 +209,6 @@ def _add_snomed_hierarchy(session, entries: List[Dict[str, Any]]) -> None:
             print(f"Error adding hierarchy for {snomed_id}: {e}")
 
 
-DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
-DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
-
-
 def _group_rules(
     rules: Iterable[Dict[str, Any]],
     allow_null_rule_ids: bool,
@@ -146,6 +231,54 @@ def _group_rules(
     return grouped
 
 
+def _extract_concept_fields(concept: Dict[str, Any]) -> Dict[str, Optional[str]]:
+    standardized = concept.get("entity_standardized_candidate")
+    original = concept.get("entity_original")
+    entity = standardized or original
+    return {
+        "entity": entity,
+        "entity_original": original,
+        "entity_standardized_candidate": standardized,
+    }
+
+
+def _infer_year(source_text: Optional[str]) -> Optional[int]:
+    if not source_text:
+        return None
+    match = re.search(r"\b(19|20)\d{2}\b", source_text)
+    if not match:
+        return None
+    try:
+        return int(match.group(0))
+    except ValueError:
+        return None
+
+
+def _merge_guideline_source(
+    session, rule_key: str, concepts: List[Dict[str, Any]]
+) -> None:
+    first = concepts[0] if concepts else {}
+    title = first.get("guideline_title")
+    section = first.get("chunk_id") or first.get("source_context") or "Unknown Section"
+    source_key = first.get("source_context") or section
+    year = _infer_year(title) or _infer_year(source_key)
+    session.run(
+        """
+        MERGE (src:GuidelineSource {source_key: $source_key})
+        SET src.title = $title,
+            src.year = $year,
+            src.section = $section
+        MERGE (rec:RecommendationNode {rule_unique_id: $rule_key})
+        MERGE (rec)-[:MENTIONED_IN]->(src)
+        """,
+        source_key=str(source_key),
+        title=title,
+        year=year,
+        section=section,
+        rule_key=str(rule_key),
+    )
+
+
 def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) -> None:
     for rule_key, concepts in grouped_rules.items():
         rec_props = _infer_recommendation_props(concepts)
@@ -158,9 +291,11 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
         session.run(
             """
             MERGE (rec:RecommendationNode {rule_unique_id: $rule_key})
-            SET rec.class = $class,
-                rec.level = $level,
+            SET rec.class_of_recommendation = $class_of_recommendation,
+                rec.level_of_evidence = $level_of_evidence,
                 rec.direction = $direction,
+                rec.full_text = $full_text,
+                rec.recommendation_type = $recommendation_type,
                 rec.original_rule_id = $orig_rule_id,
                 rec.source = $source
             """,
@@ -169,6 +304,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
             source=source_info,
             **rec_props,
         )
+        _merge_guideline_source(session, rule_key, concepts)
 
         condition_concepts = []
         action_concepts = []
@@ -216,12 +352,14 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                 for step_index, concept in enumerate(concepts_group, start=1):
                     role = (concept.get("role") or "").strip()
                     logic_structured = concept.get("logic_structured") or {}
+                    concept_fields = _extract_concept_fields(concept)
                     snomed_id = concept.get("snomed_id")
                     target_label = concept.get("target_label") or "Concept"
-                    concept_name = concept.get(
+                    concept_name = concept_fields["entity"]
+                    entity_original = concept_fields["entity_original"]
+                    entity_standardized_candidate = concept_fields[
                         "entity_standardized_candidate"
-                    ) or concept.get("entity_original")
-                    entity_original = concept.get("entity_original")
+                    ]
                     decision_id = f"{rule_key}::g{group_idx}::s{step_index}"
                     relation = "CHECKS_FOR" if role == "Condition" else "EVALUATES"
 
@@ -229,50 +367,64 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         session.run(
                             f"""
                             MERGE (c:`{target_label}` {{snomed_id: $snomed_id}})
+                            SET c.entity = $entity,
+                                c.entity_original = $entity_original,
+                                c.entity_standardized_candidate = $entity_standardized_candidate,
+                                c.name = coalesce(c.name, $entity)
                             MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
-                            SET dec.concept = $concept,
+                            SET dec.question = $question,
                                 dec.operator = $operator,
-                                dec.threshold = $threshold,
+                                dec.threshold_value = $threshold_value,
                                 dec.unit = $unit,
                                 dec.condition_context = $condition_context,
+                                dec.entity = $entity,
                                 dec.entity_original = $entity_original,
+                                dec.entity_standardized_candidate = $entity_standardized_candidate,
                                 dec.logic_type = $logic_type
                             MERGE (dec)-[r:{relation}]->(c)
                             """,
                             snomed_id=str(snomed_id),
                             rule_key=str(rule_key),
                             decision_id=decision_id,
-                            concept=concept_name,
+                            question=concept_name,
                             operator=logic_structured.get("operator"),
-                            threshold=logic_structured.get("threshold"),
+                            threshold_value=logic_structured.get("threshold"),
                             unit=logic_structured.get("unit"),
                             condition_context=logic_structured.get("condition_context"),
+                            entity=concept_name,
                             entity_original=entity_original,
+                            entity_standardized_candidate=entity_standardized_candidate,
                             logic_type=logic_type,
                         )
                     else:
                         session.run(
                             f"""
                             MERGE (u:UnresolvedConcept {{name: $name, target_label: $target_label}})
-                            SET u.entity_original = $entity_original
+                            SET u.entity = $entity,
+                                u.entity_original = $entity_original,
+                                u.entity_standardized_candidate = $entity_standardized_candidate
                             MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
-                            SET dec.concept = $concept,
+                            SET dec.question = $question,
                                 dec.operator = $operator,
-                                dec.threshold = $threshold,
+                                dec.threshold_value = $threshold_value,
                                 dec.unit = $unit,
                                 dec.condition_context = $condition_context,
+                                dec.entity = $entity,
                                 dec.entity_original = $entity_original,
+                                dec.entity_standardized_candidate = $entity_standardized_candidate,
                                 dec.logic_type = $logic_type
                             MERGE (dec)-[r:{relation}]->(u)
                             """,
                             name=concept_name,
                             target_label=target_label,
+                            entity=concept_name,
                             entity_original=entity_original,
+                            entity_standardized_candidate=entity_standardized_candidate,
                             rule_key=str(rule_key),
                             decision_id=decision_id,
-                            concept=concept_name,
+                            question=concept_name,
                             operator=logic_structured.get("operator"),
-                            threshold=logic_structured.get("threshold"),
+                            threshold_value=logic_structured.get("threshold"),
                             unit=logic_structured.get("unit"),
                             condition_context=logic_structured.get("condition_context"),
                             logic_type=logic_type,
@@ -300,12 +452,14 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
             for step_index, concept in enumerate(concepts_group, start=1):
                 role = (concept.get("role") or "").strip()
                 logic_structured = concept.get("logic_structured") or {}
+                concept_fields = _extract_concept_fields(concept)
                 snomed_id = concept.get("snomed_id")
                 target_label = concept.get("target_label") or "Concept"
-                concept_name = concept.get(
+                concept_name = concept_fields["entity"]
+                entity_original = concept_fields["entity_original"]
+                entity_standardized_candidate = concept_fields[
                     "entity_standardized_candidate"
-                ) or concept.get("entity_original")
-                entity_original = concept.get("entity_original")
+                ]
                 decision_id = f"{rule_key}::g{group_idx}::s{step_index}"
                 relation = "CHECKS_FOR" if role == "Condition" else "EVALUATES"
 
@@ -313,50 +467,64 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                     session.run(
                         f"""
                         MERGE (c:`{target_label}` {{snomed_id: $snomed_id}})
+                        SET c.entity = $entity,
+                            c.entity_original = $entity_original,
+                            c.entity_standardized_candidate = $entity_standardized_candidate,
+                            c.name = coalesce(c.name, $entity)
                         MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
-                        SET dec.concept = $concept,
+                        SET dec.question = $question,
                             dec.operator = $operator,
-                            dec.threshold = $threshold,
+                            dec.threshold_value = $threshold_value,
                             dec.unit = $unit,
                             dec.condition_context = $condition_context,
+                            dec.entity = $entity,
                             dec.entity_original = $entity_original,
+                            dec.entity_standardized_candidate = $entity_standardized_candidate,
                             dec.logic_type = $logic_type
                         MERGE (dec)-[r:{relation}]->(c)
                         """,
                         snomed_id=str(snomed_id),
                         rule_key=str(rule_key),
                         decision_id=decision_id,
-                        concept=concept_name,
+                        question=concept_name,
                         operator=logic_structured.get("operator"),
-                        threshold=logic_structured.get("threshold"),
+                        threshold_value=logic_structured.get("threshold"),
                         unit=logic_structured.get("unit"),
                         condition_context=logic_structured.get("condition_context"),
+                        entity=concept_name,
                         entity_original=entity_original,
+                        entity_standardized_candidate=entity_standardized_candidate,
                         logic_type=logic_type,
                     )
                 else:
                     session.run(
                         f"""
                         MERGE (u:UnresolvedConcept {{name: $name, target_label: $target_label}})
-                        SET u.entity_original = $entity_original
+                        SET u.entity = $entity,
+                            u.entity_original = $entity_original,
+                            u.entity_standardized_candidate = $entity_standardized_candidate
                         MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
-                        SET dec.concept = $concept,
+                        SET dec.question = $question,
                             dec.operator = $operator,
-                            dec.threshold = $threshold,
+                            dec.threshold_value = $threshold_value,
                             dec.unit = $unit,
                             dec.condition_context = $condition_context,
+                            dec.entity = $entity,
                             dec.entity_original = $entity_original,
+                            dec.entity_standardized_candidate = $entity_standardized_candidate,
                             dec.logic_type = $logic_type
                         MERGE (dec)-[r:{relation}]->(u)
                         """,
                         name=concept_name,
                         target_label=target_label,
+                        entity=concept_name,
                         entity_original=entity_original,
+                        entity_standardized_candidate=entity_standardized_candidate,
                         rule_key=str(rule_key),
                         decision_id=decision_id,
-                        concept=concept_name,
+                        question=concept_name,
                         operator=logic_structured.get("operator"),
-                        threshold=logic_structured.get("threshold"),
+                        threshold_value=logic_structured.get("threshold"),
                         unit=logic_structured.get("unit"),
                         condition_context=logic_structured.get("condition_context"),
                         logic_type=logic_type,
@@ -405,34 +573,47 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
 
         for concept in action_concepts:
             logic_structured = concept.get("logic_structured") or {}
+            concept_fields = _extract_concept_fields(concept)
             snomed_id = concept.get("snomed_id")
             target_label = concept.get("target_label") or "Concept"
-            concept_name = concept.get("entity_standardized_candidate") or concept.get(
-                "entity_original"
-            )
-            entity_original = concept.get("entity_original")
+            concept_name = concept_fields["entity"]
+            entity_original = concept_fields["entity_original"]
+            entity_standardized_candidate = concept_fields[
+                "entity_standardized_candidate"
+            ]
             relation = _recommendation_relation(logic_structured, concept.get("role"))
             if snomed_id:
                 session.run(
                     f"""
                     MERGE (a:`{target_label}` {{snomed_id: $snomed_id}})
+                    SET a.entity = $entity,
+                        a.entity_original = $entity_original,
+                        a.entity_standardized_candidate = $entity_standardized_candidate,
+                        a.name = coalesce(a.name, $entity)
                     MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
                     MERGE (rec)-[r:{relation}]->(a)
                     """,
                     snomed_id=str(snomed_id),
+                    entity=concept_name,
+                    entity_original=entity_original,
+                    entity_standardized_candidate=entity_standardized_candidate,
                     rule_key=str(rule_key),
                 )
             else:
                 session.run(
                     f"""
                     MERGE (u:UnresolvedConcept {{name: $name, target_label: $target_label}})
-                    SET u.entity_original = $entity_original
+                    SET u.entity = $entity,
+                        u.entity_original = $entity_original,
+                        u.entity_standardized_candidate = $entity_standardized_candidate
                     MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
                     MERGE (rec)-[r:{relation}]->(u)
                     """,
                     name=concept_name,
                     target_label=target_label,
+                    entity=concept_name,
                     entity_original=entity_original,
+                    entity_standardized_candidate=entity_standardized_candidate,
                     rule_key=str(rule_key),
                 )
 
@@ -454,11 +635,20 @@ def _infer_recommendation_props(
         direction = _normalize_value(
             logic_structured.get("direction") or concept.get("direction")
         )
+        role = (concept.get("role") or "").strip()
+        recommendation_type = None
+        if role == "Medication":
+            recommendation_type = "PRESCRIPTION"
+        elif role == "Procedure":
+            recommendation_type = "DIAGNOSIS"
+        full_text = _normalize_value(concept.get("source_context"))
         if strength or level or direction:
             return {
-                "class": strength,
-                "level": level,
+                "class_of_recommendation": strength,
+                "level_of_evidence": level,
                 "direction": direction,
+                "recommendation_type": recommendation_type,
+                "full_text": full_text,
             }
         return {}
 
@@ -476,7 +666,17 @@ def _infer_recommendation_props(
         if props:
             return props
 
-    return {"class": None, "level": None, "direction": None}
+    fallback_full_text = None
+    if concepts:
+        fallback_full_text = _normalize_value(concepts[0].get("source_context"))
+
+    return {
+        "class_of_recommendation": None,
+        "level_of_evidence": None,
+        "direction": None,
+        "recommendation_type": None,
+        "full_text": fallback_full_text,
+    }
 
 
 def _recommendation_relation(
@@ -541,6 +741,18 @@ def _recommendation_relation(
     show_default=True,
     help="Add SNOMED IS_A relationships for concept nodes",
 )
+@click.option(
+    "--schema-path",
+    default=DEFAULT_SCHEMA_PATH,
+    show_default=True,
+    help="Path to guideline graph schema YAML",
+)
+@click.option(
+    "--strict-schema/--no-strict-schema",
+    default=True,
+    show_default=True,
+    help="Fail fast when schema contract is incomplete",
+)
 def main(
     index_path: str,
     rules_path: Optional[str],
@@ -550,7 +762,12 @@ def main(
     allow_null_rule_ids: bool,
     clear_graph: bool,
     add_snomed_hierarchy: bool,
+    schema_path: str,
+    strict_schema: bool,
 ) -> None:
+    schema = _load_graph_schema(schema_path)
+    _validate_graph_schema_contract(schema, strict=strict_schema)
+
     entries = _load_grounding_index(index_path)
     rules = _load_rules(rules_path) if rules_path and os.path.exists(rules_path) else []
 
