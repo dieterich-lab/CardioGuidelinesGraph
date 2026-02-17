@@ -1,3 +1,9 @@
+// SINGLE SOURCE OF TRUTH:
+// - Canonical schema contract lives in:
+//   src/cardio_graph_core/snomedct/guideline_graph_schema.yaml (extraction_contract section)
+// - This BAML file is the extraction SUBSET of that contract.
+// - Grounding-only fields like snomed_id, preferred_term, synonyms, alt_names are added after extraction.
+
 // Update der Logic Struktur: Wir brauchen Operatoren und Werte!
 class LogicStructured {
   // Recommendation details
@@ -58,6 +64,10 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
        - Do not combine multiple distinct conditions into a single entity. Emit one concept per condition or parameter.
      7. **Population conditions**: If the sentence specifies a patient population or cohort (e.g., chronic disease state, eligibility criteria, or subgroup), include it as a Condition in the IF part. This should be captured even if it is not a numeric parameter.
        - Example forms to capture (generalized): "In [population] patients...", "Among patients with [condition]...", "Eligible [subgroup] patients...".
+    8. **Contract alignment**:
+       - This output is an extraction subset of the graph schema contract.
+       - Keep field names exactly as defined here (`entity_original`, `entity_standardized_candidate`, `operator`, `threshold`, `unit`, `condition_context`, `strength`, `level`, `direction`).
+       - Do not emit grounding fields (`snomed_id`, `preferred_term`, `synonyms`, `alt_names`) in extraction output.
 
     Sentence: {{text}}
 
@@ -135,6 +145,10 @@ function ExtractRulesV2(text: string) -> ExtractRulesResultV2 {
     5. SNOMED-style terms:
        - Output short, specific noun phrases (singular). Avoid full sentences and lists.
        - Do not combine multiple distinct conditions into a single entity.
+     6. Contract alignment:
+       - This schema is the extraction subset; grounding fields are out of scope.
+       - Keep recommendation keys as `strength` and `level` (mapped later to graph `class_of_recommendation` and `level_of_evidence`).
+       - Keep condition threshold key as `threshold` (mapped later to graph `threshold_value`).
 
     Sentence: {{text}}
 

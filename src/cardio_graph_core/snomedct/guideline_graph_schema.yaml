@@ -19,8 +19,23 @@ nodes:
       - name: "snomed_id"
         type: "string"
         description: "SCTID from SNOMED CT"
+      - name: "preferred_term"
+        type: "string"
+        description: "Preferred SNOMED term (often FSN depending on data source)."
       - name: "synonyms"
         type: "list"
+      - name: "alt_names"
+        type: "list"
+        description: "Alternative active descriptions from SNOMED."
+      - name: "entity"
+        type: "string"
+        description: "Canonical extracted surface form used in pipeline."
+      - name: "entity_original"
+        type: "string"
+        description: "Original text span from guideline extraction."
+      - name: "entity_standardized_candidate"
+        type: "string"
+        description: "LLM standardized candidate prior to SNOMED grounding."
 
   - label: "Medication"
     description: "Drug substances or drug classes."
@@ -28,6 +43,18 @@ nodes:
       - name: "name"
         type: "string"
       - name: "snomed_id"
+        type: "string"
+      - name: "preferred_term"
+        type: "string"
+      - name: "synonyms"
+        type: "list"
+      - name: "alt_names"
+        type: "list"
+      - name: "entity"
+        type: "string"
+      - name: "entity_original"
+        type: "string"
+      - name: "entity_standardized_candidate"
         type: "string"
       - name: "drug_class"
         type: "boolean" # True = ACE-Inhibitor (Class), False = Ramipril (Substance)
@@ -39,6 +66,18 @@ nodes:
         type: "string"
       - name: "snomed_id"
         type: "string"
+      - name: "preferred_term"
+        type: "string"
+      - name: "synonyms"
+        type: "list"
+      - name: "alt_names"
+        type: "list"
+      - name: "entity"
+        type: "string"
+      - name: "entity_original"
+        type: "string"
+      - name: "entity_standardized_candidate"
+        type: "string"
       - name: "unit"
         type: "string" # e.g., "mmHg", "%", "mmol/L"
 
@@ -48,6 +87,18 @@ nodes:
       - name: "name"
         type: "string"
       - name: "snomed_id"
+        type: "string"
+      - name: "preferred_term"
+        type: "string"
+      - name: "synonyms"
+        type: "list"
+      - name: "alt_names"
+        type: "list"
+      - name: "entity"
+        type: "string"
+      - name: "entity_original"
+        type: "string"
+      - name: "entity_standardized_candidate"
         type: "string"
 
   # --- B. Logic Layer (The Guideline Structure) ---
@@ -73,8 +124,18 @@ nodes:
         type: "string" # e.g., "<", ">", "=", "PRESENT", "ABSENT", "PLANNED"
       - name: "threshold_value"
         type: "float"  # e.g., 40.0
+      - name: "unit"
+        type: "string"
+      - name: "condition_context"
+        type: "string"
       - name: "logic_type"
-        type: "string" # "AND", "OR", "SINGLE"
+        type: "string" # "AND", "OR", "null"
+      - name: "entity"
+        type: "string"
+      - name: "entity_original"
+        type: "string"
+      - name: "entity_standardized_candidate"
+        type: "string"
 
   - label: "RecommendationNode"
     description: "The specific clinical instruction derived from the guideline."
@@ -83,10 +144,16 @@ nodes:
         type: "string" # "I", "IIa", "IIb", "III"
       - name: "level_of_evidence"
         type: "string" # "A", "B", "C"
+      - name: "direction"
+        type: "string" # "POSITIVE", "NEGATIVE", "UNKNOWN"
       - name: "full_text"
         type: "string" # The exact sentence from the PDF
       - name: "recommendation_type"
         type: "string" # "PRESCRIPTION", "DIAGNOSIS", "LIFESTYLE"
+      - name: "source"
+        type: "string"
+      - name: "original_rule_id"
+        type: "string"
 
 
 # ==========================================
@@ -176,3 +243,54 @@ snomed_mapping:
     - target_label: "ClinicalParameter"
       root_concepts:
         - "363787002" # Observable entity (z.B. Blood Pressure)
+
+
+# ==========================================
+# 4. EXTRACTION CONTRACT (Single Source of Truth)
+# ==========================================
+# This section defines the extraction-side subset and naming contract.
+# The BAML schema MUST remain a subset of this contract.
+extraction_contract:
+  version: "1.0"
+  source_of_truth: "guideline_graph_schema.yaml"
+  baml_file: "src/cardio_graph_core/extraction/baml_src/extract_concepts.baml"
+
+  roles:
+    condition_side: ["Condition", "ClinicalParameter", "Procedure"]
+    action_side: ["Medication", "Procedure"]
+
+  required_origin_fields:
+    - "entity_original"
+    - "entity_standardized_candidate"
+
+  derived_origin_fields:
+    - name: "entity"
+      derivation: "entity_standardized_candidate || entity_original"
+
+  condition_logic_fields:
+    operator:
+      allowed: ["<", ">", "<=", ">=", "=", "PRESENT", "ABSENT", "PLANNED"]
+    threshold:
+      maps_to_graph_attribute: "threshold_value"
+    unit:
+      maps_to_graph_attribute: "unit"
+    condition_context:
+      maps_to_graph_attribute: "condition_context"
+    logic_type:
+      allowed: ["AND", "OR", null]
+    logic_group:
+      type: "string"
+
+  recommendation_fields:
+    strength:
+      maps_to_graph_attribute: "class_of_recommendation"
+    level:
+      maps_to_graph_attribute: "level_of_evidence"
+    direction:
+      allowed: ["POSITIVE", "NEGATIVE", "UNKNOWN"]
+
+  grounding_fields:
+    - "snomed_id"
+    - "preferred_term"
+    - "synonyms"
+    - "alt_names"
