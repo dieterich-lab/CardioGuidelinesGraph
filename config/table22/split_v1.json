@@ -1,0 +1,30 @@
+{
+  "split_version": "v1",
+  "table_id": 0,
+  "created_from": "table_22_manual_full_graph.json",
+  "created_on": "2026-02-17",
+  "notes": "Balanced split for prompt/pipeline tuning with complexity and class coverage preserved in locked test.",
+  "dev_rows": [
+    "row_02",
+    "row_03",
+    "row_04",
+    "row_05",
+    "row_06",
+    "row_09",
+    "row_10",
+    "row_11",
+    "row_12",
+    "row_13",
+    "row_14",
+    "row_15",
+    "row_17"
+  ],
+  "locked_test_rows": [
+    "row_01",
+    "row_07",
+    "row_08",
+    "row_16",
+    "row_18",
+    "row_19"
+  ]
+}

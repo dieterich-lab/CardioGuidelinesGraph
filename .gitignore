@@ -16,6 +16,7 @@ baml_client/
 *.pkl
 *.pdf
 *.json
+!config/table22/split_v1.json
 *.owl
 !tests/expected_row_10_structure.json
 !tests/expected_rows/
