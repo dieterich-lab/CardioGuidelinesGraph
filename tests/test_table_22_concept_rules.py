@@ -345,11 +345,12 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
             )
             display_entry.update(
                 {
-                    "name": getattr(concept, "preferred_term", None)
-                    or display_entry.get("entity"),
                     "preferred_term": getattr(concept, "preferred_term", None),
-                    "synonyms": getattr(concept, "alt_names", None) or [],
-                    "alt_names": getattr(concept, "alt_names", None) or [],
+                    "synonyms": (
+                        getattr(concept, "synonyms", None)
+                        or getattr(concept, "alt_names", None)
+                        or []
+                    ),
                     "snomed_id": getattr(concept, "snomed_id", None),
                     "target_label": target_label,
                     "taxonomy_path": taxonomy_path,
@@ -372,10 +373,12 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
                     or getattr(concept, "entity_original", None),
                     "entity_original": getattr(concept, "entity_original", None),
                     "role": getattr(concept, "role", None),
-                    "name": getattr(concept, "preferred_term", None),
                     "preferred_term": getattr(concept, "preferred_term", None),
-                    "synonyms": getattr(concept, "alt_names", None) or [],
-                    "alt_names": getattr(concept, "alt_names", None) or [],
+                    "synonyms": (
+                        getattr(concept, "synonyms", None)
+                        or getattr(concept, "alt_names", None)
+                        or []
+                    ),
                     "snomed_id": getattr(concept, "snomed_id", None),
                     "target_label": target_label,
                     "taxonomy_path": taxonomy_path,

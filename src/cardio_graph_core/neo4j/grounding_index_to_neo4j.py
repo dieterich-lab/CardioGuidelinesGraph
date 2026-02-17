@@ -118,13 +118,11 @@ def _merge_concepts(session, label: str, rows: List[Dict[str, Any]]) -> None:
     query = f"""
     UNWIND $rows AS row
     MERGE (n:`{label}` {{snomed_id: row.snomed_id}})
-    SET n.name = row.name,
-        n.preferred_term = row.preferred_term,
+    SET n.preferred_term = row.preferred_term,
         n.entity = row.entity,
         n.entity_original = row.entity_original,
         n.entity_standardized_candidate = row.entity_standardized_candidate,
         n.target_label = row.target_label,
-        n.alt_names = row.alt_names,
         n.synonyms = row.synonyms,
         n.drug_class = row.drug_class,
         n.unit = row.unit
@@ -143,13 +141,6 @@ def _merge_concepts(session, label: str, rows: List[Dict[str, Any]]) -> None:
             or normalized.get("preferred_term")
             or normalized.get("entity_original")
         )
-        normalized["name"] = (
-            normalized.get("preferred_term")
-            or normalized.get("entity_standardized_candidate")
-            or normalized.get("entity_original")
-            or normalized.get("entity")
-        )
-        normalized["alt_names"] = normalized.get("alt_names") or []
         normalized["synonyms"] = (
             normalized.get("synonyms") or normalized.get("alt_names") or []
         )

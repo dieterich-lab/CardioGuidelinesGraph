@@ -2,7 +2,7 @@
 // - Canonical schema contract lives in:
 //   src/cardio_graph_core/snomedct/guideline_graph_schema.yaml (extraction_contract section)
 // - This BAML file is the extraction SUBSET of that contract.
-// - Grounding-only fields like snomed_id, preferred_term, synonyms, alt_names are added after extraction.
+// - Grounding-only fields like snomed_id, preferred_term, synonyms are added after extraction.
 
 // Update der Logic Struktur: Wir brauchen Operatoren und Werte!
 class LogicStructured {
