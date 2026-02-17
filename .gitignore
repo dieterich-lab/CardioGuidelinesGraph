@@ -66,4 +66,7 @@ outputs/
 slurm/
 *.sh
 
+# Generated autotuning runs
+docs/table22_tuning_runs/
+
 .coverage
