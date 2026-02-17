@@ -299,16 +299,31 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
         entries.append(entry)
 
     grounding_summary = None
+    grounded_display_entries = None
     if ground_after_extraction:
         root_map = _root_map_from_builder(builder)
         root_hits = []
         target_label_counts = {}
         root_hit_counts = {}
+        grounded_display_entries = []
 
         for concept in grounded:
             taxonomy_path = getattr(concept, "taxonomy_path", None) or []
             root_hit = _extract_root_hit(taxonomy_path, root_map)
             target_label = getattr(concept, "target_label", None)
+            logic_structured = getattr(concept, "logic_structured", None) or {}
+            logic_side = (getattr(concept, "logic", None) or "").strip().lower()
+            side = None
+            if logic_side == "condition":
+                side = "condition"
+            elif logic_side == "action":
+                side = "action"
+            else:
+                role = getattr(concept, "role", None)
+                if role in {"Condition", "ClinicalParameter"}:
+                    side = "condition"
+                elif role in {"Procedure", "Medication"}:
+                    side = "action"
 
             if target_label:
                 target_label_counts[target_label] = (
@@ -319,14 +334,51 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
                 root_key = root_hit["root_concept_id"]
                 root_hit_counts[root_key] = root_hit_counts.get(root_key, 0) + 1
 
+            display_entry = _build_entry_with_side(
+                getattr(concept, "entity_standardized_candidate", None)
+                or getattr(concept, "entity_original", ""),
+                getattr(concept, "entity_original", ""),
+                getattr(concept, "role", None),
+                logic_structured,
+                side,
+                getattr(concept, "rule_id", None),
+            )
+            display_entry.update(
+                {
+                    "name": getattr(concept, "preferred_term", None)
+                    or display_entry.get("entity"),
+                    "preferred_term": getattr(concept, "preferred_term", None),
+                    "synonyms": getattr(concept, "alt_names", None) or [],
+                    "alt_names": getattr(concept, "alt_names", None) or [],
+                    "snomed_id": getattr(concept, "snomed_id", None),
+                    "target_label": target_label,
+                    "taxonomy_path": taxonomy_path,
+                    "root_concept_id": (
+                        root_hit.get("root_concept_id") if root_hit else None
+                    ),
+                    "root_concept_term": (
+                        root_hit.get("root_concept_term") if root_hit else None
+                    ),
+                    "mapped_target_label": (
+                        root_hit.get("mapped_target_label") if root_hit else None
+                    ),
+                }
+            )
+            grounded_display_entries.append(display_entry)
+
             root_hits.append(
                 {
                     "entity": getattr(concept, "entity_standardized_candidate", None)
                     or getattr(concept, "entity_original", None),
                     "entity_original": getattr(concept, "entity_original", None),
                     "role": getattr(concept, "role", None),
+                    "name": getattr(concept, "preferred_term", None),
+                    "preferred_term": getattr(concept, "preferred_term", None),
+                    "synonyms": getattr(concept, "alt_names", None) or [],
+                    "alt_names": getattr(concept, "alt_names", None) or [],
                     "snomed_id": getattr(concept, "snomed_id", None),
                     "target_label": target_label,
+                    "taxonomy_path": taxonomy_path,
                     "root_hit": root_hit,
                 }
             )
@@ -339,7 +391,7 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
             "root_hits": root_hits,
         }
 
-    return entries, grounding_summary
+    return entries, grounding_summary, grounded_display_entries
 
 
 def _summarize_ground_truth(truth):
@@ -846,7 +898,11 @@ class Table22ConceptRulesTests(unittest.TestCase):
         for expected_row_id, expected_entries in expected_rows:
             if LIVE_LLM:
                 actual_row_id = expected_row_id
-                actual_entries_raw, grounding_summary = _extract_entries_live(
+                (
+                    actual_entries_raw,
+                    grounding_summary,
+                    grounded_display_entries,
+                ) = _extract_entries_live(
                     truth_rows.get(expected_row_id, {}),
                     builder,
                     ground_after_extraction=GROUND_AFTER_EXTRACTION,
@@ -856,6 +912,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 )
             else:
                 grounding_summary = None
+                grounded_display_entries = None
                 expected_index = int(expected_row_id.split("_")[-1])
                 actual_row_id = f"row_{expected_index + 1:02d}"
                 actual_entries_raw = dict(actual_rows).get(actual_row_id, [])
@@ -893,8 +950,12 @@ class Table22ConceptRulesTests(unittest.TestCase):
                         expected_row_id, expected_entries
                     ),
                     "actual_entries": actual_entries_ordered,
-                    "actual_entries_display": _group_entries_by_rule(
-                        actual_entries_ordered
+                    "actual_entries_display": (
+                        _group_entries_by_rule(
+                            _strip_internal_keys(grounded_display_entries)
+                        )
+                        if grounded_display_entries
+                        else _group_entries_by_rule(actual_entries_ordered)
                     ),
                     "concept_summary": {
                         "expected": len(expected_concepts),
