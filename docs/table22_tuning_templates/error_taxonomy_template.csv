@@ -1,0 +1,4 @@
+iteration_id,split,row_id,rule_id,error_class,secondary_class,severity,expected,actual,notes
+v1.0,dev,row_02,1,B1_missing_concept,,major,,,""
+v1.0,dev,row_02,1,C1_operator_wrong,,major,,,""
+v1.0,test,row_16,1,C6_logic_group_wrong,A2_merge_fail,major,,,""
