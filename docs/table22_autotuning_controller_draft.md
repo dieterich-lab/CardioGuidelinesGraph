@@ -356,6 +356,22 @@ Initial scaffold modules now exist:
 - `src/cardio_graph_core/tuning/contracts.py`
 - `src/cardio_graph_core/tuning/gates.py`
 - `src/cardio_graph_core/tuning/controller.py`
+- `src/cardio_graph_core/tuning/llm_bridge.py`
+- `src/cardio_graph_core/tuning/score_adapter.py`
+- `src/cardio_graph_core/tuning/error_analyst.py`
+- `src/cardio_graph_core/tuning/prompt_optimizer.py`
+- `src/cardio_graph_core/tuning/prompt_patcher.py`
+
+Prompt injection into extraction is enabled via:
+
+- `CARDIO_GRAPH_EXTRACTION_PROMPT_APPENDIX_PATH`
+
+`GuidelineGraphBuilder.extract_concepts()` now prepends this appendix to the LLM input.
+
+BAML templates for LLM2/LLM3 contracts were added (to be activated after BAML client regeneration):
+
+- `src/cardio_graph_core/extraction/baml_src/autotuning_error_analyst.baml`
+- `src/cardio_graph_core/extraction/baml_src/autotuning_prompt_optimizer.baml`
 
 Run dry-run controller:
 
@@ -366,6 +382,17 @@ poetry run python -m cardio_graph_core.tuning.controller \
   --run-locked-every 3 \
   --output-dir docs/table22_tuning_runs/autotune_dryrun \
   --dry-run
+```
+
+Run live controller (real extraction/eval loop):
+
+```bash
+poetry run python -m cardio_graph_core.tuning.controller \
+  --split-manifest config/table22/split_v1.json \
+  --iterations 3 \
+  --run-locked-every 2 \
+  --model Qwen30b --node g5 --port 11435 \
+  --no-dry-run
 ```
 
 Expected output:
