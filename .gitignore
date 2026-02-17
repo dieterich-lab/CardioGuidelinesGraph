@@ -12,6 +12,7 @@ baml_client/
 *.log
 *.drawio
 *.txt
+!config/cardio_graph_core/abbrv.txt
 *.faiss
 *.pkl
 *.pdf

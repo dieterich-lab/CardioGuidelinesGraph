@@ -1,6 +1,6 @@
 // SINGLE SOURCE OF TRUTH:
 // - Canonical schema contract lives in:
-//   src/cardio_graph_core/snomedct/guideline_graph_schema.yaml (extraction_contract section)
+//   config/cardio_graph_core/guideline_graph_schema.yaml (extraction_contract section)
 // - This BAML file is the extraction SUBSET of that contract.
 // - Grounding-only fields like snomed_id, preferred_term, synonyms are added after extraction.
 

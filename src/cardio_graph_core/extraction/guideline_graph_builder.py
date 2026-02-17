@@ -39,9 +39,17 @@ logger = logging.getLogger("GuidelineGraphBuilder")
 
 IS_A_TYPE_ID = 116680003
 DEFAULT_CONFIG_PATH = os.path.join(
-    os.path.dirname(__file__), "../snomedct/guideline_graph_schema.yaml"
+    Path(__file__).resolve().parents[3],
+    "config",
+    "cardio_graph_core",
+    "guideline_graph_schema.yaml",
 )
-DEFAULT_ABBRV_PATH = os.path.join(os.path.dirname(__file__), "../snomedct/abbrv.txt")
+DEFAULT_ABBRV_PATH = os.path.join(
+    Path(__file__).resolve().parents[3],
+    "config",
+    "cardio_graph_core",
+    "abbrv.txt",
+)
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
 DEFAULT_MIN_MATCH_SCORE = 0.6

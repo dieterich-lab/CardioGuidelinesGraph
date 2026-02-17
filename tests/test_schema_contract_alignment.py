@@ -6,11 +6,7 @@ import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = (
-    PROJECT_ROOT
-    / "src"
-    / "cardio_graph_core"
-    / "snomedct"
-    / "guideline_graph_schema.yaml"
+    PROJECT_ROOT / "config" / "cardio_graph_core" / "guideline_graph_schema.yaml"
 )
 BAML_PATH = (
     PROJECT_ROOT

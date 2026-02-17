@@ -24,7 +24,10 @@ from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
 DEFAULT_SCHEMA_PATH = str(
-    Path(__file__).resolve().parent.parent / "snomedct" / "guideline_graph_schema.yaml"
+    Path(__file__).resolve().parents[3]
+    / "config"
+    / "cardio_graph_core"
+    / "guideline_graph_schema.yaml"
 )
 
 REQUIRED_NODE_LABELS = {
