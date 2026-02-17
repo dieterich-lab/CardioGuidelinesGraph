@@ -133,12 +133,12 @@ Aligned JSON (expected vs actual):
     "conditions": [
       {
         "entity": "percutaneous revascularization",
-        "entity_original": "percutaneous or surgical revascularization",
+        "entity_original": "scheduled for percutaneous or surgical revascularization",
         "role": "Procedure",
         "operator": "PLANNED",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "condition_context": "scheduled",
         "logic_type": "OR",
         "logic_group": "or_1",
         "strength": "Unknown",
@@ -148,13 +148,29 @@ Aligned JSON (expected vs actual):
         "side": "condition"
       },
       {
-        "entity": "surgical revascularization",
+        "entity": "revascularization procedure",
         "entity_original": "percutaneous or surgical revascularization",
         "role": "Procedure",
         "operator": "PLANNED",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "condition_context": "scheduled",
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "Unknown",
+        "level": "Unknown",
+        "direction": "UNKNOWN",
+        "rule_id": 1,
+        "side": "condition"
+      },
+      {
+        "entity": "surgical revascularization",
+        "entity_original": "scheduled for percutaneous or surgical revascularization",
+        "role": "Procedure",
+        "operator": "PLANNED",
+        "threshold": null,
+        "unit": null,
+        "condition_context": "scheduled",
         "logic_type": "OR",
         "logic_group": "or_1",
         "strength": "Unknown",
@@ -166,7 +182,23 @@ Aligned JSON (expected vs actual):
     ],
     "actions": [
       {
-        "entity": "information about benefits, risks, therapeutic consequences, and alternatives to revascularization",
+        "entity": "shared clinical decision-making",
+        "entity_original": "complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "I",
+        "level": "C",
+        "direction": "POSITIVE",
+        "rule_id": 1,
+        "side": "action"
+      },
+      {
+        "entity": "shared decision-making information",
         "entity_original": "complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization",
         "role": "Procedure",
         "operator": null,
@@ -220,8 +252,10 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: information about benefits, risks, therapeutic consequences, and alternatives to revascularization]
+  ACT1[Procedure: shared clinical decision-making]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
+  ACT2[Procedure: shared decision-making information]
+  REC -->|RECOMMENDS_PROCEDURE| ACT2
   subgraph LLM_or_1_OR
     D_or_1_1[DecisionNode or_1 s1]
     C_or_1_1[Procedure: percutaneous revascularization]
@@ -230,16 +264,99 @@ graph LR
     C_or_1_2[Procedure: surgical revascularization]
     D_or_1_2 -->|CHECKS_FOR| C_or_1_2
   end
-  D_or_1_1 -->|RESULTS_IN condition_met=true| REC
-  D_or_1_2 -->|RESULTS_IN condition_met=true| REC
+  subgraph LLM_group_1_AND
+    D_group_1_1[DecisionNode group_1 s1]
+    C_group_1_1[Procedure: revascularization procedure]
+    D_group_1_1 -->|CHECKS_FOR| C_group_1_1
+    D_or_1_1 -->|LEADS_TO condition_met=true| D_group_1_1
+    D_or_1_2 -->|LEADS_TO condition_met=true| D_group_1_1
+  end
+  D_group_1_1 -->|RESULTS_IN condition_met=true| REC
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 5,
+  "target_label_counts": {
+    "Procedure": 5
+  },
+  "root_hit_counts": {
+    "71388002": 5
+  },
+  "root_hits": [
+    {
+      "entity": "percutaneous revascularization",
+      "entity_original": "scheduled for percutaneous or surgical revascularization",
+      "role": "Procedure",
+      "snomed_id": 81266008,
+      "target_label": "Procedure",
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    },
+    {
+      "entity": "surgical revascularization",
+      "entity_original": "scheduled for percutaneous or surgical revascularization",
+      "role": "Procedure",
+      "snomed_id": 277437006,
+      "target_label": "Procedure",
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    },
+    {
+      "entity": "shared clinical decision-making",
+      "entity_original": "complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization",
+      "role": "Procedure",
+      "snomed_id": 12121000202107,
+      "target_label": "Procedure",
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    },
+    {
+      "entity": "Revascularization procedure",
+      "entity_original": "percutaneous or surgical revascularization",
+      "role": "Procedure",
+      "snomed_id": 233497001,
+      "target_label": "Procedure",
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    },
+    {
+      "entity": "Shared decision-making information",
+      "entity_original": "complete information about the benefits, risks, therapeutic consequences, and alternatives to revascularization",
+      "role": "Procedure",
+      "snomed_id": 12121000202107,
+      "target_label": "Procedure",
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    }
+  ]
+}
 ```
 
 Concepts:
 - expected: 7
-- actual: 3
+- actual: 5
 - matches: 2
 - missing: 5
-- extra: 1
+- extra: 3
 
 Missing concepts:
 - Procedure: benefits of revascularization
@@ -249,14 +366,16 @@ Missing concepts:
 - Procedure: treatment alternatives of revascularization
 
 Extra concepts:
-- Procedure: information about benefits, risks, therapeutic consequences, and alternatives to revascularization
+- Procedure: revascularization procedure
+- Procedure: shared clinical decision-making
+- Procedure: shared decision-making information
 
 Rules (concept + logic fields):
 - expected: 7
-- actual: 3
+- actual: 5
 - matches: 0
 - missing: 7
-- extra: 3
+- extra: 5
 
 Missing rules:
 - Procedure: benefits of revascularization | class=I | level=C | dir=POSITIVE
@@ -268,7 +387,9 @@ Missing rules:
 - Procedure: treatment alternatives of revascularization | class=I | level=C | dir=POSITIVE
 
 Extra rules:
-- Procedure: information about benefits, risks, therapeutic consequences, and alternatives to revascularization | class=I | level=C | dir=POSITIVE
-- Procedure: percutaneous revascularization | op=PLANNED | logic=OR | grp=or_1 | class=Unknown | level=Unknown | dir=UNKNOWN
-- Procedure: surgical revascularization | op=PLANNED | logic=OR | grp=or_1 | class=Unknown | level=Unknown | dir=UNKNOWN
+- Procedure: percutaneous revascularization | op=PLANNED | ctx=scheduled | logic=OR | grp=or_1 | class=Unknown | level=Unknown | dir=UNKNOWN
+- Procedure: revascularization procedure | op=PLANNED | ctx=scheduled | class=Unknown | level=Unknown | dir=UNKNOWN
+- Procedure: shared clinical decision-making | class=I | level=C | dir=POSITIVE
+- Procedure: shared decision-making information | class=I | level=C | dir=POSITIVE
+- Procedure: surgical revascularization | op=PLANNED | ctx=scheduled | logic=OR | grp=or_1 | class=Unknown | level=Unknown | dir=UNKNOWN
 
