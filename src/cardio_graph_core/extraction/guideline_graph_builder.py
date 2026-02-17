@@ -17,6 +17,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import click
@@ -905,6 +906,23 @@ class GuidelineGraphBuilder:
     def _log_grounded_concepts(self, grounded: List[GroundedConcept]) -> None:
         return
 
+    def _load_prompt_appendix(self) -> str:
+        appendix_inline = (
+            os.environ.get("CARDIO_GRAPH_EXTRACTION_PROMPT_APPENDIX", "") or ""
+        ).strip()
+        appendix_path = (
+            os.environ.get("CARDIO_GRAPH_EXTRACTION_PROMPT_APPENDIX_PATH", "") or ""
+        ).strip()
+        appendix_file = ""
+        if appendix_path and os.path.isfile(appendix_path):
+            try:
+                appendix_file = Path(appendix_path).read_text(encoding="utf-8").strip()
+            except Exception:
+                appendix_file = ""
+        if appendix_inline and appendix_file:
+            return appendix_file + "\n" + appendix_inline
+        return appendix_file or appendix_inline
+
     def extract_concepts(
         self,
         sentence: str,
@@ -917,7 +935,14 @@ class GuidelineGraphBuilder:
         baml_options = {"client_registry": self.client_registry}
         os.environ["BAML_LOG"] = "OFF"
         focus_tag = f"[FOCUS: {focus}] " if focus else ""
+        prompt_appendix = self._load_prompt_appendix()
+        appendix_block = (
+            f"[TUNING_APPENDIX]\n{prompt_appendix}\n[/TUNING_APPENDIX]\n"
+            if prompt_appendix
+            else ""
+        )
         tagged_text = (
+            f"{appendix_block}"
             f"{focus_tag}[GUIDELINE: {guideline_title}] "
             f"[SOURCE_TYPE: {source_type}]\n{sentence}"
         )
