@@ -954,6 +954,9 @@ class GuidelineGraphBuilder:
             f"{focus_tag}[GUIDELINE: {guideline_title}] "
             f"[SOURCE_TYPE: {source_type}]\n{sentence}"
         )
+        incremental_review_enabled = (
+            os.environ.get("CARDIO_GRAPH_ENABLE_INCREMENTAL_REVIEW", "1") or "1"
+        ).strip().lower() not in {"0", "false", "no", "off"}
         concepts: List[ExtractedConcept] = []
 
         def _default_logic_structured() -> Dict[str, Optional[str]]:
@@ -969,9 +972,29 @@ class GuidelineGraphBuilder:
                 "logic_group": None,
             }
 
+        def _concepts_from_extract_concepts_result(
+            result_obj: Any,
+        ) -> List[ExtractedConcept]:
+            parsed: List[ExtractedConcept] = []
+            for concept in getattr(result_obj, "concepts", []) or []:
+                logic_structured = _default_logic_structured()
+                if getattr(concept, "logic_structured", None):
+                    logic_structured.update(concept.logic_structured.model_dump())
+                parsed.append(
+                    ExtractedConcept(
+                        rule_id=getattr(concept, "rule_id", None),
+                        entity_original=concept.entity_original,
+                        entity_standardized_candidate=concept.entity_standardized_candidate,
+                        role=concept.role,
+                        logic=concept.logic,
+                        logic_structured=logic_structured,
+                    )
+                )
+            return parsed
+
         try:
             rules_result = b.ExtractRulesV2(tagged_text, baml_options=baml_options)
-            _ = self._serialize_baml_result(rules_result)
+            rules_serialized = self._serialize_baml_result(rules_result)
             for rule in getattr(rules_result, "rules", []) or []:
                 rule_id = getattr(rule, "rule_id", None)
                 for condition in getattr(rule, "conditions", []) or []:
@@ -1005,6 +1028,29 @@ class GuidelineGraphBuilder:
                         )
                     )
             if concepts:
+                if incremental_review_enabled:
+                    try:
+                        draft_rules_json = json.dumps(
+                            rules_serialized, ensure_ascii=False, sort_keys=True
+                        )
+                        review_input = (
+                            f"[DRAFT_RULES]\n{draft_rules_json}\n[/DRAFT_RULES]\n"
+                            f"{tagged_text}"
+                        )
+                        reviewed_result = b.ExtractConcepts(
+                            review_input, baml_options=baml_options
+                        )
+                        _ = self._serialize_baml_result(reviewed_result)
+                        reviewed_concepts = _concepts_from_extract_concepts_result(
+                            reviewed_result
+                        )
+                        if reviewed_concepts:
+                            return reviewed_concepts
+                    except Exception as exc:
+                        logger.warning(
+                            "Incremental review pass failed; using first-pass rules. Error: %s",
+                            exc,
+                        )
                 return concepts
         except Exception as exc:
             logger.warning(
@@ -1021,22 +1067,7 @@ class GuidelineGraphBuilder:
             )
             return []
         _ = self._serialize_baml_result(result)
-
-        for concept in result.concepts or []:
-            logic_structured = _default_logic_structured()
-            if getattr(concept, "logic_structured", None):
-                logic_structured.update(concept.logic_structured.model_dump())
-            concepts.append(
-                ExtractedConcept(
-                    rule_id=getattr(concept, "rule_id", None),
-                    entity_original=concept.entity_original,
-                    entity_standardized_candidate=concept.entity_standardized_candidate,
-                    role=concept.role,
-                    logic=concept.logic,
-                    logic_structured=logic_structured,
-                )
-            )
-        return concepts
+        return _concepts_from_extract_concepts_result(result)
 
     def _merge_extracted_concepts(
         self, primary: List[ExtractedConcept], secondary: List[ExtractedConcept]

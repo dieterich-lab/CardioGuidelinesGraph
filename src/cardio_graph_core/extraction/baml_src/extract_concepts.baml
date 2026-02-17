@@ -41,6 +41,11 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
     You are a medical guideline extraction expert. 
     Analyze the text and extract logical rules consisting of Conditions and Actions.
 
+    IMPORTANT WORKFLOW:
+    - If the input contains a [DRAFT_RULES]...[/DRAFT_RULES] block, treat it as a first-pass draft.
+    - In that case, perform a second-pass correction: keep correct draft items, fix wrong items, and add missing items from the sentence.
+    - The sentence text is the final source of truth; do not copy draft errors.
+
     Output rules MUST be valid JSON and MUST match the OUTPUT FORMAT exactly.
     Do NOT include <think> blocks, explanations, or any text outside the JSON.
     If uncertain, return an empty concepts array rather than any extra text.
@@ -125,6 +130,11 @@ function ExtractRulesV2(text: string) -> ExtractRulesResultV2 {
     - Conditions: inputs/eligibility (conditions, parameters, or planned procedures) that define WHEN a rule applies.
     - Actions: recommendations or interventions that are advised when conditions are met.
 
+    Context:
+    - [GUIDELINE: ...] tags indicate source context.
+    - [FOCUS: MAIN] means extract full rules (conditions + actions).
+    - [FOCUS: POPULATION] means extract ONLY population/eligibility conditions; actions must be empty.
+
     Rules:
     1. Grouping: Assign the same rule_id to all conditions/actions that form a single logical statement (IF X AND Y -> THEN Z). Start at 1 and increment per distinct rule in this sentence.
     2. Conditions:
@@ -134,13 +144,18 @@ function ExtractRulesV2(text: string) -> ExtractRulesResultV2 {
        - Use operator PLANNED when the procedure is scheduled/planned but not executed (e.g., "scheduled for PCI").
     3. Actions:
        - Use role Medication or Procedure.
-       - Populate recommendation.strength/level/direction when present. Direction is POSITIVE or NEGATIVE.
+       - Populate recommendation.strength/level/direction when present.
+       - Direction must be POSITIVE, NEGATIVE, or UNKNOWN.
+       - For class strength, always output "Class I", "Class IIa", "Class IIb", or "Class III".
      4. Logic groups:
        - Use logic_type and logic_group for conditions only.
        - Do not set logic fields on actions.
     5. SNOMED-style terms:
        - Output short, specific noun phrases (singular). Avoid full sentences and lists.
        - Do not combine multiple distinct conditions into a single entity.
+     6. Focus-specific constraints:
+       - If [FOCUS: MAIN], each rule should include at least one action unless the sentence contains no recommendation.
+       - If [FOCUS: POPULATION], actions MUST be an empty array and output only eligibility/population conditions.
 
     Sentence: {{text}}
 
