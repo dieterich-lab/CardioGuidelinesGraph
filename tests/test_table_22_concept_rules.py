@@ -50,11 +50,20 @@ MIN_ROW_MATCH = float(os.environ.get("CARDIO_GRAPH_TABLE22_MIN_ROW_MATCH", "0.2"
 ENTRY_MATCH_THRESHOLD = float(
     os.environ.get("CARDIO_GRAPH_TABLE22_ENTRY_MATCH_THRESHOLD", "0.6")
 )
+
+
+def _env_flag(name, default="false"):
+    return os.environ.get(name, default).lower() in {"1", "true", "yes"}
+
+
 LIVE_LLM = os.environ.get("CARDIO_GRAPH_TABLE22_LIVE_LLM", "false").lower() in {
     "1",
     "true",
     "yes",
 }
+GROUND_AFTER_EXTRACTION = _env_flag(
+    "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION", "false"
+)
 LLM_MODEL = os.environ.get("CARDIO_GRAPH_TABLE22_LLM_MODEL", "Qwen30b")
 LLM_NODE = os.environ.get("CARDIO_GRAPH_TABLE22_LLM_NODE", "g5")
 LLM_PORT = int(os.environ.get("CARDIO_GRAPH_TABLE22_LLM_PORT", "11435"))
@@ -217,13 +226,52 @@ def _summarize_rules(rules_rows):
     return grouped
 
 
-def _extract_entries_live(row_text_dict, builder):
+def _root_map_from_builder(builder):
+    root_map = {}
+    for rule in getattr(builder, "mapping_rules", []) or []:
+        label = rule.get("target_label")
+        for root in rule.get("root_concepts", []) or []:
+            try:
+                root_map[int(root)] = label
+            except (TypeError, ValueError):
+                continue
+    return root_map
+
+
+def _extract_root_hit(taxonomy_path, root_map):
+    for node in taxonomy_path or []:
+        concept_id = node.get("concept_id")
+        try:
+            concept_id_int = int(concept_id)
+        except (TypeError, ValueError):
+            continue
+        if concept_id_int in root_map:
+            return {
+                "root_concept_id": str(concept_id_int),
+                "root_concept_term": node.get("term"),
+                "mapped_target_label": root_map.get(concept_id_int),
+            }
+    return None
+
+
+def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False):
     if not row_text_dict:
-        return []
+        return [], None
     text = _row_text(row_text_dict)
-    concepts = builder.extract_concepts(
-        text, source_type="table_row", guideline_title="ESC Guidelines"
-    )
+    concepts = []
+    grounded = []
+
+    if ground_after_extraction:
+        extracted_concepts, grounded_concepts = builder.extract_and_ground(
+            text, source_type="table_row", guideline_title="ESC Guidelines"
+        )
+        concepts = extracted_concepts
+        grounded = grounded_concepts
+    else:
+        concepts = builder.extract_concepts(
+            text, source_type="table_row", guideline_title="ESC Guidelines"
+        )
+
     entries = []
     for concept in concepts:
         logic_structured = getattr(concept, "logic_structured", None) or {}
@@ -249,7 +297,49 @@ def _extract_entries_live(row_text_dict, builder):
             getattr(concept, "rule_id", None),
         )
         entries.append(entry)
-    return entries
+
+    grounding_summary = None
+    if ground_after_extraction:
+        root_map = _root_map_from_builder(builder)
+        root_hits = []
+        target_label_counts = {}
+        root_hit_counts = {}
+
+        for concept in grounded:
+            taxonomy_path = getattr(concept, "taxonomy_path", None) or []
+            root_hit = _extract_root_hit(taxonomy_path, root_map)
+            target_label = getattr(concept, "target_label", None)
+
+            if target_label:
+                target_label_counts[target_label] = (
+                    target_label_counts.get(target_label, 0) + 1
+                )
+
+            if root_hit:
+                root_key = root_hit["root_concept_id"]
+                root_hit_counts[root_key] = root_hit_counts.get(root_key, 0) + 1
+
+            root_hits.append(
+                {
+                    "entity": getattr(concept, "entity_standardized_candidate", None)
+                    or getattr(concept, "entity_original", None),
+                    "entity_original": getattr(concept, "entity_original", None),
+                    "role": getattr(concept, "role", None),
+                    "snomed_id": getattr(concept, "snomed_id", None),
+                    "target_label": target_label,
+                    "root_hit": root_hit,
+                }
+            )
+
+        grounding_summary = {
+            "enabled": True,
+            "total_grounded": len(grounded),
+            "target_label_counts": target_label_counts,
+            "root_hit_counts": root_hit_counts,
+            "root_hits": root_hits,
+        }
+
+    return entries, grounding_summary
 
 
 def _summarize_ground_truth(truth):
@@ -756,13 +846,16 @@ class Table22ConceptRulesTests(unittest.TestCase):
         for expected_row_id, expected_entries in expected_rows:
             if LIVE_LLM:
                 actual_row_id = expected_row_id
-                actual_entries_raw = _extract_entries_live(
-                    truth_rows.get(expected_row_id, {}), builder
+                actual_entries_raw, grounding_summary = _extract_entries_live(
+                    truth_rows.get(expected_row_id, {}),
+                    builder,
+                    ground_after_extraction=GROUND_AFTER_EXTRACTION,
                 )
                 actual_entries_ordered = _strip_internal_keys(
                     _sorted_entries(actual_entries_raw)
                 )
             else:
+                grounding_summary = None
                 expected_index = int(expected_row_id.split("_")[-1])
                 actual_row_id = f"row_{expected_index + 1:02d}"
                 actual_entries_raw = dict(actual_rows).get(actual_row_id, [])
@@ -825,6 +918,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     "rule_extra": sorted(
                         rule_extra, key=lambda x: json.dumps(x, sort_keys=True)
                     ),
+                    "grounding_summary": grounding_summary,
                 }
             )
 
@@ -839,6 +933,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
                         if LIVE_LLM
                         else "truth row_N -> extracted row_{N+1} (skip extracted row_01 header)"
                     ),
+                    "ground_after_extraction": GROUND_AFTER_EXTRACTION,
                     "rows": report_rows,
                 },
                 indent=2,
@@ -872,6 +967,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 else "Mapping: truth row_N -> extracted row_{N+1} (skip extracted row_01 header)"
             )
             f.write(mapping_text + "\n\n")
+            f.write(f"Ground after extraction: {GROUND_AFTER_EXTRACTION}\n\n")
             f.write(f"Summary CSV: {REPORT_CSV_PATH.relative_to(PROJECT_ROOT)}\n")
             f.write(f"Aligned JSON: {REPORT_JSON_PATH.relative_to(PROJECT_ROOT)}\n\n")
             f.write("Per-row reports:\n\n")
@@ -916,6 +1012,12 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 f.write("```mermaid\n")
                 f.write(_build_mermaid(row["actual_entries"], "LLM"))
                 f.write("\n```\n\n")
+
+                if row.get("grounding_summary"):
+                    f.write("Grounding summary (optional):\n\n")
+                    f.write("```json\n")
+                    f.write(json.dumps(row.get("grounding_summary"), indent=2))
+                    f.write("\n```\n\n")
 
                 f.write("Concepts:\n")
                 f.write(f"- expected: {row['concept_summary']['expected']}\n")
