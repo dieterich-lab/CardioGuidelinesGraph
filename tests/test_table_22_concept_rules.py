@@ -165,6 +165,39 @@ def _normalize_direction(direction):
     return str(direction).strip()
 
 
+SCHEMA_ENTRY_KEYS = {
+    "entity",
+    "entity_original",
+    "role",
+    "operator",
+    "threshold",
+    "unit",
+    "context",
+    "logic_type",
+    "logic_group",
+    "strength",
+    "level",
+    "direction",
+}
+
+SCHEMA_GROUNDING_KEYS = {
+    "preferred_term",
+    "synonyms",
+    "snomed_id",
+    "target_label",
+    "taxonomy_path",
+    "root_concept_id",
+    "root_concept_term",
+}
+
+
+def _postfilter_entry(entry, include_grounding=False):
+    allowed = set(SCHEMA_ENTRY_KEYS)
+    if include_grounding:
+        allowed.update(SCHEMA_GROUNDING_KEYS)
+    return {k: v for k, v in entry.items() if k in allowed or k.startswith("_")}
+
+
 def _normalize_logic(logic):
     operator = logic.get("operator")
     if operator is None and (logic.get("logic_type") or logic.get("logic_group")):
@@ -184,18 +217,19 @@ def _normalize_logic(logic):
 
 def _build_entry(entity, entity_original, role, logic):
     normalized_logic = _normalize_logic(logic or {})
-    return {
+    entry = {
         "entity": _normalize_text(entity),
         "entity_original": _normalize_text(entity_original),
         "role": _normalize_role(role),
         **normalized_logic,
     }
+    return _postfilter_entry(entry)
 
 
 def _build_entry_with_side(entity, entity_original, role, logic, side):
     entry = _build_entry(entity, entity_original, role, logic)
     if side:
-        entry["side"] = side
+        entry["_side"] = side
     return entry
 
 
@@ -350,12 +384,11 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
                     "root_concept_term": (
                         root_hit.get("root_concept_term") if root_hit else None
                     ),
-                    "mapped_target_label": (
-                        root_hit.get("mapped_target_label") if root_hit else None
-                    ),
                 }
             )
-            grounded_display_entries.append(display_entry)
+            grounded_display_entries.append(
+                _postfilter_entry(display_entry, include_grounding=True)
+            )
 
             root_hits.append(
                 {
@@ -409,7 +442,7 @@ def _summarize_ground_truth(truth):
                         condition.get("role"),
                         condition.get("logic_structured") or {},
                     )
-                    entry["side"] = "condition"
+                    entry["_side"] = "condition"
                     row_entries.append(entry)
                 for action in rule.get("actions", []):
                     entity = action.get("entity_standardized_candidate") or action.get(
@@ -423,7 +456,7 @@ def _summarize_ground_truth(truth):
                         action.get("role"),
                         action.get("logic_structured") or {},
                     )
-                    entry["side"] = "action"
+                    entry["_side"] = "action"
                     row_entries.append(entry)
             if row_entries:
                 grouped[row_id] = row_entries
@@ -535,12 +568,15 @@ def _sorted_entries(entries):
 
 
 def _strip_internal_keys(entries):
-    cleaned = []
-    for entry in entries:
-        cleaned.append(
-            {key: value for key, value in entry.items() if not key.startswith("_")}
-        )
-    return cleaned
+    if isinstance(entries, dict):
+        return {
+            key: _strip_internal_keys(value)
+            for key, value in entries.items()
+            if not str(key).startswith("_")
+        }
+    if isinstance(entries, list):
+        return [_strip_internal_keys(item) for item in entries]
+    return entries
 
 
 def _concept_key(entry):
@@ -692,7 +728,7 @@ def _group_entries(entries):
 def _group_entries_by_rule(entries):
     grouped = {"rules": [{"conditions": [], "actions": []}]}
     for entry in entries:
-        side = (entry.get("side") or "").lower()
+        side = (entry.get("_side") or "").lower()
         if side == "condition":
             grouped["rules"][0]["conditions"].append(entry)
         elif side == "action":
@@ -711,13 +747,13 @@ def _group_type(group_name, entries):
 
 def _build_mermaid(entries, title):
     def is_condition(entry):
-        side = (entry.get("side") or "").strip().lower()
+        side = (entry.get("_side") or "").strip().lower()
         if side:
             return side == "condition"
         return entry.get("role") in {"ClinicalCondition", "ClinicalParameter"}
 
     def is_action(entry):
-        side = (entry.get("side") or "").strip().lower()
+        side = (entry.get("_side") or "").strip().lower()
         if side:
             return side == "action"
         return entry.get("role") in {"Procedure", "Medication"}
@@ -892,21 +928,19 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     builder,
                     ground_after_extraction=GROUND_AFTER_EXTRACTION,
                 )
-                actual_entries_ordered = _strip_internal_keys(
-                    _sorted_entries(actual_entries_raw)
-                )
+                actual_entries_sorted_raw = _sorted_entries(actual_entries_raw)
+                actual_entries_ordered = _strip_internal_keys(actual_entries_sorted_raw)
             else:
                 grounding_summary = None
                 grounded_display_entries = None
                 expected_index = int(expected_row_id.split("_")[-1])
                 actual_row_id = f"row_{expected_index + 1:02d}"
                 actual_entries_raw = dict(actual_rows).get(actual_row_id, [])
-                actual_entries_ordered = _strip_internal_keys(
-                    sorted(
-                        actual_entries_raw,
-                        key=lambda entry: entry.get("_source_index", 0),
-                    )
+                actual_entries_sorted_raw = sorted(
+                    actual_entries_raw,
+                    key=lambda entry: entry.get("_source_index", 0),
                 )
+                actual_entries_ordered = _strip_internal_keys(actual_entries_sorted_raw)
 
             expected_sorted = _sorted_entries(expected_entries)
             actual_sorted = _sorted_entries(actual_entries_ordered)
@@ -936,11 +970,13 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     ),
                     "actual_entries": actual_entries_ordered,
                     "actual_entries_display": (
-                        _group_entries_by_rule(
-                            _strip_internal_keys(grounded_display_entries)
+                        _strip_internal_keys(
+                            _group_entries_by_rule(grounded_display_entries)
                         )
                         if grounded_display_entries
-                        else _group_entries_by_rule(actual_entries_ordered)
+                        else _strip_internal_keys(
+                            _group_entries_by_rule(actual_entries_sorted_raw)
+                        )
                     ),
                     "concept_summary": {
                         "expected": len(expected_concepts),
@@ -967,6 +1003,8 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     "grounding_summary": grounding_summary,
                 }
             )
+
+        report_rows = _strip_internal_keys(report_rows)
 
         DOCS_DIR.mkdir(parents=True, exist_ok=True)
         REPORT_JSON_PATH.write_text(

@@ -250,6 +250,16 @@ class GuidelineGraphBuilder:
         self.mapping_rules = self.config.get("snomed_mapping", {}).get(
             "mapping_rules", []
         )
+        extraction_contract = self.config.get("extraction_contract", {}) or {}
+        condition_logic_fields = set(
+            (extraction_contract.get("condition_logic_fields") or {}).keys()
+        )
+        recommendation_fields = set(
+            (extraction_contract.get("recommendation_fields") or {}).keys()
+        )
+        self._allowed_logic_structured_keys = (
+            condition_logic_fields | recommendation_fields
+        )
         self.root_concepts = self._collect_root_concepts(self.mapping_rules)
 
         self.client_registry = create_client_registry(model, node, port)
@@ -293,6 +303,18 @@ class GuidelineGraphBuilder:
                 except (TypeError, ValueError):
                     continue
         return list(sorted(set(roots)))
+
+    def _filter_logic_structured(
+        self, logic_structured: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        payload = dict(logic_structured or {})
+        if not self._allowed_logic_structured_keys:
+            return payload
+        return {
+            key: value
+            for key, value in payload.items()
+            if key in self._allowed_logic_structured_keys
+        }
 
     def _normalize(self, text: str) -> str:
         return " ".join(text.lower().strip().split())
@@ -978,6 +1000,7 @@ class GuidelineGraphBuilder:
                 logic_structured = _default_logic_structured()
                 if getattr(concept, "logic_structured", None):
                     logic_structured.update(concept.logic_structured.model_dump())
+                logic_structured = self._filter_logic_structured(logic_structured)
                 parsed.append(
                     ExtractedConcept(
                         entity_original=concept.entity_original,
@@ -998,6 +1021,7 @@ class GuidelineGraphBuilder:
                     logic = getattr(condition, "logic", None)
                     if logic is not None:
                         logic_structured.update(logic.model_dump())
+                    logic_structured = self._filter_logic_structured(logic_structured)
                     concepts.append(
                         ExtractedConcept(
                             entity_original=condition.entity_original,
@@ -1012,6 +1036,7 @@ class GuidelineGraphBuilder:
                     recommendation = getattr(action, "recommendation", None)
                     if recommendation is not None:
                         logic_structured.update(recommendation.model_dump())
+                    logic_structured = self._filter_logic_structured(logic_structured)
                     concepts.append(
                         ExtractedConcept(
                             entity_original=action.entity_original,
@@ -1171,6 +1196,7 @@ class GuidelineGraphBuilder:
                 logic_structured = dict(concept.logic_structured or {})
                 logic_structured["logic_type"] = "OR"
                 logic_structured["logic_group"] = "or_1"
+                logic_structured = self._filter_logic_structured(logic_structured)
                 expanded.append(
                     ExtractedConcept(
                         entity_original=concept.entity_original,
@@ -1558,6 +1584,7 @@ class GuidelineGraphBuilder:
     ) -> None:
         for concept in grounded:
             logic_structured = dict(concept.logic_structured or {})
+            logic_structured = self._filter_logic_structured(logic_structured)
             if (concept.role or "").strip() in {
                 "ClinicalCondition",
                 "ClinicalParameter",
@@ -1602,6 +1629,7 @@ class GuidelineGraphBuilder:
             if target_label == "ClinicalParameter":
                 role = "ClinicalParameter"
             logic_structured = dict(concept.logic_structured or {})
+            logic_structured = self._filter_logic_structured(logic_structured)
             if (role or "").strip() in {
                 "ClinicalCondition",
                 "ClinicalParameter",
