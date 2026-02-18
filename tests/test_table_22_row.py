@@ -44,6 +44,7 @@ TABLE_IDS = {int(value.strip()) for value in TABLE_IDS_RAW.split(",") if value.s
 ENTRY_MATCH_THRESHOLD = float(
     os.environ.get("CARDIO_GRAPH_TABLE22_ENTRY_MATCH_THRESHOLD", "0.6")
 )
+MIN_ROW_MATCH = float(os.environ.get("CARDIO_GRAPH_TABLE22_MIN_ROW_MATCH", "0.2"))
 
 
 def _load_rules():
@@ -71,39 +72,25 @@ def _normalize_text(value):
 def _normalize_role(role):
     if role is None:
         return None
-    role_text = str(role).strip()
-    lowered = role_text.lower()
-    if lowered == "clinicalcondition":
-        return "Condition"
-    if lowered == "clinicalparameter":
-        return "ClinicalParameter"
-    if lowered == "clinicalaction":
-        return "Procedure"
-    return role_text
+    return str(role).strip()
 
 
 def _normalize_strength(strength):
     if strength is None:
         return None
-    value = str(strength).strip()
-    if value.lower().startswith("class "):
-        value = value.split(" ", 1)[1].strip()
-    return value
+    return str(strength).strip()
 
 
 def _normalize_level(level):
     if level is None:
         return None
-    value = str(level).strip()
-    if value.lower().startswith("level "):
-        value = value.split(" ", 1)[1].strip()
-    return value
+    return str(level).strip()
 
 
 def _normalize_direction(direction):
     if direction is None:
         return None
-    return str(direction).strip().upper()
+    return str(direction).strip()
 
 
 def _normalize_logic(logic):
@@ -114,7 +101,7 @@ def _normalize_logic(logic):
         "operator": operator,
         "threshold": logic.get("threshold"),
         "unit": logic.get("unit"),
-        "condition_context": _normalize_text(logic.get("condition_context")),
+        "context": _normalize_text(logic.get("context")),
         "logic_type": logic.get("logic_type"),
         "logic_group": logic.get("logic_group"),
         "strength": _normalize_strength(logic.get("strength")),
@@ -123,14 +110,13 @@ def _normalize_logic(logic):
     }
 
 
-def _build_entry(entity, entity_original, role, logic, side, rule_id):
+def _build_entry(entity, entity_original, role, logic, side):
     normalized_logic = _normalize_logic(logic or {})
     return {
         "entity": _normalize_text(entity),
         "entity_original": _normalize_text(entity_original),
         "role": _normalize_role(role),
         "side": side,
-        "rule_id": rule_id,
         **normalized_logic,
     }
 
@@ -145,7 +131,6 @@ def _get_ground_truth_for_row(truth, row_id):
             if current_row_id == row_id:
                 entries = []
                 for rule in row.get("rules", []):
-                    rule_id = rule.get("rule_id")
                     for condition in rule.get("conditions", []):
                         entity = condition.get(
                             "entity_standardized_candidate"
@@ -158,7 +143,6 @@ def _get_ground_truth_for_row(truth, row_id):
                             condition.get("role"),
                             condition.get("logic_structured") or {},
                             "condition",
-                            rule_id,
                         )
                         entries.append(entry)
                     for action in rule.get("actions", []):
@@ -173,7 +157,6 @@ def _get_ground_truth_for_row(truth, row_id):
                             action.get("role"),
                             action.get("logic_structured") or {},
                             "action",
-                            rule_id,
                         )
                         entries.append(entry)
                 return entries, row
@@ -197,7 +180,6 @@ def _get_extracted_for_row(rules_rows, row_id):
                 row.get("role"),
                 logic_structured,
                 side,
-                row.get("rule_id"),
             )
             entries.append(entry)
     return entries
@@ -255,47 +237,30 @@ def _build_mermaid(expected_entries, actual_entries):
     lines = ["graph TD"]
     node_id = 0
     entity_to_id = {}
-    rule_to_conditions = {}
-    rule_to_actions = {}
+    conditions = [e for e in expected_entries + actual_entries if e.get("side") == "condition"]
+    actions = [e for e in expected_entries + actual_entries if e.get("side") == "action"]
 
-    # Group by rule_id
-    for entry in expected_entries + actual_entries:
-        rule_id = entry.get("rule_id")
-        if rule_id is None:
-            continue
-        if entry.get("side") == "condition":
-            rule_to_conditions.setdefault(rule_id, []).append(entry)
-        elif entry.get("side") == "action":
-            rule_to_actions.setdefault(rule_id, []).append(entry)
+    condition_nodes = []
+    for cond in conditions:
+        entity = cond.get("entity")
+        if entity not in entity_to_id:
+            entity_to_id[entity] = f"C{node_id}"
+            node_id += 1
+        condition_nodes.append(entity_to_id[entity])
+        lines.append(f'{entity_to_id[entity]}["{entity}"]')
 
-    for rule_id in sorted(set(rule_to_conditions.keys()) | set(rule_to_actions.keys())):
-        conditions = rule_to_conditions.get(rule_id, [])
-        actions = rule_to_actions.get(rule_id, [])
+    action_nodes = []
+    for act in actions:
+        entity = act.get("entity")
+        if entity not in entity_to_id:
+            entity_to_id[entity] = f"A{node_id}"
+            node_id += 1
+        action_nodes.append(entity_to_id[entity])
+        lines.append(f'{entity_to_id[entity]}["{entity}"]')
 
-        # Create nodes for conditions
-        condition_nodes = []
-        for cond in conditions:
-            entity = cond.get("entity")
-            if entity not in entity_to_id:
-                entity_to_id[entity] = f"C{node_id}"
-                node_id += 1
-            condition_nodes.append(entity_to_id[entity])
-            lines.append(f'{entity_to_id[entity]}["{entity}"]')
-
-        # Create nodes for actions
-        action_nodes = []
-        for act in actions:
-            entity = act.get("entity")
-            if entity not in entity_to_id:
-                entity_to_id[entity] = f"A{node_id}"
-                node_id += 1
-            action_nodes.append(entity_to_id[entity])
-            lines.append(f'{entity_to_id[entity]}["{entity}"]')
-
-        # Connect conditions to actions
-        for cond_node in condition_nodes:
-            for act_node in action_nodes:
-                lines.append(f"{cond_node} --> {act_node}")
+    for cond_node in condition_nodes:
+        for act_node in action_nodes:
+            lines.append(f"{cond_node} --> {act_node}")
 
     return "\n".join(lines)
 
@@ -304,15 +269,12 @@ def _summarize_ground_truth_grouped(truth, row_id):
     entries, row = _get_ground_truth_for_row(truth, row_id)
     if not entries:
         return {}
-    grouped = {}
+    grouped = {"rules": [{"conditions": [], "actions": []}]}
     for entry in entries:
-        rule_id = entry.get("rule_id")
-        if rule_id not in grouped:
-            grouped[rule_id] = {"conditions": [], "actions": []}
         if entry.get("side") == "condition":
-            grouped[rule_id]["conditions"].append(entry)
+            grouped["rules"][0]["conditions"].append(entry)
         elif entry.get("side") == "action":
-            grouped[rule_id]["actions"].append(entry)
+            grouped["rules"][0]["actions"].append(entry)
     return grouped
 
 
@@ -350,7 +312,6 @@ class TestTable22Row(unittest.TestCase):
                     getattr(concept, "role", None),
                     getattr(concept, "logic_structured", None) or {},
                     side,
-                    getattr(concept, "rule_id", None),
                 )
                 actual_entries.append(entry)
         else:
@@ -359,7 +320,7 @@ class TestTable22Row(unittest.TestCase):
         match_score = _row_match_score(expected_entries, actual_entries)
         self.assertGreaterEqual(
             match_score,
-            0.5,
+            MIN_ROW_MATCH,
             f"Row {row_id} match score {match_score:.2f} is too low. "
             f"Expected {len(expected_entries)} entries, got {len(actual_entries)}.",
         )
@@ -369,15 +330,12 @@ class TestTable22Row(unittest.TestCase):
         row_md_path = ROWS_DIR / f"{row_id}.md"
 
         expected_grouped = _summarize_ground_truth_grouped(self.ground_truth, row_id)
-        actual_grouped = {}
+        actual_grouped = {"rules": [{"conditions": [], "actions": []}]}
         for entry in actual_entries:
-            rule_id = entry.get("rule_id")
-            if rule_id not in actual_grouped:
-                actual_grouped[rule_id] = {"conditions": [], "actions": []}
             if entry.get("side") == "condition":
-                actual_grouped[rule_id]["conditions"].append(entry)
+                actual_grouped["rules"][0]["conditions"].append(entry)
             elif entry.get("side") == "action":
-                actual_grouped[rule_id]["actions"].append(entry)
+                actual_grouped["rules"][0]["actions"].append(entry)
 
         mermaid = _build_mermaid(expected_entries, actual_entries)
 

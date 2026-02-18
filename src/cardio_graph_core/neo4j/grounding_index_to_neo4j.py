@@ -205,22 +205,16 @@ def _add_snomed_hierarchy(session, entries: List[Dict[str, Any]]) -> None:
 
 def _group_rules(
     rules: Iterable[Dict[str, Any]],
-    allow_null_rule_ids: bool,
 ) -> Dict[str, List[Dict[str, Any]]]:
     grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for concept in rules:
-        rule_id = concept.get("rule_id")
-        if rule_id is None and not allow_null_rule_ids:
-            continue
-        if rule_id is None:
-            rule_id = "null"
         source_key = (
             concept.get("chunk_id")
             or concept.get("source_id")
             or concept.get("source_context")
             or "global"
         )
-        rule_key = f"{source_key}::{rule_id}"
+        rule_key = str(source_key)
         grouped[rule_key].append(concept)
     return grouped
 
@@ -281,7 +275,6 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
             or concepts[0].get("chunk_id")
             or "Unknown Source"
         )
-        original_rule_id = concepts[0].get("rule_id")
         session.run(
             """
             MERGE (rec:RecommendationNode {rule_unique_id: $rule_key})
@@ -290,11 +283,9 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                 rec.direction = $direction,
                 rec.full_text = $full_text,
                 rec.recommendation_type = $recommendation_type,
-                rec.original_rule_id = $orig_rule_id,
                 rec.source = $source
             """,
             rule_key=str(rule_key),
-            orig_rule_id=original_rule_id,
             source=source_info,
             **rec_props,
         )
@@ -307,7 +298,8 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
             side = (concept.get("logic") or "").strip().lower()
 
             is_condition = (
-                role in {"Condition", "ClinicalParameter"} or side == "condition"
+                role in {"ClinicalCondition", "ClinicalParameter"}
+                or side == "condition"
             )
             is_action = role in {"Medication", "Procedure"} or side == "action"
 
@@ -355,7 +347,9 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         "entity_standardized_candidate"
                     ]
                     decision_id = f"{rule_key}::g{group_idx}::s{step_index}"
-                    relation = "CHECKS_FOR" if role == "Condition" else "EVALUATES"
+                    relation = (
+                        "CHECKS_FOR" if role == "ClinicalCondition" else "EVALUATES"
+                    )
 
                     if snomed_id:
                         session.run(
@@ -370,7 +364,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                                 dec.operator = $operator,
                                 dec.threshold_value = $threshold_value,
                                 dec.unit = $unit,
-                                dec.condition_context = $condition_context,
+                                dec.condition_context = $context,
                                 dec.entity = $entity,
                                 dec.entity_original = $entity_original,
                                 dec.entity_standardized_candidate = $entity_standardized_candidate,
@@ -384,7 +378,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             operator=logic_structured.get("operator"),
                             threshold_value=logic_structured.get("threshold"),
                             unit=logic_structured.get("unit"),
-                            condition_context=logic_structured.get("condition_context"),
+                            context=logic_structured.get("context"),
                             entity=concept_name,
                             entity_original=entity_original,
                             entity_standardized_candidate=entity_standardized_candidate,
@@ -402,7 +396,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                                 dec.operator = $operator,
                                 dec.threshold_value = $threshold_value,
                                 dec.unit = $unit,
-                                dec.condition_context = $condition_context,
+                                dec.condition_context = $context,
                                 dec.entity = $entity,
                                 dec.entity_original = $entity_original,
                                 dec.entity_standardized_candidate = $entity_standardized_candidate,
@@ -420,7 +414,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             operator=logic_structured.get("operator"),
                             threshold_value=logic_structured.get("threshold"),
                             unit=logic_structured.get("unit"),
-                            condition_context=logic_structured.get("condition_context"),
+                            context=logic_structured.get("context"),
                             logic_type=logic_type,
                         )
 
@@ -455,7 +449,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                     "entity_standardized_candidate"
                 ]
                 decision_id = f"{rule_key}::g{group_idx}::s{step_index}"
-                relation = "CHECKS_FOR" if role == "Condition" else "EVALUATES"
+                relation = "CHECKS_FOR" if role == "ClinicalCondition" else "EVALUATES"
 
                 if snomed_id:
                     session.run(
@@ -470,7 +464,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             dec.operator = $operator,
                             dec.threshold_value = $threshold_value,
                             dec.unit = $unit,
-                            dec.condition_context = $condition_context,
+                            dec.condition_context = $context,
                             dec.entity = $entity,
                             dec.entity_original = $entity_original,
                             dec.entity_standardized_candidate = $entity_standardized_candidate,
@@ -484,7 +478,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         operator=logic_structured.get("operator"),
                         threshold_value=logic_structured.get("threshold"),
                         unit=logic_structured.get("unit"),
-                        condition_context=logic_structured.get("condition_context"),
+                        context=logic_structured.get("context"),
                         entity=concept_name,
                         entity_original=entity_original,
                         entity_standardized_candidate=entity_standardized_candidate,
@@ -502,7 +496,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             dec.operator = $operator,
                             dec.threshold_value = $threshold_value,
                             dec.unit = $unit,
-                            dec.condition_context = $condition_context,
+                            dec.condition_context = $context,
                             dec.entity = $entity,
                             dec.entity_original = $entity_original,
                             dec.entity_standardized_candidate = $entity_standardized_candidate,
@@ -520,7 +514,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         operator=logic_structured.get("operator"),
                         threshold_value=logic_structured.get("threshold"),
                         unit=logic_structured.get("unit"),
-                        condition_context=logic_structured.get("condition_context"),
+                        context=logic_structured.get("context"),
                         logic_type=logic_type,
                     )
 
@@ -676,8 +670,8 @@ def _infer_recommendation_props(
 def _recommendation_relation(
     logic_structured: Dict[str, Any], role: Optional[str]
 ) -> str:
-    direction = (logic_structured.get("direction") or "").upper()
-    is_negative = direction in {"NEGATIVE", "CONTRAINDICATED", "DO_NOT_USE"}
+    direction = (logic_structured.get("direction") or "").strip().upper()
+    is_negative = direction == "ABSENT"
     role = (role or "").strip()
     if is_negative:
         return "CONTRAINDICATES"
@@ -718,12 +712,6 @@ def _recommendation_relation(
     help="Neo4j password",
 )
 @click.option(
-    "--allow-null-rule-ids/--no-allow-null-rule-ids",
-    default=False,
-    show_default=True,
-    help="Allow rules with missing rule_id",
-)
-@click.option(
     "--clear-graph/--no-clear-graph",
     default=False,
     show_default=True,
@@ -753,7 +741,6 @@ def main(
     uri: str,
     user: str,
     password: str,
-    allow_null_rule_ids: bool,
     clear_graph: bool,
     add_snomed_hierarchy: bool,
     schema_path: str,
@@ -776,7 +763,7 @@ def main(
             if add_snomed_hierarchy:
                 _add_snomed_hierarchy(session, entries)
             if rules:
-                grouped_rules = _group_rules(rules, allow_null_rule_ids)
+                grouped_rules = _group_rules(rules)
                 _create_rule_nodes(session, grouped_rules)
 
 

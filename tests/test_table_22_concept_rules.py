@@ -118,6 +118,13 @@ def _normalize_text(value):
     return " ".join(str(value).strip().split()).lower()
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(PROJECT_ROOT.resolve()))
+    except Exception:
+        return str(path)
+
+
 def _row_text(row_dict):
     return " | ".join(
         str(v).strip() for v in row_dict.values() if isinstance(v, str) and v.strip()
@@ -137,39 +144,25 @@ def _docling_row_values(row):
 def _normalize_role(role):
     if role is None:
         return None
-    role_text = str(role).strip()
-    lowered = role_text.lower()
-    if lowered == "clinicalcondition":
-        return "Condition"
-    if lowered == "clinicalparameter":
-        return "ClinicalParameter"
-    if lowered == "clinicalaction":
-        return "Procedure"
-    return role_text
+    return str(role).strip()
 
 
 def _normalize_strength(strength):
     if strength is None:
         return None
-    value = str(strength).strip()
-    if value.lower().startswith("class "):
-        value = value.split(" ", 1)[1].strip()
-    return value
+    return str(strength).strip()
 
 
 def _normalize_level(level):
     if level is None:
         return None
-    value = str(level).strip()
-    if value.lower().startswith("level "):
-        value = value.split(" ", 1)[1].strip()
-    return value
+    return str(level).strip()
 
 
 def _normalize_direction(direction):
     if direction is None:
         return None
-    return str(direction).strip().upper()
+    return str(direction).strip()
 
 
 def _normalize_logic(logic):
@@ -180,7 +173,7 @@ def _normalize_logic(logic):
         "operator": operator,
         "threshold": logic.get("threshold"),
         "unit": logic.get("unit"),
-        "condition_context": _normalize_text(logic.get("condition_context")),
+        "context": _normalize_text(logic.get("context")),
         "logic_type": logic.get("logic_type"),
         "logic_group": logic.get("logic_group"),
         "strength": _normalize_strength(logic.get("strength")),
@@ -199,9 +192,8 @@ def _build_entry(entity, entity_original, role, logic):
     }
 
 
-def _build_entry_with_side(entity, entity_original, role, logic, side, rule_id):
+def _build_entry_with_side(entity, entity_original, role, logic, side):
     entry = _build_entry(entity, entity_original, role, logic)
-    entry["rule_id"] = rule_id
     if side:
         entry["side"] = side
     return entry
@@ -283,7 +275,7 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
             side = "action"
         else:
             role = getattr(concept, "role", None)
-            if role in {"Condition", "ClinicalParameter"}:
+            if role in {"ClinicalCondition", "ClinicalParameter"}:
                 side = "condition"
             elif role in {"Procedure", "Medication"}:
                 side = "action"
@@ -294,7 +286,6 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
             getattr(concept, "role", None),
             logic_structured,
             side,
-            getattr(concept, "rule_id", None),
         )
         entries.append(entry)
 
@@ -320,7 +311,7 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
                 side = "action"
             else:
                 role = getattr(concept, "role", None)
-                if role in {"Condition", "ClinicalParameter"}:
+                if role in {"ClinicalCondition", "ClinicalParameter"}:
                     side = "condition"
                 elif role in {"Procedure", "Medication"}:
                     side = "action"
@@ -341,7 +332,6 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
                 getattr(concept, "role", None),
                 logic_structured,
                 side,
-                getattr(concept, "rule_id", None),
             )
             display_entry.update(
                 {
@@ -407,7 +397,6 @@ def _summarize_ground_truth(truth):
             row_id = f"row_{index:02d}"
             row_entries = []
             for rule in row.get("rules", []):
-                rule_id = rule.get("rule_id")
                 for condition in rule.get("conditions", []):
                     entity = condition.get(
                         "entity_standardized_candidate"
@@ -421,7 +410,6 @@ def _summarize_ground_truth(truth):
                         condition.get("logic_structured") or {},
                     )
                     entry["side"] = "condition"
-                    entry["rule_id"] = rule_id
                     row_entries.append(entry)
                 for action in rule.get("actions", []):
                     entity = action.get("entity_standardized_candidate") or action.get(
@@ -436,7 +424,6 @@ def _summarize_ground_truth(truth):
                         action.get("logic_structured") or {},
                     )
                     entry["side"] = "action"
-                    entry["rule_id"] = rule_id
                     row_entries.append(entry)
             if row_entries:
                 grouped[row_id] = row_entries
@@ -453,7 +440,6 @@ def _summarize_ground_truth_grouped(truth):
             row_id = f"row_{index:02d}"
             rules_payload = []
             for rule in row.get("rules", []):
-                rule_id = rule.get("rule_id")
                 conditions = []
                 actions = []
 
@@ -490,7 +476,6 @@ def _summarize_ground_truth_grouped(truth):
                 if conditions or actions:
                     rules_payload.append(
                         {
-                            "rule_id": rule_id,
                             "conditions": conditions,
                             "actions": actions,
                         }
@@ -569,7 +554,7 @@ def _rule_key(entry):
         entry.get("operator"),
         entry.get("threshold"),
         entry.get("unit"),
-        entry.get("condition_context"),
+        entry.get("context"),
         entry.get("logic_type"),
         entry.get("logic_group"),
         entry.get("strength"),
@@ -628,8 +613,8 @@ def _ground_truth_row_text(row):
         "Recommendation",
         "input",
         "recommendation",
-        "Class a",
-        "Level b",
+        "Class",
+        "Level",
     ]
     payload = {}
     for key in keys:
@@ -705,16 +690,13 @@ def _group_entries(entries):
 
 
 def _group_entries_by_rule(entries):
-    grouped = {}
+    grouped = {"rules": [{"conditions": [], "actions": []}]}
     for entry in entries:
-        rule_id = entry.get("rule_id")
-        if rule_id not in grouped:
-            grouped[rule_id] = {"conditions": [], "actions": []}
         side = (entry.get("side") or "").lower()
         if side == "condition":
-            grouped[rule_id]["conditions"].append(entry)
+            grouped["rules"][0]["conditions"].append(entry)
         elif side == "action":
-            grouped[rule_id]["actions"].append(entry)
+            grouped["rules"][0]["actions"].append(entry)
     return grouped
 
 
@@ -732,7 +714,7 @@ def _build_mermaid(entries, title):
         side = (entry.get("side") or "").strip().lower()
         if side:
             return side == "condition"
-        return entry.get("role") in {"Condition", "ClinicalParameter"}
+        return entry.get("role") in {"ClinicalCondition", "ClinicalParameter"}
 
     def is_action(entry):
         side = (entry.get("side") or "").strip().lower()
@@ -1032,13 +1014,13 @@ class Table22ConceptRulesTests(unittest.TestCase):
             )
             f.write(mapping_text + "\n\n")
             f.write(f"Ground after extraction: {GROUND_AFTER_EXTRACTION}\n\n")
-            f.write(f"Summary CSV: {REPORT_CSV_PATH.relative_to(PROJECT_ROOT)}\n")
-            f.write(f"Aligned JSON: {REPORT_JSON_PATH.relative_to(PROJECT_ROOT)}\n\n")
+            f.write(f"Summary CSV: {_display_path(REPORT_CSV_PATH)}\n")
+            f.write(f"Aligned JSON: {_display_path(REPORT_JSON_PATH)}\n\n")
             f.write("Per-row reports:\n\n")
             for row in report_rows:
                 row_file = ROWS_DIR / f"{row['row_id']}.md"
                 f.write(
-                    f"- {row['row_id']} -> {row_file.relative_to(PROJECT_ROOT)} "
+                    f"- {row['row_id']} -> {_display_path(row_file)} "
                     f"(match_score={row['match_score']:.3f})\n"
                 )
 

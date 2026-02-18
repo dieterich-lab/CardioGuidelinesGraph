@@ -9,21 +9,18 @@ class LogicStructured {
   // Recommendation details
   strength string? @description("Recommendation strength (e.g., Strong, Weak, Class I)")
   level string? @description("Level of evidence (e.g., A, B, C)")
-  direction string @description("POSITIVE, NEGATIVE (Contraindication), or UNKNOWN")
+  direction string @description("Direction code (e.g., <, >, =, PRESENT, ABSENT)")
   
   // Decision details (für Bedingungen/Checks)
-  operator string? @description("Mathematical operator if present (e.g., <, >, <=, =, PRESENT, ABSENT, PLANNED)")
+  operator string? @description("Logical or comparison operator if present (e.g., AND, OR, <, >, =)")
   threshold string? @description("Numeric threshold value (e.g., 40, 120/80)")
   unit string? @description("Unit of measurement (e.g., %, mmHg, mg)")
   
   // Temporal/Conditional context
-  condition_context string? @description("Additional context (e.g., 'history of', 'acute', 'chronic')")
+  context string? @description("Additional context (e.g., 'history of', 'acute', 'chronic')")
 }
 
 class ExtractedConcept {
-  // Wir fügen eine ID hinzu, um Konzepte zu gruppieren
-  rule_id int @description("Integer ID to group concepts that belong to the same logical rule (IF condition THEN action). Start at 1 per sentence and increment for each distinct rule.")
-  
   entity_original string
   entity_standardized_candidate string
   role string 
@@ -54,14 +51,14 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
     - [GUIDELINE: ...] tags indicate context.
     - [FOCUS: MAIN] means extract full rules (conditions/parameters + actions).
     - [FOCUS: POPULATION] means extract only population/eligibility conditions or parameters; do NOT output actions.
-    - Group related concepts (e.g., a specific condition and its resulting medication) using the same 'rule_id'.
+    - Group related concepts by keeping coherent IF-side and THEN-side extraction per sentence.
     
     Requirements:
-    1. **Grouping**: Assign the same 'rule_id' to all concepts that form a single logical statement (IF X AND Y -> THEN Z). Start at 1 and increment per distinct rule in this sentence.
-    2. **Logic**: For thresholds, fill 'operator', 'threshold', and 'unit'. Use operator "PRESENT" when a condition is stated without a numeric threshold. Use "PLANNED" for procedures that are scheduled but not yet executed (e.g., "scheduled for PCI").
-    3. **Direction**: POSITIVE for recommendations/indications, NEGATIVE for contraindications/avoid. Use UNKNOWN only if there is no action.
-     4. **Roles + action**: IF part uses 'Condition' or 'ClinicalParameter'; THEN part uses 'Medication' or 'Procedure'.
-       - If [FOCUS: MAIN], include at least one action per rule_id. Never use role 'Recommendation'.
+    1. **Grouping**: Keep IF-side concepts and THEN-side concepts coherent per sentence.
+    2. **Logic**: For thresholds, fill 'operator', 'threshold', and 'unit'. Use operator values from: AND, OR, <, >, =.
+    3. **Direction**: Use one of <, >, =, PRESENT, ABSENT.
+     4. **Roles + action**: IF part uses 'ClinicalCondition' or 'ClinicalParameter'; THEN part uses 'Medication' or 'Procedure'.
+       - If [FOCUS: MAIN], include at least one action when recommendation text exists. Never use role 'Recommendation'.
        - If [FOCUS: POPULATION], output ONLY population/eligibility conditions or parameters; no actions. Always return at least one population condition when such a cohort is stated.
      5. **Strength/level**: Populate logic_structured.strength and logic_structured.level when present.
        - For class strength, always output "Class I", "Class IIa", "Class IIb", or "Class III" (add the "Class" prefix if only a Roman numeral is shown).
@@ -78,25 +75,25 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
 
 // Draft v2: explicit input/output separation to remove ambiguity.
 class RuleLogicV2 {
-  operator string? @description("Operator for input conditions (e.g., <, >, <=, =, PRESENT, ABSENT, PLANNED)")
+  operator string? @description("Operator for input conditions (e.g., AND, OR, <, >, =)")
   threshold string? @description("Numeric threshold value (e.g., 40, 120/80)")
   unit string? @description("Unit of measurement (e.g., %, mmHg, mg)")
-  condition_context string? @description("Additional context (e.g., 'history of', 'acute', 'chronic')")
-  logic_type string? @description("AND or OR within a group")
+  context string? @description("Additional context (e.g., 'history of', 'acute', 'chronic')")
+  logic_type string? @description("AND, OR, or SINGLE within a group")
   logic_group string? @description("Group name for inputs that are evaluated together (e.g., and_1, or_1)")
 }
 
 class RuleConditionV2 {
   entity_original string
   entity_standardized_candidate string
-  role string @description("Condition, ClinicalParameter, Procedure")
+  role string @description("ClinicalCondition, ClinicalParameter, Procedure")
   logic RuleLogicV2
 }
 
 class RuleRecommendationV2 {
   strength string? @description("Recommendation strength (e.g., Class I, Class IIa)")
   level string? @description("Level of evidence (e.g., A, B, C)")
-  direction string @description("POSITIVE, NEGATIVE (Contraindication), or UNKNOWN")
+  direction string @description("Direction code (e.g., <, >, =, PRESENT, ABSENT)")
 }
 
 class RuleActionV2 {
@@ -107,7 +104,6 @@ class RuleActionV2 {
 }
 
 class ExtractedRuleV2 {
-  rule_id int @description("Integer ID to group inputs/outputs that belong to the same logical rule.")
   conditions RuleConditionV2[]
   actions RuleActionV2[]
 }
@@ -136,19 +132,19 @@ function ExtractRulesV2(text: string) -> ExtractRulesResultV2 {
     - [FOCUS: POPULATION] means extract ONLY population/eligibility conditions; actions must be empty.
 
     Rules:
-    1. Grouping: Assign the same rule_id to all conditions/actions that form a single logical statement (IF X AND Y -> THEN Z). Start at 1 and increment per distinct rule in this sentence.
+     1. Grouping: Keep each rule internally coherent with matching conditions and actions.
     2. Conditions:
-       - Use role Condition or ClinicalParameter for clinical states/measurements.
+       - Use role ClinicalCondition or ClinicalParameter for clinical states/measurements.
        - Use role Procedure if the procedure is an eligibility condition (e.g., planned or scheduled procedure).
-       - Use operator PRESENT for stated conditions without numeric thresholds.
-       - Use operator PLANNED when the procedure is scheduled/planned but not executed (e.g., "scheduled for PCI").
+       - Use operator values from AND, OR, <, >, =.
     3. Actions:
        - Use role Medication or Procedure.
        - Populate recommendation.strength/level/direction when present.
-       - Direction must be POSITIVE, NEGATIVE, or UNKNOWN.
+       - Direction must be one of <, >, =, PRESENT, ABSENT.
        - For class strength, always output "Class I", "Class IIa", "Class IIb", or "Class III".
      4. Logic groups:
        - Use logic_type and logic_group for conditions only.
+       - logic_type must be AND, OR, or SINGLE.
        - Do not set logic fields on actions.
     5. SNOMED-style terms:
        - Output short, specific noun phrases (singular). Avoid full sentences and lists.

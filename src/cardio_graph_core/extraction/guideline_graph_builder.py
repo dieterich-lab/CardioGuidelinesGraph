@@ -91,13 +91,13 @@ DISALLOWED_SEMANTIC_TAGS = {
     "event",
 }
 ALLOWED_SEMANTIC_TAGS_BY_ROLE = {
-    "Condition": {"disorder", "finding"},
+    "ClinicalCondition": {"disorder", "finding"},
     "ClinicalParameter": {"observable entity"},
     "Medication": {"substance", "product"},
     "Procedure": {"procedure"},
 }
 ALLOWED_ROLES = {
-    "Condition",
+    "ClinicalCondition",
     "ClinicalParameter",
     "Medication",
     "Procedure",
@@ -148,7 +148,6 @@ STUDY_SOURCE_PATTERNS = [
 
 @dataclass
 class ExtractedConcept:
-    rule_id: Optional[int]
     entity_original: str
     entity_standardized_candidate: str
     role: str
@@ -158,7 +157,6 @@ class ExtractedConcept:
 
 @dataclass
 class GroundedConcept:
-    rule_id: Optional[int]
     entity_original: str
     entity_standardized_candidate: str
     role: str
@@ -834,8 +832,8 @@ class GuidelineGraphBuilder:
         formatted_rows: List[Tuple[str, str]] = []
         for idx, row in enumerate(rows, start=1):
             recommendation = (row.get("Recommendations") or "").strip()
-            cls = (row.get("Class a") or "").strip()
-            level = (row.get("Level b") or "").strip()
+            cls = (row.get("Class") or "").strip()
+            level = (row.get("Level") or "").strip()
             if not recommendation and not cls and not level:
                 continue
             recommendation = self._expand_abbreviations_in_text(recommendation)
@@ -871,8 +869,8 @@ class GuidelineGraphBuilder:
         row_lines: List[str] = []
         for idx, row in enumerate(rows, start=1):
             recommendation = (row.get("Recommendations") or "").strip()
-            cls = (row.get("Class a") or "").strip()
-            level = (row.get("Level b") or "").strip()
+            cls = (row.get("Class") or "").strip()
+            level = (row.get("Level") or "").strip()
             if not recommendation and not cls and not level:
                 continue
             recommendation = self._expand_abbreviations_in_text(recommendation)
@@ -963,11 +961,11 @@ class GuidelineGraphBuilder:
             return {
                 "strength": "Unknown",
                 "level": "Unknown",
-                "direction": "UNKNOWN",
+                "direction": None,
                 "operator": None,
                 "threshold": None,
                 "unit": None,
-                "condition_context": None,
+                "context": None,
                 "logic_type": None,
                 "logic_group": None,
             }
@@ -982,7 +980,6 @@ class GuidelineGraphBuilder:
                     logic_structured.update(concept.logic_structured.model_dump())
                 parsed.append(
                     ExtractedConcept(
-                        rule_id=getattr(concept, "rule_id", None),
                         entity_original=concept.entity_original,
                         entity_standardized_candidate=concept.entity_standardized_candidate,
                         role=concept.role,
@@ -996,7 +993,6 @@ class GuidelineGraphBuilder:
             rules_result = b.ExtractRulesV2(tagged_text, baml_options=baml_options)
             rules_serialized = self._serialize_baml_result(rules_result)
             for rule in getattr(rules_result, "rules", []) or []:
-                rule_id = getattr(rule, "rule_id", None)
                 for condition in getattr(rule, "conditions", []) or []:
                     logic_structured = _default_logic_structured()
                     logic = getattr(condition, "logic", None)
@@ -1004,7 +1000,6 @@ class GuidelineGraphBuilder:
                         logic_structured.update(logic.model_dump())
                     concepts.append(
                         ExtractedConcept(
-                            rule_id=rule_id,
                             entity_original=condition.entity_original,
                             entity_standardized_candidate=condition.entity_standardized_candidate,
                             role=condition.role,
@@ -1019,7 +1014,6 @@ class GuidelineGraphBuilder:
                         logic_structured.update(recommendation.model_dump())
                     concepts.append(
                         ExtractedConcept(
-                            rule_id=rule_id,
                             entity_original=action.entity_original,
                             entity_standardized_candidate=action.entity_standardized_candidate,
                             role=action.role,
@@ -1085,7 +1079,7 @@ class GuidelineGraphBuilder:
                 str(logic.get("operator") or ""),
                 str(logic.get("threshold") or ""),
                 str(logic.get("unit") or ""),
-                str(logic.get("condition_context") or ""),
+                str(logic.get("context") or ""),
             )
 
         for concept in primary + secondary:
@@ -1102,7 +1096,10 @@ class GuidelineGraphBuilder:
         def is_condition(concept: ExtractedConcept) -> bool:
             role = (concept.role or "").strip()
             side = (concept.logic or "").strip().lower()
-            return role in {"Condition", "ClinicalParameter"} or side == "condition"
+            return (
+                role in {"ClinicalCondition", "ClinicalParameter"}
+                or side == "condition"
+            )
 
         condition_concepts = [c for c in concepts if is_condition(c)]
         if not condition_concepts:
@@ -1151,7 +1148,7 @@ class GuidelineGraphBuilder:
         for concept in concepts:
             side = (concept.logic or "").strip().lower()
             if (concept.role or "").strip() not in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and side != "condition":
                 expanded.append(concept)
@@ -1173,10 +1170,9 @@ class GuidelineGraphBuilder:
             for idx, part in enumerate(parts, start=1):
                 logic_structured = dict(concept.logic_structured or {})
                 logic_structured["logic_type"] = "OR"
-                logic_structured["logic_group"] = f"or_{concept.rule_id}"
+                logic_structured["logic_group"] = "or_1"
                 expanded.append(
                     ExtractedConcept(
-                        rule_id=concept.rule_id,
                         entity_original=concept.entity_original,
                         entity_standardized_candidate=part,
                         role=concept.role,
@@ -1201,27 +1197,22 @@ class GuidelineGraphBuilder:
         extracted_population = self.extract_concepts(
             filtered_sentence, source_type, guideline_title, focus="POPULATION"
         )
-        if extracted_main and extracted_population:
-            primary_rule_id = extracted_main[0].rule_id
-            for concept in extracted_population:
-                if concept.rule_id is None:
-                    concept.rule_id = primary_rule_id
         extracted = self._merge_extracted_concepts(extracted_main, extracted_population)
         extracted = self._explode_or_conditions(extracted)
         extracted = self._drop_redundant_compound_conditions(extracted)
         self._log_extracted_concepts(extracted)
         grounded: List[GroundedConcept] = []
         has_clinical_anchor = any(
-            c.role in {"Condition", "Medication", "Procedure"} for c in extracted
+            c.role in {"ClinicalCondition", "Medication", "Procedure"}
+            for c in extracted
         )
 
         for concept in extracted:
             if (concept.role or "").strip() == "Recommendation":
-                concept.role = "Condition"
+                concept.role = "ClinicalCondition"
             if (concept.role or "").strip() == "Other":
                 grounded.append(
                     GroundedConcept(
-                        rule_id=concept.rule_id,
                         entity_original=concept.entity_original,
                         entity_standardized_candidate=concept.entity_standardized_candidate,
                         role=concept.role,
@@ -1267,7 +1258,6 @@ class GuidelineGraphBuilder:
                     continue
                 grounded.append(
                     GroundedConcept(
-                        rule_id=concept.rule_id,
                         entity_original=concept.entity_original,
                         entity_standardized_candidate=concept.entity_standardized_candidate,
                         role=concept.role,
@@ -1318,7 +1308,6 @@ class GuidelineGraphBuilder:
                 continue
 
             grounded_concept = GroundedConcept(
-                rule_id=concept.rule_id,
                 entity_original=concept.entity_original,
                 entity_standardized_candidate=concept.entity_standardized_candidate,
                 role=concept.role,
@@ -1570,22 +1559,21 @@ class GuidelineGraphBuilder:
         for concept in grounded:
             logic_structured = dict(concept.logic_structured or {})
             if (concept.role or "").strip() in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_type"):
                 logic_structured["logic_type"] = "AND"
             if (concept.role or "").strip() in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_group"):
-                logic_structured["logic_group"] = f"and_{concept.rule_id}"
+                logic_structured["logic_group"] = "and_1"
             entry = {
                 "entity_standardized_candidate": concept.entity_standardized_candidate,
                 "snomed_id": concept.snomed_id,
                 "role": concept.role,
                 "target_label": concept.target_label,
                 "logic_structured": logic_structured,
-                "rule_id": concept.rule_id,
                 "chunk_id": chunk_id,
                 "source_context": source_context,
                 "source_type": source_type,
@@ -1615,15 +1603,15 @@ class GuidelineGraphBuilder:
                 role = "ClinicalParameter"
             logic_structured = dict(concept.logic_structured or {})
             if (role or "").strip() in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_type"):
                 logic_structured["logic_type"] = "AND"
             if (role or "").strip() in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_group"):
-                logic_structured["logic_group"] = f"and_{concept.rule_id}"
+                logic_structured["logic_group"] = "and_1"
             entry = {
                 "entity_original": concept.entity_original,
                 "entity_standardized_candidate": concept.entity_standardized_candidate,
@@ -1631,7 +1619,6 @@ class GuidelineGraphBuilder:
                 "role": role,
                 "target_label": target_label,
                 "logic_structured": logic_structured,
-                "rule_id": concept.rule_id,
                 "chunk_id": chunk_id,
                 "source_context": source_context,
                 "source_type": source_type,
@@ -1644,7 +1631,7 @@ class GuidelineGraphBuilder:
         self, role: str, path_ids: List[int]
     ) -> Optional[str]:
         role_map = {
-            "Condition": "ClinicalCondition",
+            "ClinicalCondition": "ClinicalCondition",
             "ClinicalParameter": "ClinicalParameter",
             "Medication": "Medication",
             "Procedure": "Procedure",
@@ -1668,7 +1655,7 @@ class GuidelineGraphBuilder:
 
     def _allowed_root_concepts_for_role(self, role: str) -> set:
         role_map = {
-            "Condition": "ClinicalCondition",
+            "ClinicalCondition": "ClinicalCondition",
             "ClinicalParameter": "ClinicalParameter",
             "Medication": "Medication",
             "Procedure": "Procedure",
@@ -1681,7 +1668,7 @@ class GuidelineGraphBuilder:
 
     def _fallback_target_label_for_role(self, role: str) -> Optional[str]:
         role_map = {
-            "Condition": "ClinicalCondition",
+            "ClinicalCondition": "ClinicalCondition",
             "ClinicalParameter": "ClinicalParameter",
             "Medication": "Medication",
             "Procedure": "Procedure",
@@ -1851,7 +1838,6 @@ def main(
 
     for r in results:
         click.echo("---")
-        click.echo(f"Rule ID: {r.rule_id}")
         click.echo(f"Entity: {r.entity_original}")
         click.echo(f"Standardized: {r.entity_standardized_candidate}")
         click.echo(f"Role: {r.role}")

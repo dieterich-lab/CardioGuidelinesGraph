@@ -270,7 +270,7 @@ extraction_contract:
   baml_file: "src/cardio_graph_core/extraction/baml_src/extract_concepts.baml"
 
   roles:
-    condition_side: ["Condition", "ClinicalParameter", "Procedure"]
+    condition_side: ["ClinicalCondition", "ClinicalParameter", "Procedure"]
     action_side: ["Medication", "Procedure"]
 
   required_origin_fields:
@@ -283,15 +283,15 @@ extraction_contract:
 
   condition_logic_fields:
     operator:
-      allowed: ["<", ">", "<=", ">=", "=", "PRESENT", "ABSENT", "PLANNED"]
+      allowed: ["OR", "AND", "<", ">", "="]
     threshold:
       maps_to_graph_attribute: "threshold_value"
     unit:
       maps_to_graph_attribute: "unit"
-    condition_context:
+    context:
       maps_to_graph_attribute: "condition_context"
     logic_type:
-      allowed: ["AND", "OR", null]
+      allowed: ["AND", "OR", "SINGLE", null]
     logic_group:
       type: "string"
 
@@ -301,7 +301,7 @@ extraction_contract:
     level:
       maps_to_graph_attribute: "level_of_evidence"
     direction:
-      allowed: ["POSITIVE", "NEGATIVE", "UNKNOWN"]
+      allowed: ["<", ">", "=", "PRESENT", "ABSENT"]
 
   grounding_fields:
     - "snomed_id"
