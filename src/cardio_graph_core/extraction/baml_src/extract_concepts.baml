@@ -1,6 +1,6 @@
 // SINGLE SOURCE OF TRUTH:
 // - Canonical schema contract lives in:
-//   config/cardio_graph_core/guideline_graph_schema.yaml (extraction_contract section)
+//   config/cardio_graph_core/guideline_graph_schema.yaml (schema_profiles.extraction)
 // - This BAML file is the extraction SUBSET of that contract.
 // - Grounding-only fields like snomed_id, preferred_term, synonyms are added after extraction.
 
@@ -9,10 +9,10 @@ class LogicStructured {
   // Recommendation details
   strength string? @description("Recommendation strength (e.g., Strong, Weak, Class I)")
   level string? @description("Level of evidence (e.g., A, B, C)")
-  direction string @description("Direction code (e.g., <, >, =, PRESENT, ABSENT)")
+  direction string @description("Recommendation polarity (POSITIVE, NEGATIVE, UNKNOWN)")
   
   // Decision details (für Bedingungen/Checks)
-  operator string? @description("Logical or comparison operator if present (e.g., AND, OR, <, >, =)")
+  operator string? @description("Logical/comparison/presence operator (e.g., AND, OR, <, >, <=, >=, =, PRESENT, ABSENT, PLANNED)")
   threshold string? @description("Numeric threshold value (e.g., 40, 120/80)")
   unit string? @description("Unit of measurement (e.g., %, mmHg, mg)")
   
@@ -55,8 +55,8 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
     
     Requirements:
     1. **Grouping**: Keep IF-side concepts and THEN-side concepts coherent per sentence.
-    2. **Logic**: For thresholds, fill 'operator', 'threshold', and 'unit'. Use operator values from: AND, OR, <, >, =.
-    3. **Direction**: Use one of <, >, =, PRESENT, ABSENT.
+    2. **Logic**: For thresholds, fill 'operator', 'threshold', and 'unit'. Use operator values from: AND, OR, <, >, <=, >=, =, PRESENT, ABSENT, PLANNED.
+    3. **Direction**: Use one of POSITIVE, NEGATIVE, UNKNOWN.
      4. **Roles + action**: IF part uses 'ClinicalCondition' or 'ClinicalParameter'; THEN part uses 'Medication' or 'Procedure'.
        - If [FOCUS: MAIN], include at least one action when recommendation text exists. Never use role 'Recommendation'.
        - If [FOCUS: POPULATION], output ONLY population/eligibility conditions or parameters; no actions. Always return at least one population condition when such a cohort is stated.
@@ -75,7 +75,7 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
 
 // Draft v2: explicit input/output separation to remove ambiguity.
 class RuleLogicV2 {
-  operator string? @description("Operator for input conditions (e.g., AND, OR, <, >, =)")
+  operator string? @description("Operator for input conditions (e.g., AND, OR, <, >, <=, >=, =, PRESENT, ABSENT, PLANNED)")
   threshold string? @description("Numeric threshold value (e.g., 40, 120/80)")
   unit string? @description("Unit of measurement (e.g., %, mmHg, mg)")
   context string? @description("Additional context (e.g., 'history of', 'acute', 'chronic')")
@@ -93,7 +93,7 @@ class RuleConditionV2 {
 class RuleRecommendationV2 {
   strength string? @description("Recommendation strength (e.g., Class I, Class IIa)")
   level string? @description("Level of evidence (e.g., A, B, C)")
-  direction string @description("Direction code (e.g., <, >, =, PRESENT, ABSENT)")
+  direction string @description("Recommendation polarity (POSITIVE, NEGATIVE, UNKNOWN)")
 }
 
 class RuleActionV2 {
@@ -136,11 +136,11 @@ function ExtractRulesV2(text: string) -> ExtractRulesResultV2 {
     2. Conditions:
        - Use role ClinicalCondition or ClinicalParameter for clinical states/measurements.
        - Use role Procedure if the procedure is an eligibility condition (e.g., planned or scheduled procedure).
-       - Use operator values from AND, OR, <, >, =.
+      - Use operator values from AND, OR, <, >, <=, >=, =, PRESENT, ABSENT, PLANNED.
     3. Actions:
        - Use role Medication or Procedure.
        - Populate recommendation.strength/level/direction when present.
-       - Direction must be one of <, >, =, PRESENT, ABSENT.
+      - Direction must be one of POSITIVE, NEGATIVE, UNKNOWN.
        - For class strength, always output "Class I", "Class IIa", "Class IIb", or "Class III".
      4. Logic groups:
        - Use logic_type and logic_group for conditions only.
@@ -150,7 +150,7 @@ function ExtractRulesV2(text: string) -> ExtractRulesResultV2 {
        - Output short, specific noun phrases (singular). Avoid full sentences and lists.
        - Do not combine multiple distinct conditions into a single entity.
      6. Focus-specific constraints:
-       - If [FOCUS: MAIN], each rule should include at least one action unless the sentence contains no recommendation.
+       - If [FOCUS: MAIN], each rule must include at least one action.
        - If [FOCUS: POPULATION], actions MUST be an empty array and output only eligibility/population conditions.
 
     Sentence: {{text}}

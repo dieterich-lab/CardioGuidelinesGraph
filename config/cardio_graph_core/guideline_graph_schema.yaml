@@ -260,54 +260,56 @@ snomed_mapping:
 
 
 # ==========================================
-# 4. EXTRACTION CONTRACT (Single Source of Truth)
+# 4. PIPELINE SCHEMA PROFILES (Single Source of Truth)
 # ==========================================
-# This section defines the extraction-side subset and naming contract.
-# The BAML schema MUST remain a subset of this contract.
-extraction_contract:
-  version: "1.0"
-  source_of_truth: "guideline_graph_schema.yaml"
-  baml_file: "src/cardio_graph_core/extraction/baml_src/extract_concepts.baml"
+# The graph schema above is canonical.
+# Profiles below define stage-specific subsets and validation constraints.
+# This keeps one schema file while making extraction-stage rules explicit.
+schema_profiles:
+  extraction:
+    version: "2.0"
+    source_of_truth: "guideline_graph_schema.yaml"
+    baml_file: "src/cardio_graph_core/extraction/baml_src/extract_concepts.baml"
 
-  roles:
-    condition_side: ["ClinicalCondition", "ClinicalParameter", "Procedure"]
-    action_side: ["Medication", "Procedure"]
+    rule_structure:
+      conditions:
+        min_items: 1
+      actions:
+        min_items_main_focus: 1
+        allow_empty_for_population_focus: true
 
-  required_origin_fields:
-    - "entity_original"
-    - "entity_standardized_candidate"
+    origin_fields:
+      required:
+        - "entity_original"
+        - "entity_standardized_candidate"
 
-  derived_origin_fields:
-    - name: "entity"
-      derivation: "entity_standardized_candidate || entity_original"
+    logic_fields:
+      operator:
+        allowed: ["OR", "AND", "<", ">", "<=", ">=", "=", "PRESENT", "ABSENT", "PLANNED"]
+      threshold:
+        maps_to_graph_attribute: "threshold_value"
+      unit:
+        maps_to_graph_attribute: "unit"
+      context:
+        maps_to_graph_attribute: "condition_context"
+      logic_type:
+        allowed: ["AND", "OR", "SINGLE", null]
+      logic_group:
+        type: "string"
 
-  condition_logic_fields:
-    operator:
-      allowed: ["OR", "AND", "<", ">", "="]
-    threshold:
-      maps_to_graph_attribute: "threshold_value"
-    unit:
-      maps_to_graph_attribute: "unit"
-    context:
-      maps_to_graph_attribute: "condition_context"
-    logic_type:
-      allowed: ["AND", "OR", "SINGLE", null]
-    logic_group:
-      type: "string"
+    recommendation_fields:
+      strength:
+        maps_to_graph_attribute: "class_of_recommendation"
+      level:
+        maps_to_graph_attribute: "level_of_evidence"
+      direction:
+        allowed: ["POSITIVE", "NEGATIVE", "UNKNOWN"]
 
-  recommendation_fields:
-    strength:
-      maps_to_graph_attribute: "class_of_recommendation"
-    level:
-      maps_to_graph_attribute: "level_of_evidence"
-    direction:
-      allowed: ["<", ">", "=", "PRESENT", "ABSENT"]
-
-  grounding_fields:
-    - "snomed_id"
-    - "preferred_term"
-    - "synonyms"
-    - "target_label"
-    - "taxonomy_path"
-    - "root_concept_id"
-    - "root_concept_term"
+    grounding_fields:
+      - "snomed_id"
+      - "preferred_term"
+      - "synonyms"
+      - "target_label"
+      - "taxonomy_path"
+      - "root_concept_id"
+      - "root_concept_term"

@@ -250,15 +250,24 @@ class GuidelineGraphBuilder:
         self.mapping_rules = self.config.get("snomed_mapping", {}).get(
             "mapping_rules", []
         )
-        extraction_contract = self.config.get("extraction_contract", {}) or {}
-        condition_logic_fields = set(
-            (extraction_contract.get("condition_logic_fields") or {}).keys()
+        extraction_profile = (
+            (self.config.get("schema_profiles") or {}).get("extraction") or {}
         )
+        self._extraction_profile = extraction_profile
+        logic_fields = set((extraction_profile.get("logic_fields") or {}).keys())
         recommendation_fields = set(
-            (extraction_contract.get("recommendation_fields") or {}).keys()
+            (extraction_profile.get("recommendation_fields") or {}).keys()
         )
-        self._allowed_logic_structured_keys = (
-            condition_logic_fields | recommendation_fields
+        self._allowed_logic_structured_keys = logic_fields | recommendation_fields
+        rule_structure = extraction_profile.get("rule_structure") or {}
+        conditions_cfg = rule_structure.get("conditions") or {}
+        actions_cfg = rule_structure.get("actions") or {}
+        self._min_conditions_per_rule = int(conditions_cfg.get("min_items", 1) or 1)
+        self._min_actions_per_rule_main_focus = int(
+            actions_cfg.get("min_items_main_focus", 1) or 1
+        )
+        self._allow_empty_actions_population_focus = bool(
+            actions_cfg.get("allow_empty_for_population_focus", True)
         )
         self.root_concepts = self._collect_root_concepts(self.mapping_rules)
 
@@ -315,6 +324,92 @@ class GuidelineGraphBuilder:
             for key, value in payload.items()
             if key in self._allowed_logic_structured_keys
         }
+
+    def _is_nonempty_concept(self, concept: Any) -> bool:
+        if concept is None:
+            return False
+        entity_original = (getattr(concept, "entity_original", None) or "").strip()
+        entity_standardized = (
+            getattr(concept, "entity_standardized_candidate", None) or ""
+        ).strip()
+        role = (getattr(concept, "role", None) or "").strip()
+        if role.lower() == "string":
+            return False
+        return bool(role and (entity_original or entity_standardized))
+
+    def _is_population_focus(self, focus: Optional[str]) -> bool:
+        return (focus or "").strip().upper() == "POPULATION"
+
+    def _concept_side(self, concept: Any) -> Optional[str]:
+        raw_logic = (getattr(concept, "logic", None) or "").strip().lower()
+        if raw_logic in {"condition", "action"}:
+            return raw_logic
+        role = (getattr(concept, "role", None) or "").strip()
+        if role in {"ClinicalCondition", "ClinicalParameter"}:
+            return "condition"
+        if role in {"Medication", "Procedure"}:
+            return "action"
+        return None
+
+    def _validate_extracted_concepts(self, concepts: List[ExtractedConcept], focus: Optional[str]) -> List[ExtractedConcept]:
+        if not concepts:
+            return []
+        is_population_focus = self._is_population_focus(focus)
+
+        condition_concepts = [
+            concept
+            for concept in concepts
+            if self._is_nonempty_concept(concept)
+            and self._concept_side(concept) == "condition"
+        ]
+        action_concepts = [
+            concept
+            for concept in concepts
+            if self._is_nonempty_concept(concept)
+            and self._concept_side(concept) == "action"
+        ]
+
+        if len(condition_concepts) < self._min_conditions_per_rule:
+            return []
+
+        if is_population_focus:
+            if action_concepts and not self._allow_empty_actions_population_focus:
+                return []
+            return condition_concepts
+
+        if len(action_concepts) < self._min_actions_per_rule_main_focus:
+            return []
+
+        return condition_concepts + action_concepts
+
+    def _validate_extracted_rules(self, rules: List[Any], focus: Optional[str]) -> List[Any]:
+        valid_rules: List[Any] = []
+        is_population_focus = self._is_population_focus(focus)
+
+        for rule in rules or []:
+            conditions = [
+                condition
+                for condition in (getattr(rule, "conditions", []) or [])
+                if self._is_nonempty_concept(condition)
+            ]
+            actions = [
+                action
+                for action in (getattr(rule, "actions", []) or [])
+                if self._is_nonempty_concept(action)
+            ]
+
+            if len(conditions) < self._min_conditions_per_rule:
+                continue
+
+            if is_population_focus:
+                if actions and not self._allow_empty_actions_population_focus:
+                    continue
+            else:
+                if len(actions) < self._min_actions_per_rule_main_focus:
+                    continue
+
+            valid_rules.append(rule)
+        return valid_rules
 
     def _normalize(self, text: str) -> str:
         return " ".join(text.lower().strip().split())
@@ -1015,8 +1110,13 @@ class GuidelineGraphBuilder:
         try:
             rules_result = b.ExtractRulesV2(tagged_text, baml_options=baml_options)
             rules_serialized = self._serialize_baml_result(rules_result)
-            for rule in getattr(rules_result, "rules", []) or []:
+            valid_rules = self._validate_extracted_rules(
+                getattr(rules_result, "rules", []) or [], focus=focus
+            )
+            for rule in valid_rules:
                 for condition in getattr(rule, "conditions", []) or []:
+                    if not self._is_nonempty_concept(condition):
+                        continue
                     logic_structured = _default_logic_structured()
                     logic = getattr(condition, "logic", None)
                     if logic is not None:
@@ -1032,6 +1132,8 @@ class GuidelineGraphBuilder:
                         )
                     )
                 for action in getattr(rule, "actions", []) or []:
+                    if not self._is_nonempty_concept(action):
+                        continue
                     logic_structured = _default_logic_structured()
                     recommendation = getattr(action, "recommendation", None)
                     if recommendation is not None:
@@ -1063,14 +1165,21 @@ class GuidelineGraphBuilder:
                         reviewed_concepts = _concepts_from_extract_concepts_result(
                             reviewed_result
                         )
-                        if reviewed_concepts:
-                            return reviewed_concepts
+                        validated_reviewed = self._validate_extracted_concepts(
+                            reviewed_concepts, focus=focus
+                        )
+                        if validated_reviewed:
+                            return validated_reviewed
                     except Exception as exc:
                         logger.warning(
                             "Incremental review pass failed; using first-pass rules. Error: %s",
                             exc,
                         )
-                return concepts
+                validated_first_pass = self._validate_extracted_concepts(
+                    concepts, focus=focus
+                )
+                if validated_first_pass:
+                    return validated_first_pass
         except Exception as exc:
             logger.warning(
                 "BAML ExtractRulesV2 failed; falling back to ExtractConcepts. Error: %s",
@@ -1086,7 +1195,8 @@ class GuidelineGraphBuilder:
             )
             return []
         _ = self._serialize_baml_result(result)
-        return _concepts_from_extract_concepts_result(result)
+        fallback_concepts = _concepts_from_extract_concepts_result(result)
+        return self._validate_extracted_concepts(fallback_concepts, focus=focus)
 
     def _merge_extracted_concepts(
         self, primary: List[ExtractedConcept], secondary: List[ExtractedConcept]
