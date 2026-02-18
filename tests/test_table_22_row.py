@@ -237,8 +237,12 @@ def _build_mermaid(expected_entries, actual_entries):
     lines = ["graph TD"]
     node_id = 0
     entity_to_id = {}
-    conditions = [e for e in expected_entries + actual_entries if e.get("side") == "condition"]
-    actions = [e for e in expected_entries + actual_entries if e.get("side") == "action"]
+    conditions = [
+        e for e in expected_entries + actual_entries if e.get("side") == "condition"
+    ]
+    actions = [
+        e for e in expected_entries + actual_entries if e.get("side") == "action"
+    ]
 
     condition_nodes = []
     for cond in conditions:
