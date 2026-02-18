@@ -277,27 +277,12 @@ class GuidelineGraphBuilder:
             "level",
             "direction",
         }
-        profile_allowed_logic_keys = {
-            "logic_group"
-        } | decision_attr_names | recommendation_attr_names
-
-        extraction_profile = (self.config.get("schema_profiles") or {}).get(
-            "extraction"
-        ) or {}
-        self._extraction_profile = extraction_profile
+        profile_allowed_logic_keys = (
+            {"logic_group"} | decision_attr_names | recommendation_attr_names
+        )
         derived_allowed_logic_keys = extraction_logic_keys & profile_allowed_logic_keys
         self._allowed_logic_structured_keys = (
             derived_allowed_logic_keys or extraction_logic_keys
-        )
-        rule_structure = extraction_profile.get("rule_structure") or {}
-        conditions_cfg = rule_structure.get("conditions") or {}
-        actions_cfg = rule_structure.get("actions") or {}
-        self._min_conditions_per_rule = int(conditions_cfg.get("min_items", 1) or 1)
-        self._min_actions_per_rule_main_focus = int(
-            actions_cfg.get("min_items_main_focus", 1) or 1
-        )
-        self._allow_empty_actions_population_focus = bool(
-            actions_cfg.get("allow_empty_for_population_focus", True)
         )
         self.root_concepts = self._collect_root_concepts(self.mapping_rules)
 
@@ -401,16 +386,8 @@ class GuidelineGraphBuilder:
             and self._concept_side(concept) == "action"
         ]
 
-        if len(condition_concepts) < self._min_conditions_per_rule:
-            return []
-
         if is_population_focus:
-            if action_concepts and not self._allow_empty_actions_population_focus:
-                return []
             return condition_concepts
-
-        if len(action_concepts) < self._min_actions_per_rule_main_focus:
-            return []
 
         return condition_concepts + action_concepts
 
@@ -432,14 +409,11 @@ class GuidelineGraphBuilder:
                 if self._is_nonempty_concept(action)
             ]
 
-            if len(conditions) < self._min_conditions_per_rule:
+            if not conditions and not actions:
                 continue
 
             if is_population_focus:
-                if actions and not self._allow_empty_actions_population_focus:
-                    continue
-            else:
-                if len(actions) < self._min_actions_per_rule_main_focus:
+                if not conditions:
                     continue
 
             valid_rules.append(rule)

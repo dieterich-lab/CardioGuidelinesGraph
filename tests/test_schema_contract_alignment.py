@@ -27,25 +27,8 @@ class TestSchemaContractAlignment(unittest.TestCase):
         self.baml_text = BAML_PATH.read_text(encoding="utf-8")
         self.loader_text = LOADER_PATH.read_text(encoding="utf-8")
 
-    def test_extraction_profile_exists(self):
-        profile = (self.schema.get("schema_profiles") or {}).get("extraction")
-        self.assertIsInstance(profile, dict)
-        self.assertEqual(profile.get("source_of_truth"), "guideline_graph_schema.yaml")
-
-    def test_rule_cardinality_constraints_exist(self):
-        profile = self.schema["schema_profiles"]["extraction"]
-        rule_structure = profile.get("rule_structure") or {}
-        self.assertGreaterEqual(
-            (rule_structure.get("conditions") or {}).get("min_items", 0), 1
-        )
-        self.assertGreaterEqual(
-            (rule_structure.get("actions") or {}).get("min_items_main_focus", 0),
-            1,
-        )
-        self.assertIn(
-            "allow_empty_for_population_focus",
-            rule_structure.get("actions") or {},
-        )
+    def test_no_extraction_profile_block(self):
+        self.assertNotIn("schema_profiles", self.schema)
 
     def test_baml_contains_required_origin_fields(self):
         required_fields = ["entity_original", "entity_standardized_candidate"]
