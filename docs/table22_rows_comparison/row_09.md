@@ -1,4 +1,4 @@
-# row_09 (mapped to row_10)
+# row_09 (mapped to row_09)
 
 Original table row text (ground truth):
 
@@ -152,64 +152,7 @@ Aligned JSON (expected vs actual):
 ]
 </pre></td>
     <td valign="top"><pre>
-[
-  {
-    "entity": "chronic coronary syndrome",
-    "entity_original": "chronic coronary syndrome (ccs) patients",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": "UNKNOWN"
-  },
-  {
-    "entity": "left ventricular ejection fraction",
-    "entity_original": "left ventricular ejection fraction (lvef) > 35%",
-    "role": "ClinicalParameter",
-    "operator": ">",
-    "threshold": "35",
-    "unit": "%",
-    "condition_context": "chronic coronary syndrome",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": "UNKNOWN"
-  },
-  {
-    "entity": "three-vessel disease",
-    "entity_original": "functionally significant three-vessel disease",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": "functionally significant",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": null,
-    "level": null,
-    "direction": "UNKNOWN"
-  },
-  {
-    "entity": "myocardial revascularization",
-    "entity_original": "myocardial revascularization",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": null,
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "A",
-    "direction": "POSITIVE"
-  }
-]
+{}
 </pre></td>
   </tr>
 </table>
@@ -250,30 +193,14 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: myocardial revascularization]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: chronic coronary syndrome]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
-    D_and_1_2 -->|EVALUATES| C_and_1_2
-    D_and_1_3[DecisionNode and_1 s3]
-    C_and_1_3[Condition: three-vessel disease]
-    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
-    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
-  end
-  D_and_1_3 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:
 - expected: 9
-- actual: 4
+- actual: 0
 - matches: 0
 - missing: 9
-- extra: 4
+- extra: 0
 
 Missing concepts:
 - ClinicalParameter: lvef
@@ -286,18 +213,12 @@ Missing concepts:
 - Procedure: evaluate patient perspectives
 - Procedure: revascularization or medical therapy
 
-Extra concepts:
-- ClinicalParameter: left ventricular ejection fraction
-- Condition: chronic coronary syndrome
-- Condition: three-vessel disease
-- Procedure: myocardial revascularization
-
 Rules (concept + logic fields):
 - expected: 9
-- actual: 4
+- actual: 0
 - matches: 0
 - missing: 9
-- extra: 4
+- extra: 0
 
 Missing rules:
 - ClinicalParameter: lvef | op=≤ | thr=35 | unit=% | logic=AND | grp=and_1
@@ -309,10 +230,4 @@ Missing rules:
 - Procedure: evaluate life expectancy | class=I | level=C | dir=POSITIVE
 - Procedure: evaluate patient perspectives | class=I | level=C | dir=POSITIVE
 - Procedure: revascularization or medical therapy | class=I | level=C | dir=POSITIVE
-
-Extra rules:
-- ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | ctx=chronic coronary syndrome | logic=AND | grp=and_1 | dir=UNKNOWN
-- Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
-- Condition: three-vessel disease | op=PRESENT | ctx=functionally significant | logic=AND | grp=and_1 | dir=UNKNOWN
-- Procedure: myocardial revascularization | class=I | level=A | dir=POSITIVE
 

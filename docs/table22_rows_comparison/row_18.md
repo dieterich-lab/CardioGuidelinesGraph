@@ -1,4 +1,4 @@
-# row_18 (mapped to row_19)
+# row_18 (mapped to row_18)
 
 Original table row text (ground truth):
 
@@ -100,50 +100,86 @@ Aligned JSON (expected vs actual):
 ]
 </pre></td>
     <td valign="top"><pre>
-[
-  {
-    "entity": "complex coronary artery disease",
-    "entity_original": "complex coronary artery disease (cad)",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": "in whom revascularization is being considered",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "assess procedural risks and post-procedural outcomes",
-    "entity_original": "assess procedural risks and post-procedural outcomes",
-    "role": "Procedure",
-    "operator": null,
-    "threshold": null,
-    "unit": null,
-    "condition_context": "to guide shared clinical decision-making",
-    "logic_type": null,
-    "logic_group": null,
-    "strength": "I",
-    "level": "C",
-    "direction": "POSITIVE"
-  },
-  {
-    "entity": "complex coronary artery disease",
-    "entity_original": "complex coronary artery disease (cad) in whom revascularization is being considered",
-    "role": "Condition",
-    "operator": "PRESENT",
-    "threshold": null,
-    "unit": null,
-    "condition_context": "revascularization considered",
-    "logic_type": "AND",
-    "logic_group": "and_1",
-    "strength": "I",
-    "level": "C",
-    "direction": "UNKNOWN"
+{
+  "1": {
+    "conditions": [
+      {
+        "entity": "high risk of persistent angina and clinical events",
+        "entity_original": "patients at high risk of persistent angina and subsequent clinical events",
+        "role": "Condition",
+        "operator": "PRESENT",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "IIa",
+        "level": "B",
+        "direction": "POSITIVE",
+        "rule_id": 1,
+        "side": "condition",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": null,
+        "target_label": "ClinicalCondition",
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null,
+        "mapped_target_label": null
+      }
+    ],
+    "actions": [
+      {
+        "entity": "post-procedural assessment",
+        "entity_original": "end of the procedure",
+        "role": "Procedure",
+        "operator": "PLANNED",
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "IIa",
+        "level": "B",
+        "direction": "POSITIVE",
+        "rule_id": 1,
+        "side": "action",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": null,
+        "target_label": "Procedure",
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null,
+        "mapped_target_label": null
+      },
+      {
+        "entity": "post-procedural risk assessment",
+        "entity_original": "should be considered",
+        "role": "Procedure",
+        "operator": null,
+        "threshold": null,
+        "unit": null,
+        "condition_context": null,
+        "logic_type": null,
+        "logic_group": null,
+        "strength": "IIa",
+        "level": "B",
+        "direction": "POSITIVE",
+        "rule_id": 1,
+        "side": "action",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": null,
+        "target_label": "Procedure",
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null,
+        "mapped_target_label": null
+      }
+    ]
   }
-]
+}
 </pre></td>
   </tr>
 </table>
@@ -176,26 +212,73 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: assess procedural risks and post-procedural outcomes]
+  ACT1[Procedure: post-procedural assessment]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: complex coronary artery disease]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[Condition: complex coronary artery disease]
-    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+  ACT2[Procedure: post-procedural risk assessment]
+  REC -->|RECOMMENDS_PROCEDURE| ACT2
+  subgraph LLM_group_1_AND
+    D_group_1_1[DecisionNode group_1 s1]
+    C_group_1_1[Condition: high risk of persistent angina and clinical events]
+    D_group_1_1 -->|CHECKS_FOR| C_group_1_1
   end
-  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
+  D_group_1_1 -->|RESULTS_IN condition_met=true| REC
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 3,
+  "target_label_counts": {
+    "Procedure": 2,
+    "ClinicalCondition": 1
+  },
+  "root_hit_counts": {},
+  "root_hits": [
+    {
+      "entity": "Post-procedural assessment",
+      "entity_original": "end of the procedure",
+      "role": "Procedure",
+      "preferred_term": null,
+      "synonyms": [],
+      "snomed_id": null,
+      "target_label": "Procedure",
+      "taxonomy_path": [],
+      "root_hit": null
+    },
+    {
+      "entity": "Post-procedural risk assessment",
+      "entity_original": "should be considered",
+      "role": "Procedure",
+      "preferred_term": null,
+      "synonyms": [],
+      "snomed_id": null,
+      "target_label": "Procedure",
+      "taxonomy_path": [],
+      "root_hit": null
+    },
+    {
+      "entity": "High Risk of Persistent Angina and Clinical Events",
+      "entity_original": "patients at high risk of persistent angina and subsequent clinical events",
+      "role": "Condition",
+      "preferred_term": null,
+      "synonyms": [],
+      "snomed_id": null,
+      "target_label": "ClinicalCondition",
+      "taxonomy_path": [],
+      "root_hit": null
+    }
+  ]
+}
 ```
 
 Concepts:
 - expected: 5
-- actual: 2
+- actual: 3
 - matches: 0
 - missing: 5
-- extra: 2
+- extra: 3
 
 Missing concepts:
 - Condition: chronic coronary syndrome
@@ -205,8 +288,9 @@ Missing concepts:
 - Procedure: revascularization
 
 Extra concepts:
-- Condition: complex coronary artery disease
-- Procedure: assess procedural risks and post-procedural outcomes
+- Condition: high risk of persistent angina and clinical events
+- Procedure: post-procedural assessment
+- Procedure: post-procedural risk assessment
 
 Rules (concept + logic fields):
 - expected: 5
@@ -223,7 +307,7 @@ Missing rules:
 - Procedure: revascularization | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- Condition: complex coronary artery disease | op=PRESENT | ctx=in whom revascularization is being considered | logic=AND | grp=and_1 | class=I | level=C | dir=POSITIVE
-- Condition: complex coronary artery disease | op=PRESENT | ctx=revascularization considered | logic=AND | grp=and_1 | class=I | level=C | dir=UNKNOWN
-- Procedure: assess procedural risks and post-procedural outcomes | ctx=to guide shared clinical decision-making | class=I | level=C | dir=POSITIVE
+- Condition: high risk of persistent angina and clinical events | op=PRESENT | class=IIa | level=B | dir=POSITIVE
+- Procedure: post-procedural assessment | op=PLANNED | class=IIa | level=B | dir=POSITIVE
+- Procedure: post-procedural risk assessment | class=IIa | level=B | dir=POSITIVE
 
