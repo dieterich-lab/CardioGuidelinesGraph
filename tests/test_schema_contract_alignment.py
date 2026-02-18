@@ -35,44 +35,61 @@ class TestSchemaContractAlignment(unittest.TestCase):
     def test_rule_cardinality_constraints_exist(self):
         profile = self.schema["schema_profiles"]["extraction"]
         rule_structure = profile.get("rule_structure") or {}
-        self.assertGreaterEqual((rule_structure.get("conditions") or {}).get("min_items", 0), 1)
+        self.assertGreaterEqual(
+            (rule_structure.get("conditions") or {}).get("min_items", 0), 1
+        )
         self.assertGreaterEqual(
             (rule_structure.get("actions") or {}).get("min_items_main_focus", 0),
             1,
         )
+        self.assertIn(
+            "allow_empty_for_population_focus",
+            rule_structure.get("actions") or {},
+        )
 
     def test_baml_contains_required_origin_fields(self):
-        profile = self.schema["schema_profiles"]["extraction"]
-        required_fields = (profile.get("origin_fields") or {}).get("required", [])
+        required_fields = ["entity_original", "entity_standardized_candidate"]
         for field in required_fields:
             self.assertRegex(self.baml_text, rf"\b{re.escape(field)}\b")
 
-    def test_baml_contains_condition_logic_fields(self):
-        profile = self.schema["schema_profiles"]["extraction"]
-        logic_fields = set((profile.get("logic_fields") or {}).keys())
-        for field in logic_fields:
+    def test_baml_contains_core_logic_fields(self):
+        core_logic_fields = {
+            "operator",
+            "threshold",
+            "unit",
+            "context",
+            "logic_type",
+            "logic_group",
+            "strength",
+            "level",
+            "direction",
+        }
+        for field in core_logic_fields:
             self.assertRegex(self.baml_text, rf"\b{re.escape(field)}\b")
 
-    def test_baml_contains_recommendation_fields(self):
-        profile = self.schema["schema_profiles"]["extraction"]
-        rec_fields = set((profile.get("recommendation_fields") or {}).keys())
-        for field in rec_fields:
-            self.assertRegex(self.baml_text, rf"\b{re.escape(field)}\b")
+    def test_node_level_enums_defined_for_logic(self):
+        nodes = self.schema.get("nodes") or []
 
-    def test_loader_contains_contract_mappings(self):
-        profile = self.schema["schema_profiles"]["extraction"]
-        threshold_mapping = profile["logic_fields"]["threshold"][
-            "maps_to_graph_attribute"
-        ]
-        strength_mapping = profile["recommendation_fields"]["strength"][
-            "maps_to_graph_attribute"
-        ]
-        level_mapping = profile["recommendation_fields"]["level"][
-            "maps_to_graph_attribute"
-        ]
-        self.assertIn(threshold_mapping, self.loader_text)
-        self.assertIn(strength_mapping, self.loader_text)
-        self.assertIn(level_mapping, self.loader_text)
+        def _get_attr(label, name):
+            for node in nodes:
+                if node.get("label") != label:
+                    continue
+                for attr in node.get("attributes", []) or []:
+                    if attr.get("name") == name:
+                        return attr
+            return {}
+
+        operator_attr = _get_attr("DecisionNode", "operator")
+        logic_type_attr = _get_attr("DecisionNode", "logic_type")
+        direction_attr = _get_attr("RecommendationNode", "direction")
+
+        self.assertTrue(operator_attr.get("allowed"))
+        self.assertIn("<=", operator_attr.get("allowed", []))
+        self.assertIn(">=", operator_attr.get("allowed", []))
+        self.assertTrue(logic_type_attr.get("allowed"))
+        self.assertIn("SINGLE", logic_type_attr.get("allowed", []))
+        self.assertTrue(direction_attr.get("allowed"))
+        self.assertIn("POSITIVE", direction_attr.get("allowed", []))
 
 
 if __name__ == "__main__":

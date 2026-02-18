@@ -95,12 +95,12 @@ flowchart TD
         {
           "entity_original": "CCS",
           "entity_standardized_candidate": "chronic coronary syndrome",
-          "role": "Condition",
+          "role": "ClinicalCondition",
           "logic_structured": {
             "operator": "PRESENT",
             "threshold": null,
             "unit": null,
-            "condition_context": null,
+            "context": null,
             "logic_type": "AND",
             "logic_group": "and_1"
           }
@@ -141,7 +141,7 @@ flowchart TD
 ```json
 {
   "rule_id": 1,
-  "role": "Condition",
+  "role": "ClinicalCondition",
   "entity_original": "LVEF > 35%",
   "entity_standardized_candidate": "left ventricular ejection fraction",
   "logic_structured": {

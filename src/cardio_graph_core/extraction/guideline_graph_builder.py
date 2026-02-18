@@ -250,15 +250,45 @@ class GuidelineGraphBuilder:
         self.mapping_rules = self.config.get("snomed_mapping", {}).get(
             "mapping_rules", []
         )
-        extraction_profile = (
-            (self.config.get("schema_profiles") or {}).get("extraction") or {}
-        )
+        nodes = self.config.get("nodes") or []
+
+        def _node_attr_names(label: str) -> set:
+            for node in nodes:
+                if (node.get("label") or "").strip() != label:
+                    continue
+                attrs = node.get("attributes") or []
+                return {
+                    (attr.get("name") or "").strip()
+                    for attr in attrs
+                    if (attr.get("name") or "").strip()
+                }
+            return set()
+
+        decision_attr_names = _node_attr_names("DecisionNode")
+        recommendation_attr_names = _node_attr_names("RecommendationNode")
+        extraction_logic_keys = {
+            "operator",
+            "threshold",
+            "unit",
+            "context",
+            "logic_type",
+            "logic_group",
+            "strength",
+            "level",
+            "direction",
+        }
+        profile_allowed_logic_keys = {
+            "logic_group"
+        } | decision_attr_names | recommendation_attr_names
+
+        extraction_profile = (self.config.get("schema_profiles") or {}).get(
+            "extraction"
+        ) or {}
         self._extraction_profile = extraction_profile
-        logic_fields = set((extraction_profile.get("logic_fields") or {}).keys())
-        recommendation_fields = set(
-            (extraction_profile.get("recommendation_fields") or {}).keys()
+        derived_allowed_logic_keys = extraction_logic_keys & profile_allowed_logic_keys
+        self._allowed_logic_structured_keys = (
+            derived_allowed_logic_keys or extraction_logic_keys
         )
-        self._allowed_logic_structured_keys = logic_fields | recommendation_fields
         rule_structure = extraction_profile.get("rule_structure") or {}
         conditions_cfg = rule_structure.get("conditions") or {}
         actions_cfg = rule_structure.get("actions") or {}
@@ -351,7 +381,9 @@ class GuidelineGraphBuilder:
             return "action"
         return None
 
-    def _validate_extracted_concepts(self, concepts: List[ExtractedConcept], focus: Optional[str]) -> List[ExtractedConcept]:
+    def _validate_extracted_concepts(
+        self, concepts: List[ExtractedConcept], focus: Optional[str]
+    ) -> List[ExtractedConcept]:
         if not concepts:
             return []
         is_population_focus = self._is_population_focus(focus)
@@ -382,7 +414,9 @@ class GuidelineGraphBuilder:
 
         return condition_concepts + action_concepts
 
-    def _validate_extracted_rules(self, rules: List[Any], focus: Optional[str]) -> List[Any]:
+    def _validate_extracted_rules(
+        self, rules: List[Any], focus: Optional[str]
+    ) -> List[Any]:
         valid_rules: List[Any] = []
         is_population_focus = self._is_population_focus(focus)
 

@@ -100,7 +100,7 @@ class Row10GraphTests(unittest.TestCase):
     def test_recommendation_class_level(self):
         query = (
             "MATCH (rec:RecommendationNode {rule_unique_id: $rule}) "
-            "RETURN [rec.class_of_recommendation, rec.level_of_evidence]"
+            "RETURN [rec.strength, rec.level]"
         )
         rec_props = self._fetch_single_value(query, rule=self.RULE_KEY)
         self._assert_verbose(

@@ -278,8 +278,8 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
         session.run(
             """
             MERGE (rec:RecommendationNode {rule_unique_id: $rule_key})
-            SET rec.class_of_recommendation = $class_of_recommendation,
-                rec.level_of_evidence = $level_of_evidence,
+            SET rec.strength = $strength,
+                rec.level = $level,
                 rec.direction = $direction,
                 rec.full_text = $full_text,
                 rec.recommendation_type = $recommendation_type,
@@ -362,9 +362,9 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
                             SET dec.question = $question,
                                 dec.operator = $operator,
-                                dec.threshold_value = $threshold_value,
+                                dec.threshold = $threshold,
                                 dec.unit = $unit,
-                                dec.condition_context = $context,
+                                dec.context = $context,
                                 dec.entity = $entity,
                                 dec.entity_original = $entity_original,
                                 dec.entity_standardized_candidate = $entity_standardized_candidate,
@@ -376,7 +376,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             decision_id=decision_id,
                             question=concept_name,
                             operator=logic_structured.get("operator"),
-                            threshold_value=logic_structured.get("threshold"),
+                            threshold=logic_structured.get("threshold"),
                             unit=logic_structured.get("unit"),
                             context=logic_structured.get("context"),
                             entity=concept_name,
@@ -394,9 +394,9 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
                             SET dec.question = $question,
                                 dec.operator = $operator,
-                                dec.threshold_value = $threshold_value,
+                                dec.threshold = $threshold,
                                 dec.unit = $unit,
-                                dec.condition_context = $context,
+                                dec.context = $context,
                                 dec.entity = $entity,
                                 dec.entity_original = $entity_original,
                                 dec.entity_standardized_candidate = $entity_standardized_candidate,
@@ -412,7 +412,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             decision_id=decision_id,
                             question=concept_name,
                             operator=logic_structured.get("operator"),
-                            threshold_value=logic_structured.get("threshold"),
+                            threshold=logic_structured.get("threshold"),
                             unit=logic_structured.get("unit"),
                             context=logic_structured.get("context"),
                             logic_type=logic_type,
@@ -462,9 +462,9 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
                         SET dec.question = $question,
                             dec.operator = $operator,
-                            dec.threshold_value = $threshold_value,
+                            dec.threshold = $threshold,
                             dec.unit = $unit,
-                            dec.condition_context = $context,
+                            dec.context = $context,
                             dec.entity = $entity,
                             dec.entity_original = $entity_original,
                             dec.entity_standardized_candidate = $entity_standardized_candidate,
@@ -476,7 +476,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         decision_id=decision_id,
                         question=concept_name,
                         operator=logic_structured.get("operator"),
-                        threshold_value=logic_structured.get("threshold"),
+                        threshold=logic_structured.get("threshold"),
                         unit=logic_structured.get("unit"),
                         context=logic_structured.get("context"),
                         entity=concept_name,
@@ -494,9 +494,9 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         MERGE (dec:DecisionNode {{rule_unique_id: $rule_key, decision_id: $decision_id}})
                         SET dec.question = $question,
                             dec.operator = $operator,
-                            dec.threshold_value = $threshold_value,
+                            dec.threshold = $threshold,
                             dec.unit = $unit,
-                            dec.condition_context = $context,
+                            dec.context = $context,
                             dec.entity = $entity,
                             dec.entity_original = $entity_original,
                             dec.entity_standardized_candidate = $entity_standardized_candidate,
@@ -512,7 +512,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         decision_id=decision_id,
                         question=concept_name,
                         operator=logic_structured.get("operator"),
-                        threshold_value=logic_structured.get("threshold"),
+                        threshold=logic_structured.get("threshold"),
                         unit=logic_structured.get("unit"),
                         context=logic_structured.get("context"),
                         logic_type=logic_type,
@@ -632,8 +632,8 @@ def _infer_recommendation_props(
         full_text = _normalize_value(concept.get("source_context"))
         if strength or level or direction:
             return {
-                "class_of_recommendation": strength,
-                "level_of_evidence": level,
+                "strength": strength,
+                "level": level,
                 "direction": direction,
                 "recommendation_type": recommendation_type,
                 "full_text": full_text,
@@ -659,8 +659,8 @@ def _infer_recommendation_props(
         fallback_full_text = _normalize_value(concepts[0].get("source_context"))
 
     return {
-        "class_of_recommendation": None,
-        "level_of_evidence": None,
+        "strength": None,
+        "level": None,
         "direction": None,
         "recommendation_type": None,
         "full_text": fallback_full_text,
@@ -671,7 +671,7 @@ def _recommendation_relation(
     logic_structured: Dict[str, Any], role: Optional[str]
 ) -> str:
     direction = (logic_structured.get("direction") or "").strip().upper()
-    is_negative = direction == "ABSENT"
+    is_negative = direction == "NEGATIVE"
     role = (role or "").strip()
     if is_negative:
         return "CONTRAINDICATES"

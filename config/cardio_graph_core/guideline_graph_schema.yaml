@@ -135,15 +135,17 @@ nodes:
       - name: "question"
         type: "string" # e.g., "Is LVEF < 40%?"
       - name: "operator"
-        type: "string" # e.g., "<", ">", "=", "PRESENT", "ABSENT", "PLANNED"
-      - name: "threshold_value"
+        type: "string" # e.g., "<", ">", "<=", ">=", "=", "PRESENT", "ABSENT", "PLANNED"
+        allowed: ["OR", "AND", "<", ">", "<=", ">=", "=", "PRESENT", "ABSENT", "PLANNED"]
+      - name: "threshold"
         type: "float"  # e.g., 40.0
       - name: "unit"
         type: "string"
-      - name: "condition_context"
+      - name: "context"
         type: "string"
       - name: "logic_type"
-        type: "string" # "AND", "OR", "null"
+        type: "string" # "AND", "OR", "SINGLE", null
+        allowed: ["AND", "OR", "SINGLE", null]
       - name: "entity"
         type: "string"
       - name: "entity_original"
@@ -154,12 +156,15 @@ nodes:
   - label: "RecommendationNode"
     description: "The specific clinical instruction derived from the guideline."
     attributes:
-      - name: "class_of_recommendation"
-        type: "string" # "I", "IIa", "IIb", "III"
-      - name: "level_of_evidence"
+      - name: "strength"
+        type: "string" # "Class I", "Class IIa", "Class IIb", "Class III"
+        allowed: ["Class I", "Class IIa", "Class IIb", "Class III", null]
+      - name: "level"
         type: "string" # "A", "B", "C"
+        allowed: ["A", "B", "C", null]
       - name: "direction"
         type: "string" # "POSITIVE", "NEGATIVE", "UNKNOWN"
+        allowed: ["POSITIVE", "NEGATIVE", "UNKNOWN", null]
       - name: "full_text"
         type: "string" # The exact sentence from the PDF
       - name: "recommendation_type"
@@ -277,39 +282,3 @@ schema_profiles:
       actions:
         min_items_main_focus: 1
         allow_empty_for_population_focus: true
-
-    origin_fields:
-      required:
-        - "entity_original"
-        - "entity_standardized_candidate"
-
-    logic_fields:
-      operator:
-        allowed: ["OR", "AND", "<", ">", "<=", ">=", "=", "PRESENT", "ABSENT", "PLANNED"]
-      threshold:
-        maps_to_graph_attribute: "threshold_value"
-      unit:
-        maps_to_graph_attribute: "unit"
-      context:
-        maps_to_graph_attribute: "condition_context"
-      logic_type:
-        allowed: ["AND", "OR", "SINGLE", null]
-      logic_group:
-        type: "string"
-
-    recommendation_fields:
-      strength:
-        maps_to_graph_attribute: "class_of_recommendation"
-      level:
-        maps_to_graph_attribute: "level_of_evidence"
-      direction:
-        allowed: ["POSITIVE", "NEGATIVE", "UNKNOWN"]
-
-    grounding_fields:
-      - "snomed_id"
-      - "preferred_term"
-      - "synonyms"
-      - "target_label"
-      - "taxonomy_path"
-      - "root_concept_id"
-      - "root_concept_term"
