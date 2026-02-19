@@ -73,7 +73,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class IIb",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -87,7 +94,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class IIb",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "high surgical risk",
@@ -101,7 +115,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "or_1",
           "strength": "Class IIb",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "not operable",
@@ -115,7 +136,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "or_1",
           "strength": "Class IIb",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "chronic coronary syndrome",
@@ -129,7 +157,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class IIb",
           "level": "B",
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "multivessel disease",
@@ -143,7 +178,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class IIb",
           "level": "B",
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -157,7 +199,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class IIb",
           "level": "B",
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "high surgical risk",
@@ -171,7 +220,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class IIb",
           "level": "B",
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "not operable",
@@ -185,7 +241,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class IIb",
           "level": "B",
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -201,7 +264,14 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class IIb",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         }
       ]
     }

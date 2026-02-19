@@ -129,7 +129,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "A",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "left ventricular ejection fraction > 35%",
@@ -143,37 +150,8 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "A",
-          "direction": "POSITIVE"
-        },
-        {
-          "entity": "chronic coronary syndrome",
-          "entity_original": "chronic coronary syndrome (ccs) patients",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "A",
-          "direction": "POSITIVE"
-        },
-        {
-          "entity": "left ventricular ejection fraction",
-          "entity_original": "left ventricular ejection fraction (lvef) > 35%",
-          "role": "ClinicalParameter",
-          "operator": ">",
-          "threshold": "35",
-          "unit": "%",
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "A",
           "direction": "POSITIVE",
           "preferred_term": "Left ventricular ejection fraction (observable entity)",
-          "synonyms": [],
           "snomed_id": 250908004,
           "target_label": "ClinicalParameter",
           "taxonomy_path": [
@@ -203,7 +181,75 @@ Aligned JSON (expected vs actual):
             }
           ],
           "root_concept_id": "363787002",
-          "root_concept_term": "Observable entity (observable entity)"
+          "root_concept_term": "Observable entity (observable entity)",
+          "synonyms": []
+        },
+        {
+          "entity": "chronic coronary syndrome",
+          "entity_original": "chronic coronary syndrome (ccs) patients",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "A",
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
+        },
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction (lvef) > 35%",
+          "role": "ClinicalParameter",
+          "operator": ">",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "A",
+          "direction": "POSITIVE",
+          "preferred_term": "Left ventricular ejection fraction (observable entity)",
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [
+            {
+              "concept_id": "250908004",
+              "term": "Left ventricular ejection fraction (observable entity)"
+            },
+            {
+              "concept_id": "70822001",
+              "term": "Cardiac ejection fraction, function (observable entity)"
+            },
+            {
+              "concept_id": "86185002",
+              "term": "Cardiac function (observable entity)"
+            },
+            {
+              "concept_id": "70337006",
+              "term": "Cardiovascular function (observable entity)"
+            },
+            {
+              "concept_id": "246464006",
+              "term": "Function (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)",
+          "synonyms": []
         }
       ],
       "actions": [
@@ -221,7 +267,6 @@ Aligned JSON (expected vs actual):
           "level": "A",
           "direction": "POSITIVE",
           "preferred_term": "Myocardial revascularization (procedure)",
-          "synonyms": [],
           "snomed_id": 275227003,
           "target_label": "Procedure",
           "taxonomy_path": [
@@ -255,7 +300,8 @@ Aligned JSON (expected vs actual):
             }
           ],
           "root_concept_id": "71388002",
-          "root_concept_term": "Procedure (procedure)"
+          "root_concept_term": "Procedure (procedure)",
+          "synonyms": []
         }
       ]
     }

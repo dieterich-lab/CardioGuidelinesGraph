@@ -167,7 +167,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -181,7 +188,39 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": "Left ventricular ejection fraction (observable entity)",
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [
+            {
+              "concept_id": "250908004",
+              "term": "Left ventricular ejection fraction (observable entity)"
+            },
+            {
+              "concept_id": "70822001",
+              "term": "Cardiac ejection fraction, function (observable entity)"
+            },
+            {
+              "concept_id": "86185002",
+              "term": "Cardiac function (observable entity)"
+            },
+            {
+              "concept_id": "70337006",
+              "term": "Cardiovascular function (observable entity)"
+            },
+            {
+              "concept_id": "246464006",
+              "term": "Function (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)",
+          "synonyms": []
         },
         {
           "entity": "three-vessel disease",
@@ -195,7 +234,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -211,7 +257,19 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class I",
           "level": "A",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Coronary artery operations (& bypass) (procedure)",
+          "snomed_id": 149169006,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "149169006",
+              "term": "Coronary artery operations (& bypass) (procedure)"
+            }
+          ],
+          "synonyms": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         }
       ]
     }

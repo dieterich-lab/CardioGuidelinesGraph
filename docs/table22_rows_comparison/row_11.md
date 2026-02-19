@@ -131,7 +131,6 @@ Aligned JSON (expected vs actual):
           "level": "Level B",
           "direction": "POSITIVE",
           "preferred_term": "Left ventricular ejection fraction (observable entity)",
-          "synonyms": [],
           "snomed_id": 250908004,
           "target_label": "ClinicalParameter",
           "taxonomy_path": [
@@ -161,7 +160,8 @@ Aligned JSON (expected vs actual):
             }
           ],
           "root_concept_id": "363787002",
-          "root_concept_term": "Observable entity (observable entity)"
+          "root_concept_term": "Observable entity (observable entity)",
+          "synonyms": []
         }
       ],
       "actions": []

@@ -115,7 +115,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "frailty",
@@ -129,7 +136,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_2",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "cognitive status",
@@ -143,7 +157,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_3",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "diabetes",
@@ -157,7 +178,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_4",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "other comorbidities",
@@ -171,7 +199,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_5",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "multivessel disease",
@@ -187,7 +222,6 @@ Aligned JSON (expected vs actual):
           "level": null,
           "direction": "UNKNOWN",
           "preferred_term": "Coronary artery disease (disorder)",
-          "synonyms": [],
           "snomed_id": 8957000,
           "target_label": "ClinicalCondition",
           "taxonomy_path": [
@@ -195,7 +229,10 @@ Aligned JSON (expected vs actual):
               "concept_id": "8957000",
               "term": "Coronary artery disease (disorder)"
             }
-          ]
+          ],
+          "synonyms": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "left main stem involvement",
@@ -209,7 +246,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_7",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "high anatomical complexity",
@@ -223,7 +267,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_8",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "likelihood of revascularization completeness",
@@ -237,7 +288,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_9",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "local expertise and outcomes",
@@ -251,7 +309,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_10",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -267,7 +332,14 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": null,
           "level": null,
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         }
       ]
     }

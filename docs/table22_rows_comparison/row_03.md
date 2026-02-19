@@ -89,9 +89,13 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "C",
           "direction": "POSITIVE",
-          "synonyms": [],
           "target_label": "Procedure",
-          "taxonomy_path": []
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         }
       ]
     }

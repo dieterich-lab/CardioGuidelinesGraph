@@ -229,6 +229,119 @@ def _is_empty_grouped_payload(payload):
     return True
 
 
+def _is_blank(value):
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    if isinstance(value, (list, dict, tuple, set)):
+        return len(value) == 0
+    return False
+
+
+def _normalize_grouped_payload(payload):
+    if isinstance(payload, dict) and isinstance(payload.get("rules"), list):
+        return payload
+
+    if isinstance(payload, dict) and payload:
+        legacy_rules = []
+        sortable = []
+        for key, value in payload.items():
+            if isinstance(value, dict) and (
+                isinstance(value.get("conditions"), list)
+                or isinstance(value.get("actions"), list)
+            ):
+                try:
+                    order = int(key)
+                except Exception:
+                    order = 10**9
+                sortable.append((order, str(key), value))
+        if sortable:
+            for _, _, value in sorted(sortable, key=lambda x: (x[0], x[1])):
+                legacy_rules.append(
+                    {
+                        "conditions": list(value.get("conditions") or []),
+                        "actions": list(value.get("actions") or []),
+                    }
+                )
+            return {"rules": legacy_rules}
+
+    if isinstance(payload, list):
+        return _group_from_flat_entries(payload)
+
+    return {"rules": [{"conditions": [], "actions": []}]}
+
+
+def _flatten_grouped_payload_entries(payload):
+    normalized = _normalize_grouped_payload(payload)
+    flat = []
+    for rule in normalized.get("rules", []):
+        for condition in rule.get("conditions", []):
+            item = dict(condition)
+            item["_side"] = "condition"
+            flat.append(item)
+        for action in rule.get("actions", []):
+            item = dict(action)
+            item["_side"] = "action"
+            flat.append(item)
+    return flat
+
+
+def _has_grounding_content(row):
+    if not isinstance(row, dict):
+        return False
+    root_hits = ((row.get("grounding_summary") or {}).get("root_hits") or [])
+    if root_hits:
+        return True
+    for entry in _flatten_grouped_payload_entries(row.get("actual_entries_display")):
+        if (
+            entry.get("taxonomy_path")
+            or entry.get("snomed_id") is not None
+            or entry.get("preferred_term")
+        ):
+            return True
+    return False
+
+
+def _select_grounding_row(base_row, grounding_rows_by_id):
+    if not isinstance(base_row, dict) or not grounding_rows_by_id:
+        return None
+
+    candidates = []
+    row_id = base_row.get("row_id")
+    mapped_row = base_row.get("mapped_actual_row")
+    if row_id:
+        candidates.append(row_id)
+    if mapped_row and mapped_row not in candidates:
+        candidates.append(mapped_row)
+
+    rows = [grounding_rows_by_id.get(candidate) for candidate in candidates]
+    rows = [row for row in rows if isinstance(row, dict)]
+    if not rows:
+        return None
+
+    for row in rows:
+        if _has_grounding_content(row):
+            return row
+    return rows[0]
+
+
+def _collect_grounding_hits(grounding_row):
+    if not isinstance(grounding_row, dict):
+        return []
+
+    hits = []
+    summary_hits = ((grounding_row.get("grounding_summary") or {}).get("root_hits") or [])
+    if isinstance(summary_hits, list):
+        hits.extend([hit for hit in summary_hits if isinstance(hit, dict)])
+
+    for entry in _flatten_grouped_payload_entries(grounding_row.get("actual_entries_display")):
+        if isinstance(entry, dict):
+            hits.append(entry)
+
+    return hits
+
+
 def _infer_side(entry):
     role = entry.get("role")
     if role in {"ClinicalCondition", "ClinicalParameter", "Condition"}:
@@ -292,6 +405,27 @@ def _pick_grounding_hit(entry, hits):
         if entity and _normalize_text(hit.get("entity")) == entity:
             return hit
 
+    for hit in hits:
+        if not role_match(hit):
+            continue
+        hit_entity = _normalize_text(hit.get("entity"))
+        if entity and hit_entity and (entity in hit_entity or hit_entity in entity):
+            return hit
+
+    for hit in hits:
+        if not role_match(hit):
+            continue
+        hit_entity_original = _normalize_text(hit.get("entity_original"))
+        if (
+            entity_original
+            and hit_entity_original
+            and (
+                entity_original in hit_entity_original
+                or hit_entity_original in entity_original
+            )
+        ):
+            return hit
+
     return None
 
 
@@ -307,7 +441,7 @@ def _enrich_entry_with_grounding(entry, hit):
         "target_label",
         "taxonomy_path",
     ]:
-        if enriched.get(key) is None and hit.get(key) is not None:
+        if _is_blank(enriched.get(key)) and not _is_blank(hit.get(key)):
             enriched[key] = hit.get(key)
 
     root_hit = hit.get("root_hit")
@@ -327,13 +461,18 @@ def _enrich_entry_with_grounding(entry, hit):
 
 
 def _enrich_grouped_payload_with_grounding(grouped_payload, grounding_summary):
-    if not isinstance(grouped_payload, dict):
-        return grouped_payload
-    if not isinstance(grounding_summary, dict):
-        return grouped_payload
+    grouped_payload = _normalize_grouped_payload(grouped_payload)
 
-    hits = grounding_summary.get("root_hits")
-    if not isinstance(hits, list) or not hits:
+    if isinstance(grounding_summary, list):
+        hits = [hit for hit in grounding_summary if isinstance(hit, dict)]
+    elif isinstance(grounding_summary, dict):
+        hits = grounding_summary.get("root_hits")
+        if not isinstance(hits, list):
+            hits = []
+    else:
+        hits = []
+
+    if not hits:
         return grouped_payload
 
     enriched = {"rules": []}
@@ -354,6 +493,36 @@ def _enrich_grouped_payload_with_grounding(grouped_payload, grounding_summary):
         enriched["rules"].append({"conditions": conditions, "actions": actions})
 
     return enriched
+
+
+def _ensure_grounding_fields(grouped_payload):
+    grouped_payload = _normalize_grouped_payload(grouped_payload)
+    defaults = {
+        "preferred_term": None,
+        "synonyms": [],
+        "snomed_id": None,
+        "target_label": None,
+        "taxonomy_path": [],
+        "root_concept_id": None,
+        "root_concept_term": None,
+    }
+
+    out = {"rules": []}
+    for rule in grouped_payload.get("rules", []):
+        if not isinstance(rule, dict):
+            continue
+        new_rule = {"conditions": [], "actions": []}
+        for side in ("conditions", "actions"):
+            for entry in rule.get(side, []):
+                if not isinstance(entry, dict):
+                    continue
+                enriched_entry = dict(entry)
+                for key, default_value in defaults.items():
+                    if key not in enriched_entry:
+                        enriched_entry[key] = default_value
+                new_rule[side].append(enriched_entry)
+        out["rules"].append(new_rule)
+    return out
 
 
 def render_reports(alignment_path: Path, grounding_alignment_path: Path | None = None):
@@ -431,14 +600,12 @@ def render_reports(alignment_path: Path, grounding_alignment_path: Path | None =
             actual_display = row.get("actual_entries_display")
             if _is_empty_grouped_payload(actual_display):
                 actual_display = _group_from_flat_entries(row.get("actual_entries", []))
-            grounding_summary = row.get("grounding_summary")
-            if not grounding_summary and row.get("row_id") in grounding_rows_by_id:
-                grounding_summary = grounding_rows_by_id[row.get("row_id")].get(
-                    "grounding_summary"
-                )
+            grounding_row = _select_grounding_row(row, grounding_rows_by_id)
+            grounding_hits = _collect_grounding_hits(grounding_row)
             actual_display = _enrich_grouped_payload_with_grounding(
-                actual_display, grounding_summary
+                actual_display, grounding_hits
             )
+            actual_display = _ensure_grounding_fields(actual_display)
             f.write(json.dumps(actual_display, indent=2))
             f.write("\n</pre></td>\n")
             f.write("  </tr>\n")
@@ -454,14 +621,12 @@ def render_reports(alignment_path: Path, grounding_alignment_path: Path | None =
             actual_display = row.get("actual_entries_display")
             if _is_empty_grouped_payload(actual_display):
                 actual_display = _group_from_flat_entries(row.get("actual_entries", []))
-            grounding_summary = row.get("grounding_summary")
-            if not grounding_summary and row.get("row_id") in grounding_rows_by_id:
-                grounding_summary = grounding_rows_by_id[row.get("row_id")].get(
-                    "grounding_summary"
-                )
+            grounding_row = _select_grounding_row(row, grounding_rows_by_id)
+            grounding_hits = _collect_grounding_hits(grounding_row)
             actual_display = _enrich_grouped_payload_with_grounding(
-                actual_display, grounding_summary
+                actual_display, grounding_hits
             )
+            actual_display = _ensure_grounding_fields(actual_display)
             f.write(_build_mermaid(actual_display, "LLM"))
             f.write("\n```\n\n")
 

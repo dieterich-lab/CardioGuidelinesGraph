@@ -115,7 +115,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "frailty",
@@ -129,7 +136,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_2",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "cognitive status",
@@ -143,7 +157,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_3",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "diabetes",
@@ -157,7 +178,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_4",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "other comorbidities",
@@ -171,7 +199,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_5",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "multivessel disease",
@@ -185,7 +220,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_6",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "left main stem involvement",
@@ -199,7 +241,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_7",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "high anatomical complexity",
@@ -213,7 +262,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_8",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "likelihood of revascularization completeness",
@@ -227,7 +283,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_9",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "local expertise",
@@ -241,7 +304,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_10",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         },
         {
           "entity": "surgical and interventional risk",
@@ -255,7 +325,14 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_11",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": null,
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -271,7 +348,43 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": null,
           "level": null,
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Myocardial revascularization (procedure)",
+          "snomed_id": 275227003,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "275227003",
+              "term": "Myocardial revascularization (procedure)"
+            },
+            {
+              "concept_id": "81266008",
+              "term": "Heart revascularization (procedure)"
+            },
+            {
+              "concept_id": "31413008",
+              "term": "Operative procedure on coronary artery (procedure)"
+            },
+            {
+              "concept_id": "38629001",
+              "term": "Operative procedure on the arteries of the thorax and abdomen (procedure)"
+            },
+            {
+              "concept_id": "74943008",
+              "term": "Operation on trunk (procedure)"
+            },
+            {
+              "concept_id": "387713003",
+              "term": "Surgical procedure (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)",
+          "synonyms": []
         }
       ]
     }
