@@ -73,7 +73,57 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Open heart surgery (procedure)",
+          "synonyms": [
+            "Open heart surgery"
+          ],
+          "snomed_id": 2598006,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "2598006",
+              "term": "Open heart surgery (procedure)"
+            },
+            {
+              "concept_id": "64915003",
+              "term": "Operation on heart (procedure)"
+            },
+            {
+              "concept_id": "386765006",
+              "term": "Operation on mediastinum (procedure)"
+            },
+            {
+              "concept_id": "118696008",
+              "term": "Procedure on mediastinum (procedure)"
+            },
+            {
+              "concept_id": "118695007",
+              "term": "Procedure on thorax (procedure)"
+            },
+            {
+              "concept_id": "118694006",
+              "term": "Procedure on trunk (procedure)"
+            },
+            {
+              "concept_id": "771329004",
+              "term": "Procedure on body region (procedure)"
+            },
+            {
+              "concept_id": "362958002",
+              "term": "Procedure by site (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ],
       "actions": [

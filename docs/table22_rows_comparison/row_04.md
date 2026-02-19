@@ -129,7 +129,49 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Hand preference (observable entity)",
+          "synonyms": [
+            "Hand preference"
+          ],
+          "snomed_id": 246559009,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [
+            {
+              "concept_id": "246559009",
+              "term": "Hand preference (observable entity)"
+            },
+            {
+              "concept_id": "363823006",
+              "term": "Cerebral dominance observable (observable entity)"
+            },
+            {
+              "concept_id": "363822001",
+              "term": "Brain observable (observable entity)"
+            },
+            {
+              "concept_id": "363821008",
+              "term": "Central nervous system observable (observable entity)"
+            },
+            {
+              "concept_id": "363820009",
+              "term": "Neurological observable (observable entity)"
+            },
+            {
+              "concept_id": "363788007",
+              "term": "Clinical history/examination observable (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)"
         },
         {
           "entity": "health literacy",
@@ -143,7 +185,33 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Health literacy (observable entity)",
+          "synonyms": [
+            "Health literacy"
+          ],
+          "snomed_id": 870552008,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [
+            {
+              "concept_id": "870552008",
+              "term": "Health literacy (observable entity)"
+            },
+            {
+              "concept_id": "246464006",
+              "term": "Function (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)"
         },
         {
           "entity": "cultural circumstances",
@@ -157,7 +225,49 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Cultural barrier status (observable entity)",
+          "synonyms": [
+            "Cultural barrier status"
+          ],
+          "snomed_id": 425271000,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [
+            {
+              "concept_id": "425271000",
+              "term": "Cultural barrier status (observable entity)"
+            },
+            {
+              "concept_id": "363910003",
+              "term": "Characteristic of psychosocial functioning (observable entity)"
+            },
+            {
+              "concept_id": "3850002",
+              "term": "Psychological function (observable entity)"
+            },
+            {
+              "concept_id": "285231000",
+              "term": "Mental function (observable entity)"
+            },
+            {
+              "concept_id": "18373002",
+              "term": "Nervous system function (observable entity)"
+            },
+            {
+              "concept_id": "246464006",
+              "term": "Function (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)"
         },
         {
           "entity": "social support",
@@ -171,7 +281,37 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Social support status (observable entity)",
+          "synonyms": [
+            "Social support status"
+          ],
+          "snomed_id": 405076007,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [
+            {
+              "concept_id": "405076007",
+              "term": "Social support status (observable entity)"
+            },
+            {
+              "concept_id": "302160007",
+              "term": "Household, family and support network detail (observable entity)"
+            },
+            {
+              "concept_id": "160476009",
+              "term": "Social / personal history observable (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)"
         }
       ],
       "actions": [

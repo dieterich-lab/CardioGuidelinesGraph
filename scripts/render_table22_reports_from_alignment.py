@@ -270,13 +270,26 @@ def _pick_grounding_hit(entry, hits):
         return (not role) or (not hit_role) or (role == hit_role)
 
     for hit in hits:
-        if role_match(hit) and entity_original and _normalize_text(
-            hit.get("entity_original")
-        ) == entity_original:
+        if (
+            role_match(hit)
+            and entity_original
+            and _normalize_text(hit.get("entity_original")) == entity_original
+        ):
             return hit
 
     for hit in hits:
         if role_match(hit) and entity and _normalize_text(hit.get("entity")) == entity:
+            return hit
+
+    for hit in hits:
+        if (
+            entity_original
+            and _normalize_text(hit.get("entity_original")) == entity_original
+        ):
+            return hit
+
+    for hit in hits:
+        if entity and _normalize_text(hit.get("entity")) == entity:
             return hit
 
     return None
@@ -287,15 +300,27 @@ def _enrich_entry_with_grounding(entry, hit):
         return entry
 
     enriched = dict(entry)
-    for key in ["preferred_term", "synonyms", "snomed_id", "target_label", "taxonomy_path"]:
+    for key in [
+        "preferred_term",
+        "synonyms",
+        "snomed_id",
+        "target_label",
+        "taxonomy_path",
+    ]:
         if enriched.get(key) is None and hit.get(key) is not None:
             enriched[key] = hit.get(key)
 
     root_hit = hit.get("root_hit")
     if isinstance(root_hit, dict):
-        if enriched.get("root_concept_id") is None and root_hit.get("root_concept_id") is not None:
+        if (
+            enriched.get("root_concept_id") is None
+            and root_hit.get("root_concept_id") is not None
+        ):
             enriched["root_concept_id"] = root_hit.get("root_concept_id")
-        if enriched.get("root_concept_term") is None and root_hit.get("root_concept_term") is not None:
+        if (
+            enriched.get("root_concept_term") is None
+            and root_hit.get("root_concept_term") is not None
+        ):
             enriched["root_concept_term"] = root_hit.get("root_concept_term")
 
     return enriched
@@ -337,7 +362,9 @@ def render_reports(alignment_path: Path, grounding_alignment_path: Path | None =
 
     grounding_rows_by_id = {}
     if grounding_alignment_path and grounding_alignment_path.is_file():
-        grounding_payload = json.loads(grounding_alignment_path.read_text(encoding="utf-8"))
+        grounding_payload = json.loads(
+            grounding_alignment_path.read_text(encoding="utf-8")
+        )
         for row in grounding_payload.get("rows", []):
             row_id = row.get("row_id")
             if row_id:

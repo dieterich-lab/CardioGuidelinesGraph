@@ -185,7 +185,17 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_6",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": "Coronary artery disease (disorder)",
+          "synonyms": [],
+          "snomed_id": 8957000,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [
+            {
+              "concept_id": "8957000",
+              "term": "Coronary artery disease (disorder)"
+            }
+          ]
         },
         {
           "entity": "left main stem involvement",
