@@ -14,6 +14,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
@@ -23,7 +24,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import click
 import yaml
 
-from cardio_graph_core.extraction.clients import create_client_registry
+from cardio_graph_core.extraction.clients import create_client_registry, ip_dict
+from cardio_graph_core.extraction.vector_candidate_retriever import (
+    Neo4jVectorCandidateRetriever,
+    VectorRetrieverConfig,
+)
 from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -317,6 +322,87 @@ class GuidelineGraphBuilder:
         self.enable_domain_filter = enable_domain_filter
         self.enable_semantic_tag_filter = enable_semantic_tag_filter
         self.off_domain_min_score = off_domain_min_score
+        self.enable_vector_grounding = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ENABLE_VECTOR", "false") or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.vector_top_k = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_TOP_K", "40") or "40"
+        )
+        self.vector_rerank_weight = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RERANK_WEIGHT", "0.25")
+            or "0.25"
+        )
+        self.vector_retriever: Optional[Neo4jVectorCandidateRetriever] = None
+        if self.enable_vector_grounding:
+            try:
+                embedding_node = (
+                    os.environ.get("CARDIO_GRAPH_GROUNDING_EMBEDDING_NODE", "g4")
+                    or "g4"
+                ).strip()
+                embedding_port = int(
+                    os.environ.get("CARDIO_GRAPH_GROUNDING_EMBEDDING_PORT", "11434")
+                    or "11434"
+                )
+                default_embedding_url = f"http://{ip_dict.get(embedding_node, embedding_node)}:{embedding_port}"
+                vector_config = VectorRetrieverConfig(
+                    uri=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_VECTOR_URI",
+                            "bolt://neo4j-dev3.internal:7687",
+                        )
+                        or "bolt://neo4j-dev3.internal:7687"
+                    ).strip(),
+                    user=(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_USER", "neo4j")
+                        or "neo4j"
+                    ).strip(),
+                    password=(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_PASSWORD", "")
+                        or ""
+                    ).strip(),
+                    index_name=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_VECTOR_INDEX",
+                            "snomed_term_embeddings",
+                        )
+                        or "snomed_term_embeddings"
+                    ).strip(),
+                    embedding_url=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_EMBEDDING_URL",
+                            default_embedding_url,
+                        )
+                        or default_embedding_url
+                    ).strip(),
+                    embedding_model=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_EMBEDDING_MODEL", "Qwen3embed"
+                        )
+                        or "Qwen3embed"
+                    ).strip(),
+                    top_k=self.vector_top_k,
+                    timeout_seconds=int(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_EMBEDDING_TIMEOUT", "20")
+                        or "20"
+                    ),
+                )
+                if vector_config.embedding_model:
+                    self.vector_retriever = Neo4jVectorCandidateRetriever(vector_config)
+                    logger.info(
+                        "Vector grounding enabled (index=%s, top_k=%d)",
+                        vector_config.index_name,
+                        self.vector_top_k,
+                    )
+                else:
+                    logger.warning(
+                        "Vector grounding enabled but no embedding model set; disabling vector retrieval"
+                    )
+                    self.enable_vector_grounding = False
+            except Exception as exc:
+                logger.warning(
+                    "Failed to initialize vector grounding retriever: %s", exc
+                )
+                self.enable_vector_grounding = False
 
     def _collect_root_concepts(self, mapping_rules: List[Dict]) -> List[int]:
         roots = []
@@ -420,7 +506,24 @@ class GuidelineGraphBuilder:
         return valid_rules
 
     def _normalize(self, text: str) -> str:
-        return " ".join(text.lower().strip().split())
+        normalized = unicodedata.normalize("NFKD", str(text or ""))
+        normalized = normalized.encode("ascii", "ignore").decode("ascii")
+        normalized = normalized.lower()
+        normalized = re.sub(r"[/_\-]", " ", normalized)
+        normalized = re.sub(r"[^a-z0-9()%\s]", " ", normalized)
+        return " ".join(normalized.strip().split())
+
+    def _normalize_token(self, token: str) -> str:
+        token = self._normalize(token)
+        if len(token) <= 4:
+            return token
+        if token.endswith("ies") and len(token) > 5:
+            return token[:-3] + "y"
+        if token.endswith("es") and len(token) > 5:
+            return token[:-2]
+        if token.endswith("s") and len(token) > 4:
+            return token[:-1]
+        return token
 
     def _load_abbreviations(self, abbrv_path: str) -> Dict[str, List[str]]:
         mapping: Dict[str, List[str]] = {}
@@ -469,9 +572,47 @@ class GuidelineGraphBuilder:
                 variants.add(variant)
         return list(variants)
 
+    def _query_variants(self, term: str) -> List[str]:
+        variants = []
+
+        def add(value: str) -> None:
+            value = " ".join(str(value or "").strip().split())
+            if value:
+                variants.append(value)
+
+        add(term)
+        stripped = re.sub(r"\s*\([^)]*\)\s*", " ", term).strip()
+        add(stripped)
+
+        normalized = self._normalize(term)
+        add(normalized)
+
+        de_prefixed = re.sub(
+            r"^(patients?|subjects?)\s+(scheduled\s+for|with|having)\s+",
+            "",
+            normalized,
+            flags=re.IGNORECASE,
+        ).strip()
+        add(de_prefixed)
+        add(re.sub(r"\bpatients?\b", "", normalized, flags=re.IGNORECASE).strip())
+
+        tokenized = [self._normalize_token(t) for t in normalized.split()]
+        add(" ".join([t for t in tokenized if t]))
+
+        seen = set()
+        deduped = []
+        for variant in variants:
+            key = self._normalize(variant)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            deduped.append(variant)
+        return deduped
+
     def _important_tokens(self, text: str) -> List[str]:
         tokens = re.findall(r"[a-z0-9]+", self._normalize(text))
-        return [t for t in tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
+        normalized_tokens = [self._normalize_token(t) for t in tokens]
+        return [t for t in normalized_tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
 
     def _has_disallowed_semantic_tag(self, term: Optional[str]) -> bool:
         if not term:
@@ -503,7 +644,45 @@ class GuidelineGraphBuilder:
             return 0.0
         if q == c:
             return 1.0
-        return SequenceMatcher(None, q, c).ratio()
+        seq = SequenceMatcher(None, q, c).ratio()
+        partial = 0.0
+        if q in c or c in q:
+            partial = min(len(q), len(c)) / max(len(q), len(c))
+        q_tokens = set(self._important_tokens(q))
+        c_tokens = set(self._important_tokens(c))
+        token_jaccard = 0.0
+        if q_tokens and c_tokens:
+            token_jaccard = len(q_tokens & c_tokens) / len(q_tokens | c_tokens)
+        return max(seq, partial, token_jaccard)
+
+    def _vector_candidates(
+        self, term: str
+    ) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
+        if not self.enable_vector_grounding or not self.vector_retriever:
+            return [], {}
+        try:
+            candidates = self.vector_retriever.retrieve(term, top_k=self.vector_top_k)
+        except Exception as exc:
+            logger.warning("Vector retrieval failed for '%s': %s", term, exc)
+            return [], {}
+
+        vector_score_by_concept: Dict[int, float] = {}
+        for row in candidates:
+            concept_id = row.get("conceptid")
+            if concept_id is None:
+                continue
+            try:
+                concept_id = int(concept_id)
+            except (TypeError, ValueError):
+                continue
+            row_score = float(row.get("vector_score") or 0.0)
+            if concept_id not in vector_score_by_concept:
+                vector_score_by_concept[concept_id] = row_score
+            else:
+                vector_score_by_concept[concept_id] = max(
+                    vector_score_by_concept[concept_id], row_score
+                )
+        return candidates, vector_score_by_concept
 
     def _token_overlap_ratio(self, tokens: set, term: Optional[str]) -> float:
         if not tokens or not term:
@@ -671,11 +850,11 @@ class GuidelineGraphBuilder:
         else:
             expanded_terms = self._expand_term(term)
             expanded_terms.extend(self._expand_term_variants(term))
-            search_terms.append(term)
+            search_terms.extend(self._query_variants(term))
             search_terms.extend(expanded_terms)
             search_terms.extend(normalized_tokens)
             if stripped_term and stripped_term != term:
-                search_terms.append(stripped_term)
+                search_terms.extend(self._query_variants(stripped_term))
                 search_terms.extend(self._expand_term(stripped_term))
             if paren_tokens:
                 search_terms.extend(paren_tokens)
@@ -700,6 +879,21 @@ class GuidelineGraphBuilder:
                 cached = self.snomed_explorer.search_concepts_by_term(t, limit=limit)
                 self._search_cache[t] = cached
             results.extend(cached)
+
+        vector_results: List[Dict[str, Any]] = []
+        vector_score_by_concept: Dict[int, float] = {}
+        if self.enable_vector_grounding and self.vector_retriever:
+            vector_search_terms = [term]
+            if stripped_term and stripped_term != term:
+                vector_search_terms.append(stripped_term)
+            for vt in vector_search_terms:
+                retrieved, score_map = self._vector_candidates(vt)
+                vector_results.extend(retrieved)
+                for concept_id, vector_score in score_map.items():
+                    prev = vector_score_by_concept.get(concept_id, 0.0)
+                    vector_score_by_concept[concept_id] = max(prev, vector_score)
+
+        results.extend(vector_results)
 
         if not results:
             return None, None, 0.0
@@ -814,7 +1008,11 @@ class GuidelineGraphBuilder:
                         continue
 
                 if score > local_best_score:
-                    local_best_score = score
+                    vector_bonus = (
+                        vector_score_by_concept.get(int(concept_id), 0.0)
+                        * self.vector_rerank_weight
+                    )
+                    local_best_score = min(1.0, score + vector_bonus)
                     local_best_id = concept_id
                     local_best_term = preferred or best_candidate_term
             return local_best_id, local_best_term, local_best_score
