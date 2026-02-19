@@ -201,4 +201,3 @@ Missing rules:
 
 Extra rules:
 - ClinicalParameter: left ventricular ejection fraction | op=<= | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class IIa | level=Level B | dir=POSITIVE
-

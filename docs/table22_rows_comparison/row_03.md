@@ -138,4 +138,3 @@ Missing rules:
 
 Extra rules:
 - Procedure: patient communication of heart team recommendations | class=Class I | level=C | dir=POSITIVE
-

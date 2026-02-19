@@ -186,4 +186,3 @@ Extra rules:
 - Condition: single- | op=PRESENT | logic=OR | grp=or_1 | class=Class I | level=B | dir=POSITIVE
 - Condition: two-vessel disease involving proximal left anterior descending artery | op=PRESENT | logic=OR | grp=or_1 | class=Class I | level=B | dir=POSITIVE
 - Procedure: myocardial revascularization | op=PRESENT | class=Class I | level=B | dir=POSITIVE
-

@@ -194,4 +194,3 @@ Extra rules:
 - Condition: multivessel disease | op=PRESENT | logic=AND | grp=and_6 | dir=UNKNOWN
 - Condition: other comorbidities | op=PRESENT | logic=AND | grp=and_5 | dir=UNKNOWN
 - Procedure: assessment of procedural risks and post-procedural outcomes | dir=POSITIVE
-

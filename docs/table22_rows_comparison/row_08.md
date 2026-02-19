@@ -203,4 +203,3 @@ Extra rules:
 - Condition: chronic coronary syndrome patients | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=A | dir=POSITIVE
 - Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=A | dir=POSITIVE
 - Procedure: myocardial revascularization | class=Class I | level=A | dir=POSITIVE
-

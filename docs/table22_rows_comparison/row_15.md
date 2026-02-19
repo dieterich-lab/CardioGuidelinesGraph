@@ -138,4 +138,3 @@ Extra rules:
 - Condition: revascularization completeness | op=PRESENT | logic=AND | grp=and_8 | dir=UNKNOWN
 - Condition: surgical and interventional risk | op=PRESENT | logic=AND | grp=and_10 | dir=UNKNOWN
 - Procedure: revascularization | dir=POSITIVE
-

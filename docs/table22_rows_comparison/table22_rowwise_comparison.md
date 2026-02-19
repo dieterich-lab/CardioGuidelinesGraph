@@ -2,7 +2,7 @@
 
 Ground truth: /prj/doctoral_letters/guide/data/evaluation/table_22_manual_full_graph.json
 Extracted rules: /prj/doctoral_letters/guide/data/graph/extracted_rules_docling_table_000_whole_grid_score0.6_df1_tag0_off0.jsonl
-Mapping: truth row_N -> extracted row_{N+1} (skip extracted row_01 header)
+truth row_N -> extracted row_{N+1} (skip extracted row_01 header)
 
 Ground after extraction: False
 

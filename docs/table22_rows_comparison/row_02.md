@@ -124,4 +124,3 @@ Extra rules:
 - Condition: complex clinical cases | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Condition: same recommendation level for cabg and pci | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Procedure: heart team discussion | class=Class I | level=C | dir=POSITIVE
-

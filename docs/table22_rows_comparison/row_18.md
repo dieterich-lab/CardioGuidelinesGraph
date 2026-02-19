@@ -177,4 +177,3 @@ Extra rules:
 - Condition: complex coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Condition: complex coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=UNKNOWN
 - Procedure: assess procedural risks and post-procedural outcomes | class=Class I | level=C | dir=POSITIVE
-

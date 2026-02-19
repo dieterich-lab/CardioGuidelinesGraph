@@ -198,4 +198,3 @@ Extra rules:
 - Condition: other comorbidities | op=PRESENT | logic=AND | grp=and_5 | dir=UNKNOWN
 - Condition: surgical and interventional risk | op=PRESENT | logic=AND | grp=and_11 | dir=UNKNOWN
 - Procedure: revascularization | dir=POSITIVE
-

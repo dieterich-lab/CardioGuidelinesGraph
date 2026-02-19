@@ -198,4 +198,3 @@ Extra rules:
 - Condition: patient preferences | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Condition: social support | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Procedure: revascularization decision | op=PRESENT | class=Class I | level=C | dir=POSITIVE
-

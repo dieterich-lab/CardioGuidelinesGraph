@@ -187,4 +187,3 @@ Extra rules:
 - Condition: chronic coronary syndrome with left ventricular ejection fraction | op=<= | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Procedure: medical therapy | class=Class I | level=C | dir=POSITIVE
 - Procedure: revascularization | class=Class I | level=C | dir=POSITIVE
-

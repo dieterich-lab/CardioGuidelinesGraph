@@ -178,4 +178,3 @@ Extra rules:
 - ClinicalParameter: coronary artery bypass grafting | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=B | dir=POSITIVE
 - Condition: patients undergoing coronary artery bypass grafting (cabg) | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=B | dir=UNKNOWN
 - Procedure: society of thoracic surgeons score | op=PRESENT | class=Class I | level=B | dir=POSITIVE
-

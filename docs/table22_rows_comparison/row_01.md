@@ -213,4 +213,3 @@ Extra rules:
 - Condition: patients scheduled for revascularization | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Condition: patients scheduled for revascularization | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=UNKNOWN
 - Procedure: information about revascularization benefits, risks, and alternatives | class=Class I | level=C | dir=POSITIVE
-

@@ -225,4 +225,3 @@ Extra rules:
 - Condition: chronic coronary syndrome with persistent angina despite guideline-directed medical treatment | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=A | dir=UNKNOWN
 - Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=A | dir=POSITIVE
 - Procedure: myocardial revascularization | class=Class I | level=A | dir=POSITIVE
-

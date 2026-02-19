@@ -120,4 +120,3 @@ Missing rules:
 Extra rules:
 - Condition: heart team | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Procedure: revascularization protocol development | class=Class I | level=C | dir=POSITIVE
-

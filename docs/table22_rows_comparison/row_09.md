@@ -248,4 +248,3 @@ Extra rules:
 - Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
 - Condition: three-vessel disease | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
 - Procedure: myocardial revascularization | class=Class I | level=A | dir=POSITIVE
-

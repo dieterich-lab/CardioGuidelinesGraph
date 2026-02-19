@@ -183,4 +183,3 @@ Extra rules:
 - Condition: multivessel coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=B | dir=POSITIVE
 - Condition: surgically eligible chronic coronary syndrome patients | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=B | dir=POSITIVE
 - Procedure: coronary artery bypass grafting | op=PRESENT | class=Class I | level=B | dir=POSITIVE
-
