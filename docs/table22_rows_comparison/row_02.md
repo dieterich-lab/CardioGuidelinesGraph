@@ -21,16 +21,15 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "rule_id": 1,
     "conditions": [
       {
         "entity": "complex clinical cases",
         "entity_original": "complex clinical cases",
-        "role": "Condition",
+        "role": "ClinicalCondition",
         "operator": "PRESENT",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": "AND",
         "logic_group": "and_1",
         "strength": null,
@@ -42,11 +41,11 @@ Aligned JSON (expected vs actual):
       {
         "entity": "heart team discussion",
         "entity_original": "heart team discussion",
-        "role": "Procedure",
+        "role": "ClinicalAction",
         "operator": null,
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": null,
         "logic_group": null,
         "strength": "I",
@@ -59,91 +58,47 @@ Aligned JSON (expected vs actual):
 </pre></td>
     <td valign="top"><pre>
 {
-  "1": {
-    "conditions": [
-      {
-        "entity": "cabg and pci same recommendation level",
-        "entity_original": "cabg and pci hold the same level of recommendation",
-        "role": "ClinicalParameter",
-        "operator": "PRESENT",
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "I",
-        "level": "C",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "condition",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": null,
-        "target_label": "ClinicalParameter",
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null,
-        "mapped_target_label": null
-      }
-    ],
-    "actions": [
-      {
-        "entity": "heart team evaluation",
-        "entity_original": "heart team discussion",
-        "role": "Procedure",
-        "operator": null,
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "I",
-        "level": "C",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "action",
-        "preferred_term": "Gait evaluation (regime/therapy)",
-        "synonyms": [
-          "Gait evaluation"
-        ],
-        "snomed_id": 39609006,
-        "target_label": "Procedure",
-        "taxonomy_path": [
-          {
-            "concept_id": "39609006",
-            "term": "Gait evaluation (regime/therapy)"
-          },
-          {
-            "concept_id": "58452000",
-            "term": "Physiotherapy training (procedure)"
-          },
-          {
-            "concept_id": "118629009",
-            "term": "Functional training (procedure)"
-          },
-          {
-            "concept_id": "409073007",
-            "term": "Education (procedure)"
-          },
-          {
-            "concept_id": "128927009",
-            "term": "Procedure by method (procedure)"
-          },
-          {
-            "concept_id": "71388002",
-            "term": "Procedure (procedure)"
-          },
-          {
-            "concept_id": "138875005",
-            "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-          }
-        ],
-        "root_concept_id": "71388002",
-        "root_concept_term": "Procedure (procedure)",
-        "mapped_target_label": "Procedure"
-      }
-    ]
-  }
+  "rules": [
+    {
+      "conditions": [],
+      "actions": [
+        {
+          "entity": "heart team discussion",
+          "entity_original": "heart team discussion",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE",
+          "preferred_term": "Discussion (procedure)",
+          "synonyms": [],
+          "snomed_id": 223482009,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "223482009",
+              "term": "Discussion (procedure)"
+            },
+            {
+              "concept_id": "128927009",
+              "term": "Procedure by method (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
+        }
+      ]
+    }
+  ]
 }
 </pre></td>
   </tr>
@@ -154,11 +109,9 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: heart team discussion]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: complex clinical cases]
+    C_and_1_1[ClinicalCondition: complex clinical cases]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   D_and_1_1 -->|RESULTS_IN condition_met=true| REC
@@ -169,26 +122,18 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: heart team evaluation]
+  ACT1[Procedure: heart team discussion]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph LLM_group_1_AND
     D_group_1_1[DecisionNode group_1 s1]
     C_group_1_1[ClinicalParameter: cabg and pci same recommendation level]
     D_group_1_1 -->|EVALUATES| C_group_1_1
     D_group_1_2[DecisionNode group_1 s2]
-    C_group_1_2[Condition: cabg and pci same recommendation level]
-    D_group_1_2 -->|CHECKS_FOR| C_group_1_2
-    D_group_1_3[DecisionNode group_1 s3]
-    C_group_1_3[ClinicalParameter: complex clinical case]
-    D_group_1_3 -->|EVALUATES| C_group_1_3
-    D_group_1_4[DecisionNode group_1 s4]
-    C_group_1_4[Condition: complex clinical case]
-    D_group_1_4 -->|CHECKS_FOR| C_group_1_4
+    C_group_1_2[ClinicalParameter: complex clinical case]
+    D_group_1_2 -->|EVALUATES| C_group_1_2
     D_group_1_1 -->|LEADS_TO condition_met=true| D_group_1_2
-    D_group_1_2 -->|LEADS_TO condition_met=true| D_group_1_3
-    D_group_1_3 -->|LEADS_TO condition_met=true| D_group_1_4
   end
-  D_group_1_4 -->|RESULTS_IN condition_met=true| REC
+  D_group_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Grounding summary (optional):
@@ -196,9 +141,8 @@ Grounding summary (optional):
 ```json
 {
   "enabled": true,
-  "total_grounded": 2,
+  "total_grounded": 1,
   "target_label_counts": {
-    "ClinicalParameter": 1,
     "Procedure": 1
   },
   "root_hit_counts": {
@@ -206,42 +150,17 @@ Grounding summary (optional):
   },
   "root_hits": [
     {
-      "entity": "CABG and PCI same recommendation level",
-      "entity_original": "CABG and PCI hold the same level of recommendation",
-      "role": "ClinicalParameter",
-      "preferred_term": null,
-      "synonyms": [],
-      "snomed_id": null,
-      "target_label": "ClinicalParameter",
-      "taxonomy_path": [],
-      "root_hit": null
-    },
-    {
-      "entity": "Heart Team Evaluation",
+      "entity": "Heart Team discussion",
       "entity_original": "Heart Team discussion",
       "role": "Procedure",
-      "preferred_term": "Gait evaluation (regime/therapy)",
-      "synonyms": [
-        "Gait evaluation"
-      ],
-      "snomed_id": 39609006,
+      "preferred_term": "Discussion (procedure)",
+      "synonyms": [],
+      "snomed_id": 223482009,
       "target_label": "Procedure",
       "taxonomy_path": [
         {
-          "concept_id": "39609006",
-          "term": "Gait evaluation (regime/therapy)"
-        },
-        {
-          "concept_id": "58452000",
-          "term": "Physiotherapy training (procedure)"
-        },
-        {
-          "concept_id": "118629009",
-          "term": "Functional training (procedure)"
-        },
-        {
-          "concept_id": "409073007",
-          "term": "Education (procedure)"
+          "concept_id": "223482009",
+          "term": "Discussion (procedure)"
         },
         {
           "concept_id": "128927009",
@@ -250,10 +169,6 @@ Grounding summary (optional):
         {
           "concept_id": "71388002",
           "term": "Procedure (procedure)"
-        },
-        {
-          "concept_id": "138875005",
-          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
         }
       ],
       "root_hit": {
@@ -268,37 +183,33 @@ Grounding summary (optional):
 
 Concepts:
 - expected: 2
-- actual: 5
+- actual: 3
 - matches: 0
 - missing: 2
-- extra: 5
+- extra: 3
 
 Missing concepts:
-- Condition: complex clinical cases
-- Procedure: heart team discussion
+- ClinicalAction: heart team discussion
+- ClinicalCondition: complex clinical cases
 
 Extra concepts:
 - ClinicalParameter: cabg and pci same recommendation level
 - ClinicalParameter: complex clinical case
-- Condition: cabg and pci same recommendation level
-- Condition: complex clinical case
-- Procedure: heart team evaluation
+- Procedure: heart team discussion
 
 Rules (concept + logic fields):
 - expected: 2
-- actual: 5
+- actual: 3
 - matches: 0
 - missing: 2
-- extra: 5
+- extra: 3
 
 Missing rules:
-- Condition: complex clinical cases | op=PRESENT | logic=AND | grp=and_1
-- Procedure: heart team discussion | class=I | level=C | dir=POSITIVE
+- ClinicalAction: heart team discussion | class=I | level=C | dir=POSITIVE
+- ClinicalCondition: complex clinical cases | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- ClinicalParameter: cabg and pci same recommendation level | op=PRESENT | class=I | level=C | dir=POSITIVE
-- ClinicalParameter: complex clinical case | op=PRESENT | class=I | level=C | dir=POSITIVE
-- Condition: cabg and pci same recommendation level | op=PRESENT | ctx=same level of recommendation | dir=POSITIVE
-- Condition: complex clinical case | op=PRESENT | dir=POSITIVE
-- Procedure: heart team evaluation | class=I | level=C | dir=POSITIVE
+- ClinicalParameter: cabg and pci same recommendation level | op=PRESENT | dir=UNKNOWN
+- ClinicalParameter: complex clinical case | op=PRESENT | dir=UNKNOWN
+- Procedure: heart team discussion | class=Class I | level=C | dir=POSITIVE
 

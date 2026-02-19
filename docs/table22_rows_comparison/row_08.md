@@ -21,16 +21,15 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "rule_id": 1,
     "conditions": [
       {
         "entity": "ccs",
         "entity_original": "ccs patient",
-        "role": "Condition",
+        "role": "ClinicalCondition",
         "operator": "PRESENT",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": "AND",
         "logic_group": "and_1",
         "strength": null,
@@ -44,7 +43,7 @@ Aligned JSON (expected vs actual):
         "operator": ">",
         "threshold": "35",
         "unit": "%",
-        "condition_context": null,
+        "context": null,
         "logic_type": "AND",
         "logic_group": "and_1",
         "strength": null,
@@ -54,11 +53,11 @@ Aligned JSON (expected vs actual):
       {
         "entity": "functionally significant three-vessel disease",
         "entity_original": "functionally significant single-vessel disease involving the proximal lad",
-        "role": "Condition",
+        "role": "ClinicalCondition",
         "operator": "PRESENT",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": "OR",
         "logic_group": "or_1",
         "strength": null,
@@ -68,11 +67,11 @@ Aligned JSON (expected vs actual):
       {
         "entity": "functionally significant three-vessel disease",
         "entity_original": "functionally significant two-vessel disease involving the proximal lad",
-        "role": "Condition",
+        "role": "ClinicalCondition",
         "operator": "PRESENT",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": "OR",
         "logic_group": "or_1",
         "strength": null,
@@ -88,7 +87,7 @@ Aligned JSON (expected vs actual):
         "operator": null,
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": null,
         "logic_group": null,
         "strength": "I",
@@ -102,7 +101,7 @@ Aligned JSON (expected vs actual):
         "operator": null,
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": null,
         "logic_group": null,
         "strength": "I",
@@ -115,281 +114,184 @@ Aligned JSON (expected vs actual):
 </pre></td>
     <td valign="top"><pre>
 {
-  "1": {
-    "conditions": [
-      {
-        "entity": "left ventricular ejection fraction",
-        "entity_original": "lvef > 35%",
-        "role": "ClinicalParameter",
-        "operator": ">",
-        "threshold": "35",
-        "unit": "%",
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "I",
-        "level": "B",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "condition",
-        "preferred_term": "Left ventricular ejection fraction (observable entity)",
-        "synonyms": [],
-        "snomed_id": 250908004,
-        "target_label": "ClinicalParameter",
-        "taxonomy_path": [
-          {
-            "concept_id": "250908004",
-            "term": "Left ventricular ejection fraction (observable entity)"
-          },
-          {
-            "concept_id": "70822001",
-            "term": "Cardiac ejection fraction, function (observable entity)"
-          },
-          {
-            "concept_id": "86185002",
-            "term": "Cardiac function (observable entity)"
-          },
-          {
-            "concept_id": "70337006",
-            "term": "Cardiovascular function (observable entity)"
-          },
-          {
-            "concept_id": "246464006",
-            "term": "Function (observable entity)"
-          },
-          {
-            "concept_id": "363787002",
-            "term": "Observable entity (observable entity)"
-          }
-        ],
-        "root_concept_id": "363787002",
-        "root_concept_term": "Observable entity (observable entity)",
-        "mapped_target_label": "ClinicalParameter"
-      },
-      {
-        "entity": "proximal left anterior descending artery disease",
-        "entity_original": "functionally significant single- or two-vessel disease involving the proximal lad",
-        "role": "ClinicalParameter",
-        "operator": "PRESENT",
-        "threshold": null,
-        "unit": null,
-        "condition_context": "functionally significant",
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "I",
-        "level": "B",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "condition",
-        "preferred_term": "Left anterior descending coronary artery thrombosis (disorder)",
-        "synonyms": [
-          "Left anterior descending coronary artery thrombosis"
-        ],
-        "snomed_id": 28248000,
-        "target_label": "ClinicalCondition",
-        "taxonomy_path": [
-          {
-            "concept_id": "28248000",
-            "term": "Left anterior descending coronary artery thrombosis (disorder)"
-          },
-          {
-            "concept_id": "398274000",
-            "term": "Coronary artery thrombosis (disorder)"
-          },
-          {
-            "concept_id": "65198009",
-            "term": "Arterial thrombosis (disorder)"
-          },
-          {
-            "concept_id": "359557001",
-            "term": "Disorder of artery (disorder)"
-          },
-          {
-            "concept_id": "27550009",
-            "term": "Disorder of blood vessel (disorder)"
-          },
-          {
-            "concept_id": "19660004",
-            "term": "Disorder of soft tissue (disorder)"
-          },
-          {
-            "concept_id": "248402002",
-            "term": "General finding of soft tissue (finding)"
-          },
-          {
-            "concept_id": "404684003",
-            "term": "Clinical finding (finding)"
-          },
-          {
-            "concept_id": "138875005",
-            "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-          }
-        ],
-        "root_concept_id": "404684003",
-        "root_concept_term": "Clinical finding (finding)",
-        "mapped_target_label": "ClinicalCondition"
-      },
-      {
-        "entity": "lvef",
-        "entity_original": "lvef > 35%",
-        "role": "ClinicalParameter",
-        "operator": ">",
-        "threshold": "35",
-        "unit": "%",
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "I",
-        "level": "B",
-        "direction": "UNKNOWN",
-        "rule_id": 1,
-        "side": "condition",
-        "preferred_term": "Left ventricular ejection fraction (observable entity)",
-        "synonyms": [
-          "Left ventricular ejection fraction",
-          "LVEF - Left ventricular ejection fraction"
-        ],
-        "snomed_id": 250908004,
-        "target_label": "ClinicalParameter",
-        "taxonomy_path": [
-          {
-            "concept_id": "250908004",
-            "term": "Left ventricular ejection fraction (observable entity)"
-          },
-          {
-            "concept_id": "250907009",
-            "term": "Left ventricular function (observable entity)"
-          },
-          {
-            "concept_id": "86185002",
-            "term": "Cardiac function (observable entity)"
-          },
-          {
-            "concept_id": "70337006",
-            "term": "Cardiovascular function (observable entity)"
-          },
-          {
-            "concept_id": "246464006",
-            "term": "Function (observable entity)"
-          },
-          {
-            "concept_id": "363787002",
-            "term": "Observable entity (observable entity)"
-          },
-          {
-            "concept_id": "138875005",
-            "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-          }
-        ],
-        "root_concept_id": "363787002",
-        "root_concept_term": "Observable entity (observable entity)",
-        "mapped_target_label": "ClinicalParameter"
-      },
-      {
-        "entity": "functionally significant single",
-        "entity_original": "functionally significant single- or two-vessel disease involving the proximal lad",
-        "role": "ClinicalParameter",
-        "operator": "PRESENT",
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": "OR",
-        "logic_group": "or_1",
-        "strength": "I",
-        "level": "B",
-        "direction": "UNKNOWN",
-        "rule_id": 1,
-        "side": "condition",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": null,
-        "target_label": "ClinicalParameter",
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null,
-        "mapped_target_label": null
-      },
-      {
-        "entity": "two-vessel disease involving proximal lad",
-        "entity_original": "functionally significant single- or two-vessel disease involving the proximal lad",
-        "role": "ClinicalParameter",
-        "operator": "PRESENT",
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": "OR",
-        "logic_group": "or_1",
-        "strength": "I",
-        "level": "B",
-        "direction": "UNKNOWN",
-        "rule_id": 1,
-        "side": "condition",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": null,
-        "target_label": "ClinicalParameter",
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null,
-        "mapped_target_label": null
-      }
-    ],
-    "actions": [
-      {
-        "entity": "myocardial revascularization",
-        "entity_original": "myocardial revascularization",
-        "role": "Procedure",
-        "operator": null,
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "I",
-        "level": "B",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "action",
-        "preferred_term": "Myocardial revascularization (procedure)",
-        "synonyms": [],
-        "snomed_id": 275227003,
-        "target_label": "Procedure",
-        "taxonomy_path": [
-          {
-            "concept_id": "275227003",
-            "term": "Myocardial revascularization (procedure)"
-          },
-          {
-            "concept_id": "81266008",
-            "term": "Heart revascularization (procedure)"
-          },
-          {
-            "concept_id": "31413008",
-            "term": "Operative procedure on coronary artery (procedure)"
-          },
-          {
-            "concept_id": "38629001",
-            "term": "Operative procedure on the arteries of the thorax and abdomen (procedure)"
-          },
-          {
-            "concept_id": "74943008",
-            "term": "Operation on trunk (procedure)"
-          },
-          {
-            "concept_id": "387713003",
-            "term": "Surgical procedure (procedure)"
-          },
-          {
-            "concept_id": "71388002",
-            "term": "Procedure (procedure)"
-          }
-        ],
-        "root_concept_id": "71388002",
-        "root_concept_term": "Procedure (procedure)",
-        "mapped_target_label": "Procedure"
-      }
-    ]
-  }
+  "rules": [
+    {
+      "conditions": [
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "lvef > 35%",
+          "role": "ClinicalParameter",
+          "operator": ">",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE",
+          "preferred_term": "Left ventricular ejection fraction (observable entity)",
+          "synonyms": [],
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [
+            {
+              "concept_id": "250908004",
+              "term": "Left ventricular ejection fraction (observable entity)"
+            },
+            {
+              "concept_id": "70822001",
+              "term": "Cardiac ejection fraction, function (observable entity)"
+            },
+            {
+              "concept_id": "86185002",
+              "term": "Cardiac function (observable entity)"
+            },
+            {
+              "concept_id": "70337006",
+              "term": "Cardiovascular function (observable entity)"
+            },
+            {
+              "concept_id": "246464006",
+              "term": "Function (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)"
+        },
+        {
+          "entity": "functionally significant coronary artery disease",
+          "entity_original": "functionally significant single- or two-vessel disease involving the proximal lad",
+          "role": "ClinicalParameter",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
+        },
+        {
+          "entity": "left ventricular ejection fraction >35%",
+          "entity_original": "lvef > 35%",
+          "role": "ClinicalParameter",
+          "operator": ">",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE",
+          "preferred_term": "Left ventricular ejection fraction (observable entity)",
+          "synonyms": [
+            "LVEF - Left ventricular ejection fraction",
+            "Left ventricular ejection fraction"
+          ],
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [
+            {
+              "concept_id": "250908004",
+              "term": "Left ventricular ejection fraction (observable entity)"
+            },
+            {
+              "concept_id": "70822001",
+              "term": "Cardiac ejection fraction, function (observable entity)"
+            },
+            {
+              "concept_id": "86185002",
+              "term": "Cardiac function (observable entity)"
+            },
+            {
+              "concept_id": "70337006",
+              "term": "Cardiovascular function (observable entity)"
+            },
+            {
+              "concept_id": "246464006",
+              "term": "Function (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "myocardial revascularization",
+          "entity_original": "myocardial revascularization",
+          "role": "Procedure",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE",
+          "preferred_term": "Myocardial revascularization (procedure)",
+          "synonyms": [],
+          "snomed_id": 275227003,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "275227003",
+              "term": "Myocardial revascularization (procedure)"
+            },
+            {
+              "concept_id": "81266008",
+              "term": "Heart revascularization (procedure)"
+            },
+            {
+              "concept_id": "31413008",
+              "term": "Operative procedure on coronary artery (procedure)"
+            },
+            {
+              "concept_id": "38629001",
+              "term": "Operative procedure on the arteries of the thorax and abdomen (procedure)"
+            },
+            {
+              "concept_id": "74943008",
+              "term": "Operation on trunk (procedure)"
+            },
+            {
+              "concept_id": "387713003",
+              "term": "Surgical procedure (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
+        }
+      ]
+    }
+  ]
 }
 </pre></td>
   </tr>
@@ -406,7 +308,7 @@ graph LR
   REC -->|RECOMMENDS_PROCEDURE| ACT2
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: ccs]
+    C_and_1_1[ClinicalCondition: ccs]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
     C_and_1_2[ClinicalParameter: lvef]
@@ -415,10 +317,10 @@ graph LR
   end
   subgraph Human_or_1_OR
     D_or_1_1[DecisionNode or_1 s1]
-    C_or_1_1[Condition: functionally significant three-vessel disease]
+    C_or_1_1[ClinicalCondition: functionally significant three-vessel disease]
     D_or_1_1 -->|CHECKS_FOR| C_or_1_1
     D_or_1_2[DecisionNode or_1 s2]
-    C_or_1_2[Condition: functionally significant three-vessel disease]
+    C_or_1_2[ClinicalCondition: functionally significant three-vessel disease]
     D_or_1_2 -->|CHECKS_FOR| C_or_1_2
     D_and_1_2 -->|LEADS_TO condition_met=true| D_or_1_1
     D_and_1_2 -->|LEADS_TO condition_met=true| D_or_1_2
@@ -436,37 +338,18 @@ graph LR
   REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph LLM_group_1_AND
     D_group_1_1[DecisionNode group_1 s1]
-    C_group_1_1[Condition: ccs patients]
-    D_group_1_1 -->|CHECKS_FOR| C_group_1_1
+    C_group_1_1[ClinicalParameter: functionally significant coronary artery disease]
+    D_group_1_1 -->|EVALUATES| C_group_1_1
     D_group_1_2[DecisionNode group_1 s2]
-    C_group_1_2[Condition: chronic coronary syndrome]
-    D_group_1_2 -->|CHECKS_FOR| C_group_1_2
+    C_group_1_2[ClinicalParameter: left ventricular ejection fraction]
+    D_group_1_2 -->|EVALUATES| C_group_1_2
     D_group_1_3[DecisionNode group_1 s3]
-    C_group_1_3[ClinicalParameter: left ventricular ejection fraction]
+    C_group_1_3[ClinicalParameter: left ventricular ejection fraction >35%]
     D_group_1_3 -->|EVALUATES| C_group_1_3
-    D_group_1_4[DecisionNode group_1 s4]
-    C_group_1_4[ClinicalParameter: lvef]
-    D_group_1_4 -->|EVALUATES| C_group_1_4
-    D_group_1_5[DecisionNode group_1 s5]
-    C_group_1_5[ClinicalParameter: proximal left anterior descending artery disease]
-    D_group_1_5 -->|EVALUATES| C_group_1_5
     D_group_1_1 -->|LEADS_TO condition_met=true| D_group_1_2
     D_group_1_2 -->|LEADS_TO condition_met=true| D_group_1_3
-    D_group_1_3 -->|LEADS_TO condition_met=true| D_group_1_4
-    D_group_1_4 -->|LEADS_TO condition_met=true| D_group_1_5
   end
-  subgraph LLM_or_1_OR
-    D_or_1_1[DecisionNode or_1 s1]
-    C_or_1_1[ClinicalParameter: functionally significant single]
-    D_or_1_1 -->|EVALUATES| C_or_1_1
-    D_or_1_2[DecisionNode or_1 s2]
-    C_or_1_2[ClinicalParameter: two-vessel disease involving proximal lad]
-    D_or_1_2 -->|EVALUATES| C_or_1_2
-    D_group_1_5 -->|LEADS_TO condition_met=true| D_or_1_1
-    D_group_1_5 -->|LEADS_TO condition_met=true| D_or_1_2
-  end
-  D_or_1_1 -->|RESULTS_IN condition_met=true| REC
-  D_or_1_2 -->|RESULTS_IN condition_met=true| REC
+  D_group_1_3 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Grounding summary (optional):
@@ -474,15 +357,13 @@ Grounding summary (optional):
 ```json
 {
   "enabled": true,
-  "total_grounded": 6,
+  "total_grounded": 4,
   "target_label_counts": {
-    "ClinicalParameter": 4,
-    "ClinicalCondition": 1,
+    "ClinicalParameter": 3,
     "Procedure": 1
   },
   "root_hit_counts": {
     "363787002": 2,
-    "404684003": 1,
     "71388002": 1
   },
   "root_hits": [
@@ -527,58 +408,15 @@ Grounding summary (optional):
       }
     },
     {
-      "entity": "Proximal Left Anterior Descending Artery Disease",
+      "entity": "Functionally Significant Coronary Artery Disease",
       "entity_original": "functionally significant single- or two-vessel disease involving the proximal LAD",
       "role": "ClinicalParameter",
-      "preferred_term": "Left anterior descending coronary artery thrombosis (disorder)",
-      "synonyms": [
-        "Left anterior descending coronary artery thrombosis"
-      ],
-      "snomed_id": 28248000,
-      "target_label": "ClinicalCondition",
-      "taxonomy_path": [
-        {
-          "concept_id": "28248000",
-          "term": "Left anterior descending coronary artery thrombosis (disorder)"
-        },
-        {
-          "concept_id": "398274000",
-          "term": "Coronary artery thrombosis (disorder)"
-        },
-        {
-          "concept_id": "65198009",
-          "term": "Arterial thrombosis (disorder)"
-        },
-        {
-          "concept_id": "359557001",
-          "term": "Disorder of artery (disorder)"
-        },
-        {
-          "concept_id": "27550009",
-          "term": "Disorder of blood vessel (disorder)"
-        },
-        {
-          "concept_id": "19660004",
-          "term": "Disorder of soft tissue (disorder)"
-        },
-        {
-          "concept_id": "248402002",
-          "term": "General finding of soft tissue (finding)"
-        },
-        {
-          "concept_id": "404684003",
-          "term": "Clinical finding (finding)"
-        },
-        {
-          "concept_id": "138875005",
-          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-        }
-      ],
-      "root_hit": {
-        "root_concept_id": "404684003",
-        "root_concept_term": "Clinical finding (finding)",
-        "mapped_target_label": "ClinicalCondition"
-      }
+      "preferred_term": null,
+      "synonyms": [],
+      "snomed_id": null,
+      "target_label": "ClinicalParameter",
+      "taxonomy_path": [],
+      "root_hit": null
     },
     {
       "entity": "Myocardial Revascularization",
@@ -625,13 +463,13 @@ Grounding summary (optional):
       }
     },
     {
-      "entity": "LVEF",
+      "entity": "Left Ventricular Ejection Fraction >35%",
       "entity_original": "LVEF > 35%",
       "role": "ClinicalParameter",
       "preferred_term": "Left ventricular ejection fraction (observable entity)",
       "synonyms": [
-        "Left ventricular ejection fraction",
-        "LVEF - Left ventricular ejection fraction"
+        "LVEF - Left ventricular ejection fraction",
+        "Left ventricular ejection fraction"
       ],
       "snomed_id": 250908004,
       "target_label": "ClinicalParameter",
@@ -641,8 +479,8 @@ Grounding summary (optional):
           "term": "Left ventricular ejection fraction (observable entity)"
         },
         {
-          "concept_id": "250907009",
-          "term": "Left ventricular function (observable entity)"
+          "concept_id": "70822001",
+          "term": "Cardiac ejection fraction, function (observable entity)"
         },
         {
           "concept_id": "86185002",
@@ -670,28 +508,6 @@ Grounding summary (optional):
         "root_concept_term": "Observable entity (observable entity)",
         "mapped_target_label": "ClinicalParameter"
       }
-    },
-    {
-      "entity": "functionally significant single",
-      "entity_original": "functionally significant single- or two-vessel disease involving the proximal LAD",
-      "role": "ClinicalParameter",
-      "preferred_term": null,
-      "synonyms": [],
-      "snomed_id": null,
-      "target_label": "ClinicalParameter",
-      "taxonomy_path": [],
-      "root_hit": null
-    },
-    {
-      "entity": "two-vessel disease involving proximal LAD",
-      "entity_original": "functionally significant single- or two-vessel disease involving the proximal LAD",
-      "role": "ClinicalParameter",
-      "preferred_term": null,
-      "synonyms": [],
-      "snomed_id": null,
-      "target_label": "ClinicalParameter",
-      "taxonomy_path": [],
-      "root_hit": null
     }
   ]
 }
@@ -699,43 +515,39 @@ Grounding summary (optional):
 
 Concepts:
 - expected: 5
-- actual: 8
-- matches: 2
-- missing: 3
-- extra: 6
+- actual: 4
+- matches: 1
+- missing: 4
+- extra: 3
 
 Missing concepts:
-- Condition: ccs
-- Condition: functionally significant three-vessel disease
+- ClinicalCondition: ccs
+- ClinicalCondition: functionally significant three-vessel disease
+- ClinicalParameter: lvef
 - Procedure: guideline-directed medical therapy
 
 Extra concepts:
-- ClinicalParameter: functionally significant single
+- ClinicalParameter: functionally significant coronary artery disease
 - ClinicalParameter: left ventricular ejection fraction
-- ClinicalParameter: proximal left anterior descending artery disease
-- ClinicalParameter: two-vessel disease involving proximal lad
-- Condition: ccs patients
-- Condition: chronic coronary syndrome
+- ClinicalParameter: left ventricular ejection fraction >35%
 
 Rules (concept + logic fields):
 - expected: 5
-- actual: 8
-- matches: 1
-- missing: 4
-- extra: 7
+- actual: 4
+- matches: 0
+- missing: 5
+- extra: 4
 
 Missing rules:
+- ClinicalCondition: ccs | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: functionally significant three-vessel disease | op=PRESENT | logic=OR | grp=or_1
 - ClinicalParameter: lvef | op=> | thr=35 | unit=% | logic=AND | grp=and_1
-- Condition: ccs | op=PRESENT | logic=AND | grp=and_1
-- Condition: functionally significant three-vessel disease | op=PRESENT | logic=OR | grp=or_1
 - Procedure: guideline-directed medical therapy | class=I | level=B | dir=POSITIVE
+- Procedure: myocardial revascularization | class=I | level=B | dir=POSITIVE
 
 Extra rules:
-- ClinicalParameter: functionally significant single | op=PRESENT | logic=OR | grp=or_1 | class=I | level=B | dir=UNKNOWN
-- ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | class=I | level=B | dir=POSITIVE
-- ClinicalParameter: lvef | op=> | thr=35 | unit=% | class=I | level=B | dir=UNKNOWN
-- ClinicalParameter: proximal left anterior descending artery disease | op=PRESENT | ctx=functionally significant | class=I | level=B | dir=POSITIVE
-- ClinicalParameter: two-vessel disease involving proximal lad | op=PRESENT | logic=OR | grp=or_1 | class=I | level=B | dir=UNKNOWN
-- Condition: ccs patients | op=PRESENT | class=I | level=B | dir=UNKNOWN
-- Condition: chronic coronary syndrome | op=PRESENT | class=I | level=B | dir=POSITIVE
+- ClinicalParameter: functionally significant coronary artery disease | op=PRESENT | class=Class I | level=B | dir=POSITIVE
+- ClinicalParameter: left ventricular ejection fraction >35% | op=> | thr=35 | unit=% | class=Class I | level=B | dir=POSITIVE
+- ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | class=Class I | level=B | dir=POSITIVE
+- Procedure: myocardial revascularization | op=PRESENT | class=Class I | level=B | dir=POSITIVE
 

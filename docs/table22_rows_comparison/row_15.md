@@ -21,16 +21,15 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "rule_id": 1,
     "conditions": [
       {
         "entity": "multivessel obstructive cad",
         "entity_original": "patients with multivessel obstructive cad",
-        "role": "Condition",
+        "role": "ClinicalCondition",
         "operator": "PRESENT",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": "AND",
         "logic_group": "and_1",
         "strength": null,
@@ -42,11 +41,11 @@ Aligned JSON (expected vs actual):
       {
         "entity": "syntax score",
         "entity_original": "calculation of the syntax score is recommended to assess the anatomical complexity of disease",
-        "role": "Procedure",
+        "role": "ClinicalAction",
         "operator": null,
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": null,
         "logic_group": null,
         "strength": "I",
@@ -59,64 +58,39 @@ Aligned JSON (expected vs actual):
 </pre></td>
     <td valign="top"><pre>
 {
-  "1": {
-    "conditions": [
-      {
-        "entity": "multivessel obstructive cad",
-        "entity_original": "multivessel obstructive cad",
-        "role": "ClinicalParameter",
-        "operator": "PRESENT",
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "I",
-        "level": "B",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "condition",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": null,
-        "target_label": "ClinicalParameter",
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null,
-        "mapped_target_label": null
-      },
-      {
-        "entity": "multivessel coronary artery disease",
-        "entity_original": "multivessel obstructive cad",
-        "role": "ClinicalParameter",
-        "operator": "PRESENT",
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "Unknown",
-        "level": "Unknown",
-        "direction": "UNKNOWN",
-        "rule_id": 1,
-        "side": "condition",
-        "preferred_term": "Coronary artery disease (disorder)",
-        "synonyms": [],
-        "snomed_id": 8957000,
-        "target_label": "ClinicalCondition",
-        "taxonomy_path": [
-          {
-            "concept_id": "8957000",
-            "term": "Coronary artery disease (disorder)"
-          }
-        ],
-        "root_concept_id": null,
-        "root_concept_term": null,
-        "mapped_target_label": null
-      }
-    ],
-    "actions": []
-  }
+  "rules": [
+    {
+      "conditions": [
+        {
+          "entity": "multivessel coronary artery disease",
+          "entity_original": "multivessel obstructive cad",
+          "role": "ClinicalParameter",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN",
+          "preferred_term": "Coronary artery disease (disorder)",
+          "synonyms": [],
+          "snomed_id": 8957000,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [
+            {
+              "concept_id": "8957000",
+              "term": "Coronary artery disease (disorder)"
+            }
+          ],
+          "root_concept_id": null,
+          "root_concept_term": null
+        }
+      ],
+      "actions": []
+    }
+  ]
 }
 </pre></td>
   </tr>
@@ -127,11 +101,9 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: syntax score]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: multivessel obstructive cad]
+    C_and_1_1[ClinicalCondition: multivessel obstructive cad]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   D_and_1_1 -->|RESULTS_IN condition_met=true| REC
@@ -148,12 +120,8 @@ graph LR
     D_group_1_1[DecisionNode group_1 s1]
     C_group_1_1[ClinicalParameter: multivessel coronary artery disease]
     D_group_1_1 -->|EVALUATES| C_group_1_1
-    D_group_1_2[DecisionNode group_1 s2]
-    C_group_1_2[ClinicalParameter: multivessel obstructive cad]
-    D_group_1_2 -->|EVALUATES| C_group_1_2
-    D_group_1_1 -->|LEADS_TO condition_met=true| D_group_1_2
   end
-  D_group_1_2 -->|RESULTS_IN condition_met=true| REC
+  D_group_1_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Grounding summary (optional):
@@ -161,24 +129,12 @@ Grounding summary (optional):
 ```json
 {
   "enabled": true,
-  "total_grounded": 2,
+  "total_grounded": 1,
   "target_label_counts": {
-    "ClinicalParameter": 1,
     "ClinicalCondition": 1
   },
   "root_hit_counts": {},
   "root_hits": [
-    {
-      "entity": "multivessel obstructive CAD",
-      "entity_original": "multivessel obstructive CAD",
-      "role": "ClinicalParameter",
-      "preferred_term": null,
-      "synonyms": [],
-      "snomed_id": null,
-      "target_label": "ClinicalParameter",
-      "taxonomy_path": [],
-      "root_hit": null
-    },
     {
       "entity": "Multivessel Coronary Artery Disease",
       "entity_original": "multivessel obstructive CAD",
@@ -201,33 +157,31 @@ Grounding summary (optional):
 
 Concepts:
 - expected: 2
-- actual: 3
+- actual: 2
 - matches: 0
 - missing: 2
-- extra: 3
+- extra: 2
 
 Missing concepts:
-- Condition: multivessel obstructive cad
-- Procedure: syntax score
+- ClinicalAction: syntax score
+- ClinicalCondition: multivessel obstructive cad
 
 Extra concepts:
 - ClinicalParameter: multivessel coronary artery disease
-- ClinicalParameter: multivessel obstructive cad
 - Procedure: syntax score calculation
 
 Rules (concept + logic fields):
 - expected: 2
-- actual: 3
+- actual: 2
 - matches: 0
 - missing: 2
-- extra: 3
+- extra: 2
 
 Missing rules:
-- Condition: multivessel obstructive cad | op=PRESENT | logic=AND | grp=and_1
-- Procedure: syntax score | class=I | level=B | dir=POSITIVE
+- ClinicalAction: syntax score | class=I | level=B | dir=POSITIVE
+- ClinicalCondition: multivessel obstructive cad | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- ClinicalParameter: multivessel coronary artery disease | op=PRESENT | class=Unknown | level=Unknown | dir=UNKNOWN
-- ClinicalParameter: multivessel obstructive cad | op=PRESENT | class=I | level=B | dir=POSITIVE
-- Procedure: syntax score calculation | class=I | level=B | dir=POSITIVE
+- ClinicalParameter: multivessel coronary artery disease | op=PRESENT | dir=UNKNOWN
+- Procedure: syntax score calculation | class=Class I | level=B | dir=POSITIVE
 

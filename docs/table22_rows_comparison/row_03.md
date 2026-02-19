@@ -21,16 +21,15 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "rule_id": 1,
     "conditions": [
       {
         "entity": "heart team",
         "entity_original": "heart team",
-        "role": "Condition",
+        "role": "ClinicalCondition",
         "operator": "PRESENT",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": "AND",
         "logic_group": "and_1",
         "strength": null,
@@ -44,7 +43,7 @@ Aligned JSON (expected vs actual):
         "operator": "PRESENT",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": "AND",
         "logic_group": "and_1",
         "strength": null,
@@ -56,11 +55,11 @@ Aligned JSON (expected vs actual):
       {
         "entity": "communicate proposal",
         "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
-        "role": "Procedure",
+        "role": "ClinicalAction",
         "operator": null,
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": null,
         "logic_group": null,
         "strength": "I",
@@ -73,66 +72,34 @@ Aligned JSON (expected vs actual):
 </pre></td>
     <td valign="top"><pre>
 {
-  "1": {
-    "conditions": [],
-    "actions": [
-      {
-        "entity": "heart team communication",
-        "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
-        "role": "Procedure",
-        "operator": null,
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "I",
-        "level": "C",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "action",
-        "preferred_term": "Ensuring good communication (regime/therapy)",
-        "synonyms": [
-          "Ensuring good communication"
-        ],
-        "snomed_id": 225981007,
-        "target_label": "Procedure",
-        "taxonomy_path": [
-          {
-            "concept_id": "225981007",
-            "term": "Ensuring good communication (regime/therapy)"
-          },
-          {
-            "concept_id": "225220004",
-            "term": "Communication interventions (regime/therapy)"
-          },
-          {
-            "concept_id": "282259008",
-            "term": "Psychotherapeutic, behavioral and/or communication procedure (procedure)"
-          },
-          {
-            "concept_id": "108310004",
-            "term": "Psychologic AND/OR psychiatric procedure AND/OR service (procedure)"
-          },
-          {
-            "concept_id": "127777001",
-            "term": "Provider-specific procedure (procedure)"
-          },
-          {
-            "concept_id": "71388002",
-            "term": "Procedure (procedure)"
-          },
-          {
-            "concept_id": "138875005",
-            "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-          }
-        ],
-        "root_concept_id": "71388002",
-        "root_concept_term": "Procedure (procedure)",
-        "mapped_target_label": "Procedure"
-      }
-    ]
-  }
+  "rules": [
+    {
+      "conditions": [],
+      "actions": [
+        {
+          "entity": "heart team communication to patient",
+          "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "Procedure",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
+        }
+      ]
+    }
+  ]
 }
 </pre></td>
   </tr>
@@ -143,18 +110,14 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: communicate proposal]
+  ACT1[Procedure: proposal]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: heart team]
+    C_and_1_1[ClinicalCondition: heart team]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[Procedure: proposal]
-    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
-  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
+  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Mermaid (LLM Generated):
@@ -162,7 +125,7 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: heart team communication]
+  ACT1[Procedure: heart team communication to patient]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
 ```
 
@@ -175,55 +138,18 @@ Grounding summary (optional):
   "target_label_counts": {
     "Procedure": 1
   },
-  "root_hit_counts": {
-    "71388002": 1
-  },
+  "root_hit_counts": {},
   "root_hits": [
     {
-      "entity": "Heart Team Communication",
+      "entity": "Heart Team communication to patient",
       "entity_original": "communicate the proposal of the Heart Team in a balanced way using language that the patient can understand",
       "role": "Procedure",
-      "preferred_term": "Ensuring good communication (regime/therapy)",
-      "synonyms": [
-        "Ensuring good communication"
-      ],
-      "snomed_id": 225981007,
+      "preferred_term": null,
+      "synonyms": [],
+      "snomed_id": null,
       "target_label": "Procedure",
-      "taxonomy_path": [
-        {
-          "concept_id": "225981007",
-          "term": "Ensuring good communication (regime/therapy)"
-        },
-        {
-          "concept_id": "225220004",
-          "term": "Communication interventions (regime/therapy)"
-        },
-        {
-          "concept_id": "282259008",
-          "term": "Psychotherapeutic, behavioral and/or communication procedure (procedure)"
-        },
-        {
-          "concept_id": "108310004",
-          "term": "Psychologic AND/OR psychiatric procedure AND/OR service (procedure)"
-        },
-        {
-          "concept_id": "127777001",
-          "term": "Provider-specific procedure (procedure)"
-        },
-        {
-          "concept_id": "71388002",
-          "term": "Procedure (procedure)"
-        },
-        {
-          "concept_id": "138875005",
-          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-        }
-      ],
-      "root_hit": {
-        "root_concept_id": "71388002",
-        "root_concept_term": "Procedure (procedure)",
-        "mapped_target_label": "Procedure"
-      }
+      "taxonomy_path": [],
+      "root_hit": null
     }
   ]
 }
@@ -237,12 +163,12 @@ Concepts:
 - extra: 1
 
 Missing concepts:
-- Condition: heart team
-- Procedure: communicate proposal
+- ClinicalAction: communicate proposal
+- ClinicalCondition: heart team
 - Procedure: proposal
 
 Extra concepts:
-- Procedure: heart team communication
+- Procedure: heart team communication to patient
 
 Rules (concept + logic fields):
 - expected: 3
@@ -252,10 +178,10 @@ Rules (concept + logic fields):
 - extra: 1
 
 Missing rules:
-- Condition: heart team | op=PRESENT | logic=AND | grp=and_1
-- Procedure: communicate proposal | class=I | level=C | dir=POSITIVE
+- ClinicalAction: communicate proposal | class=I | level=C | dir=POSITIVE
+- ClinicalCondition: heart team | op=PRESENT | logic=AND | grp=and_1
 - Procedure: proposal | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- Procedure: heart team communication | class=I | level=C | dir=POSITIVE
+- Procedure: heart team communication to patient | class=Class I | level=C | dir=POSITIVE
 

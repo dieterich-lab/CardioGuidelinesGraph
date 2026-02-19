@@ -21,7 +21,6 @@ Aligned JSON (expected vs actual):
     <td valign="top"><pre>
 [
   {
-    "rule_id": 1,
     "conditions": [
       {
         "entity": "revascularization",
@@ -30,7 +29,7 @@ Aligned JSON (expected vs actual):
         "operator": "PRESENT",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": "AND",
         "logic_group": "and_1",
         "strength": null,
@@ -40,11 +39,11 @@ Aligned JSON (expected vs actual):
       {
         "entity": "chronic coronary syndrome",
         "entity_original": "patients with chronic coronary syndrome",
-        "role": "Condition",
+        "role": "ClinicalCondition",
         "operator": "PRESENT",
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": "AND",
         "logic_group": "and_1",
         "strength": null,
@@ -60,7 +59,7 @@ Aligned JSON (expected vs actual):
         "operator": null,
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": null,
         "logic_group": null,
         "strength": "IIa",
@@ -74,7 +73,7 @@ Aligned JSON (expected vs actual):
         "operator": null,
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": null,
         "logic_group": null,
         "strength": "IIa",
@@ -88,7 +87,7 @@ Aligned JSON (expected vs actual):
         "operator": null,
         "threshold": null,
         "unit": null,
-        "condition_context": null,
+        "context": null,
         "logic_type": null,
         "logic_group": null,
         "strength": "IIa",
@@ -101,84 +100,78 @@ Aligned JSON (expected vs actual):
 </pre></td>
     <td valign="top"><pre>
 {
-  "1": {
-    "conditions": [
-      {
-        "entity": "high risk of persistent angina and clinical events",
-        "entity_original": "patients at high risk of persistent angina and subsequent clinical events",
-        "role": "Condition",
-        "operator": "PRESENT",
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "IIa",
-        "level": "B",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "condition",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": null,
-        "target_label": "ClinicalCondition",
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null,
-        "mapped_target_label": null
-      }
-    ],
-    "actions": [
-      {
-        "entity": "post-procedural assessment",
-        "entity_original": "end of the procedure",
-        "role": "Procedure",
-        "operator": "PLANNED",
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "IIa",
-        "level": "B",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "action",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": null,
-        "target_label": "Procedure",
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null,
-        "mapped_target_label": null
-      },
-      {
-        "entity": "post-procedural risk assessment",
-        "entity_original": "should be considered",
-        "role": "Procedure",
-        "operator": null,
-        "threshold": null,
-        "unit": null,
-        "condition_context": null,
-        "logic_type": null,
-        "logic_group": null,
-        "strength": "IIa",
-        "level": "B",
-        "direction": "POSITIVE",
-        "rule_id": 1,
-        "side": "action",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": null,
-        "target_label": "Procedure",
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null,
-        "mapped_target_label": null
-      }
-    ]
-  }
+  "rules": [
+    {
+      "conditions": [],
+      "actions": [
+        {
+          "entity": "procedure",
+          "entity_original": "end of the procedure",
+          "role": "Procedure",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class IIa",
+          "level": "B",
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "Procedure",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
+        },
+        {
+          "entity": "assessment",
+          "entity_original": "should be considered",
+          "role": "Procedure",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class IIa",
+          "level": "B",
+          "direction": "POSITIVE",
+          "preferred_term": "Physical assessment (procedure)",
+          "synonyms": [
+            "Physical assessment"
+          ],
+          "snomed_id": 81375008,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "81375008",
+              "term": "Physical assessment (procedure)"
+            },
+            {
+              "concept_id": "386053000",
+              "term": "Evaluation procedure (procedure)"
+            },
+            {
+              "concept_id": "128927009",
+              "term": "Procedure by method (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
+        }
+      ]
+    }
+  ]
 }
 </pre></td>
   </tr>
@@ -189,22 +182,20 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: intracoronary pressure measurement (ffr)]
+  ACT1[Procedure: revascularization]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: intracoronary pressure measurement (ifr)]
+  ACT2[Procedure: intracoronary pressure measurement (ffr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT2
-  ACT3[Procedure: computation (qfr)]
+  ACT3[Procedure: intracoronary pressure measurement (ifr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT3
+  ACT4[Procedure: computation (qfr)]
+  REC -->|RECOMMENDS_PROCEDURE| ACT4
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Procedure: revascularization]
+    C_and_1_1[ClinicalCondition: chronic coronary syndrome]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[Condition: chronic coronary syndrome]
-    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
-  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
+  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Mermaid (LLM Generated):
@@ -212,16 +203,12 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: post-procedural assessment]
+  ACT1[Procedure: assessment]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: post-procedural risk assessment]
+  ACT2[Procedure: post-procedural assessment]
   REC -->|RECOMMENDS_PROCEDURE| ACT2
-  subgraph LLM_group_1_AND
-    D_group_1_1[DecisionNode group_1 s1]
-    C_group_1_1[Condition: high risk of persistent angina and clinical events]
-    D_group_1_1 -->|CHECKS_FOR| C_group_1_1
-  end
-  D_group_1_1 -->|RESULTS_IN condition_met=true| REC
+  ACT3[Procedure: procedure]
+  REC -->|RECOMMENDS_PROCEDURE| ACT3
 ```
 
 Grounding summary (optional):
@@ -229,15 +216,16 @@ Grounding summary (optional):
 ```json
 {
   "enabled": true,
-  "total_grounded": 3,
+  "total_grounded": 2,
   "target_label_counts": {
-    "Procedure": 2,
-    "ClinicalCondition": 1
+    "Procedure": 2
   },
-  "root_hit_counts": {},
+  "root_hit_counts": {
+    "71388002": 1
+  },
   "root_hits": [
     {
-      "entity": "Post-procedural assessment",
+      "entity": "Procedure",
       "entity_original": "end of the procedure",
       "role": "Procedure",
       "preferred_term": null,
@@ -248,26 +236,42 @@ Grounding summary (optional):
       "root_hit": null
     },
     {
-      "entity": "Post-procedural risk assessment",
+      "entity": "Assessment",
       "entity_original": "should be considered",
       "role": "Procedure",
-      "preferred_term": null,
-      "synonyms": [],
-      "snomed_id": null,
+      "preferred_term": "Physical assessment (procedure)",
+      "synonyms": [
+        "Physical assessment"
+      ],
+      "snomed_id": 81375008,
       "target_label": "Procedure",
-      "taxonomy_path": [],
-      "root_hit": null
-    },
-    {
-      "entity": "High Risk of Persistent Angina and Clinical Events",
-      "entity_original": "patients at high risk of persistent angina and subsequent clinical events",
-      "role": "Condition",
-      "preferred_term": null,
-      "synonyms": [],
-      "snomed_id": null,
-      "target_label": "ClinicalCondition",
-      "taxonomy_path": [],
-      "root_hit": null
+      "taxonomy_path": [
+        {
+          "concept_id": "81375008",
+          "term": "Physical assessment (procedure)"
+        },
+        {
+          "concept_id": "386053000",
+          "term": "Evaluation procedure (procedure)"
+        },
+        {
+          "concept_id": "128927009",
+          "term": "Procedure by method (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        },
+        {
+          "concept_id": "138875005",
+          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
     }
   ]
 }
@@ -281,16 +285,16 @@ Concepts:
 - extra: 3
 
 Missing concepts:
-- Condition: chronic coronary syndrome
+- ClinicalCondition: chronic coronary syndrome
 - Procedure: computation (qfr)
 - Procedure: intracoronary pressure measurement (ffr)
 - Procedure: intracoronary pressure measurement (ifr)
 - Procedure: revascularization
 
 Extra concepts:
-- Condition: high risk of persistent angina and clinical events
+- Procedure: assessment
 - Procedure: post-procedural assessment
-- Procedure: post-procedural risk assessment
+- Procedure: procedure
 
 Rules (concept + logic fields):
 - expected: 5
@@ -300,14 +304,14 @@ Rules (concept + logic fields):
 - extra: 3
 
 Missing rules:
-- Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1
 - Procedure: computation (qfr) | class=IIa | level=B | dir=POSITIVE
 - Procedure: intracoronary pressure measurement (ffr) | class=IIa | level=B | dir=POSITIVE
 - Procedure: intracoronary pressure measurement (ifr) | class=IIa | level=B | dir=POSITIVE
 - Procedure: revascularization | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- Condition: high risk of persistent angina and clinical events | op=PRESENT | class=IIa | level=B | dir=POSITIVE
-- Procedure: post-procedural assessment | op=PLANNED | class=IIa | level=B | dir=POSITIVE
-- Procedure: post-procedural risk assessment | class=IIa | level=B | dir=POSITIVE
+- Procedure: assessment | op=PRESENT | class=Class IIa | level=B | dir=POSITIVE
+- Procedure: post-procedural assessment | op=PLANNED | class=Unknown | level=Unknown
+- Procedure: procedure | op=PRESENT | class=Class IIa | level=B | dir=POSITIVE
 
