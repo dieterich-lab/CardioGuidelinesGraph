@@ -19,6 +19,35 @@ selected_targets must contain at most 2 class labels.
 """.strip()
 
 
+def _row_evidence(
+    report: ScoreReport, max_rows: int = 5, max_errors: int = 4
+) -> list[dict]:
+    ranked_rows = sorted(report.rows, key=lambda row: len(row.errors), reverse=True)
+    evidence = []
+    for row in ranked_rows[:max_rows]:
+        class_counts: dict[str, int] = {}
+        examples = []
+        for error in row.errors[:max_errors]:
+            class_counts[error.error_class] = class_counts.get(error.error_class, 0) + 1
+            examples.append(
+                {
+                    "class": error.error_class,
+                    "expected": error.expected,
+                    "actual": error.actual,
+                    "severity": error.severity,
+                }
+            )
+        evidence.append(
+            {
+                "row_id": row.row_id,
+                "error_count": len(row.errors),
+                "class_counts": class_counts,
+                "examples": examples,
+            }
+        )
+    return evidence
+
+
 def _fallback_analysis(run_id: str, report: ScoreReport) -> ErrorAnalysis:
     counts = aggregate_error_counts(report)
     top = list(counts.items())[:2]
@@ -45,11 +74,14 @@ class ErrorAnalyst:
 
     def analyze(self, report: ScoreReport) -> ErrorAnalysis:
         counts = aggregate_error_counts(report)
+        row_evidence = _row_evidence(report)
         prompt = (
             f"run_id={report.run_id}\n"
             f"split={report.split}\n"
             f"metrics={report.metrics.to_dict()}\n"
             f"error_counts={counts}\n"
+            f"row_evidence={row_evidence}\n"
+            "Each example includes expected (ground-truth side) and actual (model output side).\n"
             "Return top classes and selected targets only as JSON."
         )
         try:

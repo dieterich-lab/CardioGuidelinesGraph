@@ -301,6 +301,7 @@ def main(
             candidate_prompt_version=challenger_prompt,
             current_prompt_appendix=champion_prompt_path.read_text(encoding="utf-8"),
             analysis=analysis,
+            score_report=score_report_champion,
         )
 
         safe, reason = is_patch_safe(patch)
