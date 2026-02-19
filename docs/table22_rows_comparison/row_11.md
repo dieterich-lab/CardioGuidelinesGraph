@@ -116,7 +116,22 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
+      "conditions": [
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction \u2264 35%",
+          "role": "ClinicalParameter",
+          "operator": "<=",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class IIa",
+          "level": "Level B",
+          "direction": "POSITIVE"
+        }
+      ],
       "actions": []
     }
   ]
@@ -164,6 +179,12 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_1 -->|EVALUATES| C_and_1_1
+  end
+  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

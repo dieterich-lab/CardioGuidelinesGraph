@@ -102,7 +102,36 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
+      "conditions": [
+        {
+          "entity": "chronic coronary syndrome",
+          "entity_original": "chronic coronary syndrome patients",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": null,
+          "level": null,
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction > 35%",
+          "role": "ClinicalParameter",
+          "operator": ">",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": null,
+          "level": null,
+          "direction": "POSITIVE"
+        }
+      ],
       "actions": []
     }
   ]
@@ -141,6 +170,16 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: chronic coronary syndrome]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_2 -->|EVALUATES| C_and_1_2
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+  end
+  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

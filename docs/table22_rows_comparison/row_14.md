@@ -60,8 +60,150 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "chronic coronary syndrome patients with functionally significant multivessel disease",
+          "entity_original": "chronic coronary syndrome patients with functionally significant multivessel disease",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction",
+          "role": "ClinicalParameter",
+          "operator": "<=",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "high surgical risk",
+          "entity_original": "high surgical risk or not operable",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "OR",
+          "logic_group": "or_1",
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "not operable",
+          "entity_original": "high surgical risk or not operable",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "OR",
+          "logic_group": "or_1",
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "chronic coronary syndrome",
+          "entity_original": "chronic coronary syndrome (ccs)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "multivessel disease",
+          "entity_original": "multivessel disease (mvd)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
+          "role": "ClinicalParameter",
+          "operator": "LE",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "high surgical risk",
+          "entity_original": "high surgical risk",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "not operable",
+          "entity_original": "not operable",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "UNKNOWN"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "percutaneous coronary intervention",
+          "entity_original": "percutaneous coronary intervention",
+          "role": "Procedure",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class IIb",
+          "level": "B",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -89,6 +231,49 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: percutaneous coronary intervention]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: chronic coronary syndrome patients with functionally significant multivessel disease]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_2 -->|EVALUATES| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[Condition: chronic coronary syndrome]
+    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
+    D_and_1_4[DecisionNode and_1 s4]
+    C_and_1_4[Condition: multivessel disease]
+    D_and_1_4 -->|CHECKS_FOR| C_and_1_4
+    D_and_1_5[DecisionNode and_1 s5]
+    C_and_1_5[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_5 -->|EVALUATES| C_and_1_5
+    D_and_1_6[DecisionNode and_1 s6]
+    C_and_1_6[Condition: high surgical risk]
+    D_and_1_6 -->|CHECKS_FOR| C_and_1_6
+    D_and_1_7[DecisionNode and_1 s7]
+    C_and_1_7[Condition: not operable]
+    D_and_1_7 -->|CHECKS_FOR| C_and_1_7
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
+    D_and_1_3 -->|LEADS_TO condition_met=true| D_and_1_4
+    D_and_1_4 -->|LEADS_TO condition_met=true| D_and_1_5
+    D_and_1_5 -->|LEADS_TO condition_met=true| D_and_1_6
+    D_and_1_6 -->|LEADS_TO condition_met=true| D_and_1_7
+  end
+  subgraph LLM_or_1_OR
+    D_or_1_1[DecisionNode or_1 s1]
+    C_or_1_1[Condition: high surgical risk]
+    D_or_1_1 -->|CHECKS_FOR| C_or_1_1
+    D_or_1_2[DecisionNode or_1 s2]
+    C_or_1_2[Condition: not operable]
+    D_or_1_2 -->|CHECKS_FOR| C_or_1_2
+    D_and_1_7 -->|LEADS_TO condition_met=true| D_or_1_1
+    D_and_1_7 -->|LEADS_TO condition_met=true| D_or_1_2
+  end
+  D_or_1_1 -->|RESULTS_IN condition_met=true| REC
+  D_or_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

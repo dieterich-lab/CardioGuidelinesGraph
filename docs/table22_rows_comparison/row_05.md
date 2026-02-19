@@ -60,8 +60,38 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "heart team",
+          "entity_original": "heart team (on site or with a partner institution)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "revascularization protocol development",
+          "entity_original": "develop institutional protocols to implement the appropriate revascularization strategy in accordance with current guidelines",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -89,6 +119,14 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: revascularization protocol development]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: heart team]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+  end
+  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

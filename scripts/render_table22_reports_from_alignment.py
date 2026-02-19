@@ -37,9 +37,13 @@ def _flatten_entries_with_side(payload):
     if isinstance(payload, dict) and isinstance(payload.get("rules"), list):
         payload = payload.get("rules")
 
-    if isinstance(payload, list) and payload and all(
-        isinstance(item, dict) and {"conditions", "actions"}.issubset(item.keys())
-        for item in payload
+    if (
+        isinstance(payload, list)
+        and payload
+        and all(
+            isinstance(item, dict) and {"conditions", "actions"}.issubset(item.keys())
+            for item in payload
+        )
     ):
         flattened = []
         for rule in payload:
@@ -211,6 +215,45 @@ def _display_path(path: Path, project_root: Path) -> str:
         return str(path)
 
 
+def _is_empty_grouped_payload(payload):
+    if not isinstance(payload, dict):
+        return False
+    rules = payload.get("rules")
+    if not isinstance(rules, list) or not rules:
+        return False
+    for rule in rules:
+        if not isinstance(rule, dict):
+            return False
+        if rule.get("conditions") or rule.get("actions"):
+            return False
+    return True
+
+
+def _infer_side(entry):
+    role = entry.get("role")
+    if role in {"ClinicalCondition", "ClinicalParameter", "Condition"}:
+        return "condition"
+    if role in {"Procedure", "Medication", "ClinicalAction"}:
+        if entry.get("logic_type") or entry.get("logic_group"):
+            return "condition"
+        return "action"
+    if entry.get("logic_type") or entry.get("logic_group"):
+        return "condition"
+    return "action"
+
+
+def _group_from_flat_entries(entries):
+    grouped = {"rules": [{"conditions": [], "actions": []}]}
+    for raw in entries or []:
+        entry = dict(raw)
+        side = (entry.get("_side") or "").strip().lower() or _infer_side(entry)
+        if side == "condition":
+            grouped["rules"][0]["conditions"].append(entry)
+        else:
+            grouped["rules"][0]["actions"].append(entry)
+    return grouped
+
+
 def render_reports(alignment_path: Path):
     payload = json.loads(alignment_path.read_text(encoding="utf-8"))
     rows = payload.get("rows", [])
@@ -272,7 +315,10 @@ def render_reports(alignment_path: Path):
             f.write(json.dumps(row.get("expected_entries_display"), indent=2))
             f.write("\n</pre></td>\n")
             f.write('    <td valign="top"><pre>\n')
-            f.write(json.dumps(row.get("actual_entries_display"), indent=2))
+            actual_display = row.get("actual_entries_display")
+            if _is_empty_grouped_payload(actual_display):
+                actual_display = _group_from_flat_entries(row.get("actual_entries", []))
+            f.write(json.dumps(actual_display, indent=2))
             f.write("\n</pre></td>\n")
             f.write("  </tr>\n")
             f.write("</table>\n\n")
@@ -284,7 +330,10 @@ def render_reports(alignment_path: Path):
 
             f.write("Mermaid (LLM Generated):\n\n")
             f.write("```mermaid\n")
-            f.write(_build_mermaid(row.get("actual_entries_display"), "LLM"))
+            actual_display = row.get("actual_entries_display")
+            if _is_empty_grouped_payload(actual_display):
+                actual_display = _group_from_flat_entries(row.get("actual_entries", []))
+            f.write(_build_mermaid(actual_display, "LLM"))
             f.write("\n```\n\n")
 
             if row.get("grounding_summary"):

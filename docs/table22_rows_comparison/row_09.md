@@ -154,8 +154,66 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "chronic coronary syndrome",
+          "entity_original": "chronic coronary syndrome (ccs) patients",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction (lvef) > 35%",
+          "role": "ClinicalParameter",
+          "operator": ">",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "three-vessel disease",
+          "entity_original": "functionally significant three-vessel disease",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "myocardial revascularization",
+          "entity_original": "myocardial revascularization",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "A",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -199,6 +257,22 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: myocardial revascularization]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: chronic coronary syndrome]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_2 -->|EVALUATES| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[Condition: three-vessel disease]
+    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
+  end
+  D_and_1_3 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

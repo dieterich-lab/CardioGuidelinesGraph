@@ -102,8 +102,108 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "surgically eligible chronic coronary syndrome patients",
+          "entity_original": "surgically eligible chronic coronary syndrome (ccs) patients",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "multivessel coronary artery disease",
+          "entity_original": "multivessel coronary artery disease (cad)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
+          "role": "ClinicalParameter",
+          "operator": "<=",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "chronic coronary syndrome",
+          "entity_original": "surgically eligible chronic coronary syndrome (ccs) patients",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "multivessel coronary artery disease",
+          "entity_original": "multivessel coronary artery disease (cad)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
+          "role": "ClinicalParameter",
+          "operator": "\u2264",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "coronary artery bypass grafting",
+          "entity_original": "myocardial revascularization with coronary artery bypass grafting (cabg)",
+          "role": "Procedure",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -139,6 +239,34 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: coronary artery bypass grafting]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: surgically eligible chronic coronary syndrome patients]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: multivessel coronary artery disease]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_3 -->|EVALUATES| C_and_1_3
+    D_and_1_4[DecisionNode and_1 s4]
+    C_and_1_4[Condition: chronic coronary syndrome]
+    D_and_1_4 -->|CHECKS_FOR| C_and_1_4
+    D_and_1_5[DecisionNode and_1 s5]
+    C_and_1_5[Condition: multivessel coronary artery disease]
+    D_and_1_5 -->|CHECKS_FOR| C_and_1_5
+    D_and_1_6[DecisionNode and_1 s6]
+    C_and_1_6[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_6 -->|EVALUATES| C_and_1_6
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
+    D_and_1_3 -->|LEADS_TO condition_met=true| D_and_1_4
+    D_and_1_4 -->|LEADS_TO condition_met=true| D_and_1_5
+    D_and_1_5 -->|LEADS_TO condition_met=true| D_and_1_6
+  end
+  D_and_1_6 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

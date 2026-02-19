@@ -102,8 +102,52 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "complex coronary artery disease",
+          "entity_original": "complex coronary artery disease (cad)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "complex coronary artery disease",
+          "entity_original": "complex coronary artery disease (cad) in whom revascularization is being considered",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "UNKNOWN"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "assess procedural risks and post-procedural outcomes",
+          "entity_original": "assess procedural risks and post-procedural outcomes",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -139,6 +183,18 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: assess procedural risks and post-procedural outcomes]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: complex coronary artery disease]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: complex coronary artery disease]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+  end
+  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

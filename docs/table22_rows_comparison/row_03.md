@@ -75,7 +75,22 @@ Aligned JSON (expected vs actual):
   "rules": [
     {
       "conditions": [],
-      "actions": []
+      "actions": [
+        {
+          "entity": "patient communication of heart team recommendations",
+          "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -107,6 +122,8 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: patient communication of heart team recommendations]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
 ```
 
 Concepts:

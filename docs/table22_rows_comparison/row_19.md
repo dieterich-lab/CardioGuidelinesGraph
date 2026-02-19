@@ -102,8 +102,52 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "coronary artery bypass grafting",
+          "entity_original": "coronary artery bypass grafting (cabg)",
+          "role": "ClinicalParameter",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "patients undergoing coronary artery bypass grafting (cabg)",
+          "entity_original": "patients undergoing coronary artery bypass grafting (cabg)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "UNKNOWN"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "society of thoracic surgeons score",
+          "entity_original": "calculation of the society of thoracic surgeons score (sts) score",
+          "role": "Procedure",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -139,6 +183,18 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: society of thoracic surgeons score]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[ClinicalParameter: coronary artery bypass grafting]
+    D_and_1_1 -->|EVALUATES| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: patients undergoing coronary artery bypass grafting (cabg)]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+  end
+  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:
