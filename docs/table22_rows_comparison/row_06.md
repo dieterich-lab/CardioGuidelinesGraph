@@ -1,4 +1,4 @@
-# row_06 (mapped to row_06)
+# row_06 (mapped to row_07)
 
 Original table row text (ground truth):
 
@@ -102,159 +102,8 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [
-        {
-          "entity": "left ventricular ejection fraction >35%",
-          "entity_original": "lvef > 35%",
-          "role": "ClinicalParameter",
-          "operator": ">",
-          "threshold": "35",
-          "unit": "%",
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": "Left ventricular ejection fraction (observable entity)",
-          "synonyms": [
-            "LVEF - Left ventricular ejection fraction",
-            "Left ventricular ejection fraction"
-          ],
-          "snomed_id": 250908004,
-          "target_label": "ClinicalParameter",
-          "taxonomy_path": [
-            {
-              "concept_id": "250908004",
-              "term": "Left ventricular ejection fraction (observable entity)"
-            },
-            {
-              "concept_id": "70822001",
-              "term": "Cardiac ejection fraction, function (observable entity)"
-            },
-            {
-              "concept_id": "86185002",
-              "term": "Cardiac function (observable entity)"
-            },
-            {
-              "concept_id": "70337006",
-              "term": "Cardiovascular function (observable entity)"
-            },
-            {
-              "concept_id": "246464006",
-              "term": "Function (observable entity)"
-            },
-            {
-              "concept_id": "363787002",
-              "term": "Observable entity (observable entity)"
-            },
-            {
-              "concept_id": "138875005",
-              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-            }
-          ],
-          "root_concept_id": "363787002",
-          "root_concept_term": "Observable entity (observable entity)"
-        },
-        {
-          "entity": "left ventricular ejection fraction",
-          "entity_original": "lvef > 35%",
-          "role": "ClinicalParameter",
-          "operator": ">",
-          "threshold": "35",
-          "unit": "%",
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": "Class I",
-          "level": "A",
-          "direction": "UNKNOWN",
-          "preferred_term": "Left ventricular ejection fraction (observable entity)",
-          "synonyms": [],
-          "snomed_id": 250908004,
-          "target_label": "ClinicalParameter",
-          "taxonomy_path": [
-            {
-              "concept_id": "250908004",
-              "term": "Left ventricular ejection fraction (observable entity)"
-            },
-            {
-              "concept_id": "70822001",
-              "term": "Cardiac ejection fraction, function (observable entity)"
-            },
-            {
-              "concept_id": "86185002",
-              "term": "Cardiac function (observable entity)"
-            },
-            {
-              "concept_id": "70337006",
-              "term": "Cardiovascular function (observable entity)"
-            },
-            {
-              "concept_id": "246464006",
-              "term": "Function (observable entity)"
-            },
-            {
-              "concept_id": "363787002",
-              "term": "Observable entity (observable entity)"
-            }
-          ],
-          "root_concept_id": "363787002",
-          "root_concept_term": "Observable entity (observable entity)"
-        }
-      ],
-      "actions": [
-        {
-          "entity": "myocardial revascularization",
-          "entity_original": "myocardial revascularization",
-          "role": "Procedure",
-          "operator": null,
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": "Class I",
-          "level": "A",
-          "direction": "POSITIVE",
-          "preferred_term": "Myocardial revascularization (procedure)",
-          "synonyms": [],
-          "snomed_id": 275227003,
-          "target_label": "Procedure",
-          "taxonomy_path": [
-            {
-              "concept_id": "275227003",
-              "term": "Myocardial revascularization (procedure)"
-            },
-            {
-              "concept_id": "81266008",
-              "term": "Heart revascularization (procedure)"
-            },
-            {
-              "concept_id": "31413008",
-              "term": "Operative procedure on coronary artery (procedure)"
-            },
-            {
-              "concept_id": "38629001",
-              "term": "Operative procedure on the arteries of the thorax and abdomen (procedure)"
-            },
-            {
-              "concept_id": "74943008",
-              "term": "Operation on trunk (procedure)"
-            },
-            {
-              "concept_id": "387713003",
-              "term": "Surgical procedure (procedure)"
-            },
-            {
-              "concept_id": "71388002",
-              "term": "Procedure (procedure)"
-            }
-          ],
-          "root_concept_id": "71388002",
-          "root_concept_term": "Procedure (procedure)"
-        }
-      ]
+      "conditions": [],
+      "actions": []
     }
   ]
 }
@@ -292,193 +141,42 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: myocardial revascularization]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_group_1_AND
-    D_group_1_1[DecisionNode group_1 s1]
-    C_group_1_1[ClinicalParameter: left ventricular ejection fraction]
-    D_group_1_1 -->|EVALUATES| C_group_1_1
-    D_group_1_2[DecisionNode group_1 s2]
-    C_group_1_2[ClinicalParameter: left ventricular ejection fraction >35%]
-    D_group_1_2 -->|EVALUATES| C_group_1_2
-    D_group_1_1 -->|LEADS_TO condition_met=true| D_group_1_2
-  end
-  D_group_1_2 -->|RESULTS_IN condition_met=true| REC
-```
-
-Grounding summary (optional):
-
-```json
-{
-  "enabled": true,
-  "total_grounded": 3,
-  "target_label_counts": {
-    "ClinicalParameter": 2,
-    "Procedure": 1
-  },
-  "root_hit_counts": {
-    "363787002": 2,
-    "71388002": 1
-  },
-  "root_hits": [
-    {
-      "entity": "Left ventricular ejection fraction >35%",
-      "entity_original": "LVEF > 35%",
-      "role": "ClinicalParameter",
-      "preferred_term": "Left ventricular ejection fraction (observable entity)",
-      "synonyms": [
-        "LVEF - Left ventricular ejection fraction",
-        "Left ventricular ejection fraction"
-      ],
-      "snomed_id": 250908004,
-      "target_label": "ClinicalParameter",
-      "taxonomy_path": [
-        {
-          "concept_id": "250908004",
-          "term": "Left ventricular ejection fraction (observable entity)"
-        },
-        {
-          "concept_id": "70822001",
-          "term": "Cardiac ejection fraction, function (observable entity)"
-        },
-        {
-          "concept_id": "86185002",
-          "term": "Cardiac function (observable entity)"
-        },
-        {
-          "concept_id": "70337006",
-          "term": "Cardiovascular function (observable entity)"
-        },
-        {
-          "concept_id": "246464006",
-          "term": "Function (observable entity)"
-        },
-        {
-          "concept_id": "363787002",
-          "term": "Observable entity (observable entity)"
-        },
-        {
-          "concept_id": "138875005",
-          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-        }
-      ],
-      "root_hit": {
-        "root_concept_id": "363787002",
-        "root_concept_term": "Observable entity (observable entity)",
-        "mapped_target_label": "ClinicalParameter"
-      }
-    },
-    {
-      "entity": "Myocardial revascularization",
-      "entity_original": "myocardial revascularization",
-      "role": "Procedure",
-      "preferred_term": "Myocardial revascularization (procedure)",
-      "synonyms": [],
-      "snomed_id": 275227003,
-      "target_label": "Procedure",
-      "taxonomy_path": [
-        {
-          "concept_id": "275227003",
-          "term": "Myocardial revascularization (procedure)"
-        },
-        {
-          "concept_id": "81266008",
-          "term": "Heart revascularization (procedure)"
-        },
-        {
-          "concept_id": "31413008",
-          "term": "Operative procedure on coronary artery (procedure)"
-        },
-        {
-          "concept_id": "38629001",
-          "term": "Operative procedure on the arteries of the thorax and abdomen (procedure)"
-        },
-        {
-          "concept_id": "74943008",
-          "term": "Operation on trunk (procedure)"
-        },
-        {
-          "concept_id": "387713003",
-          "term": "Surgical procedure (procedure)"
-        },
-        {
-          "concept_id": "71388002",
-          "term": "Procedure (procedure)"
-        }
-      ],
-      "root_hit": {
-        "root_concept_id": "71388002",
-        "root_concept_term": "Procedure (procedure)",
-        "mapped_target_label": "Procedure"
-      }
-    },
-    {
-      "entity": "Left Ventricular Ejection Fraction",
-      "entity_original": "LVEF > 35%",
-      "role": "ClinicalParameter",
-      "preferred_term": "Left ventricular ejection fraction (observable entity)",
-      "synonyms": [],
-      "snomed_id": 250908004,
-      "target_label": "ClinicalParameter",
-      "taxonomy_path": [
-        {
-          "concept_id": "250908004",
-          "term": "Left ventricular ejection fraction (observable entity)"
-        },
-        {
-          "concept_id": "70822001",
-          "term": "Cardiac ejection fraction, function (observable entity)"
-        },
-        {
-          "concept_id": "86185002",
-          "term": "Cardiac function (observable entity)"
-        },
-        {
-          "concept_id": "70337006",
-          "term": "Cardiovascular function (observable entity)"
-        },
-        {
-          "concept_id": "246464006",
-          "term": "Function (observable entity)"
-        },
-        {
-          "concept_id": "363787002",
-          "term": "Observable entity (observable entity)"
-        }
-      ],
-      "root_hit": {
-        "root_concept_id": "363787002",
-        "root_concept_term": "Observable entity (observable entity)",
-        "mapped_target_label": "ClinicalParameter"
-      }
-    }
-  ]
-}
 ```
 
 Concepts:
 - expected: 5
-- actual: 3
-- matches: 1
-- missing: 4
-- extra: 2
+- actual: 12
+- matches: 0
+- missing: 5
+- extra: 12
 
 Missing concepts:
 - ClinicalCondition: ccs
 - ClinicalCondition: functionally significant left main stem stenosis
 - ClinicalParameter: lvef
 - Procedure: guideline-directed medical therapy
+- Procedure: myocardial revascularization
 
 Extra concepts:
-- ClinicalParameter: left ventricular ejection fraction
-- ClinicalParameter: left ventricular ejection fraction >35%
+- Condition: age
+- Condition: cognitive status
+- Condition: diabetes
+- Condition: frailty
+- Condition: high anatomical complexity
+- Condition: left main stem involvement
+- Condition: likelihood of revascularization completeness
+- Condition: local expertise
+- Condition: multivessel disease
+- Condition: other comorbidities
+- Condition: surgical and interventional risk
+- Procedure: revascularization
 
 Rules (concept + logic fields):
 - expected: 5
-- actual: 3
+- actual: 12
 - matches: 0
 - missing: 5
-- extra: 3
+- extra: 12
 
 Missing rules:
 - ClinicalCondition: ccs | op=PRESENT | logic=AND | grp=and_1
@@ -488,7 +186,16 @@ Missing rules:
 - Procedure: myocardial revascularization | class=I | level=A | dir=POSITIVE
 
 Extra rules:
-- ClinicalParameter: left ventricular ejection fraction >35% | op=> | thr=35 | unit=% | dir=UNKNOWN
-- ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | class=Class I | level=A | dir=UNKNOWN
-- Procedure: myocardial revascularization | class=Class I | level=A | dir=POSITIVE
+- Condition: age | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
+- Condition: cognitive status | op=PRESENT | logic=AND | grp=and_3 | dir=UNKNOWN
+- Condition: diabetes | op=PRESENT | logic=AND | grp=and_4 | dir=UNKNOWN
+- Condition: frailty | op=PRESENT | logic=AND | grp=and_2 | dir=UNKNOWN
+- Condition: high anatomical complexity | op=PRESENT | logic=AND | grp=and_8 | dir=UNKNOWN
+- Condition: left main stem involvement | op=PRESENT | logic=AND | grp=and_7 | dir=UNKNOWN
+- Condition: likelihood of revascularization completeness | op=PRESENT | logic=AND | grp=and_9 | dir=UNKNOWN
+- Condition: local expertise | op=PRESENT | logic=AND | grp=and_10 | dir=UNKNOWN
+- Condition: multivessel disease | op=PRESENT | logic=AND | grp=and_6 | dir=UNKNOWN
+- Condition: other comorbidities | op=PRESENT | logic=AND | grp=and_5 | dir=UNKNOWN
+- Condition: surgical and interventional risk | op=PRESENT | logic=AND | grp=and_11 | dir=UNKNOWN
+- Procedure: revascularization | dir=POSITIVE
 

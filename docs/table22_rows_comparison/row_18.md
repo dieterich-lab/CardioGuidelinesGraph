@@ -1,4 +1,4 @@
-# row_18 (mapped to row_18)
+# row_18 (mapped to row_19)
 
 Original table row text (ground truth):
 
@@ -103,73 +103,7 @@ Aligned JSON (expected vs actual):
   "rules": [
     {
       "conditions": [],
-      "actions": [
-        {
-          "entity": "procedure",
-          "entity_original": "end of the procedure",
-          "role": "Procedure",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": "Class IIa",
-          "level": "B",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "Procedure",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null
-        },
-        {
-          "entity": "assessment",
-          "entity_original": "should be considered",
-          "role": "Procedure",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": "Class IIa",
-          "level": "B",
-          "direction": "POSITIVE",
-          "preferred_term": "Physical assessment (procedure)",
-          "synonyms": [
-            "Physical assessment"
-          ],
-          "snomed_id": 81375008,
-          "target_label": "Procedure",
-          "taxonomy_path": [
-            {
-              "concept_id": "81375008",
-              "term": "Physical assessment (procedure)"
-            },
-            {
-              "concept_id": "386053000",
-              "term": "Evaluation procedure (procedure)"
-            },
-            {
-              "concept_id": "128927009",
-              "term": "Procedure by method (procedure)"
-            },
-            {
-              "concept_id": "71388002",
-              "term": "Procedure (procedure)"
-            },
-            {
-              "concept_id": "138875005",
-              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-            }
-          ],
-          "root_concept_id": "71388002",
-          "root_concept_term": "Procedure (procedure)"
-        }
-      ]
+      "actions": []
     }
   ]
 }
@@ -182,20 +116,22 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: revascularization]
+  ACT1[Procedure: intracoronary pressure measurement (ffr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: intracoronary pressure measurement (ffr)]
+  ACT2[Procedure: intracoronary pressure measurement (ifr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT2
-  ACT3[Procedure: intracoronary pressure measurement (ifr)]
+  ACT3[Procedure: computation (qfr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT3
-  ACT4[Procedure: computation (qfr)]
-  REC -->|RECOMMENDS_PROCEDURE| ACT4
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: chronic coronary syndrome]
+    C_and_1_1[Procedure: revascularization]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalCondition: chronic coronary syndrome]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
-  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
+  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Mermaid (LLM Generated):
@@ -203,86 +139,14 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: assessment]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: post-procedural assessment]
-  REC -->|RECOMMENDS_PROCEDURE| ACT2
-  ACT3[Procedure: procedure]
-  REC -->|RECOMMENDS_PROCEDURE| ACT3
-```
-
-Grounding summary (optional):
-
-```json
-{
-  "enabled": true,
-  "total_grounded": 2,
-  "target_label_counts": {
-    "Procedure": 2
-  },
-  "root_hit_counts": {
-    "71388002": 1
-  },
-  "root_hits": [
-    {
-      "entity": "Procedure",
-      "entity_original": "end of the procedure",
-      "role": "Procedure",
-      "preferred_term": null,
-      "synonyms": [],
-      "snomed_id": null,
-      "target_label": "Procedure",
-      "taxonomy_path": [],
-      "root_hit": null
-    },
-    {
-      "entity": "Assessment",
-      "entity_original": "should be considered",
-      "role": "Procedure",
-      "preferred_term": "Physical assessment (procedure)",
-      "synonyms": [
-        "Physical assessment"
-      ],
-      "snomed_id": 81375008,
-      "target_label": "Procedure",
-      "taxonomy_path": [
-        {
-          "concept_id": "81375008",
-          "term": "Physical assessment (procedure)"
-        },
-        {
-          "concept_id": "386053000",
-          "term": "Evaluation procedure (procedure)"
-        },
-        {
-          "concept_id": "128927009",
-          "term": "Procedure by method (procedure)"
-        },
-        {
-          "concept_id": "71388002",
-          "term": "Procedure (procedure)"
-        },
-        {
-          "concept_id": "138875005",
-          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
-        }
-      ],
-      "root_hit": {
-        "root_concept_id": "71388002",
-        "root_concept_term": "Procedure (procedure)",
-        "mapped_target_label": "Procedure"
-      }
-    }
-  ]
-}
 ```
 
 Concepts:
 - expected: 5
-- actual: 3
+- actual: 2
 - matches: 0
 - missing: 5
-- extra: 3
+- extra: 2
 
 Missing concepts:
 - ClinicalCondition: chronic coronary syndrome
@@ -292,9 +156,8 @@ Missing concepts:
 - Procedure: revascularization
 
 Extra concepts:
-- Procedure: assessment
-- Procedure: post-procedural assessment
-- Procedure: procedure
+- Condition: complex coronary artery disease
+- Procedure: assess procedural risks and post-procedural outcomes
 
 Rules (concept + logic fields):
 - expected: 5
@@ -311,7 +174,7 @@ Missing rules:
 - Procedure: revascularization | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- Procedure: assessment | op=PRESENT | class=Class IIa | level=B | dir=POSITIVE
-- Procedure: post-procedural assessment | op=PLANNED | class=Unknown | level=Unknown
-- Procedure: procedure | op=PRESENT | class=Class IIa | level=B | dir=POSITIVE
+- Condition: complex coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
+- Condition: complex coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=UNKNOWN
+- Procedure: assess procedural risks and post-procedural outcomes | class=Class I | level=C | dir=POSITIVE
 

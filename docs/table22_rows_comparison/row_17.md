@@ -1,4 +1,4 @@
-# row_17 (mapped to row_17)
+# row_17 (mapped to row_18)
 
 Original table row text (ground truth):
 
@@ -102,34 +102,7 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [
-        {
-          "entity": "multivessel coronary artery disease",
-          "entity_original": "multivessel disease",
-          "role": "ClinicalParameter",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": null,
-          "level": null,
-          "direction": "POSITIVE",
-          "preferred_term": "Coronary artery disease (disorder)",
-          "synonyms": [],
-          "snomed_id": 8957000,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [
-            {
-              "concept_id": "8957000",
-              "term": "Coronary artery disease (disorder)"
-            }
-          ],
-          "root_concept_id": null,
-          "root_concept_term": null
-        }
-      ],
+      "conditions": [],
       "actions": []
     }
   ]
@@ -143,20 +116,22 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: intervention]
+  ACT1[Procedure: intracoronary pressure measurement (ffr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: intracoronary pressure measurement (ffr)]
+  ACT2[Procedure: intracoronary pressure measurement (ifr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT2
-  ACT3[Procedure: intracoronary pressure measurement (ifr)]
+  ACT3[Procedure: computation (qfr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT3
-  ACT4[Procedure: computation (qfr)]
-  REC -->|RECOMMENDS_PROCEDURE| ACT4
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: multivessel disease]
+    C_and_1_1[Procedure: intervention]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[ClinicalCondition: multivessel disease]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
-  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
+  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Mermaid (LLM Generated):
@@ -164,53 +139,14 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: guide lesion selection for intervention]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_group_1_AND
-    D_group_1_1[DecisionNode group_1 s1]
-    C_group_1_1[ClinicalParameter: multivessel coronary artery disease]
-    D_group_1_1 -->|EVALUATES| C_group_1_1
-  end
-  D_group_1_1 -->|RESULTS_IN condition_met=true| REC
-```
-
-Grounding summary (optional):
-
-```json
-{
-  "enabled": true,
-  "total_grounded": 1,
-  "target_label_counts": {
-    "ClinicalCondition": 1
-  },
-  "root_hit_counts": {},
-  "root_hits": [
-    {
-      "entity": "Multivessel coronary artery disease",
-      "entity_original": "multivessel disease",
-      "role": "ClinicalParameter",
-      "preferred_term": "Coronary artery disease (disorder)",
-      "synonyms": [],
-      "snomed_id": 8957000,
-      "target_label": "ClinicalCondition",
-      "taxonomy_path": [
-        {
-          "concept_id": "8957000",
-          "term": "Coronary artery disease (disorder)"
-        }
-      ],
-      "root_hit": null
-    }
-  ]
-}
 ```
 
 Concepts:
 - expected: 5
-- actual: 2
+- actual: 11
 - matches: 0
 - missing: 5
-- extra: 2
+- extra: 11
 
 Missing concepts:
 - ClinicalCondition: multivessel disease
@@ -220,15 +156,24 @@ Missing concepts:
 - Procedure: intracoronary pressure measurement (ifr)
 
 Extra concepts:
-- ClinicalParameter: multivessel coronary artery disease
-- Procedure: guide lesion selection for intervention
+- Condition: age
+- Condition: cognitive status
+- Condition: diabetes
+- Condition: frailty
+- Condition: high anatomical complexity
+- Condition: left main stem involvement
+- Condition: likelihood of revascularization completeness
+- Condition: local expertise and outcomes
+- Condition: multivessel disease
+- Condition: other comorbidities
+- Procedure: assessment of procedural risks and post-procedural outcomes
 
 Rules (concept + logic fields):
 - expected: 5
-- actual: 2
+- actual: 11
 - matches: 0
 - missing: 5
-- extra: 2
+- extra: 11
 
 Missing rules:
 - ClinicalCondition: multivessel disease | op=PRESENT | logic=AND | grp=and_1
@@ -238,6 +183,15 @@ Missing rules:
 - Procedure: intracoronary pressure measurement (ifr) | class=I | level=A | dir=POSITIVE
 
 Extra rules:
-- ClinicalParameter: multivessel coronary artery disease | op=PRESENT | dir=POSITIVE
-- Procedure: guide lesion selection for intervention | class=Class I | level=A | dir=POSITIVE
+- Condition: age | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
+- Condition: cognitive status | op=PRESENT | logic=AND | grp=and_3 | dir=UNKNOWN
+- Condition: diabetes | op=PRESENT | logic=AND | grp=and_4 | dir=UNKNOWN
+- Condition: frailty | op=PRESENT | logic=AND | grp=and_2 | dir=UNKNOWN
+- Condition: high anatomical complexity | op=PRESENT | logic=AND | grp=and_8 | dir=UNKNOWN
+- Condition: left main stem involvement | op=PRESENT | logic=AND | grp=and_7 | dir=UNKNOWN
+- Condition: likelihood of revascularization completeness | op=PRESENT | logic=AND | grp=and_9 | dir=UNKNOWN
+- Condition: local expertise and outcomes | op=PRESENT | logic=AND | grp=and_10 | dir=UNKNOWN
+- Condition: multivessel disease | op=PRESENT | logic=AND | grp=and_6 | dir=UNKNOWN
+- Condition: other comorbidities | op=PRESENT | logic=AND | grp=and_5 | dir=UNKNOWN
+- Procedure: assessment of procedural risks and post-procedural outcomes | dir=POSITIVE
 

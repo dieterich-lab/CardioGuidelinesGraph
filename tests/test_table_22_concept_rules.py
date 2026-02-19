@@ -12,7 +12,9 @@ DATA_DIR = Path(os.environ.get("CARDIO_GRAPH_DATA_DIR", DEFAULT_DATA_DIR))
 GRAPH_DIR = Path(os.environ.get("CARDIO_GRAPH_GRAPH_DIR", DATA_DIR / "graph"))
 DOCS_DIR = Path(os.environ.get("CARDIO_GRAPH_DOCS_DIR", PROJECT_ROOT / "docs"))
 ROWS_DIR = Path(
-    os.environ.get("CARDIO_GRAPH_TABLE22_ROWS_DIR", DOCS_DIR / "table22_rows")
+    os.environ.get(
+        "CARDIO_GRAPH_TABLE22_ROWS_DIR", DOCS_DIR / "table22_rows_comparison"
+    )
 )
 RULES_PATH = Path(
     os.environ.get(
@@ -70,19 +72,19 @@ LLM_PORT = int(os.environ.get("CARDIO_GRAPH_TABLE22_LLM_PORT", "11435"))
 REPORT_MD_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_MD",
-        DOCS_DIR / "table22_rowwise_comparison.md",
+        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_comparison.md",
     )
 )
 REPORT_JSON_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_JSON",
-        DOCS_DIR / "table22_rowwise_alignment.json",
+        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_alignment.json",
     )
 )
 REPORT_CSV_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_CSV",
-        DOCS_DIR / "table22_rowwise_summary.csv",
+        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_summary.csv",
     )
 )
 
@@ -746,17 +748,47 @@ def _group_type(group_name, entries):
 
 
 def _build_mermaid(entries, title):
+    def _flatten_entries_with_side(payload):
+        if isinstance(payload, dict) and isinstance(payload.get("rules"), list):
+            payload = payload.get("rules")
+
+        if isinstance(payload, list) and payload and all(
+            isinstance(item, dict) and {"conditions", "actions"}.issubset(item.keys())
+            for item in payload
+        ):
+            flattened = []
+            for rule in payload:
+                for condition in rule.get("conditions", []):
+                    item = dict(condition)
+                    item["_side"] = "condition"
+                    flattened.append(item)
+                for action in rule.get("actions", []):
+                    item = dict(action)
+                    item["_side"] = "action"
+                    flattened.append(item)
+            return flattened
+
+        if isinstance(payload, list):
+            return payload
+        return []
+
+    entries = _flatten_entries_with_side(entries)
+
     def is_condition(entry):
         side = (entry.get("_side") or "").strip().lower()
         if side:
             return side == "condition"
-        return entry.get("role") in {"ClinicalCondition", "ClinicalParameter"}
+        if entry.get("role") in {"ClinicalCondition", "ClinicalParameter"}:
+            return True
+        return bool(entry.get("logic_type") or entry.get("logic_group"))
 
     def is_action(entry):
         side = (entry.get("_side") or "").strip().lower()
         if side:
             return side == "action"
-        return entry.get("role") in {"Procedure", "Medication"}
+        if entry.get("role") in {"Procedure", "Medication", "ClinicalAction"}:
+            return not (entry.get("logic_type") or entry.get("logic_group"))
+        return False
 
     condition_entries_all = [entry for entry in entries if is_condition(entry)]
     groups = _group_entries(condition_entries_all)
@@ -1089,12 +1121,12 @@ class Table22ConceptRulesTests(unittest.TestCase):
 
                 f.write("Mermaid (Human Annotation):\n\n")
                 f.write("```mermaid\n")
-                f.write(_build_mermaid(row["expected_entries"], "Human"))
+                f.write(_build_mermaid(row.get("expected_entries_display"), "Human"))
                 f.write("\n```\n\n")
 
                 f.write("Mermaid (LLM Generated):\n\n")
                 f.write("```mermaid\n")
-                f.write(_build_mermaid(row["actual_entries"], "LLM"))
+                f.write(_build_mermaid(row.get("actual_entries_display"), "LLM"))
                 f.write("\n```\n\n")
 
                 if row.get("grounding_summary"):

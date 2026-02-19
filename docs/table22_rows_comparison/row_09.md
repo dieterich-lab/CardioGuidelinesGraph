@@ -1,4 +1,4 @@
-# row_09 (mapped to row_09)
+# row_09 (mapped to row_10)
 
 Original table row text (ground truth):
 
@@ -170,6 +170,18 @@ graph LR
   REC[RecommendationNode]
   ACT1[Procedure: revascularization or medical therapy]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
+  ACT2[ClinicalAction: evaluate coronary anatomy]
+  REC -->|RECOMMENDS_USAGE| ACT2
+  ACT3[ClinicalAction: evaluate correlation between coronary artery disease and lv dysfunction]
+  REC -->|RECOMMENDS_USAGE| ACT3
+  ACT4[ClinicalAction: evaluate comorbidities]
+  REC -->|RECOMMENDS_USAGE| ACT4
+  ACT5[ClinicalAction: evaluate life expectancy]
+  REC -->|RECOMMENDS_USAGE| ACT5
+  ACT6[ClinicalAction: evaluate individual risk-to-benefit ratio]
+  REC -->|RECOMMENDS_USAGE| ACT6
+  ACT7[ClinicalAction: evaluate patient perspectives]
+  REC -->|RECOMMENDS_USAGE| ACT7
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[ClinicalCondition: ccs]
@@ -191,10 +203,10 @@ graph LR
 
 Concepts:
 - expected: 9
-- actual: 0
+- actual: 4
 - matches: 0
 - missing: 9
-- extra: 0
+- extra: 4
 
 Missing concepts:
 - ClinicalAction: evaluate comorbidities
@@ -207,12 +219,18 @@ Missing concepts:
 - ClinicalParameter: lvef
 - Procedure: revascularization or medical therapy
 
+Extra concepts:
+- ClinicalParameter: left ventricular ejection fraction
+- Condition: chronic coronary syndrome
+- Condition: three-vessel disease
+- Procedure: myocardial revascularization
+
 Rules (concept + logic fields):
 - expected: 9
-- actual: 0
+- actual: 4
 - matches: 0
 - missing: 9
-- extra: 0
+- extra: 4
 
 Missing rules:
 - ClinicalAction: evaluate comorbidities | class=I | level=C | dir=POSITIVE
@@ -224,4 +242,10 @@ Missing rules:
 - ClinicalCondition: ccs | op=PRESENT | logic=AND | grp=and_1
 - ClinicalParameter: lvef | op=≤ | thr=35 | unit=% | logic=AND | grp=and_1
 - Procedure: revascularization or medical therapy | class=I | level=C | dir=POSITIVE
+
+Extra rules:
+- ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | logic=AND | grp=and_1 | dir=UNKNOWN
+- Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
+- Condition: three-vessel disease | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
+- Procedure: myocardial revascularization | class=Class I | level=A | dir=POSITIVE
 

@@ -1,4 +1,4 @@
-# row_15 (mapped to row_15)
+# row_15 (mapped to row_16)
 
 Original table row text (ground truth):
 
@@ -60,34 +60,7 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [
-        {
-          "entity": "multivessel coronary artery disease",
-          "entity_original": "multivessel obstructive cad",
-          "role": "ClinicalParameter",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": "Coronary artery disease (disorder)",
-          "synonyms": [],
-          "snomed_id": 8957000,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [
-            {
-              "concept_id": "8957000",
-              "term": "Coronary artery disease (disorder)"
-            }
-          ],
-          "root_concept_id": null,
-          "root_concept_term": null
-        }
-      ],
+      "conditions": [],
       "actions": []
     }
   ]
@@ -101,6 +74,8 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[ClinicalAction: syntax score]
+  REC -->|RECOMMENDS_USAGE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[ClinicalCondition: multivessel obstructive cad]
@@ -114,74 +89,53 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: syntax score calculation]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_group_1_AND
-    D_group_1_1[DecisionNode group_1 s1]
-    C_group_1_1[ClinicalParameter: multivessel coronary artery disease]
-    D_group_1_1 -->|EVALUATES| C_group_1_1
-  end
-  D_group_1_1 -->|RESULTS_IN condition_met=true| REC
-```
-
-Grounding summary (optional):
-
-```json
-{
-  "enabled": true,
-  "total_grounded": 1,
-  "target_label_counts": {
-    "ClinicalCondition": 1
-  },
-  "root_hit_counts": {},
-  "root_hits": [
-    {
-      "entity": "Multivessel Coronary Artery Disease",
-      "entity_original": "multivessel obstructive CAD",
-      "role": "ClinicalParameter",
-      "preferred_term": "Coronary artery disease (disorder)",
-      "synonyms": [],
-      "snomed_id": 8957000,
-      "target_label": "ClinicalCondition",
-      "taxonomy_path": [
-        {
-          "concept_id": "8957000",
-          "term": "Coronary artery disease (disorder)"
-        }
-      ],
-      "root_hit": null
-    }
-  ]
-}
 ```
 
 Concepts:
 - expected: 2
-- actual: 2
+- actual: 11
 - matches: 0
 - missing: 2
-- extra: 2
+- extra: 11
 
 Missing concepts:
 - ClinicalAction: syntax score
 - ClinicalCondition: multivessel obstructive cad
 
 Extra concepts:
-- ClinicalParameter: multivessel coronary artery disease
-- Procedure: syntax score calculation
+- Condition: age
+- Condition: anatomical complexity
+- Condition: cognitive status
+- Condition: diabetes
+- Condition: frailty
+- Condition: local expertise
+- Condition: multivessel disease
+- Condition: other comorbidities
+- Condition: revascularization completeness
+- Condition: surgical and interventional risk
+- Procedure: revascularization
 
 Rules (concept + logic fields):
 - expected: 2
-- actual: 2
+- actual: 11
 - matches: 0
 - missing: 2
-- extra: 2
+- extra: 11
 
 Missing rules:
 - ClinicalAction: syntax score | class=I | level=B | dir=POSITIVE
 - ClinicalCondition: multivessel obstructive cad | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- ClinicalParameter: multivessel coronary artery disease | op=PRESENT | dir=UNKNOWN
-- Procedure: syntax score calculation | class=Class I | level=B | dir=POSITIVE
+- Condition: age | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
+- Condition: anatomical complexity | op=PRESENT | logic=AND | grp=and_7 | dir=UNKNOWN
+- Condition: cognitive status | op=PRESENT | logic=AND | grp=and_3 | dir=UNKNOWN
+- Condition: diabetes | op=PRESENT | logic=AND | grp=and_4 | dir=UNKNOWN
+- Condition: frailty | op=PRESENT | logic=AND | grp=and_2 | dir=UNKNOWN
+- Condition: local expertise | op=PRESENT | logic=AND | grp=and_9 | dir=UNKNOWN
+- Condition: multivessel disease | op=PRESENT | logic=AND | grp=and_6 | dir=UNKNOWN
+- Condition: other comorbidities | op=PRESENT | logic=AND | grp=and_5 | dir=UNKNOWN
+- Condition: revascularization completeness | op=PRESENT | logic=AND | grp=and_8 | dir=UNKNOWN
+- Condition: surgical and interventional risk | op=PRESENT | logic=AND | grp=and_10 | dir=UNKNOWN
+- Procedure: revascularization | dir=POSITIVE
 

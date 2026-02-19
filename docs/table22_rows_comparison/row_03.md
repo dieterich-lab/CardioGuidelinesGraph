@@ -1,4 +1,4 @@
-# row_03 (mapped to row_03)
+# row_03 (mapped to row_04)
 
 Original table row text (ground truth):
 
@@ -75,29 +75,7 @@ Aligned JSON (expected vs actual):
   "rules": [
     {
       "conditions": [],
-      "actions": [
-        {
-          "entity": "heart team communication to patient",
-          "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
-          "role": "Procedure",
-          "operator": null,
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "Procedure",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null
-        }
-      ]
+      "actions": []
     }
   ]
 }
@@ -110,14 +88,18 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: proposal]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  ACT1[ClinicalAction: communicate proposal]
+  REC -->|RECOMMENDS_USAGE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
     C_and_1_1[ClinicalCondition: heart team]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Procedure: proposal]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
-  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
+  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Mermaid (LLM Generated):
@@ -125,34 +107,6 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: heart team communication to patient]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-```
-
-Grounding summary (optional):
-
-```json
-{
-  "enabled": true,
-  "total_grounded": 1,
-  "target_label_counts": {
-    "Procedure": 1
-  },
-  "root_hit_counts": {},
-  "root_hits": [
-    {
-      "entity": "Heart Team communication to patient",
-      "entity_original": "communicate the proposal of the Heart Team in a balanced way using language that the patient can understand",
-      "role": "Procedure",
-      "preferred_term": null,
-      "synonyms": [],
-      "snomed_id": null,
-      "target_label": "Procedure",
-      "taxonomy_path": [],
-      "root_hit": null
-    }
-  ]
-}
 ```
 
 Concepts:
@@ -168,7 +122,7 @@ Missing concepts:
 - Procedure: proposal
 
 Extra concepts:
-- Procedure: heart team communication to patient
+- Procedure: patient communication of heart team recommendations
 
 Rules (concept + logic fields):
 - expected: 3
@@ -183,5 +137,5 @@ Missing rules:
 - Procedure: proposal | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- Procedure: heart team communication to patient | class=Class I | level=C | dir=POSITIVE
+- Procedure: patient communication of heart team recommendations | class=Class I | level=C | dir=POSITIVE
 
