@@ -71,6 +71,7 @@ def _fallback_analysis(run_id: str, report: ScoreReport) -> ErrorAnalysis:
 class ErrorAnalyst:
     def __init__(self, llm_bridge: LLMBridge):
         self.llm_bridge = llm_bridge
+        self.last_debug: dict = {}
 
     def analyze(self, report: ScoreReport) -> ErrorAnalysis:
         counts = aggregate_error_counts(report)
@@ -85,12 +86,16 @@ class ErrorAnalyst:
             "Return top classes and selected targets only as JSON."
         )
         try:
-            payload = self.llm_bridge.generate_json(
+            payload, llm_debug = self.llm_bridge.generate_json_with_debug(
                 system_prompt=SYSTEM_PROMPT,
                 user_prompt=prompt,
                 temperature=0.0,
                 max_tokens=1500,
             )
+            self.last_debug = {
+                "status": "llm_success",
+                "llm": llm_debug,
+            }
             top_classes = []
             for item in payload.get("top_classes", [])[:5]:
                 top_classes.append(
@@ -105,6 +110,7 @@ class ErrorAnalyst:
                 )
             selected_targets = [str(x) for x in payload.get("selected_targets", [])][:2]
             if not top_classes:
+                self.last_debug["status"] = "fallback_empty_top_classes"
                 return _fallback_analysis(report.run_id, report)
             if not selected_targets:
                 selected_targets = [entry.error_class for entry in top_classes[:2]]
@@ -113,5 +119,9 @@ class ErrorAnalyst:
                 top_classes=top_classes,
                 selected_targets=selected_targets,
             )
-        except Exception:
+        except Exception as exc:
+            self.last_debug = {
+                "status": "fallback_exception",
+                "error": str(exc),
+            }
             return _fallback_analysis(report.run_id, report)

@@ -295,6 +295,10 @@ def main(
             champion_dev = score_report_champion.metrics
 
         analysis = llm2.analyze(score_report_champion)
+        _write_json(
+            iteration_dir / "llm2_debug.json",
+            llm2.last_debug or {"status": "missing"},
+        )
 
         patch = llm3.propose_patch(
             base_prompt_version=champion_prompt,
@@ -302,6 +306,10 @@ def main(
             current_prompt_appendix=champion_prompt_path.read_text(encoding="utf-8"),
             analysis=analysis,
             score_report=score_report_champion,
+        )
+        _write_json(
+            iteration_dir / "llm3_debug.json",
+            llm3.last_debug or {"status": "missing"},
         )
 
         safe, reason = is_patch_safe(patch)

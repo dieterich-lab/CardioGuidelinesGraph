@@ -63,6 +63,7 @@ def _row_evidence(
 class PromptOptimizer:
     def __init__(self, llm_bridge: LLMBridge):
         self.llm_bridge = llm_bridge
+        self.last_debug: dict = {}
 
     def propose_patch(
         self,
@@ -87,13 +88,18 @@ class PromptOptimizer:
         rationale = ""
         max_edit_lines = 30
         edits: list[PromptEdit] = []
+        llm_error = None
         try:
-            payload = self.llm_bridge.generate_json(
+            payload, llm_debug = self.llm_bridge.generate_json_with_debug(
                 system_prompt=SYSTEM_PROMPT,
                 user_prompt=prompt,
                 temperature=0.0,
                 max_tokens=1200,
             )
+            self.last_debug = {
+                "status": "llm_success",
+                "llm": llm_debug,
+            }
             rationale = str(payload.get("rationale", "")).strip()
             max_edit_lines = int(payload.get("max_edit_lines", 30))
 
@@ -116,6 +122,23 @@ class PromptOptimizer:
                     )
 
             if not edits:
+                raw_zone_map = payload.get("zone_edits")
+                if isinstance(raw_zone_map, dict):
+                    for zone, content in raw_zone_map.items():
+                        zone_value = str(zone).strip() or "instruction_appendix"
+                        content_value = str(content or "").strip()
+                        if not content_value:
+                            continue
+                        edits.append(
+                            PromptEdit(
+                                zone=zone_value,
+                                change_type="append",
+                                old=current_prompt_appendix,
+                                new=content_value,
+                            )
+                        )
+
+            if not edits:
                 legacy_appendix = str(payload.get("instruction_appendix", "")).strip()
                 if legacy_appendix:
                     edits.append(
@@ -126,14 +149,21 @@ class PromptOptimizer:
                             new=legacy_appendix,
                         )
                     )
-        except Exception:
+        except Exception as exc:
             edits = []
+            llm_error = str(exc)
+            self.last_debug = {
+                "status": "fallback_exception",
+                "error": llm_error,
+            }
 
         if not edits:
             instruction_appendix = _fallback_instruction(analysis.selected_targets)
             rationale = (
                 "Fallback optimizer instruction (LLM unavailable or invalid JSON)."
             )
+            if llm_error:
+                rationale += f" cause={llm_error}"
             edits = [
                 PromptEdit(
                     zone="instruction_appendix",
@@ -142,6 +172,12 @@ class PromptOptimizer:
                     new=instruction_appendix,
                 )
             ]
+            if self.last_debug.get("status") == "llm_success":
+                self.last_debug["status"] = "fallback_no_valid_edits"
+
+        self.last_debug.setdefault("selected_targets", analysis.selected_targets)
+        self.last_debug.setdefault("candidate_prompt_version", candidate_prompt_version)
+        self.last_debug.setdefault("edit_count", len(edits))
 
         return PromptPatch(
             base_prompt_version=base_prompt_version,
