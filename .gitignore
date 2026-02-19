@@ -71,3 +71,5 @@ slurm/
 docs/table22_tuning_runs/
 
 .coverage
+
+.gpg-recipients

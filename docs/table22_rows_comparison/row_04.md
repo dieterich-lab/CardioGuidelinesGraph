@@ -187,7 +187,58 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Revascularization of toe (procedure)",
+          "synonyms": [
+            "Revascularisation of toe",
+            "Revascularization of toe"
+          ],
+          "snomed_id": 233508000,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "233508000",
+              "term": "Revascularization of toe (procedure)"
+            },
+            {
+              "concept_id": "233507005",
+              "term": "Revascularization of foot (procedure)"
+            },
+            {
+              "concept_id": "61661004",
+              "term": "Operative procedure on foot (procedure)"
+            },
+            {
+              "concept_id": "118716003",
+              "term": "Procedure on foot (procedure)"
+            },
+            {
+              "concept_id": "118710009",
+              "term": "Procedure on lower extremity (procedure)"
+            },
+            {
+              "concept_id": "118949002",
+              "term": "Procedure on extremity (procedure)"
+            },
+            {
+              "concept_id": "771329004",
+              "term": "Procedure on body region (procedure)"
+            },
+            {
+              "concept_id": "362958002",
+              "term": "Procedure by site (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ]
     }

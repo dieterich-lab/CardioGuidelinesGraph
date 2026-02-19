@@ -117,7 +117,41 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Multidisciplinary review (procedure)",
+          "synonyms": [
+            "Multidisciplinary review"
+          ],
+          "snomed_id": 708004003,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "708004003",
+              "term": "Multidisciplinary review (procedure)"
+            },
+            {
+              "concept_id": "763288003",
+              "term": "Patient review (procedure)"
+            },
+            {
+              "concept_id": "169443000",
+              "term": "Preventive procedure (procedure)"
+            },
+            {
+              "concept_id": "362961001",
+              "term": "Procedure by intent (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ]
     }

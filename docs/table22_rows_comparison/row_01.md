@@ -173,7 +173,53 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Complete dermabrasion (procedure)",
+          "synonyms": [
+            "Complete dermabrasion"
+          ],
+          "snomed_id": 7818006,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "7818006",
+              "term": "Complete dermabrasion (procedure)"
+            },
+            {
+              "concept_id": "37236007",
+              "term": "Dermabrasion (procedure)"
+            },
+            {
+              "concept_id": "8420001",
+              "term": "Abrasion (procedure)"
+            },
+            {
+              "concept_id": "56757003",
+              "term": "Scraping (procedure)"
+            },
+            {
+              "concept_id": "128303001",
+              "term": "Surgical removal (procedure)"
+            },
+            {
+              "concept_id": "118292001",
+              "term": "Removal (procedure)"
+            },
+            {
+              "concept_id": "128927009",
+              "term": "Procedure by method (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ]
     }

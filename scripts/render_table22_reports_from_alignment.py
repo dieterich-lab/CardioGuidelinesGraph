@@ -254,9 +254,95 @@ def _group_from_flat_entries(entries):
     return grouped
 
 
-def render_reports(alignment_path: Path):
+def _normalize_text(value):
+    if value is None:
+        return ""
+    return " ".join(str(value).strip().lower().split())
+
+
+def _pick_grounding_hit(entry, hits):
+    role = _normalize_text(entry.get("role"))
+    entity = _normalize_text(entry.get("entity"))
+    entity_original = _normalize_text(entry.get("entity_original"))
+
+    def role_match(hit):
+        hit_role = _normalize_text(hit.get("role"))
+        return (not role) or (not hit_role) or (role == hit_role)
+
+    for hit in hits:
+        if role_match(hit) and entity_original and _normalize_text(
+            hit.get("entity_original")
+        ) == entity_original:
+            return hit
+
+    for hit in hits:
+        if role_match(hit) and entity and _normalize_text(hit.get("entity")) == entity:
+            return hit
+
+    return None
+
+
+def _enrich_entry_with_grounding(entry, hit):
+    if not hit:
+        return entry
+
+    enriched = dict(entry)
+    for key in ["preferred_term", "synonyms", "snomed_id", "target_label", "taxonomy_path"]:
+        if enriched.get(key) is None and hit.get(key) is not None:
+            enriched[key] = hit.get(key)
+
+    root_hit = hit.get("root_hit")
+    if isinstance(root_hit, dict):
+        if enriched.get("root_concept_id") is None and root_hit.get("root_concept_id") is not None:
+            enriched["root_concept_id"] = root_hit.get("root_concept_id")
+        if enriched.get("root_concept_term") is None and root_hit.get("root_concept_term") is not None:
+            enriched["root_concept_term"] = root_hit.get("root_concept_term")
+
+    return enriched
+
+
+def _enrich_grouped_payload_with_grounding(grouped_payload, grounding_summary):
+    if not isinstance(grouped_payload, dict):
+        return grouped_payload
+    if not isinstance(grounding_summary, dict):
+        return grouped_payload
+
+    hits = grounding_summary.get("root_hits")
+    if not isinstance(hits, list) or not hits:
+        return grouped_payload
+
+    enriched = {"rules": []}
+    for rule in grouped_payload.get("rules", []):
+        if not isinstance(rule, dict):
+            continue
+
+        conditions = []
+        for condition in rule.get("conditions", []):
+            hit = _pick_grounding_hit(condition, hits)
+            conditions.append(_enrich_entry_with_grounding(condition, hit))
+
+        actions = []
+        for action in rule.get("actions", []):
+            hit = _pick_grounding_hit(action, hits)
+            actions.append(_enrich_entry_with_grounding(action, hit))
+
+        enriched["rules"].append({"conditions": conditions, "actions": actions})
+
+    return enriched
+
+
+def render_reports(alignment_path: Path, grounding_alignment_path: Path | None = None):
     payload = json.loads(alignment_path.read_text(encoding="utf-8"))
     rows = payload.get("rows", [])
+
+    grounding_rows_by_id = {}
+    if grounding_alignment_path and grounding_alignment_path.is_file():
+        grounding_payload = json.loads(grounding_alignment_path.read_text(encoding="utf-8"))
+        for row in grounding_payload.get("rows", []):
+            row_id = row.get("row_id")
+            if row_id:
+                grounding_rows_by_id[row_id] = row
+
     out_dir = alignment_path.parent
     project_root = Path(__file__).resolve().parents[1]
 
@@ -318,6 +404,14 @@ def render_reports(alignment_path: Path):
             actual_display = row.get("actual_entries_display")
             if _is_empty_grouped_payload(actual_display):
                 actual_display = _group_from_flat_entries(row.get("actual_entries", []))
+            grounding_summary = row.get("grounding_summary")
+            if not grounding_summary and row.get("row_id") in grounding_rows_by_id:
+                grounding_summary = grounding_rows_by_id[row.get("row_id")].get(
+                    "grounding_summary"
+                )
+            actual_display = _enrich_grouped_payload_with_grounding(
+                actual_display, grounding_summary
+            )
             f.write(json.dumps(actual_display, indent=2))
             f.write("\n</pre></td>\n")
             f.write("  </tr>\n")
@@ -333,6 +427,14 @@ def render_reports(alignment_path: Path):
             actual_display = row.get("actual_entries_display")
             if _is_empty_grouped_payload(actual_display):
                 actual_display = _group_from_flat_entries(row.get("actual_entries", []))
+            grounding_summary = row.get("grounding_summary")
+            if not grounding_summary and row.get("row_id") in grounding_rows_by_id:
+                grounding_summary = grounding_rows_by_id[row.get("row_id")].get(
+                    "grounding_summary"
+                )
+            actual_display = _enrich_grouped_payload_with_grounding(
+                actual_display, grounding_summary
+            )
             f.write(_build_mermaid(actual_display, "LLM"))
             f.write("\n```\n\n")
 
@@ -397,8 +499,16 @@ def main():
         default="docs/table22_rows_comparison/table22_rowwise_alignment.json",
         help="Path to table22 alignment JSON",
     )
+    parser.add_argument(
+        "--grounding-alignment",
+        default=None,
+        help="Optional path to a grounded alignment JSON used to enrich taxonomy fields",
+    )
     args = parser.parse_args()
-    render_reports(Path(args.alignment))
+    grounding_alignment_path = (
+        Path(args.grounding_alignment) if args.grounding_alignment else None
+    )
+    render_reports(Path(args.alignment), grounding_alignment_path)
 
 
 if __name__ == "__main__":

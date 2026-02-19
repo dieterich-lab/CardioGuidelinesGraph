@@ -88,7 +88,10 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "synonyms": [],
+          "target_label": "Procedure",
+          "taxonomy_path": []
         }
       ]
     }

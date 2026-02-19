@@ -129,7 +129,39 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": null,
           "level": null,
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": "Left ventricular ejection fraction (observable entity)",
+          "synonyms": [],
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [
+            {
+              "concept_id": "250908004",
+              "term": "Left ventricular ejection fraction (observable entity)"
+            },
+            {
+              "concept_id": "70822001",
+              "term": "Cardiac ejection fraction, function (observable entity)"
+            },
+            {
+              "concept_id": "86185002",
+              "term": "Cardiac function (observable entity)"
+            },
+            {
+              "concept_id": "70337006",
+              "term": "Cardiovascular function (observable entity)"
+            },
+            {
+              "concept_id": "246464006",
+              "term": "Function (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)"
         }
       ],
       "actions": []
