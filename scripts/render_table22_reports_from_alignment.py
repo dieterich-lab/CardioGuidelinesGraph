@@ -290,7 +290,7 @@ def _flatten_grouped_payload_entries(payload):
 def _has_grounding_content(row):
     if not isinstance(row, dict):
         return False
-    root_hits = ((row.get("grounding_summary") or {}).get("root_hits") or [])
+    root_hits = (row.get("grounding_summary") or {}).get("root_hits") or []
     if root_hits:
         return True
     for entry in _flatten_grouped_payload_entries(row.get("actual_entries_display")):
@@ -331,11 +331,13 @@ def _collect_grounding_hits(grounding_row):
         return []
 
     hits = []
-    summary_hits = ((grounding_row.get("grounding_summary") or {}).get("root_hits") or [])
+    summary_hits = (grounding_row.get("grounding_summary") or {}).get("root_hits") or []
     if isinstance(summary_hits, list):
         hits.extend([hit for hit in summary_hits if isinstance(hit, dict)])
 
-    for entry in _flatten_grouped_payload_entries(grounding_row.get("actual_entries_display")):
+    for entry in _flatten_grouped_payload_entries(
+        grounding_row.get("actual_entries_display")
+    ):
         if isinstance(entry, dict):
             hits.append(entry)
 
