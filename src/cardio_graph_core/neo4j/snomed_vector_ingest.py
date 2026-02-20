@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 import click
 import requests
 from neo4j import GraphDatabase
+from neo4j.exceptions import Neo4jError, ServiceUnavailable, SessionExpired
 from sqlalchemy import text
 
 from cardio_graph_core.extraction.clients import ollama_models
@@ -108,6 +109,67 @@ def _create_vector_index(
     session.run(cypher)
 
 
+def _run_neo4j_with_retry(
+    driver,
+    operation,
+    operation_name: str,
+    max_attempts: int,
+    retry_backoff_seconds: float,
+):
+    attempt = 0
+    while True:
+        attempt += 1
+        try:
+            return operation()
+        except (ServiceUnavailable, SessionExpired, OSError) as exc:
+            if attempt >= max_attempts:
+                raise
+            sleep_seconds = retry_backoff_seconds * (2 ** (attempt - 1))
+            click.echo(
+                f"[vector-ingest] transient Neo4j error during {operation_name} "
+                f"(attempt {attempt}/{max_attempts}): {exc}. "
+                f"retrying in {sleep_seconds:.1f}s"
+            )
+            time.sleep(sleep_seconds)
+        except Neo4jError:
+            raise
+
+
+def _filter_rows_needing_embedding(
+    driver,
+    label: str,
+    property_name: str,
+    rows: List[Dict[str, Any]],
+    max_attempts: int,
+    retry_backoff_seconds: float,
+) -> List[Dict[str, Any]]:
+    if not rows:
+        return []
+
+    query = (
+        f"""
+        UNWIND $rows AS row
+        OPTIONAL MATCH (n:`{label}` {{concept_id: toInteger(row.conceptid), term: row.term}})
+        WITH row, n
+        WHERE n IS NULL OR n.`{property_name}` IS NULL
+        RETURN row.conceptid AS conceptid, row.term AS term
+        """
+    )
+
+    def operation():
+        with driver.session() as session:
+            result = session.run(query, rows=rows)
+            return [{"conceptid": r["conceptid"], "term": r["term"]} for r in result]
+
+    return _run_neo4j_with_retry(
+        driver=driver,
+        operation=operation,
+        operation_name="resume filter",
+        max_attempts=max_attempts,
+        retry_backoff_seconds=retry_backoff_seconds,
+    )
+
+
 @click.command()
 @click.option(
     "--neo4j-uri", default="bolt://neo4j-dev3.internal:7687", show_default=True
@@ -132,11 +194,14 @@ def _create_vector_index(
 @click.option("--max-rows", default=0, type=int, show_default=True)
 @click.option("--log-every", default=5000, type=int, show_default=True)
 @click.option("--wipe-db/--no-wipe-db", default=False, show_default=True)
+@click.option("--resume-only/--no-resume-only", default=True, show_default=True)
 @click.option(
     "--drop-existing-vector-indexes/--keep-existing-vector-indexes",
     default=True,
     show_default=True,
 )
+@click.option("--neo4j-max-attempts", default=5, type=int, show_default=True)
+@click.option("--neo4j-retry-backoff", default=2.0, type=float, show_default=True)
 def main(
     neo4j_uri: str,
     neo4j_user: str,
@@ -155,7 +220,10 @@ def main(
     max_rows: int,
     log_every: int,
     wipe_db: bool,
+    resume_only: bool,
     drop_existing_vector_indexes: bool,
+    neo4j_max_attempts: int,
+    neo4j_retry_backoff: float,
 ) -> None:
     if batch_size <= 0:
         raise click.ClickException("batch_size must be > 0")
@@ -167,6 +235,10 @@ def main(
         f"[vector-ingest] embedding_model={embedding_model} -> {_resolve_model_name(embedding_model)}"
     )
     click.echo(f"[vector-ingest] index_name={index_name}, dimensions={dimensions}")
+    click.echo(
+        f"[vector-ingest] resume_only={resume_only}, neo4j_max_attempts={neo4j_max_attempts}, "
+        f"neo4j_retry_backoff={neo4j_retry_backoff}"
+    )
 
     snomed = SnomedExplorer()
     snomed.connect()
@@ -238,7 +310,22 @@ def main(
                 if not rows_buffer:
                     return
 
-                texts = [row["term"] for row in rows_buffer]
+                rows_to_embed = rows_buffer
+                if resume_only:
+                    rows_to_embed = _filter_rows_needing_embedding(
+                        driver=driver,
+                        label=label,
+                        property_name=property_name,
+                        rows=rows_buffer,
+                        max_attempts=neo4j_max_attempts,
+                        retry_backoff_seconds=neo4j_retry_backoff,
+                    )
+
+                if not rows_to_embed:
+                    rows_buffer = []
+                    return
+
+                texts = [row["term"] for row in rows_to_embed]
                 embeddings = _embed_batch(
                     embedding_url=embedding_url,
                     embedding_model=embedding_model,
@@ -246,7 +333,7 @@ def main(
                     timeout_seconds=embedding_timeout,
                 )
 
-                if len(embeddings) != len(rows_buffer):
+                if len(embeddings) != len(rows_to_embed):
                     raise RuntimeError("Embedding count mismatch")
 
                 bad_dim = next(
@@ -258,7 +345,7 @@ def main(
                     )
 
                 payload = []
-                for item, vector in zip(rows_buffer, embeddings):
+                for item, vector in zip(rows_to_embed, embeddings):
                     payload.append(
                         {
                             "concept_id": int(item["conceptid"]),
@@ -267,16 +354,25 @@ def main(
                         }
                     )
 
-                with driver.session() as session:
-                    session.run(
-                        f"""
-                        UNWIND $rows AS row
-                        MERGE (n:`{label}` {{concept_id: row.concept_id, term: row.term}})
-                        SET n.`{property_name}` = row.embedding,
-                            n.updated_at = datetime()
-                        """,
-                        rows=payload,
-                    )
+                def write_operation():
+                    with driver.session() as session:
+                        session.run(
+                            f"""
+                            UNWIND $rows AS row
+                            MERGE (n:`{label}` {{concept_id: row.concept_id, term: row.term}})
+                            SET n.`{property_name}` = row.embedding,
+                                n.updated_at = datetime()
+                            """,
+                            rows=payload,
+                        )
+
+                _run_neo4j_with_retry(
+                    driver=driver,
+                    operation=write_operation,
+                    operation_name="batch write",
+                    max_attempts=neo4j_max_attempts,
+                    retry_backoff_seconds=neo4j_retry_backoff,
+                )
 
                 processed += len(payload)
                 rows_buffer = []
