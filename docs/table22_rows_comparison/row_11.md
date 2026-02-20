@@ -171,7 +171,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class IIa",
           "level": "Level B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": []

@@ -171,7 +171,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 18632008,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "health literacy",
@@ -185,7 +193,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 870752006,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "cultural circumstances",
@@ -199,7 +215,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 160934006,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "social support",
@@ -213,7 +237,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 1145306007,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": [
@@ -229,7 +261,15 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 233501006,
+          "target_label": "Procedure",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ]
     }

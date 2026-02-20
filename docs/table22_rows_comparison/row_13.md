@@ -150,7 +150,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "multivessel coronary artery disease",
@@ -164,7 +172,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 23687008,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -178,7 +194,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "chronic coronary syndrome",
@@ -192,7 +216,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 413838009,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "multivessel coronary artery disease",
@@ -206,7 +238,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 23687008,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -220,7 +260,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": [
@@ -236,7 +284,15 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 232717009,
+          "target_label": "Procedure",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ]
     }

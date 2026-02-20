@@ -87,7 +87,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "frailty",
@@ -101,7 +109,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_2",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 248279007,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "cognitive status",
@@ -115,7 +131,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_3",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 65367001,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "diabetes",
@@ -129,7 +153,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_4",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 11530004,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "other comorbidities",
@@ -143,7 +175,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_5",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "multivessel disease",
@@ -157,7 +197,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_6",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "anatomical complexity",
@@ -171,7 +219,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_7",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 51845000,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "revascularization completeness",
@@ -185,7 +241,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_8",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 289267004,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "local expertise",
@@ -199,7 +263,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_9",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 34714000,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "surgical and interventional risk",
@@ -213,7 +285,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_10",
           "strength": null,
           "level": null,
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": [
@@ -229,7 +309,15 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": null,
           "level": null,
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 81266008,
+          "target_label": "Procedure",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ]
     }

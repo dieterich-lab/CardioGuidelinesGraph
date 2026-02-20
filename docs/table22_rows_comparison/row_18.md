@@ -150,7 +150,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 53741008,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "complex coronary artery disease",
@@ -164,7 +172,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "C",
-          "direction": "UNKNOWN"
+          "direction": "UNKNOWN",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 53741008,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": [
@@ -180,7 +196,15 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class I",
           "level": "C",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "Procedure",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ]
     }

@@ -150,7 +150,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "functionally significant single-vessel disease involving proximal left anterior descending artery",
@@ -164,7 +172,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -178,7 +194,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "single-",
@@ -192,7 +216,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "or_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "two-vessel disease involving proximal left anterior descending artery",
@@ -206,7 +238,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "or_1",
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": [
@@ -222,7 +262,15 @@ Aligned JSON (expected vs actual):
           "logic_group": null,
           "strength": "Class I",
           "level": "B",
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 277437006,
+          "target_label": "Procedure",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ]
     }

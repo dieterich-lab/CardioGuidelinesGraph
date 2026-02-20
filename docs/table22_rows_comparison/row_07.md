@@ -150,7 +150,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": null,
           "level": null,
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 413838009,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -164,7 +172,15 @@ Aligned JSON (expected vs actual):
           "logic_group": "and_1",
           "strength": null,
           "level": null,
-          "direction": "POSITIVE"
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": []

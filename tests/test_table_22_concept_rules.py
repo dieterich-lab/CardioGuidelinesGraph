@@ -199,6 +199,7 @@ SCHEMA_GROUNDING_KEYS = {
     "taxonomy_path",
     "root_concept_id",
     "root_concept_term",
+    "mapped_target_label",
 }
 
 
@@ -272,9 +273,22 @@ def _summarize_rules(rules_rows):
             row.get("role"),
             row.get("logic_structured") or {},
         )
+        entry.update(
+            {
+                "preferred_term": row.get("preferred_term"),
+                "synonyms": row.get("synonyms") or row.get("alt_names") or [],
+                "snomed_id": row.get("snomed_id"),
+                "target_label": row.get("target_label"),
+                "taxonomy_path": row.get("taxonomy_path") or [],
+                "root_concept_id": row.get("root_concept_id"),
+                "root_concept_term": row.get("root_concept_term"),
+                "mapped_target_label": row.get("mapped_target_label"),
+            }
+        )
         side = _infer_side(row.get("role"), row.get("logic_structured") or {})
         if side:
             entry["_side"] = side
+        entry = _postfilter_entry(entry, include_grounding=True)
         entry["_source_index"] = index
         grouped.setdefault(row_id, []).append(entry)
     return grouped
