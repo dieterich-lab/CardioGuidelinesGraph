@@ -35,14 +35,44 @@ def _row_evidence(
                     "expected": error.expected,
                     "actual": error.actual,
                     "severity": error.severity,
+                    "details": error.details,
                 }
             )
+
+        ground_truth_text = row.row_context.get("ground_truth_text") or {}
+        row_text = (
+            ground_truth_text.get("Recommendations")
+            or ground_truth_text.get("Recommendation")
+            or ground_truth_text.get("recommendation")
+            or ""
+        )
+        header = {
+            key: value
+            for key, value in ground_truth_text.items()
+            if key not in {"Recommendations", "Recommendation", "recommendation", "Class", "Class a", "Level", "Level b"}
+        }
+        footer = {
+            key: ground_truth_text.get(key)
+            for key in ("Class", "Class a", "Level", "Level b")
+            if ground_truth_text.get(key) is not None
+        }
+
         evidence.append(
             {
                 "row_id": row.row_id,
                 "error_count": len(row.errors),
                 "class_counts": class_counts,
                 "examples": examples,
+                "header": header,
+                "row": row_text,
+                "footer": footer,
+                "ground_truth": ground_truth_text,
+                "expected_entries_display": row.row_context.get(
+                    "expected_entries_display"
+                ),
+                "actual_entries_display": row.row_context.get("actual_entries_display"),
+                "concept_summary": row.row_context.get("concept_summary"),
+                "rule_summary": row.row_context.get("rule_summary"),
             }
         )
     return evidence

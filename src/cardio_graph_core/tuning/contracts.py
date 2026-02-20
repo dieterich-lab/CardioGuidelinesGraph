@@ -25,13 +25,15 @@ class ErrorItem:
     severity: str
     expected: Optional[str] = None
     actual: Optional[str] = None
+    details: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Optional[str]]:
+    def to_dict(self) -> Dict[str, Any]:
         payload = {
             "class": self.error_class,
             "severity": self.severity,
             "expected": self.expected,
             "actual": self.actual,
+            "details": self.details,
         }
         return payload
 
@@ -40,11 +42,13 @@ class ErrorItem:
 class RowErrors:
     row_id: str
     errors: List[ErrorItem] = field(default_factory=list)
+    row_context: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "row_id": self.row_id,
             "errors": [error.to_dict() for error in self.errors],
+            "row_context": self.row_context,
         }
 
 

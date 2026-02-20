@@ -10,13 +10,18 @@ from cardio_graph_core.tuning.llm_bridge import LLMBridge
 
 SYSTEM_PROMPT = """
 You are LLM3 (prompt optimizer) for extraction autotuning.
-Propose a minimal prompt appendix patch that targets the selected error classes.
+Propose a minimal prompt appendix patch that targets the selected error classes and row-level structural mismatches.
 Return strict JSON with keys:
 - edits (array of objects with keys: zone, content)
 - rationale (string)
 - max_edit_lines (int)
 Allowed zones: instruction_appendix, rule_structuring, condition_extraction, action_extraction, operator_logic.
 Keep edits concise and actionable.
+Hard constraints:
+- Do NOT add illustrative examples, entity lists, or category primers.
+- Do NOT restate known ontology categories.
+- Every edit must be a transformation rule anchored to observed row evidence (row_id + mismatch type).
+- Prioritize exact condition/action separation and operator/logic_group preservation from ground truth.
 """.strip()
 
 
@@ -25,6 +30,7 @@ def _fallback_instruction(targets: list[str]) -> str:
         "Prioritize strict IF/THEN separation: conditions on left, actions on right.",
         "Do not infer PLANNED unless explicit scheduling intent is present.",
         "Preserve OR and AND groupings exactly as written in coordinated phrases.",
+        "Do not add category primers or example entities; emit only extraction transformation rules.",
     ]
     if targets:
         lines.append("Focus classes: " + ", ".join(targets))
@@ -47,14 +53,44 @@ def _row_evidence(
                     "expected": error.expected,
                     "actual": error.actual,
                     "severity": error.severity,
+                    "details": error.details,
                 }
             )
+
+        ground_truth_text = row.row_context.get("ground_truth_text") or {}
+        row_text = (
+            ground_truth_text.get("Recommendations")
+            or ground_truth_text.get("Recommendation")
+            or ground_truth_text.get("recommendation")
+            or ""
+        )
+        header = {
+            key: value
+            for key, value in ground_truth_text.items()
+            if key not in {"Recommendations", "Recommendation", "recommendation", "Class", "Class a", "Level", "Level b"}
+        }
+        footer = {
+            key: ground_truth_text.get(key)
+            for key in ("Class", "Class a", "Level", "Level b")
+            if ground_truth_text.get(key) is not None
+        }
+
         evidence.append(
             {
                 "row_id": row.row_id,
                 "error_count": len(row.errors),
                 "class_counts": class_counts,
                 "examples": examples,
+                "header": header,
+                "row": row_text,
+                "footer": footer,
+                "ground_truth": ground_truth_text,
+                "expected_entries_display": row.row_context.get(
+                    "expected_entries_display"
+                ),
+                "actual_entries_display": row.row_context.get("actual_entries_display"),
+                "concept_summary": row.row_context.get("concept_summary"),
+                "rule_summary": row.row_context.get("rule_summary"),
             }
         )
     return evidence
@@ -82,8 +118,9 @@ class PromptOptimizer:
             f"top_classes={[entry.to_dict() for entry in analysis.top_classes]}\n"
             f"row_evidence={row_evidence}\n"
             "Each example includes expected (ground-truth side) and actual (model output side).\n"
+            "Ground-truth row context includes header/row/footer when available.\n"
             f"current_prompt_appendix={current_prompt_appendix!r}\n"
-            "Return JSON only."
+            "Return JSON only. Keep edits row-anchored and avoid generic guidance."
         )
         rationale = ""
         max_edit_lines = 30
