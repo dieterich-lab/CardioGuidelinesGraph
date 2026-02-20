@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "percutaneous coronary revascularization",
+        "entity": "pci",
         "entity_original": "pci",
         "role": "Procedure",
         "operator": "PRESENT",
@@ -34,17 +34,10 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "415070008",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       },
       {
-        "entity": "lesion",
+        "entity": "anatomically complex lesions",
         "entity_original": "anatomically complex lesions",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -55,17 +48,10 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "52988006",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       },
       {
-        "entity": "stenosis of left coronary artery main stem",
+        "entity": "left main stem lesions",
         "entity_original": "left main stem lesions",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -76,17 +62,10 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "876857001",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       },
       {
-        "entity": "lesion",
+        "entity": "true bifurcations lesions",
         "entity_original": "true bifurcations lesions",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -97,17 +76,10 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "52988006",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       },
       {
-        "entity": "lesion",
+        "entity": "long lesions",
         "entity_original": "long lesions",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -118,19 +90,12 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "52988006",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       }
     ],
     "actions": [
       {
-        "entity": "intravascular ultrasound of artery",
+        "entity": "ivus",
         "entity_original": "intracoronary imaging guidance by ivus recommended",
         "role": "Procedure",
         "operator": null,
@@ -141,17 +106,10 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "241467003",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       },
       {
-        "entity": "optical coherence tomography",
+        "entity": "octis",
         "entity_original": "intracoronary imaging guidance by octis recommended",
         "role": "Procedure",
         "operator": null,
@@ -162,14 +120,7 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "392010000",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       }
     ]
   }
@@ -195,12 +146,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 413838009,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "chronic coronary syndrome with persistent angina despite guideline-directed medical treatment",
@@ -218,11 +168,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -241,12 +190,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 277437006,
-          "target_label": "Procedure",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ]
     }
@@ -261,27 +209,27 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: intravascular ultrasound of artery]
+  ACT1[Procedure: ivus]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: optical coherence tomography]
+  ACT2[Procedure: octis]
   REC -->|RECOMMENDS_PROCEDURE| ACT2
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Procedure: percutaneous coronary revascularization]
+    C_and_1_1[Procedure: pci]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   subgraph Human_or_1_OR
     D_or_1_1[DecisionNode or_1 s1]
-    C_or_1_1[ClinicalCondition: lesion]
+    C_or_1_1[ClinicalCondition: anatomically complex lesions]
     D_or_1_1 -->|CHECKS_FOR| C_or_1_1
     D_or_1_2[DecisionNode or_1 s2]
-    C_or_1_2[ClinicalCondition: stenosis of left coronary artery main stem]
+    C_or_1_2[ClinicalCondition: left main stem lesions]
     D_or_1_2 -->|CHECKS_FOR| C_or_1_2
     D_or_1_3[DecisionNode or_1 s3]
-    C_or_1_3[ClinicalCondition: lesion]
+    C_or_1_3[ClinicalCondition: true bifurcations lesions]
     D_or_1_3 -->|CHECKS_FOR| C_or_1_3
     D_or_1_4[DecisionNode or_1 s4]
-    C_or_1_4[ClinicalCondition: lesion]
+    C_or_1_4[ClinicalCondition: long lesions]
     D_or_1_4 -->|CHECKS_FOR| C_or_1_4
     D_and_1_1 -->|LEADS_TO condition_met=true| D_or_1_1
     D_and_1_1 -->|LEADS_TO condition_met=true| D_or_1_2
@@ -314,18 +262,20 @@ graph LR
 ```
 
 Concepts:
-- expected: 5
+- expected: 7
 - actual: 3
 - matches: 0
-- missing: 5
+- missing: 7
 - extra: 3
 
 Missing concepts:
-- ClinicalCondition: lesion
-- ClinicalCondition: stenosis of left coronary artery main stem
-- Procedure: intravascular ultrasound of artery
-- Procedure: optical coherence tomography
-- Procedure: percutaneous coronary revascularization
+- ClinicalCondition: anatomically complex lesions
+- ClinicalCondition: left main stem lesions
+- ClinicalCondition: long lesions
+- ClinicalCondition: true bifurcations lesions
+- Procedure: ivus
+- Procedure: octis
+- Procedure: pci
 
 Extra concepts:
 - Condition: chronic coronary syndrome
@@ -333,21 +283,22 @@ Extra concepts:
 - Procedure: myocardial revascularization
 
 Rules (concept + logic fields):
-- expected: 5
+- expected: 7
 - actual: 3
 - matches: 0
-- missing: 5
+- missing: 7
 - extra: 3
 
 Missing rules:
-- ClinicalCondition: lesion | op=PRESENT | logic=OR | grp=or_1
-- ClinicalCondition: stenosis of left coronary artery main stem | op=PRESENT | logic=OR | grp=or_1
-- Procedure: intravascular ultrasound of artery | class=I | level=A | dir=POSITIVE
-- Procedure: optical coherence tomography | class=I | level=A | dir=POSITIVE
-- Procedure: percutaneous coronary revascularization | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: anatomically complex lesions | op=PRESENT | logic=OR | grp=or_1
+- ClinicalCondition: left main stem lesions | op=PRESENT | logic=OR | grp=or_1
+- ClinicalCondition: long lesions | op=PRESENT | logic=OR | grp=or_1
+- ClinicalCondition: true bifurcations lesions | op=PRESENT | logic=OR | grp=or_1
+- Procedure: ivus | class=I | level=A | dir=POSITIVE
+- Procedure: octis | class=I | level=A | dir=POSITIVE
+- Procedure: pci | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
 - Condition: chronic coronary syndrome with persistent angina despite guideline-directed medical treatment | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=A | dir=UNKNOWN
 - Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=A | dir=POSITIVE
 - Procedure: myocardial revascularization | class=Class I | level=A | dir=POSITIVE
-

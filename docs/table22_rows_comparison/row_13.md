@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "coronary artery disease",
+        "entity": "complex cad",
         "entity_original": "patients with complex cad",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -34,17 +34,10 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "53741008",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       },
       {
-        "entity": "myocardial revascularization",
+        "entity": "revascularization is being considered",
         "entity_original": "patients in whom revascularization is being considered",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -55,21 +48,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "275227003",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       }
     ],
     "actions": [
       {
-        "entity": "therapeutic evaluation (procedure)",
+        "entity": "procedural risks",
         "entity_original": "assess procedural risks",
-        "role": "Procedure",
+        "role": "ClinicalAction",
         "operator": null,
         "threshold": null,
         "unit": null,
@@ -78,19 +64,12 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "110463001",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       },
       {
-        "entity": "therapeutic evaluation (procedure)",
+        "entity": "post-procedural outcomes",
         "entity_original": "assess post-procedural outcomes",
-        "role": "Procedure",
+        "role": "ClinicalAction",
         "operator": null,
         "threshold": null,
         "unit": null,
@@ -99,19 +78,12 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "110463001",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       },
       {
-        "entity": "using decision making strategies",
+        "entity": "shared clinical decision-making",
         "entity_original": "take part in shared clinical decision-making",
-        "role": "Procedure",
+        "role": "ClinicalAction",
         "operator": null,
         "threshold": null,
         "unit": null,
@@ -120,14 +92,7 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "415806002",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       }
     ]
   }
@@ -154,11 +119,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "multivessel coronary artery disease",
@@ -175,12 +139,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 23687008,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -197,12 +160,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 250908004,
-          "target_label": "ClinicalParameter",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "chronic coronary syndrome",
@@ -219,12 +181,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 413838009,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "multivessel coronary artery disease",
@@ -241,12 +202,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 23687008,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -263,12 +223,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 250908004,
-          "target_label": "ClinicalParameter",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -287,12 +246,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 232717009,
-          "target_label": "Procedure",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ]
     }
@@ -307,18 +265,18 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: therapeutic evaluation (procedure)]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: therapeutic evaluation (procedure)]
-  REC -->|RECOMMENDS_PROCEDURE| ACT2
-  ACT3[Procedure: using decision making strategies]
-  REC -->|RECOMMENDS_PROCEDURE| ACT3
+  ACT1[ClinicalAction: procedural risks]
+  REC -->|RECOMMENDS_USAGE| ACT1
+  ACT2[ClinicalAction: post-procedural outcomes]
+  REC -->|RECOMMENDS_USAGE| ACT2
+  ACT3[ClinicalAction: shared clinical decision-making]
+  REC -->|RECOMMENDS_USAGE| ACT3
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: coronary artery disease]
+    C_and_1_1[ClinicalCondition: complex cad]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalCondition: myocardial revascularization]
+    C_and_1_2[ClinicalCondition: revascularization is being considered]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
     D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
@@ -361,17 +319,18 @@ graph LR
 ```
 
 Concepts:
-- expected: 4
+- expected: 5
 - actual: 5
 - matches: 0
-- missing: 4
+- missing: 5
 - extra: 5
 
 Missing concepts:
-- ClinicalCondition: coronary artery disease
-- ClinicalCondition: myocardial revascularization
-- Procedure: therapeutic evaluation (procedure)
-- Procedure: using decision making strategies
+- ClinicalAction: post-procedural outcomes
+- ClinicalAction: procedural risks
+- ClinicalAction: shared clinical decision-making
+- ClinicalCondition: complex cad
+- ClinicalCondition: revascularization is being considered
 
 Extra concepts:
 - ClinicalParameter: left ventricular ejection fraction
@@ -381,17 +340,18 @@ Extra concepts:
 - Procedure: coronary artery bypass grafting
 
 Rules (concept + logic fields):
-- expected: 4
+- expected: 5
 - actual: 6
 - matches: 0
-- missing: 4
+- missing: 5
 - extra: 6
 
 Missing rules:
-- ClinicalCondition: coronary artery disease | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: myocardial revascularization | op=PRESENT | logic=AND | grp=and_1
-- Procedure: therapeutic evaluation (procedure) | class=I | level=C | dir=POSITIVE
-- Procedure: using decision making strategies | class=I | level=C | dir=POSITIVE
+- ClinicalAction: post-procedural outcomes | class=I | level=C | dir=POSITIVE
+- ClinicalAction: procedural risks | class=I | level=C | dir=POSITIVE
+- ClinicalAction: shared clinical decision-making | class=I | level=C | dir=POSITIVE
+- ClinicalCondition: complex cad | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: revascularization is being considered | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
 - ClinicalParameter: left ventricular ejection fraction | op=<= | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class I | level=B | dir=POSITIVE
@@ -400,4 +360,3 @@ Extra rules:
 - Condition: multivessel coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=B | dir=POSITIVE
 - Condition: surgically eligible chronic coronary syndrome patients | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=B | dir=POSITIVE
 - Procedure: coronary artery bypass grafting | op=PRESENT | class=Class I | level=B | dir=POSITIVE
-

@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "coronary artery bypass grafting",
+        "entity": "cabg",
         "entity_original": "cabg",
         "role": "Procedure",
         "operator": "PRESENT",
@@ -34,21 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "232717009",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       }
     ],
     "actions": [
       {
-        "entity": "society of thoracic surgeons risk calculator",
-        "entity_original": "calculation of the sts score",
-        "role": "Procedure",
+        "entity": "sts score",
+        "entity_original": "calculation of the sts score to estimate in-hospital morbidity and 30-day mortality after cabg",
+        "role": "ClinicalAction",
         "operator": null,
         "threshold": null,
         "unit": null,
@@ -57,14 +50,7 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "B",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "448586003",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       }
     ]
   }
@@ -91,11 +77,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -112,12 +97,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 250908004,
-          "target_label": "ClinicalParameter",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "high surgical risk",
@@ -135,11 +119,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "not operable",
@@ -157,11 +140,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "chronic coronary syndrome",
@@ -178,12 +160,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 413838009,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "multivessel disease",
@@ -201,11 +182,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -222,12 +202,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 250908004,
-          "target_label": "ClinicalParameter",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "high surgical risk",
@@ -245,11 +224,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "not operable",
@@ -267,11 +245,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -290,12 +267,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 415070008,
-          "target_label": "Procedure",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ]
     }
@@ -310,11 +286,11 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: society of thoracic surgeons risk calculator]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  ACT1[ClinicalAction: sts score]
+  REC -->|RECOMMENDS_USAGE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Procedure: coronary artery bypass grafting]
+    C_and_1_1[Procedure: cabg]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   D_and_1_1 -->|RESULTS_IN condition_met=true| REC
@@ -378,8 +354,8 @@ Concepts:
 - extra: 7
 
 Missing concepts:
-- Procedure: coronary artery bypass grafting
-- Procedure: society of thoracic surgeons risk calculator
+- ClinicalAction: sts score
+- Procedure: cabg
 
 Extra concepts:
 - ClinicalParameter: left ventricular ejection fraction
@@ -398,8 +374,8 @@ Rules (concept + logic fields):
 - extra: 10
 
 Missing rules:
-- Procedure: coronary artery bypass grafting | op=PRESENT | logic=AND | grp=and_1
-- Procedure: society of thoracic surgeons risk calculator | class=I | level=B | dir=POSITIVE
+- ClinicalAction: sts score | class=I | level=B | dir=POSITIVE
+- Procedure: cabg | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
 - ClinicalParameter: left ventricular ejection fraction | op=<= | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class IIb | level=B | dir=POSITIVE
@@ -412,4 +388,3 @@ Extra rules:
 - Condition: not operable | op=PRESENT | logic=AND | grp=and_1 | class=Class IIb | level=B | dir=UNKNOWN
 - Condition: not operable | op=PRESENT | logic=OR | grp=or_1 | class=Class IIb | level=B | dir=POSITIVE
 - Procedure: percutaneous coronary intervention | op=PRESENT | class=Class IIb | level=B | dir=POSITIVE
-

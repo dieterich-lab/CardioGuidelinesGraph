@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "procedure",
+        "entity": "intervention",
         "entity_original": "intervention",
         "role": "Procedure",
         "operator": "PRESENT",
@@ -34,17 +34,10 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "71388002",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       },
       {
-        "entity": "multi vessel coronary artery disease",
+        "entity": "multivessel disease",
         "entity_original": "patients with multivessel disease",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -55,20 +48,13 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "371803003",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       }
     ],
     "actions": [
       {
-        "entity": "intracoronary pressure guide wire",
-        "entity_original": "intracoronary pressure measurement (ffr)",
+        "entity": "intracoronary pressure measurement (ffr)",
+        "entity_original": "intracoronary pressure measurement (ffr) is recommended to guide lesion selection for intervention",
         "role": "Procedure",
         "operator": null,
         "threshold": null,
@@ -78,18 +64,11 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "371789009",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       },
       {
-        "entity": "intracoronary pressure guide wire",
-        "entity_original": "intracoronary pressure measurement (ifr)",
+        "entity": "intracoronary pressure measurement (ifr)",
+        "entity_original": "intracoronary pressure measurement (ifr) is recommended to guide lesion selection for intervention",
         "role": "Procedure",
         "operator": null,
         "threshold": null,
@@ -99,18 +78,11 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "371789009",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       },
       {
-        "entity": "angiography of coronary artery",
-        "entity_original": "computation (qfr)",
+        "entity": "computation (qfr)",
+        "entity_original": "computation (qfr) is recommended to guide lesion selection for intervention",
         "role": "Procedure",
         "operator": null,
         "threshold": null,
@@ -120,14 +92,7 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "33367005",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       }
     ]
   }
@@ -154,11 +119,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "frailty",
@@ -175,12 +139,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 248279007,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "cognitive status",
@@ -197,12 +160,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 65367001,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "diabetes",
@@ -219,12 +181,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 11530004,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "other comorbidities",
@@ -242,11 +203,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "multivessel disease",
@@ -261,14 +221,18 @@ Aligned JSON (expected vs actual):
           "strength": null,
           "level": null,
           "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
+          "preferred_term": "Coronary artery disease (disorder)",
+          "snomed_id": 8957000,
           "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
+          "taxonomy_path": [
+            {
+              "concept_id": "8957000",
+              "term": "Coronary artery disease (disorder)"
+            }
+          ],
+          "synonyms": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "left main stem involvement",
@@ -286,11 +250,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "high anatomical complexity",
@@ -308,11 +271,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "likelihood of revascularization completeness",
@@ -330,11 +292,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "local expertise and outcomes",
@@ -352,11 +313,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -376,11 +336,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "Procedure",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ]
     }
@@ -395,18 +354,18 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: intracoronary pressure guide wire]
+  ACT1[Procedure: intracoronary pressure measurement (ffr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: intracoronary pressure guide wire]
+  ACT2[Procedure: intracoronary pressure measurement (ifr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT2
-  ACT3[Procedure: angiography of coronary artery]
+  ACT3[Procedure: computation (qfr)]
   REC -->|RECOMMENDS_PROCEDURE| ACT3
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Procedure: procedure]
+    C_and_1_1[Procedure: intervention]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalCondition: multi vessel coronary artery disease]
+    C_and_1_2[ClinicalCondition: multivessel disease]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
     D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
@@ -483,17 +442,18 @@ graph LR
 ```
 
 Concepts:
-- expected: 4
+- expected: 5
 - actual: 11
 - matches: 0
-- missing: 4
+- missing: 5
 - extra: 11
 
 Missing concepts:
-- ClinicalCondition: multi vessel coronary artery disease
-- Procedure: angiography of coronary artery
-- Procedure: intracoronary pressure guide wire
-- Procedure: procedure
+- ClinicalCondition: multivessel disease
+- Procedure: computation (qfr)
+- Procedure: intervention
+- Procedure: intracoronary pressure measurement (ffr)
+- Procedure: intracoronary pressure measurement (ifr)
 
 Extra concepts:
 - Condition: age
@@ -509,17 +469,18 @@ Extra concepts:
 - Procedure: assessment of procedural risks and post-procedural outcomes
 
 Rules (concept + logic fields):
-- expected: 4
+- expected: 5
 - actual: 11
 - matches: 0
-- missing: 4
+- missing: 5
 - extra: 11
 
 Missing rules:
-- ClinicalCondition: multi vessel coronary artery disease | op=PRESENT | logic=AND | grp=and_1
-- Procedure: angiography of coronary artery | class=I | level=A | dir=POSITIVE
-- Procedure: intracoronary pressure guide wire | class=I | level=A | dir=POSITIVE
-- Procedure: procedure | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: multivessel disease | op=PRESENT | logic=AND | grp=and_1
+- Procedure: computation (qfr) | class=I | level=A | dir=POSITIVE
+- Procedure: intervention | op=PRESENT | logic=AND | grp=and_1
+- Procedure: intracoronary pressure measurement (ffr) | class=I | level=A | dir=POSITIVE
+- Procedure: intracoronary pressure measurement (ifr) | class=I | level=A | dir=POSITIVE
 
 Extra rules:
 - Condition: age | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
@@ -533,4 +494,3 @@ Extra rules:
 - Condition: multivessel disease | op=PRESENT | logic=AND | grp=and_6 | dir=UNKNOWN
 - Condition: other comorbidities | op=PRESENT | logic=AND | grp=and_5 | dir=UNKNOWN
 - Procedure: assessment of procedural risks and post-procedural outcomes | dir=POSITIVE
-

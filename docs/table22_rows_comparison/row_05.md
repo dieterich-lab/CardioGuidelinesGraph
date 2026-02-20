@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "specialist multidisciplinary team",
+        "entity": "heart team",
         "entity_original": "the heart team",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -34,21 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "408458006",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       }
     ],
     "actions": [
       {
-        "entity": "development of care plan",
-        "entity_original": "develop institutional protocols",
-        "role": "Procedure",
+        "entity": "protocols for revascularization",
+        "entity_original": "develop institutional protocols to implement the appropriate revascularization strategy in accordance with current guidelines",
+        "role": "string",
         "operator": null,
         "threshold": null,
         "unit": null,
@@ -57,14 +50,7 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "399684003",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       }
     ]
   }
@@ -88,14 +74,56 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "C",
           "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 368009,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "preferred_term": "Open heart surgery (procedure)",
+          "synonyms": [
+            "Open heart surgery"
+          ],
+          "snomed_id": 2598006,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "2598006",
+              "term": "Open heart surgery (procedure)"
+            },
+            {
+              "concept_id": "64915003",
+              "term": "Operation on heart (procedure)"
+            },
+            {
+              "concept_id": "386765006",
+              "term": "Operation on mediastinum (procedure)"
+            },
+            {
+              "concept_id": "118696008",
+              "term": "Procedure on mediastinum (procedure)"
+            },
+            {
+              "concept_id": "118695007",
+              "term": "Procedure on thorax (procedure)"
+            },
+            {
+              "concept_id": "118694006",
+              "term": "Procedure on trunk (procedure)"
+            },
+            {
+              "concept_id": "771329004",
+              "term": "Procedure on body region (procedure)"
+            },
+            {
+              "concept_id": "362958002",
+              "term": "Procedure by site (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ],
       "actions": [
@@ -112,14 +140,13 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "C",
           "direction": "POSITIVE",
+          "target_label": "Procedure",
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "Procedure",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ]
     }
@@ -134,11 +161,11 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: development of care plan]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  ACT1[string: protocols for revascularization]
+  REC -->|RECOMMENDS_USAGE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: specialist multidisciplinary team]
+    C_and_1_1[ClinicalCondition: heart team]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   D_and_1_1 -->|RESULTS_IN condition_met=true| REC
@@ -167,8 +194,8 @@ Concepts:
 - extra: 2
 
 Missing concepts:
-- ClinicalCondition: specialist multidisciplinary team
-- Procedure: development of care plan
+- ClinicalCondition: heart team
+- string: protocols for revascularization
 
 Extra concepts:
 - Condition: heart team
@@ -182,10 +209,9 @@ Rules (concept + logic fields):
 - extra: 2
 
 Missing rules:
-- ClinicalCondition: specialist multidisciplinary team | op=PRESENT | logic=AND | grp=and_1
-- Procedure: development of care plan | class=I | level=C | dir=POSITIVE
+- ClinicalCondition: heart team | op=PRESENT | logic=AND | grp=and_1
+- string: protocols for revascularization | class=I | level=C | dir=POSITIVE
 
 Extra rules:
 - Condition: heart team | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Procedure: revascularization protocol development | class=Class I | level=C | dir=POSITIVE
-

@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "disorder of cardiovascular system",
+        "entity": "complex clinical cases",
         "entity_original": "complex clinical cases",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -34,21 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "49601007",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       }
     ],
     "actions": [
       {
-        "entity": "multidisciplinary meeting",
+        "entity": "heart team discussion",
         "entity_original": "heart team discussion",
-        "role": "Procedure",
+        "role": "ClinicalAction",
         "operator": null,
         "threshold": null,
         "unit": null,
@@ -57,14 +50,7 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "287051000000107",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       }
     ]
   }
@@ -90,12 +76,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 2640006,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "same recommendation level for cabg and pci",
@@ -113,11 +98,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "complex clinical cases",
@@ -134,12 +118,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 2640006,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -156,14 +139,40 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "C",
           "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 223482009,
+          "preferred_term": "Multidisciplinary review (procedure)",
+          "synonyms": [
+            "Multidisciplinary review"
+          ],
+          "snomed_id": 708004003,
           "target_label": "Procedure",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "taxonomy_path": [
+            {
+              "concept_id": "708004003",
+              "term": "Multidisciplinary review (procedure)"
+            },
+            {
+              "concept_id": "763288003",
+              "term": "Patient review (procedure)"
+            },
+            {
+              "concept_id": "169443000",
+              "term": "Preventive procedure (procedure)"
+            },
+            {
+              "concept_id": "362961001",
+              "term": "Procedure by intent (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ]
     }
@@ -178,11 +187,11 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: multidisciplinary meeting]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  ACT1[ClinicalAction: heart team discussion]
+  REC -->|RECOMMENDS_USAGE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: disorder of cardiovascular system]
+    C_and_1_1[ClinicalCondition: complex clinical cases]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   D_and_1_1 -->|RESULTS_IN condition_met=true| REC
@@ -219,8 +228,8 @@ Concepts:
 - extra: 4
 
 Missing concepts:
-- ClinicalCondition: disorder of cardiovascular system
-- Procedure: multidisciplinary meeting
+- ClinicalAction: heart team discussion
+- ClinicalCondition: complex clinical cases
 
 Extra concepts:
 - Condition: complex clinical case
@@ -236,12 +245,11 @@ Rules (concept + logic fields):
 - extra: 4
 
 Missing rules:
-- ClinicalCondition: disorder of cardiovascular system | op=PRESENT | logic=AND | grp=and_1
-- Procedure: multidisciplinary meeting | class=I | level=C | dir=POSITIVE
+- ClinicalAction: heart team discussion | class=I | level=C | dir=POSITIVE
+- ClinicalCondition: complex clinical cases | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
 - Condition: complex clinical case | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Condition: complex clinical cases | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Condition: same recommendation level for cabg and pci | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Procedure: heart team discussion | class=Class I | level=C | dir=POSITIVE
-

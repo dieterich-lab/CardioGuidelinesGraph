@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "multi vessel coronary artery disease",
+        "entity": "multivessel obstructive cad",
         "entity_original": "patients with multivessel obstructive cad",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -34,21 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null,
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "371803003",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": null
       }
     ],
     "actions": [
       {
-        "entity": "assessment score",
+        "entity": "syntax score",
         "entity_original": "calculation of the syntax score is recommended to assess the anatomical complexity of disease",
-        "role": "Procedure",
+        "role": "ClinicalAction",
         "operator": null,
         "threshold": null,
         "unit": null,
@@ -57,14 +50,7 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "B",
-        "direction": "POSITIVE",
-        "preferred_term": null,
-        "synonyms": [],
-        "snomed_id": "782487009",
-        "target_label": null,
-        "taxonomy_path": [],
-        "root_concept_id": null,
-        "root_concept_term": null
+        "direction": "POSITIVE"
       }
     ]
   }
@@ -91,11 +77,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "frailty",
@@ -112,12 +97,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 248279007,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "cognitive status",
@@ -134,12 +118,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 65367001,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "diabetes",
@@ -156,12 +139,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 11530004,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "other comorbidities",
@@ -179,11 +161,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "multivessel disease",
@@ -201,11 +182,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "anatomical complexity",
@@ -222,12 +202,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 51845000,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "revascularization completeness",
@@ -244,12 +223,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 289267004,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "local expertise",
@@ -266,12 +244,11 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 34714000,
-          "target_label": "ClinicalCondition",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         },
         {
           "entity": "surgical and interventional risk",
@@ -289,11 +266,10 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": "ClinicalCondition",
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ],
       "actions": [
@@ -312,12 +288,11 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": 81266008,
-          "target_label": "Procedure",
+          "snomed_id": null,
+          "target_label": null,
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ]
     }
@@ -332,11 +307,11 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: assessment score]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  ACT1[ClinicalAction: syntax score]
+  REC -->|RECOMMENDS_USAGE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: multi vessel coronary artery disease]
+    C_and_1_1[ClinicalCondition: multivessel obstructive cad]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
   end
   D_and_1_1 -->|RESULTS_IN condition_met=true| REC
@@ -419,8 +394,8 @@ Concepts:
 - extra: 11
 
 Missing concepts:
-- ClinicalCondition: multi vessel coronary artery disease
-- Procedure: assessment score
+- ClinicalAction: syntax score
+- ClinicalCondition: multivessel obstructive cad
 
 Extra concepts:
 - Condition: age
@@ -443,8 +418,8 @@ Rules (concept + logic fields):
 - extra: 11
 
 Missing rules:
-- ClinicalCondition: multi vessel coronary artery disease | op=PRESENT | logic=AND | grp=and_1
-- Procedure: assessment score | class=I | level=B | dir=POSITIVE
+- ClinicalAction: syntax score | class=I | level=B | dir=POSITIVE
+- ClinicalCondition: multivessel obstructive cad | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
 - Condition: age | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
@@ -458,4 +433,3 @@ Extra rules:
 - Condition: revascularization completeness | op=PRESENT | logic=AND | grp=and_8 | dir=UNKNOWN
 - Condition: surgical and interventional risk | op=PRESENT | logic=AND | grp=and_10 | dir=UNKNOWN
 - Procedure: revascularization | dir=POSITIVE
-
