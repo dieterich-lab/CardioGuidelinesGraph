@@ -73,3 +73,8 @@ docs/table22_tuning_runs/
 .coverage
 
 .gpg-recipients
+
+# Local secrets/env files
+.env
+.env.*
+!.env.example

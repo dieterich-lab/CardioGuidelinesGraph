@@ -146,15 +146,13 @@ def _filter_rows_needing_embedding(
     if not rows:
         return []
 
-    query = (
-        f"""
+    query = f"""
         UNWIND $rows AS row
         OPTIONAL MATCH (n:`{label}` {{concept_id: toInteger(row.conceptid), term: row.term}})
         WITH row, n
         WHERE n IS NULL OR n.`{property_name}` IS NULL
         RETURN row.conceptid AS conceptid, row.term AS term
         """
-    )
 
     def operation():
         with driver.session() as session:

@@ -13,6 +13,36 @@ The three scripts are:
 - `snomed_vector_ingest.py`
 
 
+## Secrets setup (recommended)
+
+Do not store Neo4j passwords in source files.
+
+Preferred approach:
+
+1. Create a local-only secrets file:
+
+   - `mkdir -p ~/.config/cardio_graph`
+   - `chmod 700 ~/.config/cardio_graph`
+   - `cat > ~/.config/cardio_graph/secrets.env <<'EOF'`
+   - `CARDIO_GRAPH_NEO4J_URI=bolt://neo4j-dev4.internal:7687`
+   - `CARDIO_GRAPH_NEO4J_USER=neo4j`
+   - `CARDIO_GRAPH_NEO4J_PASSWORD=<your_password_here>`
+   - `EOF`
+   - `chmod 600 ~/.config/cardio_graph/secrets.env`
+
+2. Run scripts normally. `feedneo4jdb.py` will auto-load this file.
+
+Supported password env vars (priority order in `feedneo4jdb.py`):
+
+- `CARDIO_GRAPH_NEO4J_PASSWORD` (preferred)
+- `NEO4J_PASSWORD`
+- `CARDIO_GRAPH_GROUNDING_PASSWORD`
+
+Optional override for the secrets file path:
+
+- `CARDIO_GRAPH_SECRETS_ENV_PATH=/custom/path/secrets.env`
+
+
 ## Big picture: how grounding works end-to-end
 
 Grounding is split into two layers:
