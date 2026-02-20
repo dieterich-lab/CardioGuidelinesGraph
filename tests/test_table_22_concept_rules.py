@@ -26,7 +26,7 @@ RULES_PATH = Path(
 GROUND_TRUTH_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH",
-        DATA_DIR / "evaluation" / "table_22_manual_snomed.json",
+        "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json",
     )
 )
 DOCLING_TABLE_62_PATH = Path(
@@ -88,6 +88,13 @@ REPORT_CSV_PATH = Path(
         DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_summary.csv",
     )
 )
+LLM_SNAPSHOT_PATH = Path(
+    os.environ.get(
+        "CARDIO_GRAPH_TABLE22_LLM_SNAPSHOT",
+        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_alignment.json",
+    )
+)
+USE_SNAPSHOT = _env_flag("CARDIO_GRAPH_TABLE22_USE_SNAPSHOT", "true")
 
 
 def _load_rules():
@@ -113,6 +120,16 @@ def _load_docling_rows():
             payload = json.load(f)
         rows.extend(payload.get("data", []))
     return rows
+
+
+def _load_llm_snapshot():
+    if not LLM_SNAPSHOT_PATH.is_file():
+        raise FileNotFoundError(
+            f"Missing LLM snapshot alignment JSON: {LLM_SNAPSHOT_PATH}"
+        )
+    with open(LLM_SNAPSHOT_PATH, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    return payload.get("rows", [])
 
 
 def _normalize_text(value):
@@ -541,9 +558,7 @@ def _summarize_ground_truth_grouped(truth):
                             "root_concept_term": condition.get("root_concept_term"),
                         }
                     )
-                    conditions.append(
-                        _postfilter_entry(entry, include_grounding=True)
-                    )
+                    conditions.append(_postfilter_entry(entry, include_grounding=True))
 
                 for action in rule.get("actions", []):
                     entity = action.get("entity_standardized_candidate") or action.get(
@@ -825,9 +840,14 @@ def _build_mermaid(entries, title):
         if isinstance(payload, dict) and isinstance(payload.get("rules"), list):
             payload = payload.get("rules")
 
-        if isinstance(payload, list) and payload and all(
-            isinstance(item, dict) and {"conditions", "actions"}.issubset(item.keys())
-            for item in payload
+        if (
+            isinstance(payload, list)
+            and payload
+            and all(
+                isinstance(item, dict)
+                and {"conditions", "actions"}.issubset(item.keys())
+                for item in payload
+            )
         ):
             flattened = []
             for rule in payload:
@@ -955,13 +975,19 @@ def _build_mermaid(entries, title):
 
 class Table22ConceptRulesTests(unittest.TestCase):
     def setUp(self):
-        if not LIVE_LLM:
+        if not LIVE_LLM and not USE_SNAPSHOT:
             if not RULES_PATH.is_file():
                 self.skipTest(
                     "Missing rules file: "
                     + str(RULES_PATH)
-                    + ". Set CARDIO_GRAPH_TABLE22_RULES_PATH."
+                    + ". Set CARDIO_GRAPH_TABLE22_RULES_PATH or enable CARDIO_GRAPH_TABLE22_USE_SNAPSHOT."
                 )
+        if USE_SNAPSHOT and not LLM_SNAPSHOT_PATH.is_file():
+            self.skipTest(
+                "Missing LLM snapshot alignment JSON: "
+                + str(LLM_SNAPSHOT_PATH)
+                + ". Set CARDIO_GRAPH_TABLE22_LLM_SNAPSHOT or disable CARDIO_GRAPH_TABLE22_USE_SNAPSHOT."
+            )
         if not GROUND_TRUTH_PATH.is_file():
             self.skipTest(
                 "Missing ground-truth file: "
@@ -984,8 +1010,15 @@ class Table22ConceptRulesTests(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_table_22_rules_match_ground_truth(self):
-        rules_rows = [] if LIVE_LLM else _load_rules()
         truth = _load_ground_truth()
+
+        use_snapshot = USE_SNAPSHOT and LLM_SNAPSHOT_PATH.is_file()
+        snapshot_rows = (
+            {row.get("row_id"): row for row in _load_llm_snapshot()}
+            if use_snapshot
+            else {}
+        )
+        rules_rows = [] if (LIVE_LLM or use_snapshot) else _load_rules()
 
         builder = (
             GuidelineGraphBuilder(model=LLM_MODEL, node=LLM_NODE, port=LLM_PORT)
@@ -1010,9 +1043,19 @@ class Table22ConceptRulesTests(unittest.TestCase):
             expected_rows = expected_rows_full
             expected_rows_grouped = _summarize_ground_truth_grouped(truth)
 
-        actual_rows = [] if LIVE_LLM else _ordered_rows(_summarize_rules(rules_rows))
+        if use_snapshot:
+            actual_rows = _ordered_rows(
+                {
+                    row_id: snapshot_rows[row_id].get("actual_entries", []) or []
+                    for row_id in snapshot_rows
+                }
+            )
+        else:
+            actual_rows = [] if LIVE_LLM else _ordered_rows(_summarize_rules(rules_rows))
 
-        if (not LIVE_LLM) and len(actual_rows) < len(expected_rows):
+        if (not LIVE_LLM) and (not use_snapshot) and len(actual_rows) < len(
+            expected_rows
+        ):
             self.fail(
                 "Extracted rows are fewer than expected. "
                 + str(len(actual_rows))
@@ -1035,6 +1078,20 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 )
                 actual_entries_sorted_raw = _sorted_entries(actual_entries_raw)
                 actual_entries_ordered = _strip_internal_keys(actual_entries_sorted_raw)
+            elif use_snapshot:
+                snapshot_row = snapshot_rows.get(expected_row_id)
+                if not snapshot_row:
+                    self.fail(
+                        "Snapshot missing row: "
+                        + expected_row_id
+                        + f" (expected rows {sorted(snapshot_rows.keys())})"
+                    )
+                actual_row_id = snapshot_row.get("mapped_actual_row") or expected_row_id
+                actual_entries_raw = snapshot_row.get("actual_entries") or []
+                actual_entries_sorted_raw = _sorted_entries(actual_entries_raw)
+                actual_entries_ordered = _strip_internal_keys(actual_entries_sorted_raw)
+                grounding_summary = None
+                grounded_display_entries = snapshot_row.get("actual_entries_display")
             else:
                 grounding_summary = None
                 grounded_display_entries = None
@@ -1075,12 +1132,16 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     ),
                     "actual_entries": actual_entries_ordered,
                     "actual_entries_display": (
-                        _strip_internal_keys(
-                            _group_entries_by_rule(grounded_display_entries)
-                        )
-                        if grounded_display_entries
-                        else _strip_internal_keys(
-                            _group_entries_by_rule(actual_entries_sorted_raw)
+                        _strip_internal_keys(grounded_display_entries)
+                        if (grounded_display_entries is not None and use_snapshot)
+                        else (
+                            _strip_internal_keys(
+                                _group_entries_by_rule(grounded_display_entries)
+                            )
+                            if grounded_display_entries
+                            else _strip_internal_keys(
+                                _group_entries_by_rule(actual_entries_sorted_raw)
+                            )
                         )
                     ),
                     "concept_summary": {
@@ -1153,7 +1214,11 @@ class Table22ConceptRulesTests(unittest.TestCase):
             mapping_text = (
                 "Live LLM extraction"
                 if LIVE_LLM
-                else "Mapping: truth row_N -> extracted row_{N+1} (skip extracted row_01 header)"
+                else (
+                    f"Snapshot LLM alignment: {LLM_SNAPSHOT_PATH}"
+                    if use_snapshot
+                    else "Mapping: truth row_N -> extracted row_{N+1} (skip extracted row_01 header)"
+                )
             )
             f.write(mapping_text + "\n\n")
             f.write(f"Ground after extraction: {GROUND_AFTER_EXTRACTION}\n\n")

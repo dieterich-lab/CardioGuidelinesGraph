@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "ccs",
+        "entity": "chronic ischemic heart disease",
         "entity_original": "ccs patient",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -34,10 +34,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "413838009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "persistent angina",
+        "entity": "angina pectoris",
         "entity_original": "persistent angina",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -48,7 +55,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "194828000",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "anginal equivalent",
@@ -62,10 +76,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "565394081000119105",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "despite guideline-directed medical treatment",
+        "entity": "medical therapy",
         "entity_original": "despite guideline-directed medical treatment",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -76,7 +97,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "243121000",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
@@ -92,7 +120,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "275227003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -118,11 +153,12 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": null,
-          "target_label": null,
+          "snomed_id": 250908004,
+          "target_label": "ClinicalParameter",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "chronic coronary syndrome with left ventricular ejection fraction",
@@ -140,10 +176,11 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": null,
+          "target_label": "ClinicalCondition",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": [
@@ -160,13 +197,14 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "C",
           "direction": "POSITIVE",
-          "target_label": "Procedure",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": null,
+          "snomed_id": 81266008,
+          "target_label": "Procedure",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "medical therapy",
@@ -183,11 +221,12 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": null,
-          "target_label": null,
+          "snomed_id": 243121000,
+          "target_label": "Procedure",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ]
     }
@@ -206,16 +245,16 @@ graph LR
   REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: ccs]
+    C_and_1_1[ClinicalCondition: chronic ischemic heart disease]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalCondition: despite guideline-directed medical treatment]
+    C_and_1_2[ClinicalCondition: medical therapy]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
     D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
   subgraph Human_or_1_OR
     D_or_1_1[DecisionNode or_1 s1]
-    C_or_1_1[ClinicalCondition: persistent angina]
+    C_or_1_1[ClinicalCondition: angina pectoris]
     D_or_1_1 -->|CHECKS_FOR| C_or_1_1
     D_or_1_2[DecisionNode or_1 s2]
     C_or_1_2[ClinicalCondition: anginal equivalent]
@@ -256,10 +295,10 @@ Concepts:
 - extra: 4
 
 Missing concepts:
+- ClinicalCondition: angina pectoris
 - ClinicalCondition: anginal equivalent
-- ClinicalCondition: ccs
-- ClinicalCondition: despite guideline-directed medical treatment
-- ClinicalCondition: persistent angina
+- ClinicalCondition: chronic ischemic heart disease
+- ClinicalCondition: medical therapy
 - Procedure: myocardial revascularization
 
 Extra concepts:
@@ -276,10 +315,10 @@ Rules (concept + logic fields):
 - extra: 4
 
 Missing rules:
+- ClinicalCondition: angina pectoris | op=PRESENT | logic=OR | grp=or_1
 - ClinicalCondition: anginal equivalent | op=PRESENT | logic=OR | grp=or_1
-- ClinicalCondition: ccs | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: despite guideline-directed medical treatment | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: persistent angina | op=PRESENT | logic=OR | grp=or_1
+- ClinicalCondition: chronic ischemic heart disease | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: medical therapy | op=PRESENT | logic=AND | grp=and_1
 - Procedure: myocardial revascularization | class=I | level=A | dir=POSITIVE
 
 Extra rules:
@@ -287,3 +326,4 @@ Extra rules:
 - Condition: chronic coronary syndrome with left ventricular ejection fraction | op=<= | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Procedure: medical therapy | class=Class I | level=C | dir=POSITIVE
 - Procedure: revascularization | class=Class I | level=C | dir=POSITIVE
+

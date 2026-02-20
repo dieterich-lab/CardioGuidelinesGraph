@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "ccs",
+        "entity": "chronic ischemic heart disease",
         "entity_original": "ccs patient",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -34,10 +34,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "413838009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "lvef",
+        "entity": "left ventricular ejection fraction",
         "entity_original": "lvef > 35%",
         "role": "ClinicalParameter",
         "operator": ">",
@@ -48,10 +55,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "250908004",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "functionally significant three-vessel disease",
+        "entity": "triple vessel disease of the heart",
         "entity_original": "functionally significant three-vessel disease",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -62,13 +76,20 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "233817007",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
       {
         "entity": "myocardial revascularization",
-        "entity_original": "myocardial revascularization is recommended to improve long-term survival and to reduce long-term cardiovascular mortality and the risk of spontaneous myocardial infarction",
+        "entity_original": "myocardial revascularization",
         "role": "Procedure",
         "operator": null,
         "threshold": null,
@@ -78,11 +99,18 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "275227003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "guideline-directed medical therapy",
-        "entity_original": "guideline-directed medical therapy is recommended to improve long-term survival and to reduce long-term cardiovascular mortality and the risk of spontaneous myocardial infarction",
+        "entity": "medical therapy",
+        "entity_original": "guideline-directed medical therapy",
         "role": "Procedure",
         "operator": null,
         "threshold": null,
@@ -92,7 +120,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "243121000",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -118,11 +153,12 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": null,
-          "target_label": null,
+          "snomed_id": 413838009,
+          "target_label": "ClinicalCondition",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -137,38 +173,14 @@ Aligned JSON (expected vs actual):
           "strength": null,
           "level": null,
           "direction": "POSITIVE",
-          "preferred_term": "Left ventricular ejection fraction (observable entity)",
+          "preferred_term": null,
+          "synonyms": [],
           "snomed_id": 250908004,
           "target_label": "ClinicalParameter",
-          "taxonomy_path": [
-            {
-              "concept_id": "250908004",
-              "term": "Left ventricular ejection fraction (observable entity)"
-            },
-            {
-              "concept_id": "70822001",
-              "term": "Cardiac ejection fraction, function (observable entity)"
-            },
-            {
-              "concept_id": "86185002",
-              "term": "Cardiac function (observable entity)"
-            },
-            {
-              "concept_id": "70337006",
-              "term": "Cardiovascular function (observable entity)"
-            },
-            {
-              "concept_id": "246464006",
-              "term": "Function (observable entity)"
-            },
-            {
-              "concept_id": "363787002",
-              "term": "Observable entity (observable entity)"
-            }
-          ],
-          "root_concept_id": "363787002",
-          "root_concept_term": "Observable entity (observable entity)",
-          "synonyms": []
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": []
@@ -186,17 +198,17 @@ graph LR
   REC[RecommendationNode]
   ACT1[Procedure: myocardial revascularization]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: guideline-directed medical therapy]
+  ACT2[Procedure: medical therapy]
   REC -->|RECOMMENDS_PROCEDURE| ACT2
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: ccs]
+    C_and_1_1[ClinicalCondition: chronic ischemic heart disease]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalParameter: lvef]
+    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
     D_and_1_2 -->|EVALUATES| C_and_1_2
     D_and_1_3[DecisionNode and_1 s3]
-    C_and_1_3[ClinicalCondition: functionally significant three-vessel disease]
+    C_and_1_3[ClinicalCondition: triple vessel disease of the heart]
     D_and_1_3 -->|CHECKS_FOR| C_and_1_3
     D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
     D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
@@ -224,19 +236,17 @@ graph LR
 Concepts:
 - expected: 5
 - actual: 2
-- matches: 0
-- missing: 5
-- extra: 2
+- matches: 1
+- missing: 4
+- extra: 1
 
 Missing concepts:
-- ClinicalCondition: ccs
-- ClinicalCondition: functionally significant three-vessel disease
-- ClinicalParameter: lvef
-- Procedure: guideline-directed medical therapy
+- ClinicalCondition: chronic ischemic heart disease
+- ClinicalCondition: triple vessel disease of the heart
+- Procedure: medical therapy
 - Procedure: myocardial revascularization
 
 Extra concepts:
-- ClinicalParameter: left ventricular ejection fraction
 - Condition: chronic coronary syndrome
 
 Rules (concept + logic fields):
@@ -247,12 +257,13 @@ Rules (concept + logic fields):
 - extra: 2
 
 Missing rules:
-- ClinicalCondition: ccs | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: functionally significant three-vessel disease | op=PRESENT | logic=AND | grp=and_1
-- ClinicalParameter: lvef | op=> | thr=35 | unit=% | logic=AND | grp=and_1
-- Procedure: guideline-directed medical therapy | class=I | level=A | dir=POSITIVE
+- ClinicalCondition: chronic ischemic heart disease | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: triple vessel disease of the heart | op=PRESENT | logic=AND | grp=and_1
+- ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | logic=AND | grp=and_1
+- Procedure: medical therapy | class=I | level=A | dir=POSITIVE
 - Procedure: myocardial revascularization | class=I | level=A | dir=POSITIVE
 
 Extra rules:
 - ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | logic=AND | grp=and_1 | dir=POSITIVE
 - Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | dir=POSITIVE
+

@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "ccs",
+        "entity": "chronic ischemic heart disease",
         "entity_original": "ccs patient",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -34,10 +34,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "413838009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "surgically eligible",
+        "entity": "medically fit for surgery",
         "entity_original": "surgically eligible patient",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -48,10 +55,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "713671003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "multivessel cad",
+        "entity": "multi vessel coronary artery disease",
         "entity_original": "multivessel cad",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -62,10 +76,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "371803003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "lvef",
+        "entity": "left ventricular ejection fraction",
         "entity_original": "lvef \u2264 35%",
         "role": "ClinicalParameter",
         "operator": "\u2264",
@@ -76,13 +97,20 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "250908004",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
       {
-        "entity": "cabg",
-        "entity_original": "myocardial revascularization with cabg over medical therapy alone to improve long-term survival",
+        "entity": "coronary artery bypass grafting",
+        "entity_original": "myocardial revascularization with cabg",
         "role": "Procedure",
         "operator": null,
         "threshold": null,
@@ -92,7 +120,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "B",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "232717009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -116,38 +151,14 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "B",
           "direction": "POSITIVE",
-          "preferred_term": "Left ventricular ejection fraction (observable entity)",
+          "preferred_term": null,
+          "synonyms": [],
           "snomed_id": 250908004,
           "target_label": "ClinicalParameter",
-          "taxonomy_path": [
-            {
-              "concept_id": "250908004",
-              "term": "Left ventricular ejection fraction (observable entity)"
-            },
-            {
-              "concept_id": "70822001",
-              "term": "Cardiac ejection fraction, function (observable entity)"
-            },
-            {
-              "concept_id": "86185002",
-              "term": "Cardiac function (observable entity)"
-            },
-            {
-              "concept_id": "70337006",
-              "term": "Cardiovascular function (observable entity)"
-            },
-            {
-              "concept_id": "246464006",
-              "term": "Function (observable entity)"
-            },
-            {
-              "concept_id": "363787002",
-              "term": "Observable entity (observable entity)"
-            }
-          ],
-          "root_concept_id": "363787002",
-          "root_concept_term": "Observable entity (observable entity)",
-          "synonyms": []
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "functionally significant single-vessel disease involving proximal left anterior descending artery",
@@ -165,10 +176,11 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": null,
+          "target_label": "ClinicalCondition",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "left ventricular ejection fraction",
@@ -183,38 +195,14 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "B",
           "direction": "POSITIVE",
-          "preferred_term": "Left ventricular ejection fraction (observable entity)",
+          "preferred_term": null,
+          "synonyms": [],
           "snomed_id": 250908004,
           "target_label": "ClinicalParameter",
-          "taxonomy_path": [
-            {
-              "concept_id": "250908004",
-              "term": "Left ventricular ejection fraction (observable entity)"
-            },
-            {
-              "concept_id": "70822001",
-              "term": "Cardiac ejection fraction, function (observable entity)"
-            },
-            {
-              "concept_id": "86185002",
-              "term": "Cardiac function (observable entity)"
-            },
-            {
-              "concept_id": "70337006",
-              "term": "Cardiovascular function (observable entity)"
-            },
-            {
-              "concept_id": "246464006",
-              "term": "Function (observable entity)"
-            },
-            {
-              "concept_id": "363787002",
-              "term": "Observable entity (observable entity)"
-            }
-          ],
-          "root_concept_id": "363787002",
-          "root_concept_term": "Observable entity (observable entity)",
-          "synonyms": []
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "single-",
@@ -232,10 +220,11 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": null,
+          "target_label": "ClinicalCondition",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "two-vessel disease involving proximal left anterior descending artery",
@@ -253,10 +242,11 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": null,
+          "target_label": "ClinicalCondition",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": [
@@ -273,18 +263,14 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "B",
           "direction": "POSITIVE",
-          "preferred_term": "Coronary artery operations (& bypass) (procedure)",
-          "snomed_id": 149169006,
-          "target_label": "Procedure",
-          "taxonomy_path": [
-            {
-              "concept_id": "149169006",
-              "term": "Coronary artery operations (& bypass) (procedure)"
-            }
-          ],
+          "preferred_term": null,
           "synonyms": [],
+          "snomed_id": 277437006,
+          "target_label": "Procedure",
+          "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ]
     }
@@ -299,20 +285,20 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: cabg]
+  ACT1[Procedure: coronary artery bypass grafting]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: ccs]
+    C_and_1_1[ClinicalCondition: chronic ischemic heart disease]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalCondition: surgically eligible]
+    C_and_1_2[ClinicalCondition: medically fit for surgery]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
     D_and_1_3[DecisionNode and_1 s3]
-    C_and_1_3[ClinicalCondition: multivessel cad]
+    C_and_1_3[ClinicalCondition: multi vessel coronary artery disease]
     D_and_1_3 -->|CHECKS_FOR| C_and_1_3
     D_and_1_4[DecisionNode and_1 s4]
-    C_and_1_4[ClinicalParameter: lvef]
+    C_and_1_4[ClinicalParameter: left ventricular ejection fraction]
     D_and_1_4 -->|EVALUATES| C_and_1_4
     D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
     D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
@@ -358,19 +344,17 @@ graph LR
 Concepts:
 - expected: 5
 - actual: 5
-- matches: 0
-- missing: 5
-- extra: 5
+- matches: 1
+- missing: 4
+- extra: 4
 
 Missing concepts:
-- ClinicalCondition: ccs
-- ClinicalCondition: multivessel cad
-- ClinicalCondition: surgically eligible
-- ClinicalParameter: lvef
-- Procedure: cabg
+- ClinicalCondition: chronic ischemic heart disease
+- ClinicalCondition: medically fit for surgery
+- ClinicalCondition: multi vessel coronary artery disease
+- Procedure: coronary artery bypass grafting
 
 Extra concepts:
-- ClinicalParameter: left ventricular ejection fraction
 - Condition: functionally significant single-vessel disease involving proximal left anterior descending artery
 - Condition: single-
 - Condition: two-vessel disease involving proximal left anterior descending artery
@@ -384,11 +368,11 @@ Rules (concept + logic fields):
 - extra: 5
 
 Missing rules:
-- ClinicalCondition: ccs | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: multivessel cad | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: surgically eligible | op=PRESENT | logic=AND | grp=and_1
-- ClinicalParameter: lvef | op=≤ | thr=35 | unit=% | logic=AND | grp=and_1
-- Procedure: cabg | class=I | level=B | dir=POSITIVE
+- ClinicalCondition: chronic ischemic heart disease | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: medically fit for surgery | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: multi vessel coronary artery disease | op=PRESENT | logic=AND | grp=and_1
+- ClinicalParameter: left ventricular ejection fraction | op=≤ | thr=35 | unit=% | logic=AND | grp=and_1
+- Procedure: coronary artery bypass grafting | class=I | level=B | dir=POSITIVE
 
 Extra rules:
 - ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class I | level=B | dir=POSITIVE
@@ -396,3 +380,4 @@ Extra rules:
 - Condition: single- | op=PRESENT | logic=OR | grp=or_1 | class=Class I | level=B | dir=POSITIVE
 - Condition: two-vessel disease involving proximal left anterior descending artery | op=PRESENT | logic=OR | grp=or_1 | class=Class I | level=B | dir=POSITIVE
 - Procedure: myocardial revascularization | op=PRESENT | class=Class I | level=B | dir=POSITIVE
+

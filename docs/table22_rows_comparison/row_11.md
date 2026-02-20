@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "ccs",
+        "entity": "chronic ischemic heart disease",
         "entity_original": "ccs patient",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -34,10 +34,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "413838009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "high surgical risk",
+        "entity": "high risk",
         "entity_original": "patient with high surgical risk",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -48,10 +55,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "723509005",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "not operable",
+        "entity": "inoperable",
         "entity_original": "not operable patient",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -62,10 +76,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "74778001",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "functionally significant mvd",
+        "entity": "multi vessel coronary artery disease",
         "entity_original": "functionally significant mvd",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -76,10 +97,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "371803003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "lvef",
+        "entity": "left ventricular ejection fraction",
         "entity_original": "lvef \u2264 35%",
         "role": "ClinicalParameter",
         "operator": "\u2264",
@@ -90,12 +118,19 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "250908004",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
       {
-        "entity": "pci",
+        "entity": "percutaneous coronary revascularization",
         "entity_original": "pci may be considered as an alternative to cabg",
         "role": "Procedure",
         "operator": null,
@@ -106,7 +141,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "IIb",
         "level": "B",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "415070008",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -130,38 +172,14 @@ Aligned JSON (expected vs actual):
           "strength": "Class IIa",
           "level": "Level B",
           "direction": "POSITIVE",
-          "preferred_term": "Left ventricular ejection fraction (observable entity)",
+          "preferred_term": null,
+          "synonyms": [],
           "snomed_id": 250908004,
           "target_label": "ClinicalParameter",
-          "taxonomy_path": [
-            {
-              "concept_id": "250908004",
-              "term": "Left ventricular ejection fraction (observable entity)"
-            },
-            {
-              "concept_id": "70822001",
-              "term": "Cardiac ejection fraction, function (observable entity)"
-            },
-            {
-              "concept_id": "86185002",
-              "term": "Cardiac function (observable entity)"
-            },
-            {
-              "concept_id": "70337006",
-              "term": "Cardiovascular function (observable entity)"
-            },
-            {
-              "concept_id": "246464006",
-              "term": "Function (observable entity)"
-            },
-            {
-              "concept_id": "363787002",
-              "term": "Observable entity (observable entity)"
-            }
-          ],
-          "root_concept_id": "363787002",
-          "root_concept_term": "Observable entity (observable entity)",
-          "synonyms": []
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": []
@@ -177,27 +195,27 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: pci]
+  ACT1[Procedure: percutaneous coronary revascularization]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: ccs]
+    C_and_1_1[ClinicalCondition: chronic ischemic heart disease]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalCondition: functionally significant mvd]
+    C_and_1_2[ClinicalCondition: multi vessel coronary artery disease]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
     D_and_1_3[DecisionNode and_1 s3]
-    C_and_1_3[ClinicalParameter: lvef]
+    C_and_1_3[ClinicalParameter: left ventricular ejection fraction]
     D_and_1_3 -->|EVALUATES| C_and_1_3
     D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
     D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
   end
   subgraph Human_or_1_OR
     D_or_1_1[DecisionNode or_1 s1]
-    C_or_1_1[ClinicalCondition: high surgical risk]
+    C_or_1_1[ClinicalCondition: high risk]
     D_or_1_1 -->|CHECKS_FOR| C_or_1_1
     D_or_1_2[DecisionNode or_1 s2]
-    C_or_1_2[ClinicalCondition: not operable]
+    C_or_1_2[ClinicalCondition: inoperable]
     D_or_1_2 -->|CHECKS_FOR| C_or_1_2
     D_and_1_3 -->|LEADS_TO condition_met=true| D_or_1_1
     D_and_1_3 -->|LEADS_TO condition_met=true| D_or_1_2
@@ -222,20 +240,16 @@ graph LR
 Concepts:
 - expected: 6
 - actual: 1
-- matches: 0
-- missing: 6
-- extra: 1
+- matches: 1
+- missing: 5
+- extra: 0
 
 Missing concepts:
-- ClinicalCondition: ccs
-- ClinicalCondition: functionally significant mvd
-- ClinicalCondition: high surgical risk
-- ClinicalCondition: not operable
-- ClinicalParameter: lvef
-- Procedure: pci
-
-Extra concepts:
-- ClinicalParameter: left ventricular ejection fraction
+- ClinicalCondition: chronic ischemic heart disease
+- ClinicalCondition: high risk
+- ClinicalCondition: inoperable
+- ClinicalCondition: multi vessel coronary artery disease
+- Procedure: percutaneous coronary revascularization
 
 Rules (concept + logic fields):
 - expected: 6
@@ -245,12 +259,13 @@ Rules (concept + logic fields):
 - extra: 1
 
 Missing rules:
-- ClinicalCondition: ccs | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: functionally significant mvd | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: high surgical risk | op=PRESENT | logic=OR | grp=or_1
-- ClinicalCondition: not operable | op=PRESENT | logic=OR | grp=or_1
-- ClinicalParameter: lvef | op=≤ | thr=35 | unit=% | logic=AND | grp=and_1
-- Procedure: pci | class=IIb | level=B | dir=POSITIVE
+- ClinicalCondition: chronic ischemic heart disease | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: high risk | op=PRESENT | logic=OR | grp=or_1
+- ClinicalCondition: inoperable | op=PRESENT | logic=OR | grp=or_1
+- ClinicalCondition: multi vessel coronary artery disease | op=PRESENT | logic=AND | grp=and_1
+- ClinicalParameter: left ventricular ejection fraction | op=≤ | thr=35 | unit=% | logic=AND | grp=and_1
+- Procedure: percutaneous coronary revascularization | class=IIb | level=B | dir=POSITIVE
 
 Extra rules:
 - ClinicalParameter: left ventricular ejection fraction | op=<= | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class IIa | level=Level B | dir=POSITIVE
+

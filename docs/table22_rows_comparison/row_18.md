@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "revascularization",
+        "entity": "myocardial revascularization",
         "entity_original": "at the end of the revascularization",
         "role": "Procedure",
         "operator": "PRESENT",
@@ -34,10 +34,17 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "275227003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "chronic coronary syndrome",
+        "entity": "chronic ischemic heart disease",
         "entity_original": "patients with chronic coronary syndrome",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -48,13 +55,20 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "413838009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
       {
-        "entity": "intracoronary pressure measurement (ffr)",
-        "entity_original": "intracoronary pressure measurement (ffr) is recommended to identify patients at high risk of persistent angina and subsequent clinical events",
+        "entity": "intracoronary pressure guide wire",
+        "entity_original": "intracoronary pressure measurement (ffr)",
         "role": "Procedure",
         "operator": null,
         "threshold": null,
@@ -64,11 +78,18 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "IIa",
         "level": "B",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "371789009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "intracoronary pressure measurement (ifr)",
-        "entity_original": "intracoronary pressure measurement (ifr) is recommended to identify patients at high risk of persistent angina and subsequent clinical events",
+        "entity": "intracoronary pressure guide wire",
+        "entity_original": "intracoronary pressure measurement (ifr)",
         "role": "Procedure",
         "operator": null,
         "threshold": null,
@@ -78,11 +99,18 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "IIa",
         "level": "B",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "371789009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
-        "entity": "computation (qfr)",
-        "entity_original": "computation (qfr) is recommended to identify patients at high risk of persistent angina and subsequent clinical events",
+        "entity": "angiography of coronary artery",
+        "entity_original": "computation (qfr)",
         "role": "Procedure",
         "operator": null,
         "threshold": null,
@@ -92,7 +120,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "IIa",
         "level": "B",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "33367005",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -118,11 +153,12 @@ Aligned JSON (expected vs actual):
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": null,
-          "target_label": null,
+          "snomed_id": 53741008,
+          "target_label": "ClinicalCondition",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         },
         {
           "entity": "complex coronary artery disease",
@@ -139,11 +175,12 @@ Aligned JSON (expected vs actual):
           "direction": "UNKNOWN",
           "preferred_term": null,
           "synonyms": [],
-          "snomed_id": null,
-          "target_label": null,
+          "snomed_id": 53741008,
+          "target_label": "ClinicalCondition",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ],
       "actions": [
@@ -163,10 +200,11 @@ Aligned JSON (expected vs actual):
           "preferred_term": null,
           "synonyms": [],
           "snomed_id": null,
-          "target_label": null,
+          "target_label": "Procedure",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null
+          "root_concept_term": null,
+          "mapped_target_label": null
         }
       ]
     }
@@ -181,18 +219,18 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: intracoronary pressure measurement (ffr)]
+  ACT1[Procedure: intracoronary pressure guide wire]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: intracoronary pressure measurement (ifr)]
+  ACT2[Procedure: intracoronary pressure guide wire]
   REC -->|RECOMMENDS_PROCEDURE| ACT2
-  ACT3[Procedure: computation (qfr)]
+  ACT3[Procedure: angiography of coronary artery]
   REC -->|RECOMMENDS_PROCEDURE| ACT3
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Procedure: revascularization]
+    C_and_1_1[Procedure: myocardial revascularization]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalCondition: chronic coronary syndrome]
+    C_and_1_2[ClinicalCondition: chronic ischemic heart disease]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
     D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
@@ -219,38 +257,37 @@ graph LR
 ```
 
 Concepts:
-- expected: 5
+- expected: 4
 - actual: 2
 - matches: 0
-- missing: 5
+- missing: 4
 - extra: 2
 
 Missing concepts:
-- ClinicalCondition: chronic coronary syndrome
-- Procedure: computation (qfr)
-- Procedure: intracoronary pressure measurement (ffr)
-- Procedure: intracoronary pressure measurement (ifr)
-- Procedure: revascularization
+- ClinicalCondition: chronic ischemic heart disease
+- Procedure: angiography of coronary artery
+- Procedure: intracoronary pressure guide wire
+- Procedure: myocardial revascularization
 
 Extra concepts:
 - Condition: complex coronary artery disease
 - Procedure: assess procedural risks and post-procedural outcomes
 
 Rules (concept + logic fields):
-- expected: 5
+- expected: 4
 - actual: 3
 - matches: 0
-- missing: 5
+- missing: 4
 - extra: 3
 
 Missing rules:
-- ClinicalCondition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1
-- Procedure: computation (qfr) | class=IIa | level=B | dir=POSITIVE
-- Procedure: intracoronary pressure measurement (ffr) | class=IIa | level=B | dir=POSITIVE
-- Procedure: intracoronary pressure measurement (ifr) | class=IIa | level=B | dir=POSITIVE
-- Procedure: revascularization | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: chronic ischemic heart disease | op=PRESENT | logic=AND | grp=and_1
+- Procedure: angiography of coronary artery | class=IIa | level=B | dir=POSITIVE
+- Procedure: intracoronary pressure guide wire | class=IIa | level=B | dir=POSITIVE
+- Procedure: myocardial revascularization | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
 - Condition: complex coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Condition: complex coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=UNKNOWN
 - Procedure: assess procedural risks and post-procedural outcomes | class=Class I | level=C | dir=POSITIVE
+
