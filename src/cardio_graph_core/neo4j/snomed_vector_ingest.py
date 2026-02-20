@@ -168,6 +168,33 @@ def _filter_rows_needing_embedding(
     )
 
 
+def _count_existing_embeddings(
+    driver,
+    label: str,
+    property_name: str,
+    max_attempts: int,
+    retry_backoff_seconds: float,
+) -> int:
+    query = f"""
+        MATCH (n:`{label}`)
+        WHERE n.`{property_name}` IS NOT NULL
+        RETURN count(n) AS cnt
+        """
+
+    def operation() -> int:
+        with driver.session() as session:
+            row = session.run(query).single()
+            return int(row["cnt"] if row else 0)
+
+    return _run_neo4j_with_retry(
+        driver=driver,
+        operation=operation,
+        operation_name="count existing embeddings",
+        max_attempts=max_attempts,
+        retry_backoff_seconds=retry_backoff_seconds,
+    )
+
+
 @click.command()
 @click.option(
     "--neo4j-uri", default="bolt://neo4j-dev3.internal:7687", show_default=True
@@ -284,6 +311,21 @@ def main(
                 f"FOR (n:`{label}`) ON (n.concept_id, n.term)"
             )
 
+        pre_existing_embeddings = 0
+        if resume_only and not wipe_db:
+            pre_existing_embeddings = _count_existing_embeddings(
+                driver=driver,
+                label=label,
+                property_name=property_name,
+                max_attempts=neo4j_max_attempts,
+                retry_backoff_seconds=neo4j_retry_backoff,
+            )
+            if max_rows > 0:
+                pre_existing_embeddings = min(pre_existing_embeddings, total_target)
+            click.echo(
+                f"[vector-ingest] existing embedded rows before run={pre_existing_embeddings}"
+            )
+
         query = text(
             f"""
             SELECT conceptid, term
@@ -378,12 +420,14 @@ def main(
                 if processed % log_every == 0 or (time.time() - last_log) >= 60:
                     elapsed = time.time() - start
                     rate = processed / max(elapsed, 1e-9)
-                    remaining = max(total_target - processed, 0)
+                    effective_done = min(pre_existing_embeddings + processed, total_target)
+                    remaining = max(total_target - effective_done, 0)
                     eta = _format_seconds(remaining / rate) if rate > 0 else "--:--:--"
                     click.echo(
                         "[vector-ingest] processed="
-                        f"{processed}/{total_target} "
-                        f"({(processed / max(total_target, 1)) * 100:.2f}%), "
+                        f"{effective_done}/{total_target} "
+                        f"({(effective_done / max(total_target, 1)) * 100:.2f}%), "
+                        f"run_delta={processed}, pre_existing={pre_existing_embeddings}, "
                         f"rate={rate:.2f} rows/s, elapsed={_format_seconds(elapsed)}, eta={eta}"
                     )
                     last_log = time.time()
@@ -391,7 +435,7 @@ def main(
             for row in result.mappings():
                 if max_rows > 0 and processed + len(rows_buffer) >= max_rows:
                     break
-                rows_buffer.append({"conceptid": row["conceptid"], "term": row["term"]})
+                rows_buffer.append({"conceptid": int(row["conceptid"]), "term": row["term"]})
                 if len(rows_buffer) >= batch_size:
                     flush_buffer()
 
@@ -427,8 +471,11 @@ def main(
                 time.sleep(10)
 
     total_elapsed = time.time() - start
+    final_effective_done = min(pre_existing_embeddings + processed, total_target)
     click.echo(
-        f"[vector-ingest] completed rows={processed} elapsed={_format_seconds(total_elapsed)}"
+        "[vector-ingest] completed "
+        f"effective_rows={final_effective_done}/{total_target}, "
+        f"run_delta={processed}, elapsed={_format_seconds(total_elapsed)}"
     )
 
 
