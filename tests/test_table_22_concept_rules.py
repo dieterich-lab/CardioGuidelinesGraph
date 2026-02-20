@@ -94,7 +94,7 @@ LLM_SNAPSHOT_PATH = Path(
         DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_alignment.json",
     )
 )
-USE_SNAPSHOT = _env_flag("CARDIO_GRAPH_TABLE22_USE_SNAPSHOT", "true")
+USE_SNAPSHOT = _env_flag("CARDIO_GRAPH_TABLE22_USE_SNAPSHOT", "false")
 
 
 def _load_rules():
@@ -982,7 +982,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     + str(RULES_PATH)
                     + ". Set CARDIO_GRAPH_TABLE22_RULES_PATH or enable CARDIO_GRAPH_TABLE22_USE_SNAPSHOT."
                 )
-        if USE_SNAPSHOT and not LLM_SNAPSHOT_PATH.is_file():
+        if (not LIVE_LLM) and USE_SNAPSHOT and not LLM_SNAPSHOT_PATH.is_file():
             self.skipTest(
                 "Missing LLM snapshot alignment JSON: "
                 + str(LLM_SNAPSHOT_PATH)
