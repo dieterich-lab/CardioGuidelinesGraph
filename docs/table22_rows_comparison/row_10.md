@@ -34,7 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "413838009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "medically fit for surgery",
@@ -48,7 +55,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "713671003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "multi vessel coronary artery disease",
@@ -62,7 +76,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "371803003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "left ventricular ejection fraction",
@@ -76,7 +97,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "250908004",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
@@ -92,7 +120,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "B",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "232717009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -102,8 +137,94 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction (lvef) > 35%",
+          "role": "ClinicalParameter",
+          "operator": ">",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "functionally significant single-vessel disease involving proximal left anterior descending artery",
+          "entity_original": "functionally significant single- or two-vessel disease involving the proximal left anterior descending artery (lad)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction (lvef) > 35%",
+          "role": "ClinicalParameter",
+          "operator": ">",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "single-",
+          "entity_original": "functionally significant single- or two-vessel disease involving the proximal left anterior descending artery (lad)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "OR",
+          "logic_group": "or_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "two-vessel disease involving proximal left anterior descending artery",
+          "entity_original": "functionally significant single- or two-vessel disease involving the proximal left anterior descending artery (lad)",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "OR",
+          "logic_group": "or_1",
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "myocardial revascularization",
+          "entity_original": "myocardial revascularization",
+          "role": "Procedure",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "B",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -143,6 +264,33 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: myocardial revascularization]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_1 -->|EVALUATES| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: functionally significant single-vessel disease involving proximal left anterior descending artery]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_3 -->|EVALUATES| C_and_1_3
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
+  end
+  subgraph LLM_or_1_OR
+    D_or_1_1[DecisionNode or_1 s1]
+    C_or_1_1[Condition: single-]
+    D_or_1_1 -->|CHECKS_FOR| C_or_1_1
+    D_or_1_2[DecisionNode or_1 s2]
+    C_or_1_2[Condition: two-vessel disease involving proximal left anterior descending artery]
+    D_or_1_2 -->|CHECKS_FOR| C_or_1_2
+    D_and_1_3 -->|LEADS_TO condition_met=true| D_or_1_1
+    D_and_1_3 -->|LEADS_TO condition_met=true| D_or_1_2
+  end
+  D_or_1_1 -->|RESULTS_IN condition_met=true| REC
+  D_or_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

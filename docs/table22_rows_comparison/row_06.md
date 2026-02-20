@@ -34,7 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "413838009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "left ventricular ejection fraction",
@@ -48,7 +55,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "250908004",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "stenosis of left coronary artery main stem",
@@ -62,7 +76,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "876857001",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
@@ -78,7 +99,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "275227003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "medical therapy",
@@ -92,7 +120,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "243121000",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -102,8 +137,178 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "age",
+          "entity_original": "age",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "frailty",
+          "entity_original": "frailty",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_2",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "cognitive status",
+          "entity_original": "cognitive status",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_3",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "diabetes",
+          "entity_original": "diabetes",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_4",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "other comorbidities",
+          "entity_original": "any other comorbidities",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_5",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "multivessel disease",
+          "entity_original": "multivessel disease",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_6",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "left main stem involvement",
+          "entity_original": "left main stem involvement",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_7",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "high anatomical complexity",
+          "entity_original": "high anatomical complexity",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_8",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "likelihood of revascularization completeness",
+          "entity_original": "likelihood of revascularization completeness",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_9",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "local expertise",
+          "entity_original": "local expertise",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_10",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        },
+        {
+          "entity": "surgical and interventional risk",
+          "entity_original": "surgical and interventional risk",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_11",
+          "strength": null,
+          "level": null,
+          "direction": "UNKNOWN"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "revascularization",
+          "entity_original": "revascularization to improve outcomes",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": null,
+          "level": null,
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -141,6 +346,74 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: revascularization]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: age]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+  end
+  subgraph LLM_and_2_AND
+    D_and_2_1[DecisionNode and_2 s1]
+    C_and_2_1[Condition: frailty]
+    D_and_2_1 -->|CHECKS_FOR| C_and_2_1
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_2_1
+  end
+  subgraph LLM_and_3_AND
+    D_and_3_1[DecisionNode and_3 s1]
+    C_and_3_1[Condition: cognitive status]
+    D_and_3_1 -->|CHECKS_FOR| C_and_3_1
+    D_and_2_1 -->|LEADS_TO condition_met=true| D_and_3_1
+  end
+  subgraph LLM_and_4_AND
+    D_and_4_1[DecisionNode and_4 s1]
+    C_and_4_1[Condition: diabetes]
+    D_and_4_1 -->|CHECKS_FOR| C_and_4_1
+    D_and_3_1 -->|LEADS_TO condition_met=true| D_and_4_1
+  end
+  subgraph LLM_and_5_AND
+    D_and_5_1[DecisionNode and_5 s1]
+    C_and_5_1[Condition: other comorbidities]
+    D_and_5_1 -->|CHECKS_FOR| C_and_5_1
+    D_and_4_1 -->|LEADS_TO condition_met=true| D_and_5_1
+  end
+  subgraph LLM_and_6_AND
+    D_and_6_1[DecisionNode and_6 s1]
+    C_and_6_1[Condition: multivessel disease]
+    D_and_6_1 -->|CHECKS_FOR| C_and_6_1
+    D_and_5_1 -->|LEADS_TO condition_met=true| D_and_6_1
+  end
+  subgraph LLM_and_7_AND
+    D_and_7_1[DecisionNode and_7 s1]
+    C_and_7_1[Condition: left main stem involvement]
+    D_and_7_1 -->|CHECKS_FOR| C_and_7_1
+    D_and_6_1 -->|LEADS_TO condition_met=true| D_and_7_1
+  end
+  subgraph LLM_and_8_AND
+    D_and_8_1[DecisionNode and_8 s1]
+    C_and_8_1[Condition: high anatomical complexity]
+    D_and_8_1 -->|CHECKS_FOR| C_and_8_1
+    D_and_7_1 -->|LEADS_TO condition_met=true| D_and_8_1
+  end
+  subgraph LLM_and_9_AND
+    D_and_9_1[DecisionNode and_9 s1]
+    C_and_9_1[Condition: likelihood of revascularization completeness]
+    D_and_9_1 -->|CHECKS_FOR| C_and_9_1
+    D_and_8_1 -->|LEADS_TO condition_met=true| D_and_9_1
+  end
+  subgraph LLM_and_10_AND
+    D_and_10_1[DecisionNode and_10 s1]
+    C_and_10_1[Condition: local expertise]
+    D_and_10_1 -->|CHECKS_FOR| C_and_10_1
+    D_and_9_1 -->|LEADS_TO condition_met=true| D_and_10_1
+  end
+  subgraph LLM_and_11_AND
+    D_and_11_1[DecisionNode and_11 s1]
+    C_and_11_1[Condition: surgical and interventional risk]
+    D_and_11_1 -->|CHECKS_FOR| C_and_11_1
+    D_and_10_1 -->|LEADS_TO condition_met=true| D_and_11_1
+  end
+  D_and_11_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

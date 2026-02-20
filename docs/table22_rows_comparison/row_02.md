@@ -34,7 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "49601007",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
@@ -50,7 +57,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "287051000000107",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -60,8 +74,66 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "complex clinical case",
+          "entity_original": "complex clinical cases",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "same recommendation level for cabg and pci",
+          "entity_original": "cabg and pci hold the same level of recommendation",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "complex clinical cases",
+          "entity_original": "complex clinical cases",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "heart team discussion",
+          "entity_original": "heart team discussion",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -89,6 +161,22 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: heart team discussion]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: complex clinical case]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: same recommendation level for cabg and pci]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[Condition: complex clinical cases]
+    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
+  end
+  D_and_1_3 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

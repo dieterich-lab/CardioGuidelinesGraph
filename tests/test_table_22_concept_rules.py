@@ -244,6 +244,20 @@ def _build_entry_with_side(entity, entity_original, role, logic, side):
     return entry
 
 
+def _infer_side(role, logic):
+    role_name = _normalize_role(role)
+    logic = logic or {}
+    if role_name in {"ClinicalCondition", "ClinicalParameter", "Condition"}:
+        return "condition"
+    if role_name in {"Procedure", "Medication", "ClinicalAction"}:
+        logic_type = _normalize_text(logic.get("logic_type"))
+        logic_group = _normalize_text(logic.get("logic_group"))
+        if logic_type or logic_group:
+            return "condition"
+        return "action"
+    return None
+
+
 def _summarize_rules(rules_rows):
     grouped = {}
     for index, row in enumerate(rules_rows):
@@ -258,6 +272,9 @@ def _summarize_rules(rules_rows):
             row.get("role"),
             row.get("logic_structured") or {},
         )
+        side = _infer_side(row.get("role"), row.get("logic_structured") or {})
+        if side:
+            entry["_side"] = side
         entry["_source_index"] = index
         grouped.setdefault(row_id, []).append(entry)
     return grouped
@@ -493,13 +510,25 @@ def _summarize_ground_truth_grouped(truth):
                     ) or condition.get("entity_original")
                     if _normalize_text(entity) == "string":
                         continue
+                    entry = _build_entry(
+                        entity,
+                        condition.get("entity_original"),
+                        condition.get("role"),
+                        condition.get("logic_structured") or {},
+                    )
+                    entry.update(
+                        {
+                            "preferred_term": condition.get("preferred_term"),
+                            "synonyms": condition.get("synonyms") or [],
+                            "snomed_id": condition.get("snomed_id"),
+                            "target_label": condition.get("target_label"),
+                            "taxonomy_path": condition.get("taxonomy_path") or [],
+                            "root_concept_id": condition.get("root_concept_id"),
+                            "root_concept_term": condition.get("root_concept_term"),
+                        }
+                    )
                     conditions.append(
-                        _build_entry(
-                            entity,
-                            condition.get("entity_original"),
-                            condition.get("role"),
-                            condition.get("logic_structured") or {},
-                        )
+                        _postfilter_entry(entry, include_grounding=True)
                     )
 
                 for action in rule.get("actions", []):
@@ -508,14 +537,24 @@ def _summarize_ground_truth_grouped(truth):
                     )
                     if _normalize_text(entity) == "string":
                         continue
-                    actions.append(
-                        _build_entry(
-                            entity,
-                            action.get("entity_original"),
-                            action.get("role"),
-                            action.get("logic_structured") or {},
-                        )
+                    entry = _build_entry(
+                        entity,
+                        action.get("entity_original"),
+                        action.get("role"),
+                        action.get("logic_structured") or {},
                     )
+                    entry.update(
+                        {
+                            "preferred_term": action.get("preferred_term"),
+                            "synonyms": action.get("synonyms") or [],
+                            "snomed_id": action.get("snomed_id"),
+                            "target_label": action.get("target_label"),
+                            "taxonomy_path": action.get("taxonomy_path") or [],
+                            "root_concept_id": action.get("root_concept_id"),
+                            "root_concept_term": action.get("root_concept_term"),
+                        }
+                    )
+                    actions.append(_postfilter_entry(entry, include_grounding=True))
 
                 if conditions or actions:
                     rules_payload.append(
@@ -740,6 +779,17 @@ def _group_entries_by_rule(entries):
     grouped = {"rules": [{"conditions": [], "actions": []}]}
     for entry in entries:
         side = (entry.get("_side") or "").lower()
+        if not side:
+            side = (
+                _infer_side(
+                    entry.get("role"),
+                    {
+                        "logic_type": entry.get("logic_type"),
+                        "logic_group": entry.get("logic_group"),
+                    },
+                )
+                or ""
+            )
         if side == "condition":
             grouped["rules"][0]["conditions"].append(entry)
         elif side == "action":

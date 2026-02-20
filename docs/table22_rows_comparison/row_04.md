@@ -34,7 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "81266008",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
@@ -50,7 +57,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "positive"
+        "direction": "positive",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "415806002",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "preferences",
@@ -64,7 +78,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "positive"
+        "direction": "positive",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "225773000",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "health literacy",
@@ -78,7 +99,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "positive"
+        "direction": "positive",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "870552008",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "requires culturally responsive service to support health literacy",
@@ -92,7 +120,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "positive"
+        "direction": "positive",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "1254714002",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "social support",
@@ -106,7 +141,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "C",
-        "direction": "positive"
+        "direction": "positive",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "315042007",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -116,8 +158,80 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "patient preferences",
+          "entity_original": "patient preferences",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "health literacy",
+          "entity_original": "health literacy",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "cultural circumstances",
+          "entity_original": "cultural circumstances",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "social support",
+          "entity_original": "social support",
+          "role": "Condition",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "revascularization decision",
+          "entity_original": "decision for revascularization and its modality",
+          "role": "Procedure",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -153,6 +267,26 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: revascularization decision]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[Condition: patient preferences]
+    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: health literacy]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_3[DecisionNode and_1 s3]
+    C_and_1_3[Condition: cultural circumstances]
+    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
+    D_and_1_4[DecisionNode and_1 s4]
+    C_and_1_4[Condition: social support]
+    D_and_1_4 -->|CHECKS_FOR| C_and_1_4
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
+    D_and_1_3 -->|LEADS_TO condition_met=true| D_and_1_4
+  end
+  D_and_1_4 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

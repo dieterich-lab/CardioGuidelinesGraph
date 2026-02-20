@@ -34,7 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "413838009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "angina pectoris",
@@ -48,7 +55,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "194828000",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "anginal equivalent",
@@ -62,7 +76,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "565394081000119105",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "medical therapy",
@@ -76,7 +97,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "243121000",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
@@ -92,7 +120,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "I",
         "level": "A",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "275227003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -102,8 +137,66 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
-      "actions": []
+      "conditions": [
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
+          "role": "ClinicalParameter",
+          "operator": "<=",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "chronic coronary syndrome with left ventricular ejection fraction",
+          "entity_original": "ccs patients with left ventricular ejection fraction (lvef) \u2264 35%",
+          "role": "Condition",
+          "operator": "<=",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ],
+      "actions": [
+        {
+          "entity": "revascularization",
+          "entity_original": "revascularization",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        },
+        {
+          "entity": "medical therapy",
+          "entity_original": "medical therapy",
+          "role": "Procedure",
+          "operator": null,
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "C",
+          "direction": "POSITIVE"
+        }
+      ]
     }
   ]
 }
@@ -146,6 +239,20 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  ACT1[Procedure: revascularization]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  ACT2[Procedure: medical therapy]
+  REC -->|RECOMMENDS_PROCEDURE| ACT2
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_1 -->|EVALUATES| C_and_1_1
+    D_and_1_2[DecisionNode and_1 s2]
+    C_and_1_2[Condition: chronic coronary syndrome with left ventricular ejection fraction]
+    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
+    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+  end
+  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:

@@ -34,7 +34,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "413838009",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "high risk",
@@ -48,7 +55,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "723509005",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "inoperable",
@@ -62,7 +76,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "or_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "74778001",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "multi vessel coronary artery disease",
@@ -76,7 +97,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "371803003",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       },
       {
         "entity": "left ventricular ejection fraction",
@@ -90,7 +118,14 @@ Aligned JSON (expected vs actual):
         "logic_group": "and_1",
         "strength": null,
         "level": null,
-        "direction": null
+        "direction": null,
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "250908004",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ],
     "actions": [
@@ -106,7 +141,14 @@ Aligned JSON (expected vs actual):
         "logic_group": null,
         "strength": "IIb",
         "level": "B",
-        "direction": "POSITIVE"
+        "direction": "POSITIVE",
+        "preferred_term": null,
+        "synonyms": [],
+        "snomed_id": "415070008",
+        "target_label": null,
+        "taxonomy_path": [],
+        "root_concept_id": null,
+        "root_concept_term": null
       }
     ]
   }
@@ -116,7 +158,22 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [],
+      "conditions": [
+        {
+          "entity": "left ventricular ejection fraction",
+          "entity_original": "left ventricular ejection fraction \u2264 35%",
+          "role": "ClinicalParameter",
+          "operator": "<=",
+          "threshold": "35",
+          "unit": "%",
+          "context": null,
+          "logic_type": "AND",
+          "logic_group": "and_1",
+          "strength": "Class IIa",
+          "level": "Level B",
+          "direction": "POSITIVE"
+        }
+      ],
       "actions": []
     }
   ]
@@ -164,6 +221,12 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
+  subgraph LLM_and_1_AND
+    D_and_1_1[DecisionNode and_1 s1]
+    C_and_1_1[ClinicalParameter: left ventricular ejection fraction]
+    D_and_1_1 -->|EVALUATES| C_and_1_1
+  end
+  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:
