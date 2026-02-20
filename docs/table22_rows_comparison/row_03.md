@@ -1,4 +1,4 @@
-# row_03 (mapped to row_04)
+# row_03 (mapped to row_03)
 
 Original table row text (ground truth):
 
@@ -98,7 +98,7 @@ Aligned JSON (expected vs actual):
       "conditions": [],
       "actions": [
         {
-          "entity": "patient communication of heart team recommendations",
+          "entity": "heart team communication",
           "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
           "role": "Procedure",
           "operator": null,
@@ -110,14 +110,44 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "C",
           "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
+          "preferred_term": "Ensuring good communication (regime/therapy)",
+          "synonyms": [
+            "Ensuring good communication"
+          ],
+          "snomed_id": 225981007,
           "target_label": "Procedure",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "taxonomy_path": [
+            {
+              "concept_id": "225981007",
+              "term": "Ensuring good communication (regime/therapy)"
+            },
+            {
+              "concept_id": "225220004",
+              "term": "Communication interventions (regime/therapy)"
+            },
+            {
+              "concept_id": "282259008",
+              "term": "Psychotherapeutic, behavioral and/or communication procedure (procedure)"
+            },
+            {
+              "concept_id": "108310004",
+              "term": "Psychologic AND/OR psychiatric procedure AND/OR service (procedure)"
+            },
+            {
+              "concept_id": "127777001",
+              "term": "Provider-specific procedure (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ]
     }
@@ -151,8 +181,71 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: patient communication of heart team recommendations]
+  ACT1[Procedure: heart team communication]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 1,
+  "target_label_counts": {
+    "Procedure": 1
+  },
+  "root_hit_counts": {
+    "71388002": 1
+  },
+  "root_hits": [
+    {
+      "entity": "Heart Team Communication",
+      "entity_original": "communicate the proposal of the Heart Team in a balanced way using language that the patient can understand",
+      "role": "Procedure",
+      "preferred_term": "Ensuring good communication (regime/therapy)",
+      "synonyms": [
+        "Ensuring good communication"
+      ],
+      "snomed_id": 225981007,
+      "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "225981007",
+          "term": "Ensuring good communication (regime/therapy)"
+        },
+        {
+          "concept_id": "225220004",
+          "term": "Communication interventions (regime/therapy)"
+        },
+        {
+          "concept_id": "282259008",
+          "term": "Psychotherapeutic, behavioral and/or communication procedure (procedure)"
+        },
+        {
+          "concept_id": "108310004",
+          "term": "Psychologic AND/OR psychiatric procedure AND/OR service (procedure)"
+        },
+        {
+          "concept_id": "127777001",
+          "term": "Provider-specific procedure (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        },
+        {
+          "concept_id": "138875005",
+          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    }
+  ]
+}
 ```
 
 Concepts:
@@ -168,7 +261,7 @@ Missing concepts:
 - Procedure: treatment plan given
 
 Extra concepts:
-- Procedure: patient communication of heart team recommendations
+- Procedure: heart team communication
 
 Rules (concept + logic fields):
 - expected: 3
@@ -183,5 +276,5 @@ Missing rules:
 - Procedure: treatment plan given | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- Procedure: patient communication of heart team recommendations | class=Class I | level=C | dir=POSITIVE
+- Procedure: heart team communication | class=Class I | level=C | dir=POSITIVE
 

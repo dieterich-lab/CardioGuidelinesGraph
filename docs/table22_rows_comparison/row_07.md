@@ -1,4 +1,4 @@
-# row_07 (mapped to row_08)
+# row_07 (mapped to row_07)
 
 Original table row text (ground truth):
 
@@ -139,51 +139,153 @@ Aligned JSON (expected vs actual):
     {
       "conditions": [
         {
-          "entity": "chronic coronary syndrome",
-          "entity_original": "chronic coronary syndrome patients",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": null,
-          "level": null,
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 413838009,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
           "entity": "left ventricular ejection fraction",
-          "entity_original": "left ventricular ejection fraction > 35%",
+          "entity_original": "lvef > 35%",
           "role": "ClinicalParameter",
           "operator": ">",
           "threshold": "35",
           "unit": "%",
           "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": null,
-          "level": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "A",
           "direction": "POSITIVE",
-          "preferred_term": null,
+          "preferred_term": "Left ventricular ejection fraction (observable entity)",
           "synonyms": [],
           "snomed_id": 250908004,
           "target_label": "ClinicalParameter",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "taxonomy_path": [
+            {
+              "concept_id": "250908004",
+              "term": "Left ventricular ejection fraction (observable entity)"
+            },
+            {
+              "concept_id": "70822001",
+              "term": "Cardiac ejection fraction, function (observable entity)"
+            },
+            {
+              "concept_id": "86185002",
+              "term": "Cardiac function (observable entity)"
+            },
+            {
+              "concept_id": "70337006",
+              "term": "Cardiovascular function (observable entity)"
+            },
+            {
+              "concept_id": "246464006",
+              "term": "Function (observable entity)"
+            },
+            {
+              "concept_id": "363787002",
+              "term": "Observable entity (observable entity)"
+            }
+          ],
+          "root_concept_id": "363787002",
+          "root_concept_term": "Observable entity (observable entity)"
+        },
+        {
+          "entity": "three-vessel coronary artery disease",
+          "entity_original": "functionally significant three-vessel disease",
+          "role": "ClinicalParameter",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "A",
+          "direction": "UNKNOWN",
+          "preferred_term": "Coronary artery spasm (disorder)",
+          "synonyms": [
+            "Coronary artery spasm",
+            "Coronary spasm"
+          ],
+          "snomed_id": 23687008,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [
+            {
+              "concept_id": "23687008",
+              "term": "Coronary artery spasm (disorder)"
+            },
+            {
+              "concept_id": "128527000",
+              "term": "Disorder of smooth muscle (disorder)"
+            },
+            {
+              "concept_id": "129565002",
+              "term": "Disorder of skeletal AND/OR smooth muscle (disorder)"
+            },
+            {
+              "concept_id": "106030000",
+              "term": "Muscle finding (finding)"
+            },
+            {
+              "concept_id": "404684003",
+              "term": "Clinical finding (finding)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "404684003",
+          "root_concept_term": "Clinical finding (finding)"
         }
       ],
-      "actions": []
+      "actions": [
+        {
+          "entity": "myocardial revascularization",
+          "entity_original": "myocardial revascularization",
+          "role": "Procedure",
+          "operator": "PRESENT",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class I",
+          "level": "A",
+          "direction": "POSITIVE",
+          "preferred_term": "Myocardial revascularization (procedure)",
+          "synonyms": [],
+          "snomed_id": 275227003,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "275227003",
+              "term": "Myocardial revascularization (procedure)"
+            },
+            {
+              "concept_id": "81266008",
+              "term": "Heart revascularization (procedure)"
+            },
+            {
+              "concept_id": "31413008",
+              "term": "Operative procedure on coronary artery (procedure)"
+            },
+            {
+              "concept_id": "38629001",
+              "term": "Operative procedure on the arteries of the thorax and abdomen (procedure)"
+            },
+            {
+              "concept_id": "74943008",
+              "term": "Operation on trunk (procedure)"
+            },
+            {
+              "concept_id": "387713003",
+              "term": "Surgical procedure (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
+        }
+      ]
     }
   ]
 }
@@ -221,40 +323,190 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: chronic coronary syndrome]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
-    D_and_1_2 -->|EVALUATES| C_and_1_2
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+  ACT1[Procedure: myocardial revascularization]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
+  subgraph LLM_group_1_AND
+    D_group_1_1[DecisionNode group_1 s1]
+    C_group_1_1[ClinicalParameter: left ventricular ejection fraction]
+    D_group_1_1 -->|EVALUATES| C_group_1_1
+    D_group_1_2[DecisionNode group_1 s2]
+    C_group_1_2[ClinicalParameter: three-vessel coronary artery disease]
+    D_group_1_2 -->|EVALUATES| C_group_1_2
+    D_group_1_1 -->|LEADS_TO condition_met=true| D_group_1_2
   end
-  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
+  D_group_1_2 -->|RESULTS_IN condition_met=true| REC
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 3,
+  "target_label_counts": {
+    "ClinicalParameter": 1,
+    "Procedure": 1,
+    "ClinicalCondition": 1
+  },
+  "root_hit_counts": {
+    "363787002": 1,
+    "71388002": 1,
+    "404684003": 1
+  },
+  "root_hits": [
+    {
+      "entity": "Left Ventricular Ejection Fraction",
+      "entity_original": "LVEF > 35%",
+      "role": "ClinicalParameter",
+      "preferred_term": "Left ventricular ejection fraction (observable entity)",
+      "synonyms": [],
+      "snomed_id": 250908004,
+      "target_label": "ClinicalParameter",
+      "taxonomy_path": [
+        {
+          "concept_id": "250908004",
+          "term": "Left ventricular ejection fraction (observable entity)"
+        },
+        {
+          "concept_id": "70822001",
+          "term": "Cardiac ejection fraction, function (observable entity)"
+        },
+        {
+          "concept_id": "86185002",
+          "term": "Cardiac function (observable entity)"
+        },
+        {
+          "concept_id": "70337006",
+          "term": "Cardiovascular function (observable entity)"
+        },
+        {
+          "concept_id": "246464006",
+          "term": "Function (observable entity)"
+        },
+        {
+          "concept_id": "363787002",
+          "term": "Observable entity (observable entity)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "363787002",
+        "root_concept_term": "Observable entity (observable entity)",
+        "mapped_target_label": "ClinicalParameter"
+      }
+    },
+    {
+      "entity": "Myocardial Revascularization",
+      "entity_original": "myocardial revascularization",
+      "role": "Procedure",
+      "preferred_term": "Myocardial revascularization (procedure)",
+      "synonyms": [],
+      "snomed_id": 275227003,
+      "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "275227003",
+          "term": "Myocardial revascularization (procedure)"
+        },
+        {
+          "concept_id": "81266008",
+          "term": "Heart revascularization (procedure)"
+        },
+        {
+          "concept_id": "31413008",
+          "term": "Operative procedure on coronary artery (procedure)"
+        },
+        {
+          "concept_id": "38629001",
+          "term": "Operative procedure on the arteries of the thorax and abdomen (procedure)"
+        },
+        {
+          "concept_id": "74943008",
+          "term": "Operation on trunk (procedure)"
+        },
+        {
+          "concept_id": "387713003",
+          "term": "Surgical procedure (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    },
+    {
+      "entity": "Three-Vessel Coronary Artery Disease",
+      "entity_original": "functionally significant three-vessel disease",
+      "role": "ClinicalParameter",
+      "preferred_term": "Coronary artery spasm (disorder)",
+      "synonyms": [
+        "Coronary artery spasm",
+        "Coronary spasm"
+      ],
+      "snomed_id": 23687008,
+      "target_label": "ClinicalCondition",
+      "taxonomy_path": [
+        {
+          "concept_id": "23687008",
+          "term": "Coronary artery spasm (disorder)"
+        },
+        {
+          "concept_id": "128527000",
+          "term": "Disorder of smooth muscle (disorder)"
+        },
+        {
+          "concept_id": "129565002",
+          "term": "Disorder of skeletal AND/OR smooth muscle (disorder)"
+        },
+        {
+          "concept_id": "106030000",
+          "term": "Muscle finding (finding)"
+        },
+        {
+          "concept_id": "404684003",
+          "term": "Clinical finding (finding)"
+        },
+        {
+          "concept_id": "138875005",
+          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "404684003",
+        "root_concept_term": "Clinical finding (finding)",
+        "mapped_target_label": "ClinicalCondition"
+      }
+    }
+  ]
+}
 ```
 
 Concepts:
 - expected: 5
-- actual: 2
-- matches: 1
-- missing: 4
-- extra: 1
+- actual: 4
+- matches: 2
+- missing: 3
+- extra: 2
 
 Missing concepts:
 - ClinicalCondition: chronic ischemic heart disease
 - ClinicalCondition: triple vessel disease of the heart
 - Procedure: medical therapy
-- Procedure: myocardial revascularization
 
 Extra concepts:
-- Condition: chronic coronary syndrome
+- ClinicalParameter: chronic coronary syndrome
+- ClinicalParameter: three-vessel coronary artery disease
 
 Rules (concept + logic fields):
 - expected: 5
-- actual: 2
+- actual: 4
 - matches: 0
 - missing: 5
-- extra: 2
+- extra: 4
 
 Missing rules:
 - ClinicalCondition: chronic ischemic heart disease | op=PRESENT | logic=AND | grp=and_1
@@ -264,6 +516,8 @@ Missing rules:
 - Procedure: myocardial revascularization | class=I | level=A | dir=POSITIVE
 
 Extra rules:
-- ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | logic=AND | grp=and_1 | dir=POSITIVE
-- Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | dir=POSITIVE
+- ClinicalParameter: chronic coronary syndrome | op=PRESENT | class=Class I | level=A | dir=UNKNOWN
+- ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | class=Class I | level=A | dir=POSITIVE
+- ClinicalParameter: three-vessel coronary artery disease | op=PRESENT | class=Class I | level=A | dir=UNKNOWN
+- Procedure: myocardial revascularization | op=PRESENT | class=Class I | level=A | dir=POSITIVE
 

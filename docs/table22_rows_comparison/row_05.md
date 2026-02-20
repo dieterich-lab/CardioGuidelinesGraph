@@ -1,4 +1,4 @@
-# row_05 (mapped to row_06)
+# row_05 (mapped to row_05)
 
 Original table row text (ground truth):
 
@@ -74,36 +74,13 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [
+      "conditions": [],
+      "actions": [
         {
           "entity": "heart team",
           "entity_original": "heart team (on site or with a partner institution)",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 368009,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        }
-      ],
-      "actions": [
-        {
-          "entity": "revascularization protocol development",
-          "entity_original": "develop institutional protocols to implement the appropriate revascularization strategy in accordance with current guidelines",
           "role": "Procedure",
-          "operator": null,
+          "operator": "PRESENT",
           "threshold": null,
           "unit": null,
           "context": null,
@@ -112,14 +89,56 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "C",
           "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
+          "preferred_term": "Open heart surgery (procedure)",
+          "synonyms": [
+            "Open heart surgery"
+          ],
+          "snomed_id": 2598006,
           "target_label": "Procedure",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "taxonomy_path": [
+            {
+              "concept_id": "2598006",
+              "term": "Open heart surgery (procedure)"
+            },
+            {
+              "concept_id": "64915003",
+              "term": "Operation on heart (procedure)"
+            },
+            {
+              "concept_id": "386765006",
+              "term": "Operation on mediastinum (procedure)"
+            },
+            {
+              "concept_id": "118696008",
+              "term": "Procedure on mediastinum (procedure)"
+            },
+            {
+              "concept_id": "118695007",
+              "term": "Procedure on thorax (procedure)"
+            },
+            {
+              "concept_id": "118694006",
+              "term": "Procedure on trunk (procedure)"
+            },
+            {
+              "concept_id": "771329004",
+              "term": "Procedure on body region (procedure)"
+            },
+            {
+              "concept_id": "362958002",
+              "term": "Procedure by site (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            },
+            {
+              "concept_id": "138875005",
+              "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ]
     }
@@ -149,14 +168,83 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: revascularization protocol development]
+  ACT1[Procedure: heart team]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: heart team]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-  end
-  D_and_1_1 -->|RESULTS_IN condition_met=true| REC
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 1,
+  "target_label_counts": {
+    "Procedure": 1
+  },
+  "root_hit_counts": {
+    "71388002": 1
+  },
+  "root_hits": [
+    {
+      "entity": "Heart Team",
+      "entity_original": "Heart Team (on site or with a partner institution)",
+      "role": "Procedure",
+      "preferred_term": "Open heart surgery (procedure)",
+      "synonyms": [
+        "Open heart surgery"
+      ],
+      "snomed_id": 2598006,
+      "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "2598006",
+          "term": "Open heart surgery (procedure)"
+        },
+        {
+          "concept_id": "64915003",
+          "term": "Operation on heart (procedure)"
+        },
+        {
+          "concept_id": "386765006",
+          "term": "Operation on mediastinum (procedure)"
+        },
+        {
+          "concept_id": "118696008",
+          "term": "Procedure on mediastinum (procedure)"
+        },
+        {
+          "concept_id": "118695007",
+          "term": "Procedure on thorax (procedure)"
+        },
+        {
+          "concept_id": "118694006",
+          "term": "Procedure on trunk (procedure)"
+        },
+        {
+          "concept_id": "771329004",
+          "term": "Procedure on body region (procedure)"
+        },
+        {
+          "concept_id": "362958002",
+          "term": "Procedure by site (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        },
+        {
+          "concept_id": "138875005",
+          "term": "SNOMED CT Concept (SNOMED RT+CTV3)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    }
+  ]
+}
 ```
 
 Concepts:
@@ -171,8 +259,8 @@ Missing concepts:
 - Procedure: development of care plan
 
 Extra concepts:
-- Condition: heart team
-- Procedure: revascularization protocol development
+- Procedure: develop institutional protocols
+- Procedure: heart team
 
 Rules (concept + logic fields):
 - expected: 2
@@ -186,6 +274,6 @@ Missing rules:
 - Procedure: development of care plan | class=I | level=C | dir=POSITIVE
 
 Extra rules:
-- Condition: heart team | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
-- Procedure: revascularization protocol development | class=Class I | level=C | dir=POSITIVE
+- Procedure: develop institutional protocols | class=Class I | level=C | dir=POSITIVE
+- Procedure: heart team | op=PRESENT | class=Class I | level=C | dir=POSITIVE
 

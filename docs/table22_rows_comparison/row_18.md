@@ -1,4 +1,4 @@
-# row_18 (mapped to row_19)
+# row_18 (mapped to row_18)
 
 Original table row text (ground truth):
 
@@ -139,63 +139,40 @@ Aligned JSON (expected vs actual):
     {
       "conditions": [
         {
-          "entity": "complex coronary artery disease",
-          "entity_original": "complex coronary artery disease (cad)",
-          "role": "Condition",
+          "entity": "high risk of persistent angina and subsequent clinical events",
+          "entity_original": "high risk of persistent angina and subsequent clinical events",
+          "role": "ClinicalParameter",
           "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 53741008,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "complex coronary artery disease",
-          "entity_original": "complex coronary artery disease (cad) in whom revascularization is being considered",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "C",
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 53741008,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        }
-      ],
-      "actions": [
-        {
-          "entity": "assess procedural risks and post-procedural outcomes",
-          "entity_original": "assess procedural risks and post-procedural outcomes",
-          "role": "Procedure",
-          "operator": null,
           "threshold": null,
           "unit": null,
           "context": null,
           "logic_type": null,
           "logic_group": null,
-          "strength": "Class I",
-          "level": "C",
+          "strength": "Class IIa",
+          "level": "B",
+          "direction": "POSITIVE",
+          "preferred_term": null,
+          "synonyms": [],
+          "snomed_id": null,
+          "target_label": "ClinicalParameter",
+          "taxonomy_path": [],
+          "root_concept_id": null,
+          "root_concept_term": null
+        }
+      ],
+      "actions": [
+        {
+          "entity": "consider procedure at end",
+          "entity_original": "should be considered at the end of the procedure",
+          "role": "Procedure",
+          "operator": "PLANNED",
+          "threshold": null,
+          "unit": null,
+          "context": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Class IIa",
+          "level": "B",
           "direction": "POSITIVE",
           "preferred_term": null,
           "synonyms": [],
@@ -203,8 +180,7 @@ Aligned JSON (expected vs actual):
           "target_label": "Procedure",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ]
     }
@@ -242,18 +218,52 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: assess procedural risks and post-procedural outcomes]
+  ACT1[Procedure: consider procedure at end]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: complex coronary artery disease]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[Condition: complex coronary artery disease]
-    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
+  subgraph LLM_group_1_AND
+    D_group_1_1[DecisionNode group_1 s1]
+    C_group_1_1[ClinicalParameter: high risk of persistent angina and subsequent clinical events]
+    D_group_1_1 -->|EVALUATES| C_group_1_1
   end
-  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
+  D_group_1_1 -->|RESULTS_IN condition_met=true| REC
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 2,
+  "target_label_counts": {
+    "Procedure": 1,
+    "ClinicalParameter": 1
+  },
+  "root_hit_counts": {},
+  "root_hits": [
+    {
+      "entity": "Consider procedure at end",
+      "entity_original": "should be considered at the end of the procedure",
+      "role": "Procedure",
+      "preferred_term": null,
+      "synonyms": [],
+      "snomed_id": null,
+      "target_label": "Procedure",
+      "taxonomy_path": [],
+      "root_hit": null
+    },
+    {
+      "entity": "high risk of persistent angina and subsequent clinical events",
+      "entity_original": "high risk of persistent angina and subsequent clinical events",
+      "role": "ClinicalParameter",
+      "preferred_term": null,
+      "synonyms": [],
+      "snomed_id": null,
+      "target_label": "ClinicalParameter",
+      "taxonomy_path": [],
+      "root_hit": null
+    }
+  ]
+}
 ```
 
 Concepts:
@@ -270,15 +280,15 @@ Missing concepts:
 - Procedure: myocardial revascularization
 
 Extra concepts:
-- Condition: complex coronary artery disease
-- Procedure: assess procedural risks and post-procedural outcomes
+- ClinicalParameter: high risk of persistent angina and subsequent clinical events
+- Procedure: consider procedure at end
 
 Rules (concept + logic fields):
 - expected: 4
-- actual: 3
+- actual: 2
 - matches: 0
 - missing: 4
-- extra: 3
+- extra: 2
 
 Missing rules:
 - ClinicalCondition: chronic ischemic heart disease | op=PRESENT | logic=AND | grp=and_1
@@ -287,7 +297,6 @@ Missing rules:
 - Procedure: myocardial revascularization | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- Condition: complex coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
-- Condition: complex coronary artery disease | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=UNKNOWN
-- Procedure: assess procedural risks and post-procedural outcomes | class=Class I | level=C | dir=POSITIVE
+- ClinicalParameter: high risk of persistent angina and subsequent clinical events | op=PRESENT | class=Class IIa | level=B | dir=POSITIVE
+- Procedure: consider procedure at end | op=PLANNED | class=Class IIa | level=B | dir=POSITIVE
 

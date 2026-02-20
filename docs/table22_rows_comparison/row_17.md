@@ -1,4 +1,4 @@
-# row_17 (mapped to row_18)
+# row_17 (mapped to row_17)
 
 Original table row text (ground truth):
 
@@ -139,250 +139,33 @@ Aligned JSON (expected vs actual):
     {
       "conditions": [
         {
-          "entity": "age",
-          "entity_original": "age",
-          "role": "Condition",
+          "entity": "multivessel coronary artery disease",
+          "entity_original": "patients with multivessel disease",
+          "role": "ClinicalParameter",
           "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "frailty",
-          "entity_original": "frailty",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_2",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 248279007,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "cognitive status",
-          "entity_original": "cognitive status",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_3",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 65367001,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "diabetes",
-          "entity_original": "diabetes",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_4",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 11530004,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "other comorbidities",
-          "entity_original": "any other comorbidities",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_5",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "multivessel disease",
-          "entity_original": "multivessel disease",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_6",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "left main stem involvement",
-          "entity_original": "left main stem involvement",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_7",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "high anatomical complexity",
-          "entity_original": "high anatomical complexity",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_8",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "likelihood of revascularization completeness",
-          "entity_original": "likelihood of revascularization completeness",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_9",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "local expertise and outcomes",
-          "entity_original": "local expertise and outcomes",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_10",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        }
-      ],
-      "actions": [
-        {
-          "entity": "assessment of procedural risks and post-procedural outcomes",
-          "entity_original": "assessment of procedural risks and post-procedural outcomes",
-          "role": "Procedure",
-          "operator": null,
           "threshold": null,
           "unit": null,
           "context": null,
           "logic_type": null,
           "logic_group": null,
-          "strength": null,
-          "level": null,
+          "strength": "Class I",
+          "level": "A",
           "direction": "POSITIVE",
-          "preferred_term": null,
+          "preferred_term": "Coronary artery disease (disorder)",
           "synonyms": [],
-          "snomed_id": null,
-          "target_label": "Procedure",
-          "taxonomy_path": [],
+          "snomed_id": 8957000,
+          "target_label": "ClinicalCondition",
+          "taxonomy_path": [
+            {
+              "concept_id": "8957000",
+              "term": "Coronary artery disease (disorder)"
+            }
+          ],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
-      ]
+      ],
+      "actions": []
     }
   ]
 }
@@ -418,76 +201,51 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: assessment of procedural risks and post-procedural outcomes]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: age]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
+  subgraph LLM_group_1_AND
+    D_group_1_1[DecisionNode group_1 s1]
+    C_group_1_1[ClinicalParameter: multivessel coronary artery disease]
+    D_group_1_1 -->|EVALUATES| C_group_1_1
   end
-  subgraph LLM_and_2_AND
-    D_and_2_1[DecisionNode and_2 s1]
-    C_and_2_1[Condition: frailty]
-    D_and_2_1 -->|CHECKS_FOR| C_and_2_1
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_2_1
-  end
-  subgraph LLM_and_3_AND
-    D_and_3_1[DecisionNode and_3 s1]
-    C_and_3_1[Condition: cognitive status]
-    D_and_3_1 -->|CHECKS_FOR| C_and_3_1
-    D_and_2_1 -->|LEADS_TO condition_met=true| D_and_3_1
-  end
-  subgraph LLM_and_4_AND
-    D_and_4_1[DecisionNode and_4 s1]
-    C_and_4_1[Condition: diabetes]
-    D_and_4_1 -->|CHECKS_FOR| C_and_4_1
-    D_and_3_1 -->|LEADS_TO condition_met=true| D_and_4_1
-  end
-  subgraph LLM_and_5_AND
-    D_and_5_1[DecisionNode and_5 s1]
-    C_and_5_1[Condition: other comorbidities]
-    D_and_5_1 -->|CHECKS_FOR| C_and_5_1
-    D_and_4_1 -->|LEADS_TO condition_met=true| D_and_5_1
-  end
-  subgraph LLM_and_6_AND
-    D_and_6_1[DecisionNode and_6 s1]
-    C_and_6_1[Condition: multivessel disease]
-    D_and_6_1 -->|CHECKS_FOR| C_and_6_1
-    D_and_5_1 -->|LEADS_TO condition_met=true| D_and_6_1
-  end
-  subgraph LLM_and_7_AND
-    D_and_7_1[DecisionNode and_7 s1]
-    C_and_7_1[Condition: left main stem involvement]
-    D_and_7_1 -->|CHECKS_FOR| C_and_7_1
-    D_and_6_1 -->|LEADS_TO condition_met=true| D_and_7_1
-  end
-  subgraph LLM_and_8_AND
-    D_and_8_1[DecisionNode and_8 s1]
-    C_and_8_1[Condition: high anatomical complexity]
-    D_and_8_1 -->|CHECKS_FOR| C_and_8_1
-    D_and_7_1 -->|LEADS_TO condition_met=true| D_and_8_1
-  end
-  subgraph LLM_and_9_AND
-    D_and_9_1[DecisionNode and_9 s1]
-    C_and_9_1[Condition: likelihood of revascularization completeness]
-    D_and_9_1 -->|CHECKS_FOR| C_and_9_1
-    D_and_8_1 -->|LEADS_TO condition_met=true| D_and_9_1
-  end
-  subgraph LLM_and_10_AND
-    D_and_10_1[DecisionNode and_10 s1]
-    C_and_10_1[Condition: local expertise and outcomes]
-    D_and_10_1 -->|CHECKS_FOR| C_and_10_1
-    D_and_9_1 -->|LEADS_TO condition_met=true| D_and_10_1
-  end
-  D_and_10_1 -->|RESULTS_IN condition_met=true| REC
+  D_group_1_1 -->|RESULTS_IN condition_met=true| REC
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 1,
+  "target_label_counts": {
+    "ClinicalCondition": 1
+  },
+  "root_hit_counts": {},
+  "root_hits": [
+    {
+      "entity": "Multivessel coronary artery disease",
+      "entity_original": "patients with multivessel disease",
+      "role": "ClinicalParameter",
+      "preferred_term": "Coronary artery disease (disorder)",
+      "synonyms": [],
+      "snomed_id": 8957000,
+      "target_label": "ClinicalCondition",
+      "taxonomy_path": [
+        {
+          "concept_id": "8957000",
+          "term": "Coronary artery disease (disorder)"
+        }
+      ],
+      "root_hit": null
+    }
+  ]
+}
 ```
 
 Concepts:
 - expected: 4
-- actual: 11
+- actual: 2
 - matches: 0
 - missing: 4
-- extra: 11
+- extra: 2
 
 Missing concepts:
 - ClinicalCondition: multi vessel coronary artery disease
@@ -496,24 +254,15 @@ Missing concepts:
 - Procedure: procedure
 
 Extra concepts:
-- Condition: age
-- Condition: cognitive status
-- Condition: diabetes
-- Condition: frailty
-- Condition: high anatomical complexity
-- Condition: left main stem involvement
-- Condition: likelihood of revascularization completeness
-- Condition: local expertise and outcomes
-- Condition: multivessel disease
-- Condition: other comorbidities
-- Procedure: assessment of procedural risks and post-procedural outcomes
+- ClinicalParameter: multivessel coronary artery disease
+- Procedure: lesion selection guidance for intervention
 
 Rules (concept + logic fields):
 - expected: 4
-- actual: 11
+- actual: 2
 - matches: 0
 - missing: 4
-- extra: 11
+- extra: 2
 
 Missing rules:
 - ClinicalCondition: multi vessel coronary artery disease | op=PRESENT | logic=AND | grp=and_1
@@ -522,15 +271,6 @@ Missing rules:
 - Procedure: procedure | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- Condition: age | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
-- Condition: cognitive status | op=PRESENT | logic=AND | grp=and_3 | dir=UNKNOWN
-- Condition: diabetes | op=PRESENT | logic=AND | grp=and_4 | dir=UNKNOWN
-- Condition: frailty | op=PRESENT | logic=AND | grp=and_2 | dir=UNKNOWN
-- Condition: high anatomical complexity | op=PRESENT | logic=AND | grp=and_8 | dir=UNKNOWN
-- Condition: left main stem involvement | op=PRESENT | logic=AND | grp=and_7 | dir=UNKNOWN
-- Condition: likelihood of revascularization completeness | op=PRESENT | logic=AND | grp=and_9 | dir=UNKNOWN
-- Condition: local expertise and outcomes | op=PRESENT | logic=AND | grp=and_10 | dir=UNKNOWN
-- Condition: multivessel disease | op=PRESENT | logic=AND | grp=and_6 | dir=UNKNOWN
-- Condition: other comorbidities | op=PRESENT | logic=AND | grp=and_5 | dir=UNKNOWN
-- Procedure: assessment of procedural risks and post-procedural outcomes | dir=POSITIVE
+- ClinicalParameter: multivessel coronary artery disease | op=PRESENT | class=Class I | level=A | dir=POSITIVE
+- Procedure: lesion selection guidance for intervention | class=Class I | level=A | dir=POSITIVE
 

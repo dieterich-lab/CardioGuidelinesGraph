@@ -1,4 +1,4 @@
-# row_09 (mapped to row_10)
+# row_09 (mapped to row_09)
 
 Original table row text (ground truth):
 
@@ -217,98 +217,8 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [
-        {
-          "entity": "chronic coronary syndrome",
-          "entity_original": "chronic coronary syndrome (ccs) patients",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 413838009,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "left ventricular ejection fraction",
-          "entity_original": "left ventricular ejection fraction (lvef) > 35%",
-          "role": "ClinicalParameter",
-          "operator": ">",
-          "threshold": "35",
-          "unit": "%",
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 250908004,
-          "target_label": "ClinicalParameter",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "three-vessel disease",
-          "entity_original": "functionally significant three-vessel disease",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": null,
-          "level": null,
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        }
-      ],
-      "actions": [
-        {
-          "entity": "myocardial revascularization",
-          "entity_original": "myocardial revascularization",
-          "role": "Procedure",
-          "operator": null,
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": "Class I",
-          "level": "A",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 277437006,
-          "target_label": "Procedure",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        }
-      ]
+      "conditions": [],
+      "actions": []
     }
   ]
 }
@@ -352,48 +262,28 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: myocardial revascularization]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: chronic coronary syndrome]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
-    D_and_1_2 -->|EVALUATES| C_and_1_2
-    D_and_1_3[DecisionNode and_1 s3]
-    C_and_1_3[Condition: three-vessel disease]
-    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
-    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
-  end
-  D_and_1_3 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:
 - expected: 5
-- actual: 4
-- matches: 1
-- missing: 4
-- extra: 3
+- actual: 0
+- matches: 0
+- missing: 5
+- extra: 0
 
 Missing concepts:
 - ClinicalCondition: chronic ischemic heart disease
+- ClinicalParameter: left ventricular ejection fraction
 - Procedure: angiography of coronary artery
 - Procedure: decision making
 - Procedure: therapeutic evaluation (procedure)
 
-Extra concepts:
-- Condition: chronic coronary syndrome
-- Condition: three-vessel disease
-- Procedure: myocardial revascularization
-
 Rules (concept + logic fields):
 - expected: 5
-- actual: 4
+- actual: 0
 - matches: 0
 - missing: 5
-- extra: 4
+- extra: 0
 
 Missing rules:
 - ClinicalCondition: chronic ischemic heart disease | op=PRESENT | logic=AND | grp=and_1
@@ -401,10 +291,4 @@ Missing rules:
 - Procedure: angiography of coronary artery | class=I | level=C | dir=POSITIVE
 - Procedure: decision making | class=I | level=C | dir=POSITIVE
 - Procedure: therapeutic evaluation (procedure) | class=I | level=C | dir=POSITIVE
-
-Extra rules:
-- ClinicalParameter: left ventricular ejection fraction | op=> | thr=35 | unit=% | logic=AND | grp=and_1 | dir=UNKNOWN
-- Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
-- Condition: three-vessel disease | op=PRESENT | logic=AND | grp=and_1 | dir=UNKNOWN
-- Procedure: myocardial revascularization | class=Class I | level=A | dir=POSITIVE
 

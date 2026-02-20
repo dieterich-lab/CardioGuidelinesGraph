@@ -1,4 +1,4 @@
-# row_14 (mapped to row_15)
+# row_14 (mapped to row_14)
 
 Original table row text (ground truth):
 
@@ -76,208 +76,77 @@ Aligned JSON (expected vs actual):
     {
       "conditions": [
         {
-          "entity": "chronic coronary syndrome patients with functionally significant multivessel disease",
-          "entity_original": "chronic coronary syndrome patients with functionally significant multivessel disease",
-          "role": "Condition",
-          "operator": "PRESENT",
+          "entity": "coronary artery bypass graft surgery",
+          "entity_original": "cabg",
+          "role": "Procedure",
+          "operator": "PLANNED",
           "threshold": null,
           "unit": null,
           "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class IIb",
-          "level": "B",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "left ventricular ejection fraction",
-          "entity_original": "left ventricular ejection fraction",
-          "role": "ClinicalParameter",
-          "operator": "<=",
-          "threshold": "35",
-          "unit": "%",
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class IIb",
-          "level": "B",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 250908004,
-          "target_label": "ClinicalParameter",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "high surgical risk",
-          "entity_original": "high surgical risk or not operable",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "OR",
-          "logic_group": "or_1",
-          "strength": "Class IIb",
-          "level": "B",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "not operable",
-          "entity_original": "high surgical risk or not operable",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "OR",
-          "logic_group": "or_1",
-          "strength": "Class IIb",
-          "level": "B",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "chronic coronary syndrome",
-          "entity_original": "chronic coronary syndrome (ccs)",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class IIb",
-          "level": "B",
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 413838009,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "multivessel disease",
-          "entity_original": "multivessel disease (mvd)",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class IIb",
-          "level": "B",
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "left ventricular ejection fraction",
-          "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
-          "role": "ClinicalParameter",
-          "operator": "LE",
-          "threshold": "35",
-          "unit": "%",
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class IIb",
-          "level": "B",
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 250908004,
-          "target_label": "ClinicalParameter",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "high surgical risk",
-          "entity_original": "high surgical risk",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class IIb",
-          "level": "B",
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "not operable",
-          "entity_original": "not operable",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class IIb",
-          "level": "B",
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Unknown",
+          "level": "Unknown",
+          "direction": null,
+          "preferred_term": "Aortocoronary artery bypass graft with vein graft (procedure)",
+          "synonyms": [
+            "Aortocoronary artery bypass graft with vein graft",
+            "ACVG - aortocoronary vein graft",
+            "CAVG - coronary artery vein graft",
+            "CVG - coronary vein graft"
+          ],
+          "snomed_id": 17073005,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "17073005",
+              "term": "Aortocoronary artery bypass graft with vein graft (procedure)"
+            },
+            {
+              "concept_id": "287347004",
+              "term": "Arterial bypass using vein graft (procedure)"
+            },
+            {
+              "concept_id": "116360008",
+              "term": "Arterial bypass graft (procedure)"
+            },
+            {
+              "concept_id": "23075000",
+              "term": "Creation of vascular bypass (procedure)"
+            },
+            {
+              "concept_id": "48537004",
+              "term": "Bypass graft (procedure)"
+            },
+            {
+              "concept_id": "78817002",
+              "term": "Construction of anastomosis (procedure)"
+            },
+            {
+              "concept_id": "410614008",
+              "term": "Construction (procedure)"
+            },
+            {
+              "concept_id": "4365001",
+              "term": "Surgical repair (procedure)"
+            },
+            {
+              "concept_id": "387713003",
+              "term": "Surgical procedure (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ],
       "actions": [
         {
-          "entity": "percutaneous coronary intervention",
-          "entity_original": "percutaneous coronary intervention",
+          "entity": "coronary artery bypass grafting",
+          "entity_original": "cabg",
           "role": "Procedure",
           "operator": "PRESENT",
           "threshold": null,
@@ -285,17 +154,21 @@ Aligned JSON (expected vs actual):
           "context": null,
           "logic_type": null,
           "logic_group": null,
-          "strength": "Class IIb",
-          "level": "B",
+          "strength": null,
+          "level": null,
           "direction": "POSITIVE",
-          "preferred_term": null,
+          "preferred_term": "Coronary artery operations (& bypass) (procedure)",
           "synonyms": [],
-          "snomed_id": 415070008,
+          "snomed_id": 149169006,
           "target_label": "Procedure",
-          "taxonomy_path": [],
+          "taxonomy_path": [
+            {
+              "concept_id": "149169006",
+              "term": "Coronary artery operations (& bypass) (procedure)"
+            }
+          ],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ]
     }
@@ -325,91 +198,137 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: percutaneous coronary intervention]
+  ACT1[Procedure: coronary artery bypass grafting]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: chronic coronary syndrome patients with functionally significant multivessel disease]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalParameter: left ventricular ejection fraction]
-    D_and_1_2 -->|EVALUATES| C_and_1_2
-    D_and_1_3[DecisionNode and_1 s3]
-    C_and_1_3[Condition: chronic coronary syndrome]
-    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
-    D_and_1_4[DecisionNode and_1 s4]
-    C_and_1_4[Condition: multivessel disease]
-    D_and_1_4 -->|CHECKS_FOR| C_and_1_4
-    D_and_1_5[DecisionNode and_1 s5]
-    C_and_1_5[ClinicalParameter: left ventricular ejection fraction]
-    D_and_1_5 -->|EVALUATES| C_and_1_5
-    D_and_1_6[DecisionNode and_1 s6]
-    C_and_1_6[Condition: high surgical risk]
-    D_and_1_6 -->|CHECKS_FOR| C_and_1_6
-    D_and_1_7[DecisionNode and_1 s7]
-    C_and_1_7[Condition: not operable]
-    D_and_1_7 -->|CHECKS_FOR| C_and_1_7
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
-    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
-    D_and_1_3 -->|LEADS_TO condition_met=true| D_and_1_4
-    D_and_1_4 -->|LEADS_TO condition_met=true| D_and_1_5
-    D_and_1_5 -->|LEADS_TO condition_met=true| D_and_1_6
-    D_and_1_6 -->|LEADS_TO condition_met=true| D_and_1_7
+  subgraph LLM_group_1_AND
+    D_group_1_1[DecisionNode group_1 s1]
+    C_group_1_1[Procedure: coronary artery bypass graft surgery]
+    D_group_1_1 -->|CHECKS_FOR| C_group_1_1
   end
-  subgraph LLM_or_1_OR
-    D_or_1_1[DecisionNode or_1 s1]
-    C_or_1_1[Condition: high surgical risk]
-    D_or_1_1 -->|CHECKS_FOR| C_or_1_1
-    D_or_1_2[DecisionNode or_1 s2]
-    C_or_1_2[Condition: not operable]
-    D_or_1_2 -->|CHECKS_FOR| C_or_1_2
-    D_and_1_7 -->|LEADS_TO condition_met=true| D_or_1_1
-    D_and_1_7 -->|LEADS_TO condition_met=true| D_or_1_2
-  end
-  D_or_1_1 -->|RESULTS_IN condition_met=true| REC
-  D_or_1_2 -->|RESULTS_IN condition_met=true| REC
+  D_group_1_1 -->|RESULTS_IN condition_met=true| REC
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 2,
+  "target_label_counts": {
+    "Procedure": 2
+  },
+  "root_hit_counts": {
+    "71388002": 1
+  },
+  "root_hits": [
+    {
+      "entity": "Coronary Artery Bypass Grafting",
+      "entity_original": "CABG",
+      "role": "Procedure",
+      "preferred_term": "Coronary artery operations (& bypass) (procedure)",
+      "synonyms": [],
+      "snomed_id": 149169006,
+      "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "149169006",
+          "term": "Coronary artery operations (& bypass) (procedure)"
+        }
+      ],
+      "root_hit": null
+    },
+    {
+      "entity": "Coronary artery bypass graft surgery",
+      "entity_original": "CABG",
+      "role": "Procedure",
+      "preferred_term": "Aortocoronary artery bypass graft with vein graft (procedure)",
+      "synonyms": [
+        "Aortocoronary artery bypass graft with vein graft",
+        "ACVG - aortocoronary vein graft",
+        "CAVG - coronary artery vein graft",
+        "CVG - coronary vein graft"
+      ],
+      "snomed_id": 17073005,
+      "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "17073005",
+          "term": "Aortocoronary artery bypass graft with vein graft (procedure)"
+        },
+        {
+          "concept_id": "287347004",
+          "term": "Arterial bypass using vein graft (procedure)"
+        },
+        {
+          "concept_id": "116360008",
+          "term": "Arterial bypass graft (procedure)"
+        },
+        {
+          "concept_id": "23075000",
+          "term": "Creation of vascular bypass (procedure)"
+        },
+        {
+          "concept_id": "48537004",
+          "term": "Bypass graft (procedure)"
+        },
+        {
+          "concept_id": "78817002",
+          "term": "Construction of anastomosis (procedure)"
+        },
+        {
+          "concept_id": "410614008",
+          "term": "Construction (procedure)"
+        },
+        {
+          "concept_id": "4365001",
+          "term": "Surgical repair (procedure)"
+        },
+        {
+          "concept_id": "387713003",
+          "term": "Surgical procedure (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    }
+  ]
+}
 ```
 
 Concepts:
 - expected: 2
-- actual: 7
-- matches: 0
-- missing: 2
-- extra: 7
+- actual: 3
+- matches: 1
+- missing: 1
+- extra: 2
 
 Missing concepts:
-- Procedure: coronary artery bypass grafting
 - Procedure: society of thoracic surgeons risk calculator
 
 Extra concepts:
-- ClinicalParameter: left ventricular ejection fraction
-- Condition: chronic coronary syndrome
-- Condition: chronic coronary syndrome patients with functionally significant multivessel disease
-- Condition: high surgical risk
-- Condition: multivessel disease
-- Condition: not operable
-- Procedure: percutaneous coronary intervention
+- Procedure: coronary artery bypass graft surgery
+- Procedure: surgical risk score calculation
 
 Rules (concept + logic fields):
 - expected: 2
-- actual: 10
+- actual: 3
 - matches: 0
 - missing: 2
-- extra: 10
+- extra: 3
 
 Missing rules:
 - Procedure: coronary artery bypass grafting | op=PRESENT | logic=AND | grp=and_1
 - Procedure: society of thoracic surgeons risk calculator | class=I | level=B | dir=POSITIVE
 
 Extra rules:
-- ClinicalParameter: left ventricular ejection fraction | op=<= | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class IIb | level=B | dir=POSITIVE
-- ClinicalParameter: left ventricular ejection fraction | op=LE | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class IIb | level=B | dir=UNKNOWN
-- Condition: chronic coronary syndrome patients with functionally significant multivessel disease | op=PRESENT | logic=AND | grp=and_1 | class=Class IIb | level=B | dir=POSITIVE
-- Condition: chronic coronary syndrome | op=PRESENT | logic=AND | grp=and_1 | class=Class IIb | level=B | dir=UNKNOWN
-- Condition: high surgical risk | op=PRESENT | logic=AND | grp=and_1 | class=Class IIb | level=B | dir=UNKNOWN
-- Condition: high surgical risk | op=PRESENT | logic=OR | grp=or_1 | class=Class IIb | level=B | dir=POSITIVE
-- Condition: multivessel disease | op=PRESENT | logic=AND | grp=and_1 | class=Class IIb | level=B | dir=UNKNOWN
-- Condition: not operable | op=PRESENT | logic=AND | grp=and_1 | class=Class IIb | level=B | dir=UNKNOWN
-- Condition: not operable | op=PRESENT | logic=OR | grp=or_1 | class=Class IIb | level=B | dir=POSITIVE
-- Procedure: percutaneous coronary intervention | op=PRESENT | class=Class IIb | level=B | dir=POSITIVE
+- Procedure: coronary artery bypass graft surgery | op=PLANNED | class=Unknown | level=Unknown
+- Procedure: coronary artery bypass grafting | op=PRESENT | dir=POSITIVE
+- Procedure: surgical risk score calculation | class=Class I | level=B | dir=POSITIVE
 

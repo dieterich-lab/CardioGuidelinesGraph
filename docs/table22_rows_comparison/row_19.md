@@ -1,4 +1,4 @@
-# row_19 (mapped to row_20)
+# row_19 (mapped to row_19)
 
 Original table row text (ground truth):
 
@@ -137,64 +137,19 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [
-        {
-          "entity": "coronary artery bypass grafting",
-          "entity_original": "coronary artery bypass grafting (cabg)",
-          "role": "ClinicalParameter",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "B",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 232717009,
-          "target_label": "Procedure",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "patients undergoing coronary artery bypass grafting (cabg)",
-          "entity_original": "patients undergoing coronary artery bypass grafting (cabg)",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "B",
-          "direction": "UNKNOWN",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        }
-      ],
+      "conditions": [],
       "actions": [
         {
-          "entity": "society of thoracic surgeons score",
-          "entity_original": "calculation of the society of thoracic surgeons score (sts) score",
+          "entity": "lesion identification for additional pci",
+          "entity_original": "identify lesions potentially amenable to treatment with additional pci",
           "role": "Procedure",
-          "operator": "PRESENT",
+          "operator": null,
           "threshold": null,
           "unit": null,
           "context": null,
           "logic_type": null,
           "logic_group": null,
-          "strength": "Class I",
+          "strength": "Class IIb",
           "level": "B",
           "direction": "POSITIVE",
           "preferred_term": null,
@@ -203,8 +158,7 @@ Aligned JSON (expected vs actual):
           "target_label": "Procedure",
           "taxonomy_path": [],
           "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "root_concept_term": null
         }
       ]
     }
@@ -242,26 +196,42 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: society of thoracic surgeons score]
+  ACT1[Procedure: lesion identification for additional pci]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalParameter: coronary artery bypass grafting]
-    D_and_1_1 -->|EVALUATES| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[Condition: patients undergoing coronary artery bypass grafting (cabg)]
-    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
-  end
-  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 1,
+  "target_label_counts": {
+    "Procedure": 1
+  },
+  "root_hit_counts": {},
+  "root_hits": [
+    {
+      "entity": "Lesion identification for additional PCI",
+      "entity_original": "identify lesions potentially amenable to treatment with additional PCI",
+      "role": "Procedure",
+      "preferred_term": null,
+      "synonyms": [],
+      "snomed_id": null,
+      "target_label": "Procedure",
+      "taxonomy_path": [],
+      "root_hit": null
+    }
+  ]
+}
 ```
 
 Concepts:
 - expected: 4
-- actual: 3
+- actual: 2
 - matches: 0
 - missing: 4
-- extra: 3
+- extra: 2
 
 Missing concepts:
 - ClinicalCondition: chronic ischemic heart disease
@@ -270,9 +240,8 @@ Missing concepts:
 - Procedure: myocardial revascularization
 
 Extra concepts:
-- ClinicalParameter: coronary artery bypass grafting
-- Condition: patients undergoing coronary artery bypass grafting (cabg)
-- Procedure: society of thoracic surgeons score
+- Procedure: end of procedure
+- Procedure: lesion identification for additional pci
 
 Rules (concept + logic fields):
 - expected: 4
@@ -288,7 +257,7 @@ Missing rules:
 - Procedure: myocardial revascularization | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
-- ClinicalParameter: coronary artery bypass grafting | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=B | dir=POSITIVE
-- Condition: patients undergoing coronary artery bypass grafting (cabg) | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=B | dir=UNKNOWN
-- Procedure: society of thoracic surgeons score | op=PRESENT | class=Class I | level=B | dir=POSITIVE
+- Procedure: end of procedure | op=PLANNED | class=Unknown | level=Unknown
+- Procedure: end of procedure | op=PRESENT | dir=UNKNOWN
+- Procedure: lesion identification for additional pci | class=Class IIb | level=B | dir=POSITIVE
 

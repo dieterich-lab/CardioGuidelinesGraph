@@ -1,4 +1,4 @@
-# row_02 (mapped to row_03)
+# row_02 (mapped to row_02)
 
 Original table row text (ground truth):
 
@@ -76,70 +76,109 @@ Aligned JSON (expected vs actual):
     {
       "conditions": [
         {
-          "entity": "complex clinical case",
-          "entity_original": "complex clinical cases",
-          "role": "Condition",
+          "entity": "coronary artery bypass graft surgery",
+          "entity_original": "cabg",
+          "role": "Procedure",
           "operator": "PRESENT",
           "threshold": null,
           "unit": null,
           "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 2640006,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Unknown",
+          "level": "Unknown",
+          "direction": null,
+          "preferred_term": "Aortocoronary artery bypass graft with vein graft (procedure)",
+          "synonyms": [
+            "Aortocoronary artery bypass graft with vein graft",
+            "ACVG - aortocoronary vein graft",
+            "CAVG - coronary artery vein graft",
+            "CVG - coronary vein graft"
+          ],
+          "snomed_id": 17073005,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "17073005",
+              "term": "Aortocoronary artery bypass graft with vein graft (procedure)"
+            },
+            {
+              "concept_id": "287347004",
+              "term": "Arterial bypass using vein graft (procedure)"
+            },
+            {
+              "concept_id": "116360008",
+              "term": "Arterial bypass graft (procedure)"
+            },
+            {
+              "concept_id": "23075000",
+              "term": "Creation of vascular bypass (procedure)"
+            },
+            {
+              "concept_id": "48537004",
+              "term": "Bypass graft (procedure)"
+            },
+            {
+              "concept_id": "78817002",
+              "term": "Construction of anastomosis (procedure)"
+            },
+            {
+              "concept_id": "410614008",
+              "term": "Construction (procedure)"
+            },
+            {
+              "concept_id": "4365001",
+              "term": "Surgical repair (procedure)"
+            },
+            {
+              "concept_id": "387713003",
+              "term": "Surgical procedure (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         },
         {
-          "entity": "same recommendation level for cabg and pci",
-          "entity_original": "cabg and pci hold the same level of recommendation",
-          "role": "Condition",
+          "entity": "percutaneous coronary intervention",
+          "entity_original": "pci",
+          "role": "Procedure",
           "operator": "PRESENT",
           "threshold": null,
           "unit": null,
           "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "preferred_term": null,
+          "logic_type": null,
+          "logic_group": null,
+          "strength": "Unknown",
+          "level": "Unknown",
+          "direction": null,
+          "preferred_term": "Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure)",
           "synonyms": [],
-          "snomed_id": null,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
-        },
-        {
-          "entity": "complex clinical cases",
-          "entity_original": "complex clinical cases",
-          "role": "Condition",
-          "operator": "PRESENT",
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": 2640006,
-          "target_label": "ClinicalCondition",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "snomed_id": 415070008,
+          "target_label": "Procedure",
+          "taxonomy_path": [
+            {
+              "concept_id": "415070008",
+              "term": "Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure)"
+            },
+            {
+              "concept_id": "4365001",
+              "term": "Surgical repair (procedure)"
+            },
+            {
+              "concept_id": "128927009",
+              "term": "Procedure by method (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ],
       "actions": [
@@ -156,14 +195,26 @@ Aligned JSON (expected vs actual):
           "strength": "Class I",
           "level": "C",
           "direction": "POSITIVE",
-          "preferred_term": null,
+          "preferred_term": "Discussion (procedure)",
           "synonyms": [],
           "snomed_id": 223482009,
           "target_label": "Procedure",
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null,
-          "mapped_target_label": null
+          "taxonomy_path": [
+            {
+              "concept_id": "223482009",
+              "term": "Discussion (procedure)"
+            },
+            {
+              "concept_id": "128927009",
+              "term": "Procedure by method (procedure)"
+            },
+            {
+              "concept_id": "71388002",
+              "term": "Procedure (procedure)"
+            }
+          ],
+          "root_concept_id": "71388002",
+          "root_concept_term": "Procedure (procedure)"
         }
       ]
     }
@@ -195,20 +246,154 @@ graph LR
   REC[RecommendationNode]
   ACT1[Procedure: heart team discussion]
   REC -->|RECOMMENDS_PROCEDURE| ACT1
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[Condition: complex clinical case]
-    D_and_1_1 -->|CHECKS_FOR| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[Condition: same recommendation level for cabg and pci]
-    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_3[DecisionNode and_1 s3]
-    C_and_1_3[Condition: complex clinical cases]
-    D_and_1_3 -->|CHECKS_FOR| C_and_1_3
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
-    D_and_1_2 -->|LEADS_TO condition_met=true| D_and_1_3
+  subgraph LLM_group_1_AND
+    D_group_1_1[DecisionNode group_1 s1]
+    C_group_1_1[Procedure: coronary artery bypass graft surgery]
+    D_group_1_1 -->|CHECKS_FOR| C_group_1_1
+    D_group_1_2[DecisionNode group_1 s2]
+    C_group_1_2[Procedure: percutaneous coronary intervention]
+    D_group_1_2 -->|CHECKS_FOR| C_group_1_2
+    D_group_1_1 -->|LEADS_TO condition_met=true| D_group_1_2
   end
-  D_and_1_3 -->|RESULTS_IN condition_met=true| REC
+  D_group_1_2 -->|RESULTS_IN condition_met=true| REC
+```
+
+Grounding summary (optional):
+
+```json
+{
+  "enabled": true,
+  "total_grounded": 3,
+  "target_label_counts": {
+    "Procedure": 3
+  },
+  "root_hit_counts": {
+    "71388002": 3
+  },
+  "root_hits": [
+    {
+      "entity": "Coronary artery bypass graft surgery",
+      "entity_original": "CABG",
+      "role": "Procedure",
+      "preferred_term": "Aortocoronary artery bypass graft with vein graft (procedure)",
+      "synonyms": [
+        "Aortocoronary artery bypass graft with vein graft",
+        "ACVG - aortocoronary vein graft",
+        "CAVG - coronary artery vein graft",
+        "CVG - coronary vein graft"
+      ],
+      "snomed_id": 17073005,
+      "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "17073005",
+          "term": "Aortocoronary artery bypass graft with vein graft (procedure)"
+        },
+        {
+          "concept_id": "287347004",
+          "term": "Arterial bypass using vein graft (procedure)"
+        },
+        {
+          "concept_id": "116360008",
+          "term": "Arterial bypass graft (procedure)"
+        },
+        {
+          "concept_id": "23075000",
+          "term": "Creation of vascular bypass (procedure)"
+        },
+        {
+          "concept_id": "48537004",
+          "term": "Bypass graft (procedure)"
+        },
+        {
+          "concept_id": "78817002",
+          "term": "Construction of anastomosis (procedure)"
+        },
+        {
+          "concept_id": "410614008",
+          "term": "Construction (procedure)"
+        },
+        {
+          "concept_id": "4365001",
+          "term": "Surgical repair (procedure)"
+        },
+        {
+          "concept_id": "387713003",
+          "term": "Surgical procedure (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    },
+    {
+      "entity": "Percutaneous coronary intervention",
+      "entity_original": "PCI",
+      "role": "Procedure",
+      "preferred_term": "Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure)",
+      "synonyms": [],
+      "snomed_id": 415070008,
+      "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "415070008",
+          "term": "Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure)"
+        },
+        {
+          "concept_id": "4365001",
+          "term": "Surgical repair (procedure)"
+        },
+        {
+          "concept_id": "128927009",
+          "term": "Procedure by method (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    },
+    {
+      "entity": "Heart team discussion",
+      "entity_original": "Heart Team discussion",
+      "role": "Procedure",
+      "preferred_term": "Discussion (procedure)",
+      "synonyms": [],
+      "snomed_id": 223482009,
+      "target_label": "Procedure",
+      "taxonomy_path": [
+        {
+          "concept_id": "223482009",
+          "term": "Discussion (procedure)"
+        },
+        {
+          "concept_id": "128927009",
+          "term": "Procedure by method (procedure)"
+        },
+        {
+          "concept_id": "71388002",
+          "term": "Procedure (procedure)"
+        }
+      ],
+      "root_hit": {
+        "root_concept_id": "71388002",
+        "root_concept_term": "Procedure (procedure)",
+        "mapped_target_label": "Procedure"
+      }
+    }
+  ]
+}
 ```
 
 Concepts:
@@ -223,10 +408,10 @@ Missing concepts:
 - Procedure: multidisciplinary meeting
 
 Extra concepts:
-- Condition: complex clinical case
-- Condition: complex clinical cases
-- Condition: same recommendation level for cabg and pci
+- ClinicalParameter: complex clinical case
+- Procedure: coronary artery bypass graft surgery
 - Procedure: heart team discussion
+- Procedure: percutaneous coronary intervention
 
 Rules (concept + logic fields):
 - expected: 2
@@ -240,8 +425,8 @@ Missing rules:
 - Procedure: multidisciplinary meeting | class=I | level=C | dir=POSITIVE
 
 Extra rules:
-- Condition: complex clinical case | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
-- Condition: complex clinical cases | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
-- Condition: same recommendation level for cabg and pci | op=PRESENT | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
+- ClinicalParameter: complex clinical case | op=PRESENT | class=Unknown | level=Unknown
+- Procedure: coronary artery bypass graft surgery | op=PRESENT | class=Unknown | level=Unknown
 - Procedure: heart team discussion | class=Class I | level=C | dir=POSITIVE
+- Procedure: percutaneous coronary intervention | op=PRESENT | class=Unknown | level=Unknown
 
