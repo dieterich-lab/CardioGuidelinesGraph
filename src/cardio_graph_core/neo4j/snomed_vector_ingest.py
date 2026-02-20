@@ -12,7 +12,7 @@ from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError, ServiceUnavailable, SessionExpired
 from sqlalchemy import text
 
-from cardio_graph_core.extraction.clients import ollama_models
+from cardio_graph_core.extraction.clients import ip_dict, ollama_models, port_dict
 from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 
@@ -25,6 +25,17 @@ def _format_seconds(seconds: float) -> str:
     h, rem = divmod(seconds, 3600)
     m, s = divmod(rem, 60)
     return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+def _resolve_base_url(node: str, port: Optional[int], explicit_url: Optional[str]) -> str:
+    if explicit_url:
+        return explicit_url.rstrip("/")
+    if not node:
+        raise click.ClickException("Either embedding-url or node must be provided")
+    actual_port = port if port is not None else port_dict.get(node, 34)
+    if actual_port >= 1000:
+        return f"http://{ip_dict.get(node, node)}:{actual_port}"
+    return f"http://{ip_dict.get(node, node)}:114{actual_port}"
 
 
 def _embed_batch(
@@ -208,9 +219,9 @@ def _count_existing_embeddings(
 @click.option("--index-name", default="snomed_term_embeddings_4096", show_default=True)
 @click.option("--dimensions", default=4096, type=int, show_default=True)
 @click.option("--similarity", default="COSINE", show_default=True)
-@click.option(
-    "--embedding-url", default="http://10.250.135.153:11434", show_default=True
-)
+@click.option("--embedding-url", default=None, show_default=False)
+@click.option("--node", default="g4", show_default=True)
+@click.option("--port", default=None, type=int, show_default=False)
 @click.option("--embedding-model", default="Qwen3embed", show_default=True)
 @click.option("--embedding-timeout", default=120, type=int, show_default=True)
 @click.option("--fetch-size", default=2000, type=int, show_default=True)
@@ -236,7 +247,9 @@ def main(
     index_name: str,
     dimensions: int,
     similarity: str,
-    embedding_url: str,
+    embedding_url: Optional[str],
+    node: str,
+    port: Optional[int],
     embedding_model: str,
     embedding_timeout: int,
     fetch_size: int,
@@ -255,7 +268,8 @@ def main(
 
     click.echo("[vector-ingest] starting")
     click.echo(f"[vector-ingest] neo4j_uri={neo4j_uri}")
-    click.echo(f"[vector-ingest] embedding_url={embedding_url}")
+    base_url = _resolve_base_url(node=node, port=port, explicit_url=embedding_url)
+    click.echo(f"[vector-ingest] embedding_url={base_url} (node={node}, port={port})")
     click.echo(
         f"[vector-ingest] embedding_model={embedding_model} -> {_resolve_model_name(embedding_model)}"
     )
@@ -367,7 +381,7 @@ def main(
 
                 texts = [row["term"] for row in rows_to_embed]
                 embeddings = _embed_batch(
-                    embedding_url=embedding_url,
+                    embedding_url=base_url,
                     embedding_model=embedding_model,
                     texts=texts,
                     timeout_seconds=embedding_timeout,
