@@ -141,21 +141,44 @@ def _run_evaluation(
     )
     env["CARDIO_GRAPH_EXTRACTION_PROMPT_APPENDIX_PATH"] = str(prompt_appendix_path)
 
-    completed = subprocess.run(
+    click.echo(
+        "[autotune] eval_start "
+        f"split={split_name} rows={len(row_ids)} model={model_name} node={node}:{port} "
+        f"prompt={prompt_appendix_path.name} out_dir={out_dir}"
+    )
+
+    process = subprocess.Popen(
         eval_command,
         shell=True,
         env=env,
         cwd=Path(__file__).resolve().parents[3],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         text=True,
+        bufsize=1,
     )
+
+    output_lines: List[str] = []
+    if process.stdout is not None:
+        for line in process.stdout:
+            clean = line.rstrip("\n")
+            output_lines.append(clean)
+            if clean.strip():
+                click.echo(f"[eval:{split_name}] {clean}")
+
+    completed_return_code = process.wait()
+    combined_output = "\n".join(output_lines)
     logs = {
-        "stdout": completed.stdout,
-        "stderr": completed.stderr,
-        "return_code": str(completed.returncode),
+        "stdout": combined_output,
+        "stderr": "",
+        "return_code": str(completed_return_code),
         "split": split_name,
     }
-    success = completed.returncode == 0 and alignment_path.exists()
+    success = completed_return_code == 0 and alignment_path.exists()
+    click.echo(
+        "[autotune] eval_done "
+        f"split={split_name} rc={completed_return_code} alignment_exists={alignment_path.exists()}"
+    )
     return success, logs, alignment_path
 
 
@@ -255,12 +278,31 @@ def main(
     champion_test = _initial_metrics()
     accepted_promotions = 0
 
+    click.echo(
+        "[autotune] start "
+        f"run_tag={run_tag} dry_run={dry_run} iterations={iterations} run_locked_every={run_locked_every}"
+    )
+    click.echo(
+        "[autotune] models "
+        f"extractor={model}@{node}:{port} llm2={llm2_model or model} llm3={llm3_model or model}"
+    )
+    click.echo(
+        "[autotune] splits "
+        f"dev_rows={manifest.dev_rows} locked_test_rows={manifest.locked_test_rows}"
+    )
+    click.echo(f"[autotune] run_root={run_root}")
+
     for iteration in range(1, iterations + 1):
         iteration_dir = run_root / f"iter_{iteration:02d}"
         iteration_dir.mkdir(parents=True, exist_ok=True)
 
         run_id = f"dev_iter_{iteration:02d}"
         challenger_prompt = f"prompt_v{iteration}_candidate"
+
+        click.echo(
+            "[autotune] iteration_start "
+            f"iteration={iteration}/{iterations} champion={champion_prompt} challenger={challenger_prompt}"
+        )
 
         if dry_run:
             simulated_rows = _simulate_error_rows(manifest.dev_rows, rng)
@@ -295,6 +337,11 @@ def main(
             champion_dev = score_report_champion.metrics
 
         analysis = llm2.analyze(score_report_champion)
+        click.echo(
+            "[autotune] llm2_done "
+            f"iteration={iteration} targets={analysis.selected_targets} "
+            f"status={llm2.last_debug.get('status', 'unknown')}"
+        )
         _write_json(
             iteration_dir / "llm2_debug.json",
             llm2.last_debug or {"status": "missing"},
@@ -307,6 +354,11 @@ def main(
             analysis=analysis,
             score_report=score_report_champion,
         )
+        click.echo(
+            "[autotune] llm3_done "
+            f"iteration={iteration} edits={len(patch.edits)} "
+            f"status={llm3.last_debug.get('status', 'unknown')}"
+        )
         _write_json(
             iteration_dir / "llm3_debug.json",
             llm3.last_debug or {"status": "missing"},
@@ -318,6 +370,10 @@ def main(
             {"safe": safe, "reason": reason},
         )
         if not safe:
+            click.echo(
+                "[autotune] patch_rejected "
+                f"iteration={iteration} reason={reason}"
+            )
             _write_json(iteration_dir / "error_analysis.json", analysis.to_dict())
             _write_json(iteration_dir / "prompt_patch.json", patch.to_dict())
             _write_json(
@@ -376,6 +432,12 @@ def main(
             challenger_dev = score_report.metrics
 
         dev_decision = evaluate_dev_gates(champion_dev, challenger_dev, thresholds)
+        click.echo(
+            "[autotune] dev_gate "
+            f"iteration={iteration} accepted={dev_decision.accepted} reasons={dev_decision.reasons} "
+            f"d_rule={dev_decision.deltas.get('rule_exact_match', 0.0):.4f} "
+            f"d_f1={dev_decision.deltas.get('concept_f1', 0.0):.4f}"
+        )
 
         _write_json(
             iteration_dir / "score_report_dev_champion.json",
@@ -466,6 +528,11 @@ def main(
                     challenger_test,
                     thresholds,
                 )
+                click.echo(
+                    "[autotune] locked_test_gate "
+                    f"iteration={iteration} accepted={test_decision.accepted} "
+                    f"reasons={test_decision.reasons}"
+                )
                 _write_json(
                     iteration_dir / "gate_decision_locked_test.json",
                     test_decision.to_dict(),
@@ -494,6 +561,11 @@ def main(
             "dev_metrics": champion_dev.to_dict(),
         }
         _write_json(iteration_dir / "iteration_summary.json", summary_payload)
+        click.echo(
+            "[autotune] iteration_done "
+            f"iteration={iteration} promotion_reason={promotion_reason} "
+            f"champion_now={champion_prompt} accepted_promotions={accepted_promotions}"
+        )
 
     final_summary = {
         "run_tag": run_tag,
@@ -516,6 +588,10 @@ def main(
     }
     _write_json(run_root / "run_summary.json", final_summary)
     mode = "dryrun" if dry_run else "live"
+    click.echo(
+        "[autotune] finished "
+        f"run_tag={run_tag} accepted_promotions={accepted_promotions} final_prompt={champion_prompt}"
+    )
     click.echo(f"[autotune-{mode}] artifacts written to: {run_root}")
 
 
