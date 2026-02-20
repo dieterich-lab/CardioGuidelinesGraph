@@ -156,6 +156,8 @@ nodes:
   - label: "RecommendationNode"
     description: "The specific clinical instruction derived from the guideline."
     attributes:
+      - name: "context"
+        type: "string"
       - name: "strength"
         type: "string" # "Class I", "Class IIa", "Class IIb", "Class III"
         allowed: ["Class I", "Class IIa", "Class IIb", "Class III", null]

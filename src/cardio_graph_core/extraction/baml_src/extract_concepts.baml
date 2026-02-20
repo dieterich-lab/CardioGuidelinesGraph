@@ -56,6 +56,7 @@ function ExtractConcepts(text: string) -> ExtractConceptsResult {
     Requirements:
     1. **Grouping**: Keep IF-side concepts and THEN-side concepts coherent per sentence.
     2. **Logic**: For thresholds, fill 'operator', 'threshold', and 'unit'. Use operator values from: AND, OR, <, >, <=, >=, =, PRESENT, ABSENT, PLANNED.
+       - Populate `logic_structured.context` with concise local qualifiers when present (e.g., "despite medical therapy", "to improve survival", "history of", "in selected patients").
     3. **Direction**: Use one of POSITIVE, NEGATIVE, UNKNOWN.
      4. **Roles + action**: IF part uses 'ClinicalCondition' or 'ClinicalParameter'; THEN part uses 'Medication' or 'Procedure'.
        - If [FOCUS: MAIN], include at least one action when recommendation text exists. Never use role 'Recommendation'.
@@ -100,6 +101,7 @@ class RuleActionV2 {
   entity_original string
   entity_standardized_candidate string
   role string @description("Medication or Procedure")
+  context string? @description("Short action context span (e.g., indication, temporal clause, qualifier)")
   recommendation RuleRecommendationV2
 }
 
@@ -139,6 +141,7 @@ function ExtractRulesV2(text: string) -> ExtractRulesResultV2 {
       - Use operator values from AND, OR, <, >, <=, >=, =, PRESENT, ABSENT, PLANNED.
     3. Actions:
        - Use role Medication or Procedure.
+       - Populate action `context` with a short indication/qualifier phrase when present in the sentence.
        - Populate recommendation.strength/level/direction when present.
       - Direction must be one of POSITIVE, NEGATIVE, UNKNOWN.
        - For class strength, always output "Class I", "Class IIa", "Class IIb", or "Class III".

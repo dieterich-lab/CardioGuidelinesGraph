@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "heart team",
+        "entity": "specialist multidisciplinary team",
         "entity_original": "heart team",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -37,7 +37,7 @@ Aligned JSON (expected vs actual):
         "direction": null
       },
       {
-        "entity": "proposal",
+        "entity": "treatment plan given",
         "entity_original": "proposal",
         "role": "Procedure",
         "operator": "PRESENT",
@@ -53,9 +53,9 @@ Aligned JSON (expected vs actual):
     ],
     "actions": [
       {
-        "entity": "communicate proposal",
-        "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
-        "role": "ClinicalAction",
+        "entity": "informing patient",
+        "entity_original": "communicate",
+        "role": "Procedure",
         "operator": null,
         "threshold": null,
         "unit": null,
@@ -75,29 +75,7 @@ Aligned JSON (expected vs actual):
   "rules": [
     {
       "conditions": [],
-      "actions": [
-        {
-          "entity": "patient communication of heart team recommendations",
-          "entity_original": "communicate the proposal of the heart team in a balanced way using language that the patient can understand",
-          "role": "Procedure",
-          "operator": null,
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "target_label": "Procedure",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null
-        }
-      ]
+      "actions": []
     }
   ]
 }
@@ -110,14 +88,14 @@ Mermaid (Human Annotation):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[ClinicalAction: communicate proposal]
-  REC -->|RECOMMENDS_USAGE| ACT1
+  ACT1[Procedure: informing patient]
+  REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: heart team]
+    C_and_1_1[ClinicalCondition: specialist multidisciplinary team]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[Procedure: proposal]
+    C_and_1_2[Procedure: treatment plan given]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
     D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
@@ -129,8 +107,6 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: patient communication of heart team recommendations]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
 ```
 
 Concepts:
@@ -141,9 +117,9 @@ Concepts:
 - extra: 1
 
 Missing concepts:
-- ClinicalAction: communicate proposal
-- ClinicalCondition: heart team
-- Procedure: proposal
+- ClinicalCondition: specialist multidisciplinary team
+- Procedure: informing patient
+- Procedure: treatment plan given
 
 Extra concepts:
 - Procedure: patient communication of heart team recommendations
@@ -156,9 +132,10 @@ Rules (concept + logic fields):
 - extra: 1
 
 Missing rules:
-- ClinicalAction: communicate proposal | class=I | level=C | dir=POSITIVE
-- ClinicalCondition: heart team | op=PRESENT | logic=AND | grp=and_1
-- Procedure: proposal | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: specialist multidisciplinary team | op=PRESENT | logic=AND | grp=and_1
+- Procedure: informing patient | class=I | level=C | dir=POSITIVE
+- Procedure: treatment plan given | op=PRESENT | logic=AND | grp=and_1
 
 Extra rules:
 - Procedure: patient communication of heart team recommendations | class=Class I | level=C | dir=POSITIVE
+

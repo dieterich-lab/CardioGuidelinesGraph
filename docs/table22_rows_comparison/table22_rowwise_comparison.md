@@ -1,8 +1,8 @@
 # Table 22 row-wise comparison (concepts and rules)
 
-Ground truth: /prj/doctoral_letters/guide/data/evaluation/table_22_manual_full_graph.json
+Ground truth: /prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json
 Extracted rules: /prj/doctoral_letters/guide/data/graph/extracted_rules_docling_table_000_whole_grid_score0.6_df1_tag0_off0.jsonl
-truth row_N -> extracted row_{N+1} (skip extracted row_01 header)
+Mapping: truth row_N -> extracted row_{N+1} (skip extracted row_01 header)
 
 Ground after extraction: False
 
@@ -17,11 +17,11 @@ Per-row reports:
 - row_04 -> docs/table22_rows_comparison/row_04.md (match_score=0.000)
 - row_05 -> docs/table22_rows_comparison/row_05.md (match_score=0.000)
 - row_06 -> docs/table22_rows_comparison/row_06.md (match_score=0.000)
-- row_07 -> docs/table22_rows_comparison/row_07.md (match_score=0.000)
-- row_08 -> docs/table22_rows_comparison/row_08.md (match_score=0.167)
-- row_09 -> docs/table22_rows_comparison/row_09.md (match_score=0.000)
-- row_10 -> docs/table22_rows_comparison/row_10.md (match_score=0.000)
-- row_11 -> docs/table22_rows_comparison/row_11.md (match_score=0.000)
+- row_07 -> docs/table22_rows_comparison/row_07.md (match_score=0.200)
+- row_08 -> docs/table22_rows_comparison/row_08.md (match_score=0.333)
+- row_09 -> docs/table22_rows_comparison/row_09.md (match_score=0.111)
+- row_10 -> docs/table22_rows_comparison/row_10.md (match_score=0.200)
+- row_11 -> docs/table22_rows_comparison/row_11.md (match_score=0.167)
 - row_12 -> docs/table22_rows_comparison/row_12.md (match_score=0.000)
 - row_13 -> docs/table22_rows_comparison/row_13.md (match_score=0.000)
 - row_14 -> docs/table22_rows_comparison/row_14.md (match_score=0.000)

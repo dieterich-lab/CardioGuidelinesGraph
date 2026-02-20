@@ -23,7 +23,7 @@ Aligned JSON (expected vs actual):
   {
     "conditions": [
       {
-        "entity": "ccs",
+        "entity": "chronic ischemic heart disease",
         "entity_original": "ccs patient",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -37,7 +37,7 @@ Aligned JSON (expected vs actual):
         "direction": null
       },
       {
-        "entity": "persistent angina",
+        "entity": "angina pectoris",
         "entity_original": "persistent angina",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -65,7 +65,7 @@ Aligned JSON (expected vs actual):
         "direction": null
       },
       {
-        "entity": "despite guideline-directed medical treatment",
+        "entity": "medical therapy",
         "entity_original": "despite guideline-directed medical treatment",
         "role": "ClinicalCondition",
         "operator": "PRESENT",
@@ -102,94 +102,8 @@ Aligned JSON (expected vs actual):
 {
   "rules": [
     {
-      "conditions": [
-        {
-          "entity": "left ventricular ejection fraction",
-          "entity_original": "left ventricular ejection fraction (lvef) \u2264 35%",
-          "role": "ClinicalParameter",
-          "operator": "<=",
-          "threshold": "35",
-          "unit": "%",
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": null,
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null
-        },
-        {
-          "entity": "chronic coronary syndrome with left ventricular ejection fraction",
-          "entity_original": "ccs patients with left ventricular ejection fraction (lvef) \u2264 35%",
-          "role": "Condition",
-          "operator": "<=",
-          "threshold": "35",
-          "unit": "%",
-          "context": null,
-          "logic_type": "AND",
-          "logic_group": "and_1",
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": null,
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null
-        }
-      ],
-      "actions": [
-        {
-          "entity": "revascularization",
-          "entity_original": "revascularization",
-          "role": "Procedure",
-          "operator": null,
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "target_label": "Procedure",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null
-        },
-        {
-          "entity": "medical therapy",
-          "entity_original": "medical therapy",
-          "role": "Procedure",
-          "operator": null,
-          "threshold": null,
-          "unit": null,
-          "context": null,
-          "logic_type": null,
-          "logic_group": null,
-          "strength": "Class I",
-          "level": "C",
-          "direction": "POSITIVE",
-          "preferred_term": null,
-          "synonyms": [],
-          "snomed_id": null,
-          "target_label": null,
-          "taxonomy_path": [],
-          "root_concept_id": null,
-          "root_concept_term": null
-        }
-      ]
+      "conditions": [],
+      "actions": []
     }
   ]
 }
@@ -206,16 +120,16 @@ graph LR
   REC -->|RECOMMENDS_PROCEDURE| ACT1
   subgraph Human_and_1_AND
     D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalCondition: ccs]
+    C_and_1_1[ClinicalCondition: chronic ischemic heart disease]
     D_and_1_1 -->|CHECKS_FOR| C_and_1_1
     D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[ClinicalCondition: despite guideline-directed medical treatment]
+    C_and_1_2[ClinicalCondition: medical therapy]
     D_and_1_2 -->|CHECKS_FOR| C_and_1_2
     D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
   end
   subgraph Human_or_1_OR
     D_or_1_1[DecisionNode or_1 s1]
-    C_or_1_1[ClinicalCondition: persistent angina]
+    C_or_1_1[ClinicalCondition: angina pectoris]
     D_or_1_1 -->|CHECKS_FOR| C_or_1_1
     D_or_1_2[DecisionNode or_1 s2]
     C_or_1_2[ClinicalCondition: anginal equivalent]
@@ -232,20 +146,6 @@ Mermaid (LLM Generated):
 ```mermaid
 graph LR
   REC[RecommendationNode]
-  ACT1[Procedure: revascularization]
-  REC -->|RECOMMENDS_PROCEDURE| ACT1
-  ACT2[Procedure: medical therapy]
-  REC -->|RECOMMENDS_PROCEDURE| ACT2
-  subgraph LLM_and_1_AND
-    D_and_1_1[DecisionNode and_1 s1]
-    C_and_1_1[ClinicalParameter: left ventricular ejection fraction]
-    D_and_1_1 -->|EVALUATES| C_and_1_1
-    D_and_1_2[DecisionNode and_1 s2]
-    C_and_1_2[Condition: chronic coronary syndrome with left ventricular ejection fraction]
-    D_and_1_2 -->|CHECKS_FOR| C_and_1_2
-    D_and_1_1 -->|LEADS_TO condition_met=true| D_and_1_2
-  end
-  D_and_1_2 -->|RESULTS_IN condition_met=true| REC
 ```
 
 Concepts:
@@ -256,10 +156,10 @@ Concepts:
 - extra: 4
 
 Missing concepts:
+- ClinicalCondition: angina pectoris
 - ClinicalCondition: anginal equivalent
-- ClinicalCondition: ccs
-- ClinicalCondition: despite guideline-directed medical treatment
-- ClinicalCondition: persistent angina
+- ClinicalCondition: chronic ischemic heart disease
+- ClinicalCondition: medical therapy
 - Procedure: myocardial revascularization
 
 Extra concepts:
@@ -276,10 +176,10 @@ Rules (concept + logic fields):
 - extra: 4
 
 Missing rules:
+- ClinicalCondition: angina pectoris | op=PRESENT | logic=OR | grp=or_1
 - ClinicalCondition: anginal equivalent | op=PRESENT | logic=OR | grp=or_1
-- ClinicalCondition: ccs | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: despite guideline-directed medical treatment | op=PRESENT | logic=AND | grp=and_1
-- ClinicalCondition: persistent angina | op=PRESENT | logic=OR | grp=or_1
+- ClinicalCondition: chronic ischemic heart disease | op=PRESENT | logic=AND | grp=and_1
+- ClinicalCondition: medical therapy | op=PRESENT | logic=AND | grp=and_1
 - Procedure: myocardial revascularization | class=I | level=A | dir=POSITIVE
 
 Extra rules:
@@ -287,3 +187,4 @@ Extra rules:
 - Condition: chronic coronary syndrome with left ventricular ejection fraction | op=<= | thr=35 | unit=% | logic=AND | grp=and_1 | class=Class I | level=C | dir=POSITIVE
 - Procedure: medical therapy | class=Class I | level=C | dir=POSITIVE
 - Procedure: revascularization | class=Class I | level=C | dir=POSITIVE
+

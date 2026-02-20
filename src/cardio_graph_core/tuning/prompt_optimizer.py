@@ -108,6 +108,7 @@ class PromptOptimizer:
         current_prompt_appendix: str,
         analysis: ErrorAnalysis,
         score_report: ScoreReport,
+        candidate_slot: str | None = None,
     ) -> PromptPatch:
         row_evidence = _row_evidence(score_report)
         prompt = (
@@ -119,6 +120,16 @@ class PromptOptimizer:
             f"row_evidence={row_evidence}\n"
             "Each example includes expected (ground-truth side) and actual (model output side).\n"
             "Ground-truth row context includes header/row/footer when available.\n"
+            + (
+                (
+                    "candidate_slot="
+                    f"{candidate_slot}. Use a materially distinct strategy from likely prior candidates "
+                    "(different failure-mode focus and/or zone emphasis) while staying minimal and safe.\n"
+                )
+                if candidate_slot
+                else ""
+            )
+            +
             f"current_prompt_appendix={current_prompt_appendix!r}\n"
             "Return JSON only. Keep edits row-anchored and avoid generic guidance."
         )

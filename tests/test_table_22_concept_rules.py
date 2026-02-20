@@ -26,7 +26,7 @@ RULES_PATH = Path(
 GROUND_TRUTH_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH",
-        DATA_DIR / "evaluation" / "table_22_manual_full_graph.json",
+        DATA_DIR / "evaluation" / "table_22_manual_snomed.json",
     )
 )
 DOCLING_TABLE_62_PATH = Path(
@@ -66,6 +66,7 @@ LIVE_LLM = os.environ.get("CARDIO_GRAPH_TABLE22_LIVE_LLM", "false").lower() in {
 GROUND_AFTER_EXTRACTION = _env_flag(
     "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION", "false"
 )
+CHECK_CONTEXT = _env_flag("CARDIO_GRAPH_TABLE22_CHECK_CONTEXT", "false")
 LLM_MODEL = os.environ.get("CARDIO_GRAPH_TABLE22_LLM_MODEL", "Qwen30b")
 LLM_NODE = os.environ.get("CARDIO_GRAPH_TABLE22_LLM_NODE", "g5")
 LLM_PORT = int(os.environ.get("CARDIO_GRAPH_TABLE22_LLM_PORT", "11435"))
@@ -118,6 +119,14 @@ def _normalize_text(value):
     if value is None:
         return None
     return " ".join(str(value).strip().split()).lower()
+
+
+def _table_row_id(table_id, index):
+    base_id = f"row_{index:02d}"
+    if TABLE_IDS and len(TABLE_IDS) <= 1:
+        return base_id
+    safe_table = "unknown" if table_id is None else str(table_id)
+    return f"t{safe_table}_{base_id}"
 
 
 def _display_path(path: Path) -> str:
@@ -429,7 +438,7 @@ def _summarize_ground_truth(truth):
         if TABLE_IDS and table_id not in TABLE_IDS:
             continue
         for index, row in enumerate(table.get("data", []), start=1):
-            row_id = f"row_{index:02d}"
+            row_id = _table_row_id(table_id, index)
             row_entries = []
             for rule in row.get("rules", []):
                 for condition in rule.get("conditions", []):
@@ -472,7 +481,7 @@ def _summarize_ground_truth_grouped(truth):
         if TABLE_IDS and table_id not in TABLE_IDS:
             continue
         for index, row in enumerate(table.get("data", []), start=1):
-            row_id = f"row_{index:02d}"
+            row_id = _table_row_id(table_id, index)
             rules_payload = []
             for rule in row.get("rules", []):
                 conditions = []
@@ -592,7 +601,7 @@ def _rule_key(entry):
         entry.get("operator"),
         entry.get("threshold"),
         entry.get("unit"),
-        entry.get("context"),
+        entry.get("context") if CHECK_CONTEXT else None,
         entry.get("logic_type"),
         entry.get("logic_group"),
         entry.get("strength"),
@@ -678,7 +687,7 @@ def _collect_ground_truth_rows(truth):
         if TABLE_IDS and table_id not in TABLE_IDS:
             continue
         for index, row in enumerate(table.get("data", []), start=1):
-            row_id = f"row_{index:02d}"
+            row_id = _table_row_id(table_id, index)
             rows[row_id] = _ground_truth_row_text(row)
     return rows
 
@@ -694,7 +703,7 @@ def _collect_docling_rows(truth):
         if TABLE_IDS and table_id not in TABLE_IDS:
             continue
         for index, row in enumerate(table.get("data", []), start=1):
-            row_id = f"row_{index:02d}"
+            row_id = _table_row_id(table_id, index)
             match_text = _ground_truth_match_text(row)
             matched_row = None
             if match_text:

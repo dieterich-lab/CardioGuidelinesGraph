@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
+import math
 import random
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 import click
 
@@ -104,6 +105,35 @@ def _initial_metrics() -> Metrics:
     )
 
 
+def _candidate_utility(deltas: Dict[str, float]) -> float:
+    return (
+        3.0 * deltas.get("rule_exact_match", 0.0)
+        + 1.0 * deltas.get("operator_accuracy", 0.0)
+        + 1.0 * deltas.get("logic_group_accuracy", 0.0)
+        + 1.0 * deltas.get("concept_f1", 0.0)
+    )
+
+
+def _patch_zones(patch) -> Set[str]:
+    return {edit.zone for edit in patch.edits if edit.zone}
+
+
+def _ucb_bonus(
+    zones: Set[str],
+    zone_stats: Dict[str, Dict[str, float]],
+    total_zone_uses: int,
+    exploration_weight: float,
+) -> float:
+    if not zones:
+        return 0.0
+    terms = []
+    for zone in zones:
+        usage = int(zone_stats.get(zone, {}).get("uses", 0))
+        bonus = math.sqrt(math.log(total_zone_uses + 2.0) / (usage + 1.0))
+        terms.append(bonus)
+    return exploration_weight * (sum(terms) / len(terms))
+
+
 def _run_evaluation(
     split_name: str,
     row_ids: List[str],
@@ -198,6 +228,9 @@ def _run_evaluation(
     show_default=True,
 )
 @click.option("--seed", type=int, default=22, show_default=True)
+@click.option("--candidates-per-iter", type=int, default=3, show_default=True)
+@click.option("--early-stop-patience", type=int, default=2, show_default=True)
+@click.option("--ucb-exploration", type=float, default=0.02, show_default=True)
 @click.option("--model", default="Qwen30b", show_default=True)
 @click.option("--node", default="g5", show_default=True)
 @click.option("--port", type=int, default=11435, show_default=True)
@@ -236,6 +269,9 @@ def main(
     run_locked_every: int,
     output_dir: Path,
     seed: int,
+    candidates_per_iter: int,
+    early_stop_patience: int,
+    ucb_exploration: float,
     model: str,
     node: str,
     port: int,
@@ -245,6 +281,8 @@ def main(
     eval_command: str,
     dry_run: bool,
 ) -> None:
+    if candidates_per_iter <= 0:
+        raise click.ClickException("candidates_per_iter must be > 0")
     manifest = _load_split_manifest(split_manifest)
     rng = random.Random(seed)
     thresholds = GateThresholds()
@@ -277,10 +315,15 @@ def main(
     champion_dev = _initial_metrics()
     champion_test = _initial_metrics()
     accepted_promotions = 0
+    consecutive_no_promotion = 0
+    zone_stats: Dict[str, Dict[str, float]] = {}
+    total_zone_uses = 0
+    iterations_executed = 0
 
     click.echo(
         "[autotune] start "
-        f"run_tag={run_tag} dry_run={dry_run} iterations={iterations} run_locked_every={run_locked_every}"
+        f"run_tag={run_tag} dry_run={dry_run} iterations={iterations} run_locked_every={run_locked_every} "
+        f"candidates_per_iter={candidates_per_iter} early_stop_patience={early_stop_patience}"
     )
     click.echo(
         "[autotune] models "
@@ -293,15 +336,14 @@ def main(
     click.echo(f"[autotune] run_root={run_root}")
 
     for iteration in range(1, iterations + 1):
+        iterations_executed = iteration
         iteration_dir = run_root / f"iter_{iteration:02d}"
         iteration_dir.mkdir(parents=True, exist_ok=True)
 
         run_id = f"dev_iter_{iteration:02d}"
-        challenger_prompt = f"prompt_v{iteration}_candidate"
-
         click.echo(
             "[autotune] iteration_start "
-            f"iteration={iteration}/{iterations} champion={champion_prompt} challenger={challenger_prompt}"
+            f"iteration={iteration}/{iterations} champion={champion_prompt}"
         )
 
         if dry_run:
@@ -342,141 +384,162 @@ def main(
             f"iteration={iteration} targets={analysis.selected_targets} "
             f"status={llm2.last_debug.get('status', 'unknown')}"
         )
-        _write_json(
-            iteration_dir / "llm2_debug.json",
-            llm2.last_debug or {"status": "missing"},
-        )
-
-        patch = llm3.propose_patch(
-            base_prompt_version=champion_prompt,
-            candidate_prompt_version=challenger_prompt,
-            current_prompt_appendix=champion_prompt_path.read_text(encoding="utf-8"),
-            analysis=analysis,
-            score_report=score_report_champion,
-        )
-        click.echo(
-            "[autotune] llm3_done "
-            f"iteration={iteration} edits={len(patch.edits)} "
-            f"status={llm3.last_debug.get('status', 'unknown')}"
-        )
-        _write_json(
-            iteration_dir / "llm3_debug.json",
-            llm3.last_debug or {"status": "missing"},
-        )
-
-        safe, reason = is_patch_safe(patch)
-        _write_json(
-            iteration_dir / "patch_safety.json",
-            {"safe": safe, "reason": reason},
-        )
-        if not safe:
-            click.echo(
-                "[autotune] patch_rejected "
-                f"iteration={iteration} reason={reason}"
-            )
-            _write_json(iteration_dir / "error_analysis.json", analysis.to_dict())
-            _write_json(iteration_dir / "prompt_patch.json", patch.to_dict())
-            _write_json(
-                iteration_dir / "iteration_summary.json",
-                {
-                    "iteration": iteration,
-                    "champion_prompt_after_iteration": champion_prompt,
-                    "accepted_promotions": accepted_promotions,
-                    "promotion_reason": "unsafe_patch",
-                    "dev_metrics": champion_dev.to_dict(),
-                },
-            )
-            continue
-
-        candidate_prompt_path = prompts_dir / f"{challenger_prompt}.txt"
-        candidate_prompt_text = apply_prompt_patch(
-            champion_prompt_path.read_text(encoding="utf-8"),
-            patch,
-        )
-        candidate_prompt_path.write_text(candidate_prompt_text, encoding="utf-8")
-
-        if dry_run:
-            challenger_dev = _simulate_metrics(
-                champion_dev,
-                rng,
-                favor_rule_gain=True,
-            )
-            score_report = ScoreReport(
-                run_id=run_id,
-                split="dev",
-                prompt_version=challenger_prompt,
-                metrics=challenger_dev,
-                rows=score_report_champion.rows,
-            )
-        else:
-            challenger_dev_dir = iteration_dir / "challenger_dev"
-            challenger_ok, challenger_logs, challenger_alignment = _run_evaluation(
-                split_name="dev",
-                row_ids=manifest.dev_rows,
-                out_dir=challenger_dev_dir,
-                prompt_appendix_path=candidate_prompt_path,
-                eval_command=eval_command,
-                model_name=model,
-                node=node,
-                port=port,
-                ground_after_extraction=ground_after_extraction,
-            )
-            _write_json(iteration_dir / "challenger_dev_logs.json", challenger_logs)
-            score_report = build_score_report_from_alignment(
-                alignment_path=challenger_alignment,
-                run_id=run_id,
-                split="dev",
-                prompt_version=challenger_prompt,
-                run_success=challenger_ok,
-            )
-            challenger_dev = score_report.metrics
-
-        dev_decision = evaluate_dev_gates(champion_dev, challenger_dev, thresholds)
-        click.echo(
-            "[autotune] dev_gate "
-            f"iteration={iteration} accepted={dev_decision.accepted} reasons={dev_decision.reasons} "
-            f"d_rule={dev_decision.deltas.get('rule_exact_match', 0.0):.4f} "
-            f"d_f1={dev_decision.deltas.get('concept_f1', 0.0):.4f}"
-        )
-
-        _write_json(
-            iteration_dir / "score_report_dev_champion.json",
-            score_report_champion.to_dict(),
-        )
-        _write_json(iteration_dir / "score_report_dev.json", score_report.to_dict())
+        _write_json(iteration_dir / "llm2_debug.json", llm2.last_debug or {"status": "missing"})
+        _write_json(iteration_dir / "score_report_dev_champion.json", score_report_champion.to_dict())
         _write_json(iteration_dir / "error_analysis.json", analysis.to_dict())
-        _write_json(iteration_dir / "prompt_patch.json", patch.to_dict())
-        _write_json(iteration_dir / "gate_decision_dev.json", dev_decision.to_dict())
+
+        accepted_candidates: List[dict] = []
+        for candidate_index in range(1, candidates_per_iter + 1):
+            challenger_prompt = f"prompt_v{iteration}_candidate_{candidate_index:02d}"
+            candidate_dir = iteration_dir / f"candidate_{candidate_index:02d}"
+            candidate_dir.mkdir(parents=True, exist_ok=True)
+            click.echo(
+                "[autotune] candidate_start "
+                f"iteration={iteration} candidate={candidate_index}/{candidates_per_iter} "
+                f"name={challenger_prompt}"
+            )
+
+            patch = llm3.propose_patch(
+                base_prompt_version=champion_prompt,
+                candidate_prompt_version=challenger_prompt,
+                current_prompt_appendix=champion_prompt_path.read_text(encoding="utf-8"),
+                analysis=analysis,
+                score_report=score_report_champion,
+                candidate_slot=f"{candidate_index}/{candidates_per_iter}",
+            )
+            _write_json(candidate_dir / "llm3_debug.json", llm3.last_debug or {"status": "missing"})
+            _write_json(candidate_dir / "prompt_patch.json", patch.to_dict())
+
+            safe, reason = is_patch_safe(patch)
+            _write_json(candidate_dir / "patch_safety.json", {"safe": safe, "reason": reason})
+            if not safe:
+                click.echo(
+                    "[autotune] patch_rejected "
+                    f"iteration={iteration} candidate={candidate_index} reason={reason}"
+                )
+                continue
+
+            candidate_prompt_path = prompts_dir / f"{challenger_prompt}.txt"
+            candidate_prompt_text = apply_prompt_patch(
+                champion_prompt_path.read_text(encoding="utf-8"),
+                patch,
+            )
+            candidate_prompt_path.write_text(candidate_prompt_text, encoding="utf-8")
+
+            if dry_run:
+                challenger_dev = _simulate_metrics(champion_dev, rng, favor_rule_gain=True)
+                score_report = ScoreReport(
+                    run_id=f"{run_id}_cand_{candidate_index:02d}",
+                    split="dev",
+                    prompt_version=challenger_prompt,
+                    metrics=challenger_dev,
+                    rows=score_report_champion.rows,
+                )
+            else:
+                challenger_dev_dir = candidate_dir / "challenger_dev"
+                challenger_ok, challenger_logs, challenger_alignment = _run_evaluation(
+                    split_name="dev",
+                    row_ids=manifest.dev_rows,
+                    out_dir=challenger_dev_dir,
+                    prompt_appendix_path=candidate_prompt_path,
+                    eval_command=eval_command,
+                    model_name=model,
+                    node=node,
+                    port=port,
+                    ground_after_extraction=ground_after_extraction,
+                )
+                _write_json(candidate_dir / "challenger_dev_logs.json", challenger_logs)
+                score_report = build_score_report_from_alignment(
+                    alignment_path=challenger_alignment,
+                    run_id=f"{run_id}_cand_{candidate_index:02d}",
+                    split="dev",
+                    prompt_version=challenger_prompt,
+                    run_success=challenger_ok,
+                )
+                challenger_dev = score_report.metrics
+
+            dev_decision = evaluate_dev_gates(champion_dev, challenger_dev, thresholds)
+            _write_json(candidate_dir / "score_report_dev.json", score_report.to_dict())
+            _write_json(candidate_dir / "gate_decision_dev.json", dev_decision.to_dict())
+
+            base_utility = _candidate_utility(dev_decision.deltas)
+            zones = _patch_zones(patch)
+            ucb_bonus = _ucb_bonus(
+                zones=zones,
+                zone_stats=zone_stats,
+                total_zone_uses=total_zone_uses,
+                exploration_weight=ucb_exploration,
+            )
+            ranking_score = base_utility + ucb_bonus
+
+            click.echo(
+                "[autotune] dev_gate "
+                f"iteration={iteration} candidate={candidate_index} accepted={dev_decision.accepted} "
+                f"score={ranking_score:.4f} base={base_utility:.4f} ucb_bonus={ucb_bonus:.4f}"
+            )
+            if dev_decision.accepted:
+                accepted_candidates.append(
+                    {
+                        "candidate_index": candidate_index,
+                        "prompt_name": challenger_prompt,
+                        "prompt_path": candidate_prompt_path,
+                        "metrics": challenger_dev,
+                        "dev_decision": dev_decision,
+                        "zones": zones,
+                        "ranking_score": ranking_score,
+                        "base_utility": base_utility,
+                    }
+                )
 
         promotion_reason = "dev_gate_fail"
-        if dev_decision.accepted:
+        selected_candidate = None
+        if accepted_candidates:
+            accepted_candidates = sorted(
+                accepted_candidates,
+                key=lambda item: (
+                    item["ranking_score"],
+                    item["dev_decision"].deltas.get("rule_exact_match", 0.0),
+                    item["dev_decision"].deltas.get("concept_f1", 0.0),
+                ),
+                reverse=True,
+            )
+            selected_candidate = accepted_candidates[0]
+            _write_json(
+                iteration_dir / "candidate_ranking.json",
+                {
+                    "selected_candidate": selected_candidate["candidate_index"],
+                    "accepted_candidates": [
+                        {
+                            "candidate_index": item["candidate_index"],
+                            "prompt_name": item["prompt_name"],
+                            "ranking_score": item["ranking_score"],
+                            "base_utility": item["base_utility"],
+                            "zones": sorted(item["zones"]),
+                            "deltas": item["dev_decision"].deltas,
+                        }
+                        for item in accepted_candidates
+                    ],
+                },
+            )
+
             run_locked_checkpoint = (accepted_promotions + 1) % run_locked_every == 0
             if run_locked_checkpoint:
                 if dry_run:
-                    challenger_test = _simulate_metrics(
-                        champion_test,
-                        rng,
-                        favor_rule_gain=True,
-                    )
+                    challenger_test = _simulate_metrics(champion_test, rng, favor_rule_gain=True)
                 else:
                     champion_test_dir = iteration_dir / "champion_test"
-                    champion_test_ok, champion_test_logs, champion_test_alignment = (
-                        _run_evaluation(
-                            split_name="locked_test",
-                            row_ids=manifest.locked_test_rows,
-                            out_dir=champion_test_dir,
-                            prompt_appendix_path=champion_prompt_path,
-                            eval_command=eval_command,
-                            model_name=model,
-                            node=node,
-                            port=port,
-                            ground_after_extraction=ground_after_extraction,
-                        )
+                    champion_test_ok, champion_test_logs, champion_test_alignment = _run_evaluation(
+                        split_name="locked_test",
+                        row_ids=manifest.locked_test_rows,
+                        out_dir=champion_test_dir,
+                        prompt_appendix_path=champion_prompt_path,
+                        eval_command=eval_command,
+                        model_name=model,
+                        node=node,
+                        port=port,
+                        ground_after_extraction=ground_after_extraction,
                     )
-                    _write_json(
-                        iteration_dir / "champion_test_logs.json",
-                        champion_test_logs,
-                    )
+                    _write_json(iteration_dir / "champion_test_logs.json", champion_test_logs)
                     champion_test_report = build_score_report_from_alignment(
                         alignment_path=champion_test_alignment,
                         run_id=f"{run_id}_test_champion",
@@ -487,30 +550,23 @@ def main(
                     champion_test = champion_test_report.metrics
 
                     challenger_test_dir = iteration_dir / "challenger_test"
-                    (
-                        challenger_test_ok,
-                        challenger_test_logs,
-                        challenger_test_alignment,
-                    ) = _run_evaluation(
+                    challenger_test_ok, challenger_test_logs, challenger_test_alignment = _run_evaluation(
                         split_name="locked_test",
                         row_ids=manifest.locked_test_rows,
                         out_dir=challenger_test_dir,
-                        prompt_appendix_path=candidate_prompt_path,
+                        prompt_appendix_path=selected_candidate["prompt_path"],
                         eval_command=eval_command,
                         model_name=model,
                         node=node,
                         port=port,
                         ground_after_extraction=ground_after_extraction,
                     )
-                    _write_json(
-                        iteration_dir / "challenger_test_logs.json",
-                        challenger_test_logs,
-                    )
+                    _write_json(iteration_dir / "challenger_test_logs.json", challenger_test_logs)
                     challenger_test_report = build_score_report_from_alignment(
                         alignment_path=challenger_test_alignment,
                         run_id=f"{run_id}_test_challenger",
                         split="locked_test",
-                        prompt_version=challenger_prompt,
+                        prompt_version=selected_candidate["prompt_name"],
                         run_success=challenger_test_ok,
                     )
                     challenger_test = challenger_test_report.metrics
@@ -523,41 +579,50 @@ def main(
                         challenger_test_report.to_dict(),
                     )
 
-                test_decision = evaluate_locked_test_gate(
-                    champion_test,
-                    challenger_test,
-                    thresholds,
-                )
-                click.echo(
-                    "[autotune] locked_test_gate "
-                    f"iteration={iteration} accepted={test_decision.accepted} "
-                    f"reasons={test_decision.reasons}"
-                )
-                _write_json(
-                    iteration_dir / "gate_decision_locked_test.json",
-                    test_decision.to_dict(),
-                )
+                test_decision = evaluate_locked_test_gate(champion_test, challenger_test, thresholds)
+                _write_json(iteration_dir / "gate_decision_locked_test.json", test_decision.to_dict())
                 if test_decision.accepted:
                     champion_test = challenger_test
-                    champion_dev = challenger_dev
-                    champion_prompt = challenger_prompt
-                    champion_prompt_path = candidate_prompt_path
+                    champion_dev = selected_candidate["metrics"]
+                    champion_prompt = selected_candidate["prompt_name"]
+                    champion_prompt_path = selected_candidate["prompt_path"]
                     accepted_promotions += 1
+                    for zone in selected_candidate["zones"]:
+                        entry = zone_stats.setdefault(zone, {"uses": 0.0, "utility_sum": 0.0})
+                        entry["uses"] += 1.0
+                        entry["utility_sum"] += selected_candidate["base_utility"]
+                    total_zone_uses += len(selected_candidate["zones"])
                     promotion_reason = "accepted_with_locked_test"
                 else:
                     promotion_reason = "locked_test_regression"
             else:
-                champion_dev = challenger_dev
-                champion_prompt = challenger_prompt
-                champion_prompt_path = candidate_prompt_path
+                champion_dev = selected_candidate["metrics"]
+                champion_prompt = selected_candidate["prompt_name"]
+                champion_prompt_path = selected_candidate["prompt_path"]
                 accepted_promotions += 1
+                for zone in selected_candidate["zones"]:
+                    entry = zone_stats.setdefault(zone, {"uses": 0.0, "utility_sum": 0.0})
+                    entry["uses"] += 1.0
+                    entry["utility_sum"] += selected_candidate["base_utility"]
+                total_zone_uses += len(selected_candidate["zones"])
                 promotion_reason = "accepted_dev_only"
+
+        if promotion_reason.startswith("accepted"):
+            consecutive_no_promotion = 0
+        else:
+            consecutive_no_promotion += 1
 
         summary_payload = {
             "iteration": iteration,
             "champion_prompt_after_iteration": champion_prompt,
             "accepted_promotions": accepted_promotions,
             "promotion_reason": promotion_reason,
+            "evaluated_candidates": candidates_per_iter,
+            "accepted_candidates": len(accepted_candidates),
+            "selected_candidate": (
+                selected_candidate["candidate_index"] if selected_candidate else None
+            ),
+            "consecutive_no_promotion": consecutive_no_promotion,
             "dev_metrics": champion_dev.to_dict(),
         }
         _write_json(iteration_dir / "iteration_summary.json", summary_payload)
@@ -567,10 +632,22 @@ def main(
             f"champion_now={champion_prompt} accepted_promotions={accepted_promotions}"
         )
 
+        if (
+            early_stop_patience > 0
+            and consecutive_no_promotion >= early_stop_patience
+            and iteration < iterations
+        ):
+            click.echo(
+                "[autotune] early_stop "
+                f"iteration={iteration} reason=no_promotion_for_{consecutive_no_promotion}_iterations"
+            )
+            break
+
     final_summary = {
         "run_tag": run_tag,
         "split_version": manifest.split_version,
         "iterations": iterations,
+        "iterations_executed": iterations_executed,
         "accepted_promotions": accepted_promotions,
         "final_prompt": champion_prompt,
         "final_dev_metrics": champion_dev.to_dict(),
@@ -584,6 +661,9 @@ def main(
             "llm3_model": llm3_model or model,
             "eval_command": eval_command,
             "ground_after_extraction": ground_after_extraction,
+            "candidates_per_iter": candidates_per_iter,
+            "early_stop_patience": early_stop_patience,
+            "ucb_exploration": ucb_exploration,
         },
     }
     _write_json(run_root / "run_summary.json", final_summary)
