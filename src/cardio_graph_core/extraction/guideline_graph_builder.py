@@ -293,8 +293,9 @@ class GuidelineGraphBuilder:
 
         self.client_registry = create_client_registry(model, node, port)
 
-        self.snomed_explorer = SnomedExplorer()
-        self.snomed_explorer.connect()
+        # Establish SNOMED connectivity lazily so extraction-only flows can run
+        # without paying grounding setup cost.
+        self.snomed_explorer: Optional[SnomedExplorer] = None
 
         self._preferred_term_cache: Dict[int, str] = {}
         self._alt_names_cache: Dict[int, List[str]] = {}
@@ -437,6 +438,12 @@ class GuidelineGraphBuilder:
         if role.lower() == "string":
             return False
         return bool(role and (entity_original or entity_standardized))
+
+    def _ensure_snomed_connected(self) -> SnomedExplorer:
+        if self.snomed_explorer is None:
+            self.snomed_explorer = SnomedExplorer()
+            self.snomed_explorer.connect()
+        return self.snomed_explorer
 
     def _is_population_focus(self, focus: Optional[str]) -> bool:
         return (focus or "").strip().upper() == "POPULATION"
@@ -779,7 +786,8 @@ class GuidelineGraphBuilder:
     def _get_preferred_term(self, concept_id: int) -> Optional[str]:
         if concept_id in self._preferred_term_cache:
             return self._preferred_term_cache[concept_id]
-        term = self.snomed_explorer.get_preferred_term(concept_id)
+        explorer = self._ensure_snomed_connected()
+        term = explorer.get_preferred_term(concept_id)
         if term:
             self._preferred_term_cache[concept_id] = term
         return term
@@ -789,7 +797,8 @@ class GuidelineGraphBuilder:
     ) -> List[str]:
         if concept_id in self._alt_names_cache:
             return self._alt_names_cache[concept_id]
-        descriptions = self.snomed_explorer.get_descriptions_for_concept(concept_id)
+        explorer = self._ensure_snomed_connected()
+        descriptions = explorer.get_descriptions_for_concept(concept_id)
         seen = set()
         alt_names: List[str] = []
         normalized_preferred = self._normalize(preferred_term or "")
@@ -876,7 +885,8 @@ class GuidelineGraphBuilder:
             seen.add(t)
             cached = self._search_cache.get(t)
             if cached is None:
-                cached = self.snomed_explorer.search_concepts_by_term(t, limit=limit)
+                explorer = self._ensure_snomed_connected()
+                cached = explorer.search_concepts_by_term(t, limit=limit)
                 self._search_cache[t] = cached
             results.extend(cached)
 
@@ -1067,7 +1077,8 @@ class GuidelineGraphBuilder:
     def _get_parents(self, concept_id: int) -> List[int]:
         cached = self._relationships_cache.get(concept_id)
         if cached is None:
-            cached = self.snomed_explorer.get_relationships(concept_id)
+            explorer = self._ensure_snomed_connected()
+            cached = explorer.get_relationships(concept_id)
             self._relationships_cache[concept_id] = cached
         relationships = cached
         parents = []

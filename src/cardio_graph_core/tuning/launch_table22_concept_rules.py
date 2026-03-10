@@ -48,7 +48,7 @@ def _submit(
         "CARDIO_GRAPH_TABLE22_LLM_NODE": node,
         "CARDIO_GRAPH_TABLE22_LLM_PORT": str(port),
         "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION": os.environ.get(
-            "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION", "true"
+            "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION", "false"
         ),
         "CARDIO_GRAPH_TABLE22_USE_SNAPSHOT": "false",
         "CARDIO_GRAPH_TABLE22_ROWS_DIR": str(out_dir),
@@ -65,10 +65,7 @@ def _submit(
         f"{key}={shlex.quote(value)}" for key, value in env_vars.items()
     )
 
-    eval_cmd = (
-        "poetry run python -m unittest -v "
-        "tests.test_table_22_concept_rules.Table22ConceptRulesTests.test_table_22_rules_match_ground_truth"
-    )
+    eval_cmd = "poetry run python -m cardio_graph_core.tuning.table22_dev_eval"
 
     wrapped = (
         f"cd {shlex.quote(str(PROJECT_ROOT))} && "

@@ -44,7 +44,9 @@ def _submit(
             "CARDIO_GRAPH_TABLE22_RULES_PATH",
             "/prj/doctoral_letters/guide/data/graph/extracted_rules_docling_table_000_whole_grid_score0.6_df1_tag0_off0.jsonl",
         ),
-        "CARDIO_GRAPH_TABLE22_TABLE_IDS": os.environ.get("CARDIO_GRAPH_TABLE22_TABLE_IDS", "0"),
+        "CARDIO_GRAPH_TABLE22_TABLE_IDS": os.environ.get(
+            "CARDIO_GRAPH_TABLE22_TABLE_IDS", "0"
+        ),
         "CARDIO_GRAPH_TABLE22_ENTRY_MATCH_THRESHOLD": os.environ.get(
             "CARDIO_GRAPH_TABLE22_ENTRY_MATCH_THRESHOLD", "0.6"
         ),
@@ -54,7 +56,7 @@ def _submit(
         "CARDIO_GRAPH_TABLE22_LLM_NODE": node,
         "CARDIO_GRAPH_TABLE22_LLM_PORT": str(port),
         "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION": os.environ.get(
-            "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION", "true"
+            "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION", "false"
         ),
         "CARDIO_GRAPH_TABLE22_USE_SNAPSHOT": "false",
     }
@@ -64,7 +66,7 @@ def _submit(
     )
     eval_cmd = (
         "poetry run python -m cardio_graph_core.tuning.controller "
-        "--dry-run=false "
+        "--no-dry-run "
         f"--iterations {iterations} "
         f"--candidates-per-iter {candidates_per_iter} "
         "--run-locked-every 9999 "
@@ -72,7 +74,10 @@ def _submit(
         f"--output-dir {shlex.quote(str(out_root))} "
         f"--model {shlex.quote(model)} "
         f"--node {shlex.quote(node)} "
-        f"--port {port}"
+        f"--port {port} "
+        "--no-ground-after-extraction "
+        "--no-stream-eval-logs "
+        "--eval-command 'poetry run python -m cardio_graph_core.tuning.table22_dev_eval'"
     )
     wrapped = (
         f"cd {shlex.quote(str(PROJECT_ROOT))} && "
