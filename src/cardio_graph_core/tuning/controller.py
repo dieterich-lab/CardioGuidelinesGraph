@@ -30,6 +30,15 @@ from cardio_graph_core.tuning.prompt_optimizer import PromptOptimizer
 from cardio_graph_core.tuning.prompt_patcher import apply_prompt_patch, is_patch_safe
 from cardio_graph_core.tuning.score_adapter import build_score_report_from_alignment
 
+DEFAULT_GRAPH_DIR = "/prj/doctoral_letters/guide/data/graph"
+DEFAULT_GROUND_TRUTH_PATH = (
+    "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json"
+)
+DEFAULT_RULES_PATH = (
+    "/prj/doctoral_letters/guide/data/graph/"
+    "extracted_rules_docling_table_000_whole_grid_score0.6_df1_tag0_off0.jsonl"
+)
+
 
 def _load_split_manifest(path: Path) -> SplitManifest:
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -147,6 +156,14 @@ def _run_evaluation(
     port: int,
     ground_after_extraction: bool,
     stream_eval_logs: bool,
+    graph_dir: str,
+    ground_truth_path: str,
+    rules_path: str,
+    table_ids: str,
+    entry_match_threshold: float,
+    skip_rows: str,
+    live_llm: bool,
+    use_snapshot: bool,
 ) -> Tuple[bool, Dict[str, str], Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     rows_dir = out_dir / "rows"
@@ -156,6 +173,12 @@ def _run_evaluation(
     import os
 
     env = os.environ.copy()
+    env["CARDIO_GRAPH_GRAPH_DIR"] = graph_dir
+    env["CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH"] = ground_truth_path
+    env["CARDIO_GRAPH_TABLE22_RULES_PATH"] = rules_path
+    env["CARDIO_GRAPH_TABLE22_TABLE_IDS"] = table_ids
+    env["CARDIO_GRAPH_TABLE22_ENTRY_MATCH_THRESHOLD"] = str(entry_match_threshold)
+    env["CARDIO_GRAPH_TABLE22_SKIP_ROWS"] = skip_rows
     env["CARDIO_GRAPH_TABLE22_TARGET_ROWS"] = ",".join(row_ids)
     env["CARDIO_GRAPH_TABLE22_REPORT_MD"] = str(
         out_dir / "table22_rowwise_comparison.md"
@@ -165,10 +188,11 @@ def _run_evaluation(
         out_dir / "table22_rowwise_summary.csv"
     )
     env["CARDIO_GRAPH_TABLE22_ROWS_DIR"] = str(rows_dir)
-    env["CARDIO_GRAPH_TABLE22_LIVE_LLM"] = "true"
+    env["CARDIO_GRAPH_TABLE22_LIVE_LLM"] = "true" if live_llm else "false"
     env["CARDIO_GRAPH_TABLE22_LLM_MODEL"] = model_name
     env["CARDIO_GRAPH_TABLE22_LLM_NODE"] = node
     env["CARDIO_GRAPH_TABLE22_LLM_PORT"] = str(port)
+    env["CARDIO_GRAPH_TABLE22_USE_SNAPSHOT"] = "true" if use_snapshot else "false"
     env["CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION"] = (
         "true" if ground_after_extraction else "false"
     )
@@ -205,8 +229,12 @@ def _run_evaluation(
     duration = time.time() - eval_start
     if not stream_eval_logs:
         marker_done = bool(re.search(r"\[table22-dev-eval\]\s+done", combined_output))
-        marker_failed = bool(re.search(r"\[table22-dev-eval\]\s+failed", combined_output))
-        marker_skipped = bool(re.search(r"\[table22-dev-eval\]\s+skipped", combined_output))
+        marker_failed = bool(
+            re.search(r"\[table22-dev-eval\]\s+failed", combined_output)
+        )
+        marker_skipped = bool(
+            re.search(r"\[table22-dev-eval\]\s+skipped", combined_output)
+        )
         click.echo(
             "[autotune] eval_stream_summary "
             f"split={split_name} lines={len(output_lines)} rc={completed_return_code} "
@@ -249,6 +277,16 @@ def _run_evaluation(
 @click.option("--model", default="Qwen30b", show_default=True)
 @click.option("--node", default="g5", show_default=True)
 @click.option("--port", type=int, default=11435, show_default=True)
+@click.option("--graph-dir", default=DEFAULT_GRAPH_DIR, show_default=True)
+@click.option(
+    "--ground-truth-path", default=DEFAULT_GROUND_TRUTH_PATH, show_default=True
+)
+@click.option("--rules-path", default=DEFAULT_RULES_PATH, show_default=True)
+@click.option("--table-ids", default="0", show_default=True)
+@click.option("--entry-match-threshold", type=float, default=0.6, show_default=True)
+@click.option("--skip-rows", default="", show_default=True)
+@click.option("--live-llm/--no-live-llm", default=True, show_default=True)
+@click.option("--use-snapshot/--no-use-snapshot", default=False, show_default=True)
 @click.option(
     "--llm2-model",
     default=None,
@@ -293,6 +331,14 @@ def main(
     model: str,
     node: str,
     port: int,
+    graph_dir: str,
+    ground_truth_path: str,
+    rules_path: str,
+    table_ids: str,
+    entry_match_threshold: float,
+    skip_rows: str,
+    live_llm: bool,
+    use_snapshot: bool,
     llm2_model: str | None,
     llm3_model: str | None,
     ground_after_extraction: bool,
@@ -349,6 +395,11 @@ def main(
         f"extractor={model}@{node}:{port} llm2={llm2_model or model} llm3={llm3_model or model}"
     )
     click.echo(
+        "[autotune] data "
+        f"graph_dir={graph_dir} table_ids={table_ids} entry_threshold={entry_match_threshold} "
+        f"skip_rows={skip_rows or '-'} snapshot={use_snapshot}"
+    )
+    click.echo(
         "[autotune] splits "
         f"dev_rows={manifest.dev_rows} locked_test_rows={manifest.locked_test_rows}"
     )
@@ -387,6 +438,14 @@ def main(
                 port=port,
                 ground_after_extraction=ground_after_extraction,
                 stream_eval_logs=stream_eval_logs,
+                graph_dir=graph_dir,
+                ground_truth_path=ground_truth_path,
+                rules_path=rules_path,
+                table_ids=table_ids,
+                entry_match_threshold=entry_match_threshold,
+                skip_rows=skip_rows,
+                live_llm=live_llm,
+                use_snapshot=use_snapshot,
             )
             _write_json(iteration_dir / "champion_dev_logs.json", champion_logs)
             score_report_champion = build_score_report_from_alignment(
@@ -482,6 +541,14 @@ def main(
                     port=port,
                     ground_after_extraction=ground_after_extraction,
                     stream_eval_logs=stream_eval_logs,
+                    graph_dir=graph_dir,
+                    ground_truth_path=ground_truth_path,
+                    rules_path=rules_path,
+                    table_ids=table_ids,
+                    entry_match_threshold=entry_match_threshold,
+                    skip_rows=skip_rows,
+                    live_llm=live_llm,
+                    use_snapshot=use_snapshot,
                 )
                 _write_json(candidate_dir / "challenger_dev_logs.json", challenger_logs)
                 score_report = build_score_report_from_alignment(
@@ -579,6 +646,14 @@ def main(
                             port=port,
                             ground_after_extraction=ground_after_extraction,
                             stream_eval_logs=stream_eval_logs,
+                            graph_dir=graph_dir,
+                            ground_truth_path=ground_truth_path,
+                            rules_path=rules_path,
+                            table_ids=table_ids,
+                            entry_match_threshold=entry_match_threshold,
+                            skip_rows=skip_rows,
+                            live_llm=live_llm,
+                            use_snapshot=use_snapshot,
                         )
                     )
                     _write_json(
@@ -609,6 +684,14 @@ def main(
                         port=port,
                         ground_after_extraction=ground_after_extraction,
                         stream_eval_logs=stream_eval_logs,
+                        graph_dir=graph_dir,
+                        ground_truth_path=ground_truth_path,
+                        rules_path=rules_path,
+                        table_ids=table_ids,
+                        entry_match_threshold=entry_match_threshold,
+                        skip_rows=skip_rows,
+                        live_llm=live_llm,
+                        use_snapshot=use_snapshot,
                     )
                     _write_json(
                         iteration_dir / "challenger_test_logs.json",
@@ -718,6 +801,14 @@ def main(
             "model": model,
             "node": node,
             "port": port,
+            "graph_dir": graph_dir,
+            "ground_truth_path": ground_truth_path,
+            "rules_path": rules_path,
+            "table_ids": table_ids,
+            "entry_match_threshold": entry_match_threshold,
+            "skip_rows": skip_rows,
+            "live_llm": live_llm,
+            "use_snapshot": use_snapshot,
             "llm2_model": llm2_model or model,
             "llm3_model": llm3_model or model,
             "eval_command": eval_command,
