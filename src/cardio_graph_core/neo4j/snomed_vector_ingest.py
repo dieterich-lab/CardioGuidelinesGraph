@@ -27,7 +27,9 @@ def _format_seconds(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def _resolve_base_url(node: str, port: Optional[int], explicit_url: Optional[str]) -> str:
+def _resolve_base_url(
+    node: str, port: Optional[int], explicit_url: Optional[str]
+) -> str:
     if explicit_url:
         return explicit_url.rstrip("/")
     if not node:
@@ -238,6 +240,13 @@ def _count_existing_embeddings(
 )
 @click.option("--neo4j-max-attempts", default=5, type=int, show_default=True)
 @click.option("--neo4j-retry-backoff", default=2.0, type=float, show_default=True)
+@click.option(
+    "--index-online-timeout",
+    default=7200,
+    type=int,
+    show_default=True,
+    help="Timeout in seconds to wait for vector index to become ONLINE (0 for no timeout)",
+)
 def main(
     neo4j_uri: str,
     neo4j_user: str,
@@ -262,6 +271,7 @@ def main(
     drop_existing_vector_indexes: bool,
     neo4j_max_attempts: int,
     neo4j_retry_backoff: float,
+    index_online_timeout: int,
 ) -> None:
     if batch_size <= 0:
         raise click.ClickException("batch_size must be > 0")
@@ -434,7 +444,9 @@ def main(
                 if processed % log_every == 0 or (time.time() - last_log) >= 60:
                     elapsed = time.time() - start
                     rate = processed / max(elapsed, 1e-9)
-                    effective_done = min(pre_existing_embeddings + processed, total_target)
+                    effective_done = min(
+                        pre_existing_embeddings + processed, total_target
+                    )
                     remaining = max(total_target - effective_done, 0)
                     eta = _format_seconds(remaining / rate) if rate > 0 else "--:--:--"
                     click.echo(
@@ -449,7 +461,9 @@ def main(
             for row in result.mappings():
                 if max_rows > 0 and processed + len(rows_buffer) >= max_rows:
                     break
-                rows_buffer.append({"conceptid": int(row["conceptid"]), "term": row["term"]})
+                rows_buffer.append(
+                    {"conceptid": int(row["conceptid"]), "term": row["term"]}
+                )
                 if len(rows_buffer) >= batch_size:
                     flush_buffer()
 
@@ -477,12 +491,35 @@ def main(
                     name=index_name,
                 ).single()
                 state = row["state"] if row else "MISSING"
-                click.echo(f"[vector-ingest] index_state={state}")
+                click.echo(
+                    f"[vector-ingest] index_state={state} (elapsed={_format_seconds(time.time() - poll_start)})"
+                )
                 if state == "ONLINE":
                     break
-                if time.time() - poll_start > 1800:
+                elif state == "FAILED":
+                    raise RuntimeError(f"Vector index failed to populate: {state}")
+                if (
+                    index_online_timeout > 0
+                    and time.time() - poll_start > index_online_timeout
+                ):
                     raise RuntimeError("Timed out waiting for vector index ONLINE")
                 time.sleep(10)
+
+            # Final check
+            row = session.run(
+                """
+                SHOW INDEXES YIELD name, type, state
+                WHERE name = $name
+                RETURN state
+                """,
+                name=index_name,
+            ).single()
+            final_state = row["state"] if row else "MISSING"
+            if final_state != "ONLINE":
+                raise RuntimeError(
+                    f"Vector index did not reach ONLINE state: {final_state}"
+                )
+            click.echo("[vector-ingest] vector index is ONLINE")
 
     total_elapsed = time.time() - start
     final_effective_done = min(pre_existing_embeddings + processed, total_target)
