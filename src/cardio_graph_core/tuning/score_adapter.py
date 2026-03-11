@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -29,23 +31,89 @@ def _entry_order_key(entry: Dict[str, Any]) -> Tuple[str, str]:
     )
 
 
+def _tokenize(text: Any) -> set[str]:
+    if text is None:
+        return set()
+    cleaned = re.sub(r"[^a-z0-9]+", " ", str(text).lower())
+    return {token for token in cleaned.split() if token}
+
+
+def _entry_aliases(entry: Dict[str, Any]) -> List[str]:
+    candidates: List[str] = []
+    for key in ("entity", "entity_original", "preferred_term"):
+        value = entry.get(key)
+        if value:
+            candidates.append(str(value))
+    synonyms = entry.get("synonyms") or []
+    if isinstance(synonyms, list):
+        for synonym in synonyms:
+            if synonym:
+                candidates.append(str(synonym))
+
+    # Preserve order but deduplicate.
+    seen = set()
+    ordered = []
+    for candidate in candidates:
+        normalized = candidate.strip().lower()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        ordered.append(candidate)
+    return ordered
+
+
+def _entry_similarity(expected: Dict[str, Any], actual: Dict[str, Any]) -> float:
+    if expected.get("role") != actual.get("role"):
+        return 0.0
+    best = 0.0
+    for expected_alias in _entry_aliases(expected):
+        expected_tokens = _tokenize(expected_alias)
+        if not expected_tokens:
+            continue
+        for actual_alias in _entry_aliases(actual):
+            actual_tokens = _tokenize(actual_alias)
+            if not actual_tokens:
+                continue
+            overlap = expected_tokens.intersection(actual_tokens)
+            coverage = len(overlap) / len(expected_tokens)
+            if coverage > best:
+                best = coverage
+    return best
+
+
+def _rule_fields_match(expected: Dict[str, Any], actual: Dict[str, Any]) -> bool:
+    comparable_keys = (
+        "operator",
+        "threshold",
+        "unit",
+        "context",
+        "logic_type",
+        "logic_group",
+        "strength",
+        "level",
+        "direction",
+    )
+    return all(expected.get(key) == actual.get(key) for key in comparable_keys)
+
+
 def _pair_entries(
     expected_entries: List[Dict[str, Any]],
     actual_entries: List[Dict[str, Any]],
+    threshold: float = 0.6,
 ) -> List[Tuple[Dict[str, Any], Dict[str, Any]]]:
-    expected_by_concept: Dict[Tuple[Any, Any], List[Dict[str, Any]]] = {}
-    actual_by_concept: Dict[Tuple[Any, Any], List[Dict[str, Any]]] = {}
-
-    for entry in expected_entries:
-        expected_by_concept.setdefault(_concept_key(entry), []).append(entry)
-    for entry in actual_entries:
-        actual_by_concept.setdefault(_concept_key(entry), []).append(entry)
-
+    # Greedy one-to-one matching by highest semantic overlap.
+    remaining_actual = sorted(actual_entries, key=_entry_order_key)
     pairs: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
-    for concept in set(expected_by_concept) & set(actual_by_concept):
-        expected_list = sorted(expected_by_concept[concept], key=_entry_order_key)
-        actual_list = sorted(actual_by_concept[concept], key=_entry_order_key)
-        pairs.extend(zip(expected_list, actual_list))
+    for expected_entry in sorted(expected_entries, key=_entry_order_key):
+        best_index = -1
+        best_similarity = 0.0
+        for index, actual_entry in enumerate(remaining_actual):
+            similarity = _entry_similarity(expected_entry, actual_entry)
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_index = index
+        if best_index >= 0 and best_similarity >= threshold:
+            pairs.append((expected_entry, remaining_actual.pop(best_index)))
     return pairs
 
 
@@ -56,6 +124,10 @@ def build_score_report_from_alignment(
     prompt_version: str,
     run_success: bool,
 ) -> ScoreReport:
+    lenient_extras = (
+        os.environ.get("CARDIO_GRAPH_TUNING_LENIENT_EXTRAS", "true").lower() == "true"
+    )
+
     payload = json.loads(alignment_path.read_text(encoding="utf-8"))
     rows = payload.get("rows", [])
 
@@ -80,12 +152,20 @@ def build_score_report_from_alignment(
         concept_summary = row.get("concept_summary", {})
         rule_summary = row.get("rule_summary", {})
 
-        expected_concepts = int(concept_summary.get("expected", 0))
-        actual_concepts = int(concept_summary.get("actual", 0))
-        concept_matches = int(concept_summary.get("matches", 0))
+        expected_entries = list(row.get("expected_entries") or [])
+        actual_entries = list(row.get("actual_entries") or [])
+        entry_pairs = _pair_entries(expected_entries, actual_entries)
 
-        expected_rules = int(rule_summary.get("expected", 0))
-        rule_matches = int(rule_summary.get("matches", 0))
+        expected_concepts = len(expected_entries)
+        actual_concepts = len(actual_entries)
+        concept_matches = len(entry_pairs)
+
+        expected_rules = len(expected_entries)
+        rule_matches = sum(
+            1
+            for expected_entry, actual_entry in entry_pairs
+            if _rule_fields_match(expected_entry, actual_entry)
+        )
 
         total_expected_concepts += expected_concepts
         total_actual_concepts += actual_concepts
@@ -94,20 +174,15 @@ def build_score_report_from_alignment(
         total_expected_rules += expected_rules
         total_rule_matches += rule_matches
 
-        expected_entries = list(row.get("expected_entries") or [])
-        actual_entries = list(row.get("actual_entries") or [])
-        entry_pairs = _pair_entries(expected_entries, actual_entries)
-
         for expected_entry, actual_entry in entry_pairs:
             total_operator_compared += 1
             if expected_entry.get("operator") == actual_entry.get("operator"):
                 total_operator_correct += 1
 
             total_logic_compared += 1
-            if (
-                expected_entry.get("logic_type") == actual_entry.get("logic_type")
-                and expected_entry.get("logic_group") == actual_entry.get("logic_group")
-            ):
+            if expected_entry.get("logic_type") == actual_entry.get(
+                "logic_type"
+            ) and expected_entry.get("logic_group") == actual_entry.get("logic_group"):
                 total_logic_correct += 1
 
         grounding_summary = row.get("grounding_summary") or {}
@@ -124,15 +199,16 @@ def build_score_report_from_alignment(
                     actual=None,
                 )
             )
-        for item in row.get("concept_extra", []) or []:
-            errors.append(
-                ErrorItem(
-                    error_class="B2_extra_concept",
-                    severity="major",
-                    expected=None,
-                    actual=str(item),
+        if not lenient_extras:
+            for item in row.get("concept_extra", []) or []:
+                errors.append(
+                    ErrorItem(
+                        error_class="B2_extra_concept",
+                        severity="major",
+                        expected=None,
+                        actual=str(item),
+                    )
                 )
-            )
         for item in row.get("rule_missing", []) or []:
             errors.append(
                 ErrorItem(
@@ -142,18 +218,21 @@ def build_score_report_from_alignment(
                     actual=None,
                 )
             )
-        for item in row.get("rule_extra", []) or []:
-            errors.append(
-                ErrorItem(
-                    error_class="RULE_EXTRA",
-                    severity="major",
-                    expected=None,
-                    actual=str(item),
+        if not lenient_extras:
+            for item in row.get("rule_extra", []) or []:
+                errors.append(
+                    ErrorItem(
+                        error_class="RULE_EXTRA",
+                        severity="major",
+                        expected=None,
+                        actual=str(item),
+                    )
                 )
-            )
 
         for expected_entry, actual_entry in entry_pairs:
-            concept_label = f"{expected_entry.get('role')}: {expected_entry.get('entity')}"
+            concept_label = (
+                f"{expected_entry.get('role')}: {expected_entry.get('entity')}"
+            )
 
             if expected_entry.get("operator") != actual_entry.get("operator"):
                 errors.append(
@@ -214,7 +293,10 @@ def build_score_report_from_alignment(
             )
         )
 
-    concept_precision = _safe_div(total_concept_matches, total_actual_concepts)
+    precision_denominator = (
+        total_expected_concepts if lenient_extras else total_actual_concepts
+    )
+    concept_precision = _safe_div(total_concept_matches, precision_denominator)
     concept_recall = _safe_div(total_concept_matches, total_expected_concepts)
     concept_f1 = _safe_div(
         2 * concept_precision * concept_recall,

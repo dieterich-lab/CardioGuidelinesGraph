@@ -2,21 +2,13 @@ from __future__ import annotations
 
 from typing import List
 
+from cardio_graph_core.extraction.clients import create_client_registry
 from cardio_graph_core.tuning.contracts import (
     ErrorAnalysis,
     ErrorClassSummary,
     ScoreReport,
 )
-from cardio_graph_core.tuning.llm_bridge import LLMBridge
 from cardio_graph_core.tuning.score_adapter import aggregate_error_counts
-
-SYSTEM_PROMPT = """
-You are LLM2 (error analyst) for medical extraction autotuning.
-Given deterministic error summaries, identify top root-cause classes.
-Return strict JSON object with keys: top_classes, selected_targets.
-Each top_classes item: class (string), count (int), confidence (float 0..1), root_cause_hypothesis (string).
-selected_targets must contain at most 2 class labels.
-""".strip()
 
 
 def _row_evidence(
@@ -49,7 +41,16 @@ def _row_evidence(
         header = {
             key: value
             for key, value in ground_truth_text.items()
-            if key not in {"Recommendations", "Recommendation", "recommendation", "Class", "Class a", "Level", "Level b"}
+            if key
+            not in {
+                "Recommendations",
+                "Recommendation",
+                "recommendation",
+                "Class",
+                "Class a",
+                "Level",
+                "Level b",
+            }
         }
         footer = {
             key: ground_truth_text.get(key)
@@ -99,8 +100,8 @@ def _fallback_analysis(run_id: str, report: ScoreReport) -> ErrorAnalysis:
 
 
 class ErrorAnalyst:
-    def __init__(self, llm_bridge: LLMBridge):
-        self.llm_bridge = llm_bridge
+    def __init__(self, model_name: str, node: str, port: int):
+        self.client_registry = create_client_registry(model_name, node, port)
         self.last_debug: dict = {}
 
     def analyze(self, report: ScoreReport) -> ErrorAnalysis:
@@ -116,29 +117,33 @@ class ErrorAnalyst:
             "Return top classes and selected targets only as JSON."
         )
         try:
-            payload, llm_debug = self.llm_bridge.generate_json_with_debug(
-                system_prompt=SYSTEM_PROMPT,
-                user_prompt=prompt,
-                temperature=0.0,
-                max_tokens=1500,
+            from cardio_graph_core.extraction.baml_client.sync_client import b
+
+            payload = b.AnalyzeTable22Errors(
+                prompt,
+                baml_options={"client_registry": self.client_registry},
             )
             self.last_debug = {
-                "status": "llm_success",
-                "llm": llm_debug,
+                "status": "baml_success",
             }
             top_classes = []
-            for item in payload.get("top_classes", [])[:5]:
+            for item in (getattr(payload, "top_classes", None) or [])[:5]:
                 top_classes.append(
                     ErrorClassSummary(
-                        error_class=str(item.get("class", "UNKNOWN")),
-                        count=int(item.get("count", 0)),
-                        confidence=float(item.get("confidence", 0.5)),
+                        error_class=str(
+                            getattr(item, "error_class", None)
+                            or getattr(item, "class", "UNKNOWN")
+                        ),
+                        count=int(getattr(item, "count", 0)),
+                        confidence=float(getattr(item, "confidence", 0.5)),
                         root_cause_hypothesis=str(
-                            item.get("root_cause_hypothesis", "")
+                            getattr(item, "root_cause_hypothesis", "")
                         ),
                     )
                 )
-            selected_targets = [str(x) for x in payload.get("selected_targets", [])][:2]
+            selected_targets = [
+                str(x) for x in (getattr(payload, "selected_targets", None) or [])
+            ][:2]
             if not top_classes:
                 self.last_debug["status"] = "fallback_empty_top_classes"
                 return _fallback_analysis(report.run_id, report)

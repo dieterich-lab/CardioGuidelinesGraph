@@ -23,7 +23,7 @@ RULES_PATH = Path(
 GROUND_TRUTH_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH",
-        "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json",
+        "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json",
     )
 )
 DOCLING_TABLE_62_PATH = Path(

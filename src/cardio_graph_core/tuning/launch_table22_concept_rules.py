@@ -29,7 +29,7 @@ def _submit(
         ),
         "CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH": os.environ.get(
             "CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH",
-            "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json",
+            "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json",
         ),
         "CARDIO_GRAPH_TABLE22_RULES_PATH": os.environ.get(
             "CARDIO_GRAPH_TABLE22_RULES_PATH",
@@ -114,7 +114,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--model",
-        default=os.environ.get("CARDIO_GRAPH_TABLE22_LLM_MODEL", "Qwen30b"),
+        default=os.environ.get("CARDIO_GRAPH_TABLE22_LLM_MODEL", "Qwen3next"),
     )
     parser.add_argument(
         "--node",

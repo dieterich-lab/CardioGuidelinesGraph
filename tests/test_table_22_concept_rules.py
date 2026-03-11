@@ -26,7 +26,7 @@ RULES_PATH = Path(
 GROUND_TRUTH_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH",
-        "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json",
+        "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json",
     )
 )
 DOCLING_TABLE_62_PATH = Path(
@@ -1051,10 +1051,14 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 }
             )
         else:
-            actual_rows = [] if LIVE_LLM else _ordered_rows(_summarize_rules(rules_rows))
+            actual_rows = (
+                [] if LIVE_LLM else _ordered_rows(_summarize_rules(rules_rows))
+            )
 
-        if (not LIVE_LLM) and (not use_snapshot) and len(actual_rows) < len(
-            expected_rows
+        if (
+            (not LIVE_LLM)
+            and (not use_snapshot)
+            and len(actual_rows) < len(expected_rows)
         ):
             self.fail(
                 "Extracted rows are fewer than expected. "

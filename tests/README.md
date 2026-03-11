@@ -50,7 +50,7 @@ Typical LLM endpoint settings:
 
 Ground truth path (finalized manual annotations):
 
-- `CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH=/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json`
+- `CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH=/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json`
 
 ## Minimal commands
 
@@ -63,7 +63,7 @@ cd /home/pwiesenbach/CardioGuidelinesGraph
 Live run example:
 
 ```bash
-export CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH=/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json
+export CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH=/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json
 export CARDIO_GRAPH_TABLE22_LIVE_LLM=true
 export CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION=true
 export CARDIO_GRAPH_TABLE22_USE_SNAPSHOT=false

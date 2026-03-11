@@ -4,6 +4,7 @@ import json
 import math
 import random
 import re
+import shutil
 import subprocess
 import time
 from datetime import datetime
@@ -25,19 +26,19 @@ from cardio_graph_core.tuning.gates import (
     evaluate_dev_gates,
     evaluate_locked_test_gate,
 )
-from cardio_graph_core.tuning.llm_bridge import LLMBridge
 from cardio_graph_core.tuning.prompt_optimizer import PromptOptimizer
 from cardio_graph_core.tuning.prompt_patcher import apply_prompt_patch, is_patch_safe
 from cardio_graph_core.tuning.score_adapter import build_score_report_from_alignment
 
 DEFAULT_GRAPH_DIR = "/prj/doctoral_letters/guide/data/graph"
 DEFAULT_GROUND_TRUTH_PATH = (
-    "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json"
+    "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json"
 )
 DEFAULT_RULES_PATH = (
     "/prj/doctoral_letters/guide/data/graph/"
     "extracted_rules_docling_table_000_whole_grid_score0.6_df1_tag0_off0.jsonl"
 )
+DEFAULT_CHAT_TUNING_MODEL = "Qwen30b"
 
 
 def _load_split_manifest(path: Path) -> SplitManifest:
@@ -274,7 +275,7 @@ def _run_evaluation(
 @click.option("--candidates-per-iter", type=int, default=3, show_default=True)
 @click.option("--early-stop-patience", type=int, default=2, show_default=True)
 @click.option("--ucb-exploration", type=float, default=0.02, show_default=True)
-@click.option("--model", default="Qwen30b", show_default=True)
+@click.option("--model", default="Qwen3next", show_default=True)
 @click.option("--node", default="g5", show_default=True)
 @click.option("--port", type=int, default=11435, show_default=True)
 @click.option("--graph-dir", default=DEFAULT_GRAPH_DIR, show_default=True)
@@ -352,23 +353,22 @@ def main(
     rng = random.Random(seed)
     thresholds = GateThresholds()
 
-    llm2 = ErrorAnalyst(
-        LLMBridge(
-            model_name=llm2_model or model,
-            node=node,
-            port=port,
-        )
-    )
-    llm3 = PromptOptimizer(
-        LLMBridge(
-            model_name=llm3_model or model,
-            node=node,
-            port=port,
-        )
-    )
+    model_lower = model.lower()
+    effective_llm2_model = llm2_model or model
+    effective_llm3_model = llm3_model or model
+    if "embed" in model_lower:
+        if llm2_model is None:
+            effective_llm2_model = DEFAULT_CHAT_TUNING_MODEL
+        if llm3_model is None:
+            effective_llm3_model = DEFAULT_CHAT_TUNING_MODEL
+
+    llm2 = ErrorAnalyst(model_name=effective_llm2_model, node=node, port=port)
+    llm3 = PromptOptimizer(model_name=effective_llm3_model, node=node, port=port)
 
     run_tag = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    run_root = output_dir / run_tag
+    run_root = output_dir
+    if run_root.exists():
+        shutil.rmtree(run_root)
     run_root.mkdir(parents=True, exist_ok=True)
     prompts_dir = run_root / "prompts"
     prompts_dir.mkdir(parents=True, exist_ok=True)
@@ -392,7 +392,7 @@ def main(
     )
     click.echo(
         "[autotune] models "
-        f"extractor={model}@{node}:{port} llm2={llm2_model or model} llm3={llm3_model or model}"
+        f"extractor={model}@{node}:{port} llm2={effective_llm2_model} llm3={effective_llm3_model}"
     )
     click.echo(
         "[autotune] data "
@@ -473,6 +473,7 @@ def main(
         _write_json(iteration_dir / "error_analysis.json", analysis.to_dict())
 
         accepted_candidates: List[dict] = []
+        all_candidates: List[dict] = []
         for candidate_index in range(1, candidates_per_iter + 1):
             challenger_prompt = f"prompt_v{iteration}_candidate_{candidate_index:02d}"
             candidate_dir = iteration_dir / f"candidate_{candidate_index:02d}"
@@ -581,19 +582,70 @@ def main(
                 f"iteration={iteration} candidate={candidate_index} accepted={dev_decision.accepted} "
                 f"score={ranking_score:.4f} base={base_utility:.4f} ucb_bonus={ucb_bonus:.4f}"
             )
+            candidate_record = {
+                "candidate_index": candidate_index,
+                "prompt_name": challenger_prompt,
+                "prompt_path": candidate_prompt_path,
+                "metrics": challenger_dev,
+                "dev_decision": dev_decision,
+                "zones": zones,
+                "ranking_score": ranking_score,
+                "base_utility": base_utility,
+            }
+            all_candidates.append(candidate_record)
             if dev_decision.accepted:
-                accepted_candidates.append(
+                accepted_candidates.append(candidate_record)
+
+        ranked_all_candidates = sorted(
+            all_candidates,
+            key=lambda item: (
+                item["ranking_score"],
+                item["dev_decision"].deltas.get("rule_exact_match", 0.0),
+                item["dev_decision"].deltas.get("concept_f1", 0.0),
+            ),
+            reverse=True,
+        )
+        _write_json(
+            iteration_dir / "candidate_ranking.json",
+            {
+                "selected_candidate": (
+                    next(
+                        (
+                            item["candidate_index"]
+                            for item in ranked_all_candidates
+                            if item["dev_decision"].accepted
+                        ),
+                        None,
+                    )
+                ),
+                "accepted_candidates": [
                     {
-                        "candidate_index": candidate_index,
-                        "prompt_name": challenger_prompt,
-                        "prompt_path": candidate_prompt_path,
-                        "metrics": challenger_dev,
-                        "dev_decision": dev_decision,
-                        "zones": zones,
-                        "ranking_score": ranking_score,
-                        "base_utility": base_utility,
+                        "candidate_index": item["candidate_index"],
+                        "prompt_name": item["prompt_name"],
+                        "ranking_score": item["ranking_score"],
+                        "base_utility": item["base_utility"],
+                        "zones": sorted(item["zones"]),
+                        "deltas": item["dev_decision"].deltas,
                     }
-                )
+                    for item in ranked_all_candidates
+                    if item["dev_decision"].accepted
+                ],
+                "all_candidates": [
+                    {
+                        "candidate_index": item["candidate_index"],
+                        "prompt_name": item["prompt_name"],
+                        "accepted": item["dev_decision"].accepted,
+                        "reasons": item["dev_decision"].reasons,
+                        "ranking_score": item["ranking_score"],
+                        "base_utility": item["base_utility"],
+                        "zones": sorted(item["zones"]),
+                        "deltas": item["dev_decision"].deltas,
+                        "metrics": item["metrics"].to_dict(),
+                    }
+                    for item in ranked_all_candidates
+                ],
+            },
+        )
 
         promotion_reason = "dev_gate_fail"
         selected_candidate = None
@@ -608,23 +660,6 @@ def main(
                 reverse=True,
             )
             selected_candidate = accepted_candidates[0]
-            _write_json(
-                iteration_dir / "candidate_ranking.json",
-                {
-                    "selected_candidate": selected_candidate["candidate_index"],
-                    "accepted_candidates": [
-                        {
-                            "candidate_index": item["candidate_index"],
-                            "prompt_name": item["prompt_name"],
-                            "ranking_score": item["ranking_score"],
-                            "base_utility": item["base_utility"],
-                            "zones": sorted(item["zones"]),
-                            "deltas": item["dev_decision"].deltas,
-                        }
-                        for item in accepted_candidates
-                    ],
-                },
-            )
 
             run_locked_checkpoint = (accepted_promotions + 1) % run_locked_every == 0
             if run_locked_checkpoint:

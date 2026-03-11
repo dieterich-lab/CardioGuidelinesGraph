@@ -13,7 +13,7 @@ Default behavior:
 
 - Runs `cardio_graph_core.tuning.controller` in live mode (`--dry-run=false`)
 - Uses `config/table22/split_v1.json` (dev rows)
-- Uses ground truth: `/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json`
+- Uses ground truth: `/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json`
 - Uses live extraction+grounding (`g5:11435` by default)
 - Disables snapshot mode (`CARDIO_GRAPH_TABLE22_USE_SNAPSHOT=false`)
 
