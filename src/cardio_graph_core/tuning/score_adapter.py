@@ -13,6 +13,19 @@ from cardio_graph_core.tuning.contracts import (
     ScoreReport,
 )
 
+SEMANTIC_REPLACEMENTS = {
+    "cabg": "coronary artery bypass graft",
+    "pci": "percutaneous coronary intervention",
+    "mi": "myocardial infarction",
+    "acs": "acute coronary syndrome",
+    "dapt": "dual antiplatelet therapy",
+    "ccs": "chronic coronary syndrome",
+    "pad": "peripheral arterial disease",
+}
+
+_LLM_SEMANTIC_CACHE: Dict[Tuple[str, str, str], float] = {}
+_LLM_SEMANTIC_CALLS = 0
+
 
 def _safe_div(numerator: float, denominator: float) -> float:
     if denominator <= 0:
@@ -21,7 +34,7 @@ def _safe_div(numerator: float, denominator: float) -> float:
 
 
 def _concept_key(entry: Dict[str, Any]) -> Tuple[Any, Any]:
-    return (entry.get("role"), entry.get("entity"))
+    return (entry.get("role"), _canonical_phrase(entry.get("entity")))
 
 
 def _entry_order_key(entry: Dict[str, Any]) -> Tuple[str, str]:
@@ -36,6 +49,107 @@ def _tokenize(text: Any) -> set[str]:
         return set()
     cleaned = re.sub(r"[^a-z0-9]+", " ", str(text).lower())
     return {token for token in cleaned.split() if token}
+
+
+def _canonical_phrase(text: Any) -> str:
+    if text is None:
+        return ""
+    normalized = re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip()
+    if not normalized:
+        return ""
+    for source, target in SEMANTIC_REPLACEMENTS.items():
+        normalized = re.sub(rf"\b{re.escape(source)}\b", target, normalized)
+    return " ".join(normalized.split())
+
+
+def _semantic_normalization_enabled() -> bool:
+    return (
+        os.environ.get("CARDIO_GRAPH_TUNING_ENABLE_SEMANTIC_NORMALIZATION", "true")
+        .lower()
+        .strip()
+        == "true"
+    )
+
+
+def _llm_semantic_match_enabled() -> bool:
+    return (
+        os.environ.get("CARDIO_GRAPH_TUNING_LLM_SEMANTIC_MATCH", "false")
+        .lower()
+        .strip()
+        == "true"
+    )
+
+
+def _llm_semantic_max_calls() -> int:
+    raw = os.environ.get("CARDIO_GRAPH_TUNING_LLM_SEMANTIC_MAX_CALLS", "0")
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _llm_semantic_model() -> str:
+    return os.environ.get("CARDIO_GRAPH_TUNING_LLM_SEMANTIC_MODEL", "Qwen3next")
+
+
+def _llm_semantic_node() -> str:
+    return os.environ.get("CARDIO_GRAPH_TUNING_LLM_SEMANTIC_NODE", "g5")
+
+
+def _llm_semantic_port() -> int:
+    raw = os.environ.get("CARDIO_GRAPH_TUNING_LLM_SEMANTIC_PORT", "11435")
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return 11435
+
+
+def _llm_semantic_equivalent(expected: str, actual: str, role: str) -> float:
+    global _LLM_SEMANTIC_CALLS
+
+    key = (role.lower(), expected.lower(), actual.lower())
+    if key in _LLM_SEMANTIC_CACHE:
+        return _LLM_SEMANTIC_CACHE[key]
+
+    if not _llm_semantic_match_enabled():
+        _LLM_SEMANTIC_CACHE[key] = 0.0
+        return 0.0
+
+    max_calls = _llm_semantic_max_calls()
+    if max_calls <= 0 or _LLM_SEMANTIC_CALLS >= max_calls:
+        _LLM_SEMANTIC_CACHE[key] = 0.0
+        return 0.0
+
+    try:
+        from cardio_graph_core.extraction.baml_client.sync_client import b
+        from cardio_graph_core.extraction.clients import create_client_registry
+
+        registry = create_client_registry(
+            _llm_semantic_model(),
+            _llm_semantic_node(),
+            _llm_semantic_port(),
+        )
+        prompt = (
+            "Decide if two medical concept phrases are semantically equivalent in guideline extraction context.\n"
+            f"Role: {role}\n"
+            f"Expected phrase: {expected}\n"
+            f"Actual phrase: {actual}\n"
+            "Answer with YES or NO as the first token. Optionally add one short reason."
+        )
+        response = b.QuestionWithoutContext(
+            prompt,
+            baml_options={"client_registry": registry},
+        )
+        _LLM_SEMANTIC_CALLS += 1
+        text = str(getattr(response, "explanation", "")).strip().lower()
+        if text.startswith("yes"):
+            _LLM_SEMANTIC_CACHE[key] = 1.0
+            return 1.0
+        _LLM_SEMANTIC_CACHE[key] = 0.0
+        return 0.0
+    except Exception:
+        _LLM_SEMANTIC_CACHE[key] = 0.0
+        return 0.0
 
 
 def _entry_aliases(entry: Dict[str, Any]) -> List[str]:
@@ -53,12 +167,15 @@ def _entry_aliases(entry: Dict[str, Any]) -> List[str]:
     # Preserve order but deduplicate.
     seen = set()
     ordered = []
+    semantic_normalization = _semantic_normalization_enabled()
     for candidate in candidates:
         normalized = candidate.strip().lower()
+        if semantic_normalization:
+            normalized = _canonical_phrase(normalized)
         if not normalized or normalized in seen:
             continue
         seen.add(normalized)
-        ordered.append(candidate)
+        ordered.append(normalized if semantic_normalization else candidate)
     return ordered
 
 
@@ -78,6 +195,16 @@ def _entry_similarity(expected: Dict[str, Any], actual: Dict[str, Any]) -> float
             coverage = len(overlap) / len(expected_tokens)
             if coverage > best:
                 best = coverage
+            if coverage >= 0.55:
+                # Good enough lexical overlap; skip expensive LLM call.
+                continue
+            llm_score = _llm_semantic_equivalent(
+                expected_alias,
+                actual_alias,
+                str(expected.get("role") or ""),
+            )
+            if llm_score > best:
+                best = llm_score
     return best
 
 
@@ -124,8 +251,24 @@ def build_score_report_from_alignment(
     prompt_version: str,
     run_success: bool,
 ) -> ScoreReport:
+    score_profile = (
+        os.environ.get("CARDIO_GRAPH_TUNING_SCORE_PROFILE", "tolerant").lower().strip()
+    )
     lenient_extras = (
         os.environ.get("CARDIO_GRAPH_TUNING_LENIENT_EXTRAS", "true").lower() == "true"
+    )
+    strict_extras = (score_profile == "strict") or (not lenient_extras)
+    extra_concept_weight = float(
+        os.environ.get(
+            "CARDIO_GRAPH_TUNING_EXTRA_CONCEPT_WEIGHT",
+            "1.0" if strict_extras else "0.25",
+        )
+    )
+    extra_and_concept_weight = float(
+        os.environ.get(
+            "CARDIO_GRAPH_TUNING_EXTRA_AND_CONCEPT_WEIGHT",
+            "1.0" if strict_extras else "0.10",
+        )
     )
 
     payload = json.loads(alignment_path.read_text(encoding="utf-8"))
@@ -134,6 +277,7 @@ def build_score_report_from_alignment(
     total_expected_concepts = 0
     total_actual_concepts = 0
     total_concept_matches = 0
+    total_weighted_extra_concepts = 0.0
 
     total_expected_rules = 0
     total_rule_matches = 0
@@ -171,6 +315,30 @@ def build_score_report_from_alignment(
         total_actual_concepts += actual_concepts
         total_concept_matches += concept_matches
 
+        unmatched_actual_entries = list(actual_entries)
+        for _, matched_actual in entry_pairs:
+            try:
+                unmatched_actual_entries.remove(matched_actual)
+            except ValueError:
+                pass
+        weighted_extras = 0.0
+        for extra_entry in unmatched_actual_entries:
+            logic_type = str(extra_entry.get("logic_type") or "").upper()
+            logic_group = str(extra_entry.get("logic_group") or "").lower()
+            role = str(extra_entry.get("role") or "")
+            is_condition_like = role in {
+                "ClinicalCondition",
+                "ClinicalParameter",
+                "Condition",
+            }
+            if is_condition_like and (
+                logic_type == "AND" or logic_group.startswith("and")
+            ):
+                weighted_extras += extra_and_concept_weight
+            else:
+                weighted_extras += extra_concept_weight
+        total_weighted_extra_concepts += weighted_extras
+
         total_expected_rules += expected_rules
         total_rule_matches += rule_matches
 
@@ -199,7 +367,7 @@ def build_score_report_from_alignment(
                     actual=None,
                 )
             )
-        if not lenient_extras:
+        if strict_extras:
             for item in row.get("concept_extra", []) or []:
                 errors.append(
                     ErrorItem(
@@ -218,7 +386,7 @@ def build_score_report_from_alignment(
                     actual=None,
                 )
             )
-        if not lenient_extras:
+        if strict_extras:
             for item in row.get("rule_extra", []) or []:
                 errors.append(
                     ErrorItem(
@@ -293,9 +461,9 @@ def build_score_report_from_alignment(
             )
         )
 
-    precision_denominator = (
-        total_expected_concepts if lenient_extras else total_actual_concepts
-    )
+    precision_denominator = total_concept_matches + total_weighted_extra_concepts
+    if strict_extras:
+        precision_denominator = total_actual_concepts
     concept_precision = _safe_div(total_concept_matches, precision_denominator)
     concept_recall = _safe_div(total_concept_matches, total_expected_concepts)
     concept_f1 = _safe_div(
