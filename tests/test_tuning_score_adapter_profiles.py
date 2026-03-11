@@ -114,6 +114,56 @@ class TestTuningScoreAdapterProfiles(unittest.TestCase):
 
         self.assertEqual(report.metrics.concept_recall, 1.0)
 
+    def test_singleton_condition_ignores_logic_type_group(self):
+        payload = {
+            "rows": [
+                {
+                    "row_id": "row_01",
+                    "expected_entries": [
+                        {
+                            "role": "ClinicalCondition",
+                            "entity": "complex clinical cases",
+                            "operator": "PRESENT",
+                            "logic_type": "AND",
+                            "logic_group": "and_1",
+                        }
+                    ],
+                    "actual_entries": [
+                        {
+                            "role": "ClinicalCondition",
+                            "entity": "complex clinical cases",
+                            "operator": "PRESENT",
+                            "logic_type": "SINGLE",
+                            "logic_group": "single_1",
+                        }
+                    ],
+                    "concept_missing": [],
+                    "concept_extra": [],
+                    "rule_missing": [],
+                    "rule_extra": [],
+                }
+            ]
+        }
+        alignment = _write_alignment(payload)
+
+        report = build_score_report_from_alignment(
+            alignment,
+            run_id="singleton_logic",
+            split="dev",
+            prompt_version="p0",
+            run_success=True,
+        )
+
+        self.assertEqual(report.metrics.rule_exact_match, 1.0)
+        self.assertEqual(report.metrics.logic_group_accuracy, 0.0)
+        row_errors = report.rows[0].errors
+        self.assertFalse(
+            any(err.error_class == "C5_logic_type_wrong" for err in row_errors)
+        )
+        self.assertFalse(
+            any(err.error_class == "C6_logic_group_wrong" for err in row_errors)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

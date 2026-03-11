@@ -223,6 +223,65 @@ def _rule_fields_match(expected: Dict[str, Any], actual: Dict[str, Any]) -> bool
     return all(expected.get(key) == actual.get(key) for key in comparable_keys)
 
 
+def _entry_side(entry: Dict[str, Any]) -> str | None:
+    role_name = str(entry.get("role") or "").strip()
+    if role_name in {"ClinicalCondition", "ClinicalParameter", "Condition"}:
+        return "condition"
+    if role_name in {"Procedure", "Medication", "ClinicalAction"}:
+        logic_type = str(entry.get("logic_type") or "").strip()
+        logic_group = str(entry.get("logic_group") or "").strip()
+        if logic_type or logic_group:
+            return "condition"
+        return "action"
+    return None
+
+
+def _side_counts(entries: List[Dict[str, Any]]) -> Dict[str, int]:
+    counts: Dict[str, int] = {"condition": 0, "action": 0}
+    for entry in entries:
+        side = _entry_side(entry)
+        if side in counts:
+            counts[side] += 1
+    return counts
+
+
+def _ignore_logic_fields_for_pair(
+    expected_entry: Dict[str, Any],
+    actual_entry: Dict[str, Any],
+    expected_counts: Dict[str, int],
+    actual_counts: Dict[str, int],
+) -> bool:
+    expected_side = _entry_side(expected_entry)
+    actual_side = _entry_side(actual_entry)
+
+    expected_singleton = (
+        expected_side is not None and expected_counts.get(expected_side, 0) <= 1
+    )
+    actual_singleton = (
+        actual_side is not None and actual_counts.get(actual_side, 0) <= 1
+    )
+    return expected_singleton or actual_singleton
+
+
+def _rule_fields_match_for_pair(
+    expected: Dict[str, Any],
+    actual: Dict[str, Any],
+    ignore_logic_fields: bool,
+) -> bool:
+    comparable_keys = [
+        "operator",
+        "threshold",
+        "unit",
+        "context",
+        "strength",
+        "level",
+        "direction",
+    ]
+    if not ignore_logic_fields:
+        comparable_keys.extend(["logic_type", "logic_group"])
+    return all(expected.get(key) == actual.get(key) for key in comparable_keys)
+
+
 def _pair_entries(
     expected_entries: List[Dict[str, Any]],
     actual_entries: List[Dict[str, Any]],
@@ -299,17 +358,28 @@ def build_score_report_from_alignment(
         expected_entries = list(row.get("expected_entries") or [])
         actual_entries = list(row.get("actual_entries") or [])
         entry_pairs = _pair_entries(expected_entries, actual_entries)
+        expected_counts = _side_counts(expected_entries)
+        actual_counts = _side_counts(actual_entries)
 
         expected_concepts = len(expected_entries)
         actual_concepts = len(actual_entries)
         concept_matches = len(entry_pairs)
 
         expected_rules = len(expected_entries)
-        rule_matches = sum(
-            1
-            for expected_entry, actual_entry in entry_pairs
-            if _rule_fields_match(expected_entry, actual_entry)
-        )
+        rule_matches = 0
+        for expected_entry, actual_entry in entry_pairs:
+            ignore_logic_fields = _ignore_logic_fields_for_pair(
+                expected_entry,
+                actual_entry,
+                expected_counts,
+                actual_counts,
+            )
+            if _rule_fields_match_for_pair(
+                expected_entry,
+                actual_entry,
+                ignore_logic_fields=ignore_logic_fields,
+            ):
+                rule_matches += 1
 
         total_expected_concepts += expected_concepts
         total_actual_concepts += actual_concepts
@@ -347,11 +417,21 @@ def build_score_report_from_alignment(
             if expected_entry.get("operator") == actual_entry.get("operator"):
                 total_operator_correct += 1
 
-            total_logic_compared += 1
-            if expected_entry.get("logic_type") == actual_entry.get(
-                "logic_type"
-            ) and expected_entry.get("logic_group") == actual_entry.get("logic_group"):
-                total_logic_correct += 1
+            ignore_logic_fields = _ignore_logic_fields_for_pair(
+                expected_entry,
+                actual_entry,
+                expected_counts,
+                actual_counts,
+            )
+
+            if not ignore_logic_fields:
+                total_logic_compared += 1
+                if expected_entry.get("logic_type") == actual_entry.get(
+                    "logic_type"
+                ) and expected_entry.get("logic_group") == actual_entry.get(
+                    "logic_group"
+                ):
+                    total_logic_correct += 1
 
         grounding_summary = row.get("grounding_summary") or {}
         total_grounded += int(grounding_summary.get("total_grounded", 0) or 0)
@@ -401,6 +481,12 @@ def build_score_report_from_alignment(
             concept_label = (
                 f"{expected_entry.get('role')}: {expected_entry.get('entity')}"
             )
+            ignore_logic_fields = _ignore_logic_fields_for_pair(
+                expected_entry,
+                actual_entry,
+                expected_counts,
+                actual_counts,
+            )
 
             if expected_entry.get("operator") != actual_entry.get("operator"):
                 errors.append(
@@ -417,7 +503,9 @@ def build_score_report_from_alignment(
                     )
                 )
 
-            if expected_entry.get("logic_type") != actual_entry.get("logic_type"):
+            if not ignore_logic_fields and expected_entry.get(
+                "logic_type"
+            ) != actual_entry.get("logic_type"):
                 errors.append(
                     ErrorItem(
                         error_class="C5_logic_type_wrong",
@@ -432,7 +520,9 @@ def build_score_report_from_alignment(
                     )
                 )
 
-            if expected_entry.get("logic_group") != actual_entry.get("logic_group"):
+            if not ignore_logic_fields and expected_entry.get(
+                "logic_group"
+            ) != actual_entry.get("logic_group"):
                 errors.append(
                     ErrorItem(
                         error_class="C6_logic_group_wrong",
