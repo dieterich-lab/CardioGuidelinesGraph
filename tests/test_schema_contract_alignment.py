@@ -4,6 +4,8 @@ from pathlib import Path
 
 import yaml
 
+from cardio_graph_core.extraction.schema_contract_sync import baml_snippets_from_schema
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = (
     PROJECT_ROOT / "config" / "cardio_graph_core" / "guideline_graph_schema.yaml"
@@ -67,12 +69,40 @@ class TestSchemaContractAlignment(unittest.TestCase):
         direction_attr = _get_attr("RecommendationNode", "direction")
 
         self.assertTrue(operator_attr.get("allowed"))
-        self.assertIn("<=", operator_attr.get("allowed", []))
-        self.assertIn(">=", operator_attr.get("allowed", []))
+        self.assertEqual(
+            set(operator_attr.get("allowed", [])),
+            {"<", ">", "=", "PRESENT", "ABSENT"},
+        )
         self.assertTrue(logic_type_attr.get("allowed"))
         self.assertIn("SINGLE", logic_type_attr.get("allowed", []))
         self.assertTrue(direction_attr.get("allowed"))
+        self.assertEqual(
+            set([v for v in direction_attr.get("allowed", []) if v is not None]),
+            {"<", ">", "=", "POSITIVE", "NEGATIVE"},
+        )
         self.assertIn("POSITIVE", direction_attr.get("allowed", []))
+
+    def test_baml_operator_and_direction_vocab_aligned_with_v13(self):
+        snippets = baml_snippets_from_schema(self.schema)
+        self.assertIn(snippets["operator_prompt"], self.baml_text)
+        self.assertIn(snippets["direction_prompt"], self.baml_text)
+        self.assertNotIn("PRESENT, ABSENT, PLANNED", self.baml_text)
+        self.assertNotIn("POSITIVE, NEGATIVE, UNKNOWN", self.baml_text)
+
+    def test_schema_prompt_blocks_exist_for_non_coercible_enum_guidance(self):
+        # BAML enforces shape via ctx.output_format; these blocks are reserved for enum/value guidance.
+        required_markers = [
+            "[BEGIN SCHEMA_OPERATOR_PROMPT]",
+            "[END SCHEMA_OPERATOR_PROMPT]",
+            "[BEGIN SCHEMA_DIRECTION_USE_PROMPT]",
+            "[END SCHEMA_DIRECTION_USE_PROMPT]",
+            "[BEGIN SCHEMA_OPERATOR_PROMPT_RULES]",
+            "[END SCHEMA_OPERATOR_PROMPT_RULES]",
+            "[BEGIN SCHEMA_DIRECTION_PROMPT_RULES]",
+            "[END SCHEMA_DIRECTION_PROMPT_RULES]",
+        ]
+        for marker in required_markers:
+            self.assertIn(marker, self.baml_text)
 
 
 if __name__ == "__main__":

@@ -269,6 +269,22 @@ class GuidelineGraphBuilder:
                 }
             return set()
 
+        def _node_attr_allowed(label: str, attr_name: str) -> set:
+            for node in nodes:
+                if (node.get("label") or "").strip() != label:
+                    continue
+                attrs = node.get("attributes") or []
+                for attr in attrs:
+                    if (attr.get("name") or "").strip() != attr_name:
+                        continue
+                    allowed = attr.get("allowed") or []
+                    return {
+                        str(value).strip()
+                        for value in allowed
+                        if value is not None and str(value).strip()
+                    }
+            return set()
+
         decision_attr_names = _node_attr_names("DecisionNode")
         recommendation_attr_names = _node_attr_names("RecommendationNode")
         extraction_logic_keys = {
@@ -289,6 +305,17 @@ class GuidelineGraphBuilder:
         self._allowed_logic_structured_keys = (
             derived_allowed_logic_keys or extraction_logic_keys
         )
+        self._allowed_operator_values = _node_attr_allowed("DecisionNode", "operator")
+        self._allowed_logic_type_values = _node_attr_allowed(
+            "DecisionNode", "logic_type"
+        )
+        self._allowed_direction_values = _node_attr_allowed(
+            "RecommendationNode", "direction"
+        )
+        self._allowed_strength_values = _node_attr_allowed(
+            "RecommendationNode", "strength"
+        )
+        self._allowed_level_values = _node_attr_allowed("RecommendationNode", "level")
         self.root_concepts = self._collect_root_concepts(self.mapping_rules)
 
         self.client_registry = create_client_registry(model, node, port)
@@ -421,11 +448,83 @@ class GuidelineGraphBuilder:
         payload = dict(logic_structured or {})
         if not self._allowed_logic_structured_keys:
             return payload
-        return {
+        filtered = {
             key: value
             for key, value in payload.items()
             if key in self._allowed_logic_structured_keys
         }
+
+        filtered["operator"] = self._normalize_enum_value(
+            filtered.get("operator"), self._allowed_operator_values
+        )
+        filtered["logic_type"] = self._normalize_enum_value(
+            filtered.get("logic_type"), self._allowed_logic_type_values
+        )
+        filtered["direction"] = self._normalize_enum_value(
+            filtered.get("direction"), self._allowed_direction_values
+        )
+        filtered["strength"] = self._normalize_strength_value(
+            filtered.get("strength"), self._allowed_strength_values
+        )
+        filtered["level"] = self._normalize_enum_value(
+            filtered.get("level"), self._allowed_level_values
+        )
+        return filtered
+
+    def _normalize_enum_value(self, value: Any, allowed_values: set) -> Optional[str]:
+        if not allowed_values:
+            text = (str(value or "") or "").strip()
+            return text or None
+        text = (str(value or "") or "").strip()
+        if not text:
+            return None
+        if text in allowed_values:
+            return text
+        upper = text.upper()
+        if upper in allowed_values:
+            return upper
+        return None
+
+    def _normalize_strength_value(
+        self, value: Any, allowed_values: set
+    ) -> Optional[str]:
+        text = (str(value or "") or "").strip()
+        if not text:
+            return None
+        direct = self._normalize_enum_value(text, allowed_values)
+        if direct is not None:
+            return direct
+
+        if text.lower().startswith("class "):
+            suffix = text.split(" ", 1)[1].strip()
+            candidate = f"Class {suffix}"
+            direct = self._normalize_enum_value(candidate, allowed_values)
+            if direct is not None:
+                return direct
+
+        prefixed = f"Class {text}"
+        direct = self._normalize_enum_value(prefixed, allowed_values)
+        if direct is not None:
+            return direct
+
+        return None
+
+    def _normalize_extracted_role(self, role: Any) -> Optional[str]:
+        text = (str(role or "") or "").strip()
+        if not text:
+            return None
+        if text in ALLOWED_ROLES:
+            return text
+        if text in BLOCKED_ROLES:
+            return None
+        normalized_map = {
+            "clinicalcondition": "ClinicalCondition",
+            "clinicalparameter": "ClinicalParameter",
+            "medication": "Medication",
+            "procedure": "Procedure",
+            "other": "Other",
+        }
+        return normalized_map.get(text.replace(" ", "").lower())
 
     def _is_nonempty_concept(self, concept: Any) -> bool:
         if concept is None:
@@ -1317,7 +1416,7 @@ class GuidelineGraphBuilder:
                     ExtractedConcept(
                         entity_original=concept.entity_original,
                         entity_standardized_candidate=concept.entity_standardized_candidate,
-                        role=concept.role,
+                        role=self._normalize_extracted_role(concept.role) or "Other",
                         logic=concept.logic,
                         logic_structured=logic_structured,
                     )
@@ -1334,6 +1433,15 @@ class GuidelineGraphBuilder:
                 for condition in getattr(rule, "conditions", []) or []:
                     if not self._is_nonempty_concept(condition):
                         continue
+                    normalized_role = self._normalize_extracted_role(
+                        getattr(condition, "role", None)
+                    )
+                    if normalized_role not in {
+                        "ClinicalCondition",
+                        "ClinicalParameter",
+                        "Procedure",
+                    }:
+                        continue
                     logic_structured = _default_logic_structured()
                     logic = getattr(condition, "logic", None)
                     if logic is not None:
@@ -1343,13 +1451,18 @@ class GuidelineGraphBuilder:
                         ExtractedConcept(
                             entity_original=condition.entity_original,
                             entity_standardized_candidate=condition.entity_standardized_candidate,
-                            role=condition.role,
+                            role=normalized_role,
                             logic="condition",
                             logic_structured=logic_structured,
                         )
                     )
                 for action in getattr(rule, "actions", []) or []:
                     if not self._is_nonempty_concept(action):
+                        continue
+                    normalized_role = self._normalize_extracted_role(
+                        getattr(action, "role", None)
+                    )
+                    if normalized_role not in {"Medication", "Procedure"}:
                         continue
                     logic_structured = _default_logic_structured()
                     recommendation = getattr(action, "recommendation", None)
@@ -1360,7 +1473,7 @@ class GuidelineGraphBuilder:
                         ExtractedConcept(
                             entity_original=action.entity_original,
                             entity_standardized_candidate=action.entity_standardized_candidate,
-                            role=action.role,
+                            role=normalized_role,
                             logic="action",
                             logic_structured=logic_structured,
                         )

@@ -135,8 +135,8 @@ nodes:
       - name: "question"
         type: "string" # e.g., "Is LVEF < 40%?"
       - name: "operator"
-        type: "string" # e.g., "<", ">", "<=", ">=", "=", "PRESENT", "ABSENT", "PLANNED"
-        allowed: ["OR", "AND", "<", ">", "<=", ">=", "=", "PRESENT", "ABSENT", "PLANNED"]
+        type: "string" # e.g., "<", ">", "=", "PRESENT", "ABSENT"
+        allowed: ["<", ">", "=", "PRESENT", "ABSENT"]
       - name: "threshold"
         type: "float"  # e.g., 40.0
       - name: "unit"
@@ -165,8 +165,8 @@ nodes:
         type: "string" # "A", "B", "C"
         allowed: ["A", "B", "C", null]
       - name: "direction"
-        type: "string" # "POSITIVE", "NEGATIVE", "UNKNOWN"
-        allowed: ["POSITIVE", "NEGATIVE", "UNKNOWN", null]
+        type: "string" # "<", ">", "=", "POSITIVE", "NEGATIVE"
+        allowed: ["<", ">", "=", "POSITIVE", "NEGATIVE", null]
       - name: "full_text"
         type: "string" # The exact sentence from the PDF
       - name: "recommendation_type"
@@ -264,3 +264,77 @@ snomed_mapping:
     - target_label: "ClinicalParameter"
       root_concepts:
         - "363787002" # Observable entity (z.B. Blood Pressure)
+
+
+# ==========================================
+# 4. RULE OUTPUT FORMAT (Source Of Truth)
+# ==========================================
+rule_output_format:
+  version: "1.3"
+  notes:
+    - "Top-level fields 'Recommendations', 'Class', and 'Level' are removed."
+    - "Use dynamic 'Column_N' placeholders for row-specific table columns."
+
+  schema:
+    Table Header: "string"
+    Section Header: "string"
+    Sub Header: "string"
+    Column_N: "string"
+    input: "string"
+    recommendation: "string"
+    rules:
+      - conditions:
+          - entity_original: "string"
+            entity_standardized_list:
+              - entity_standardized_candidate: "string"
+                snomed_id: "string"
+            context: "string"
+            role: "string"
+            logic_structured:
+              operator: "string"
+              threshold: "float"
+              unit: "string"
+              logic_type: "string"
+              logic_group: "string"
+        actions:
+          - entity_original: "string"
+            entity_standardized_list:
+              - entity_standardized_candidate: "string"
+                snomed_id: "string"
+            context: "string"
+            role: "string"
+            logic_structured:
+              strength: "string"
+              level: "string"
+              direction: "string"
+              operator: "string"
+              threshold: "float"
+              unit: "string"
+              logic_type: "string"
+              logic_group: "string"
+
+  definitions:
+    Table Header: "The main header of the table."
+    Section Header: "The header of a section of the table."
+    Sub Header: "A subsection header in the table hierarchy."
+    Column_N: "Multiple properties where each maps a column header to the current row content."
+    input: "A string that contains all conditions necessary in the row."
+    recommendation: "A string that contains all actions given as a result of the conditions in the row."
+    rules: "A class that contains conditions and actions."
+    conditions: "A class with tuples of entity_original, entity_standardized_list, context, role, logic_structured."
+    actions: "A class with tuples of entity_original, entity_standardized_list, context, role, logic_structured."
+    entity_original: "One entity from the row."
+    entity_standardized_list: "A class containing tuples of entity_standardized_candidate and snomed_id."
+    entity_standardized_candidate: "One entity standardized to a SNOMED concept from the row."
+    snomed_id: "One SCTID standardized to a SNOMED concept from the row."
+    context: "Context tied to one entity from the row."
+    role: "Role of one entity from the row: ClinicalCondition, Medication, ClinicalParameter, Procedure."
+    logic_structured: "Includes strength, level, direction, operator, logic_type, logic_group, threshold, unit."
+    strength: "Class of recommendation (see Table 1)."
+    level: "Level of evidence (see Table 2)."
+    direction: "Direction of recommendation: '<', '>', '=', 'POSITIVE', 'NEGATIVE'."
+    operator: "Operator: '<', '>', '=', 'PRESENT', 'ABSENT'."
+    threshold: "A float value used with arithmetic operators."
+    unit: "Unit of the threshold value."
+    logic_type: "Logical connector/operator: OR, AND, SINGLE, NULL."
+    logic_group: "Group identifier for logical operations."

@@ -1,7 +1,7 @@
 {
   "split_version": "v1",
   "table_id": 0,
-  "created_from": "table_22_manual_snomed.json",
+  "created_from": "table_22_manual_1.3.json",
   "created_on": "2026-02-17",
   "notes": "Balanced split for prompt/pipeline tuning with complexity and class coverage preserved in locked test.",
   "dev_rows": [
