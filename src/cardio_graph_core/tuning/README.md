@@ -1,6 +1,6 @@
-# Table 22 Auto-Tuning (Dev Split)
+# Multi-Table Auto-Tuning (Dev Split)
 
-This module is for **auto-tuning only** (LLM2/LLM3 loop). It runs against the **dev split** of Table 22 and uses finalized manual annotations.
+This module is for **auto-tuning only** (LLM2/LLM3 loop). It runs against a benchmark set that can include Table 22, Table 17, and Table 8.
 
 ## One command
 
@@ -12,10 +12,32 @@ poetry run python -m cardio_graph_core.tuning.launch_table22_tuning
 Default behavior:
 
 - Runs `cardio_graph_core.tuning.controller` in live mode (`--dry-run=false`)
-- Uses `config/table22/split_v1.json` (dev rows)
-- Uses ground truth: `/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json`
+- Uses `config/table22/split_v1.json` for row split control
+- Uses benchmark manifest: `config/table22/benchmark_manifest_v1.jsonc`
+- Uses multi-table eval wrapper: `cardio_graph_core.tuning.table_multi_dev_eval`
 - Uses live extraction+grounding (`g5:11435` by default)
 - Disables snapshot mode (`CARDIO_GRAPH_TABLE22_USE_SNAPSHOT=false`)
+- Uses tolerant scoring profile by default (`CARDIO_GRAPH_TUNING_SCORE_PROFILE=tolerant`)
+- Enables semantic alias normalization by default (`CARDIO_GRAPH_TUNING_ENABLE_SEMANTIC_NORMALIZATION=true`)
+
+Optional semantic LLM matching (for phrase-equivalent variants beyond hardcoded aliases):
+
+- `CARDIO_GRAPH_TUNING_LLM_SEMANTIC_MATCH=true`
+- `CARDIO_GRAPH_TUNING_LLM_SEMANTIC_MAX_CALLS=50` (budget guard)
+- `CARDIO_GRAPH_TUNING_LLM_SEMANTIC_MODEL=Qwen3next`
+- `CARDIO_GRAPH_TUNING_LLM_SEMANTIC_NODE=g5`
+- `CARDIO_GRAPH_TUNING_LLM_SEMANTIC_PORT=11435`
+
+## Benchmark manifest
+
+`config/table22/benchmark_manifest_v1.jsonc` contains one entry per table with:
+
+- `ground_truth_path`
+- `table_clean_path`
+- `table_ids`
+- `dev_rows` and `locked_test_rows` (optional per benchmark)
+
+Set `CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST` to override this file.
 
 ## Monitor
 

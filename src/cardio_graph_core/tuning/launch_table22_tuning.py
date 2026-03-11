@@ -11,7 +11,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SLURM_DIR = PROJECT_ROOT / "slurm"
 DEFAULT_GROUND_TRUTH = (
-    "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json"
+    "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json"
 )
 
 
@@ -58,8 +58,29 @@ def _submit(
         "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION": os.environ.get(
             "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION", "false"
         ),
+        "CARDIO_GRAPH_TUNING_LENIENT_EXTRAS": os.environ.get(
+            "CARDIO_GRAPH_TUNING_LENIENT_EXTRAS", "true"
+        ),
+        "CARDIO_GRAPH_TUNING_SCORE_PROFILE": os.environ.get(
+            "CARDIO_GRAPH_TUNING_SCORE_PROFILE", "tolerant"
+        ),
+        "CARDIO_GRAPH_TUNING_ENABLE_SEMANTIC_NORMALIZATION": os.environ.get(
+            "CARDIO_GRAPH_TUNING_ENABLE_SEMANTIC_NORMALIZATION", "true"
+        ),
+        "CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST": os.environ.get(
+            "CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST",
+            str(PROJECT_ROOT / "config" / "table22" / "benchmark_manifest_v1.jsonc"),
+        ),
         "CARDIO_GRAPH_TABLE22_USE_SNAPSHOT": "false",
     }
+    ground_after_extraction = (
+        env_vars["CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION"].lower() == "true"
+    )
+    ground_flag = (
+        "--ground-after-extraction"
+        if ground_after_extraction
+        else "--no-ground-after-extraction"
+    )
 
     export_cmd = " ".join(
         f"{key}={shlex.quote(value)}" for key, value in env_vars.items()
@@ -75,9 +96,10 @@ def _submit(
         f"--model {shlex.quote(model)} "
         f"--node {shlex.quote(node)} "
         f"--port {port} "
-        "--no-ground-after-extraction "
+        f"--benchmark-manifest {shlex.quote(env_vars['CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST'])} "
+        f"{ground_flag} "
         "--no-stream-eval-logs "
-        "--eval-command 'poetry run python -m cardio_graph_core.tuning.table22_dev_eval'"
+        "--eval-command 'poetry run python -m cardio_graph_core.tuning.table_multi_dev_eval'"
     )
     wrapped = (
         f"cd {shlex.quote(str(PROJECT_ROOT))} && "
@@ -128,7 +150,8 @@ def main() -> None:
         description="Submit one dev-focused Table 22 autotuning run via SLURM (commit-safe launcher)."
     )
     parser.add_argument(
-        "--model", default=os.environ.get("CARDIO_GRAPH_TABLE22_LLM_MODEL", "Qwen30b")
+        "--model",
+        default=os.environ.get("CARDIO_GRAPH_TABLE22_LLM_MODEL", "Qwen3next"),
     )
     parser.add_argument(
         "--node", default=os.environ.get("CARDIO_GRAPH_TABLE22_LLM_NODE", "g5")

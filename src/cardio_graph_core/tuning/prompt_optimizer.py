@@ -1,28 +1,43 @@
 from __future__ import annotations
 
+import re
+
+from cardio_graph_core.extraction.clients import create_client_registry
 from cardio_graph_core.tuning.contracts import (
     ErrorAnalysis,
     PromptEdit,
     PromptPatch,
     ScoreReport,
 )
-from cardio_graph_core.tuning.llm_bridge import LLMBridge
 
-SYSTEM_PROMPT = """
-You are LLM3 (prompt optimizer) for extraction autotuning.
-Propose a minimal prompt appendix patch that targets the selected error classes and row-level structural mismatches.
-Return strict JSON with keys:
-- edits (array of objects with keys: zone, content)
-- rationale (string)
-- max_edit_lines (int)
-Allowed zones: instruction_appendix, rule_structuring, condition_extraction, action_extraction, operator_logic.
-Keep edits concise and actionable.
-Hard constraints:
-- Do NOT add illustrative examples, entity lists, or category primers.
-- Do NOT restate known ontology categories.
-- Every edit must be a transformation rule anchored to observed row evidence (row_id + mismatch type).
-- Prioritize exact condition/action separation and operator/logic_group preservation from ground truth.
-""".strip()
+ALLOWED_ZONES = {
+    "instruction_appendix",
+    "rule_structuring",
+    "condition_extraction",
+    "action_extraction",
+    "operator_logic",
+}
+
+_FORBIDDEN_SPECIFICITY_PATTERNS = [
+    re.compile(r"\brow[_\s-]?\d{1,3}\b", flags=re.IGNORECASE),
+    re.compile(r"\btable[_\s-]?\d{1,3}\b", flags=re.IGNORECASE),
+    re.compile(r"\biter[_\s-]?\d{1,3}\b", flags=re.IGNORECASE),
+    re.compile(r"\bcandidate[_\s-]?\d{1,3}\b", flags=re.IGNORECASE),
+]
+
+
+def _is_general_instruction(text: str) -> bool:
+    for pattern in _FORBIDDEN_SPECIFICITY_PATTERNS:
+        if pattern.search(text):
+            return False
+    return True
+
+
+def _sanitize_specific_references(text: str) -> str:
+    sanitized = text
+    for pattern in _FORBIDDEN_SPECIFICITY_PATTERNS:
+        sanitized = pattern.sub("", sanitized)
+    return " ".join(sanitized.split()).strip()
 
 
 def _fallback_instruction(targets: list[str]) -> str:
@@ -67,7 +82,16 @@ def _row_evidence(
         header = {
             key: value
             for key, value in ground_truth_text.items()
-            if key not in {"Recommendations", "Recommendation", "recommendation", "Class", "Class a", "Level", "Level b"}
+            if key
+            not in {
+                "Recommendations",
+                "Recommendation",
+                "recommendation",
+                "Class",
+                "Class a",
+                "Level",
+                "Level b",
+            }
         }
         footer = {
             key: ground_truth_text.get(key)
@@ -97,8 +121,8 @@ def _row_evidence(
 
 
 class PromptOptimizer:
-    def __init__(self, llm_bridge: LLMBridge):
-        self.llm_bridge = llm_bridge
+    def __init__(self, model_name: str, node: str, port: int):
+        self.client_registry = create_client_registry(model_name, node, port)
         self.last_debug: dict = {}
 
     def propose_patch(
@@ -129,8 +153,7 @@ class PromptOptimizer:
                 if candidate_slot
                 else ""
             )
-            +
-            f"current_prompt_appendix={current_prompt_appendix!r}\n"
+            + f"current_prompt_appendix={current_prompt_appendix!r}\n"
             "Return JSON only. Keep edits row-anchored and avoid generic guidance."
         )
         rationale = ""
@@ -138,63 +161,59 @@ class PromptOptimizer:
         edits: list[PromptEdit] = []
         llm_error = None
         try:
-            payload, llm_debug = self.llm_bridge.generate_json_with_debug(
-                system_prompt=SYSTEM_PROMPT,
-                user_prompt=prompt,
-                temperature=0.0,
-                max_tokens=1200,
+            from cardio_graph_core.extraction.baml_client.sync_client import b
+
+            payload = b.ProposeTable22PromptPatch(
+                prompt,
+                baml_options={"client_registry": self.client_registry},
             )
             self.last_debug = {
-                "status": "llm_success",
-                "llm": llm_debug,
+                "status": "baml_success",
             }
-            rationale = str(payload.get("rationale", "")).strip()
-            max_edit_lines = int(payload.get("max_edit_lines", 30))
+            rationale = _sanitize_specific_references(
+                str(getattr(payload, "rationale", "")).strip()
+            )
+            max_edit_lines = int(getattr(payload, "max_edit_lines", 30))
 
-            raw_edits = payload.get("edits")
-            if isinstance(raw_edits, list):
-                for item in raw_edits:
-                    if not isinstance(item, dict):
-                        continue
-                    zone = str(item.get("zone", "")).strip() or "instruction_appendix"
-                    content = str(item.get("content", "")).strip()
-                    if not content:
-                        continue
-                    edits.append(
-                        PromptEdit(
-                            zone=zone,
-                            change_type="append",
-                            old=current_prompt_appendix,
-                            new=content,
-                        )
+            payload_edits = getattr(payload, "edits", None) or []
+            filtered_specific = 0
+            for item in payload_edits:
+                zone = str(getattr(item, "zone", "") or "").strip()
+                content = str(getattr(item, "content", "") or "").strip()
+                if not content:
+                    continue
+                if not _is_general_instruction(content):
+                    filtered_specific += 1
+                    content = _sanitize_specific_references(content)
+                if not content:
+                    continue
+                if zone not in ALLOWED_ZONES:
+                    zone = "instruction_appendix"
+                edits.append(
+                    PromptEdit(
+                        zone=zone,
+                        change_type="append",
+                        old=current_prompt_appendix,
+                        new=content,
                     )
+                )
+            if filtered_specific:
+                self.last_debug["filtered_specific_edits"] = filtered_specific
 
+            # Backward compatibility with older BAML output schema.
             if not edits:
-                raw_zone_map = payload.get("zone_edits")
-                if isinstance(raw_zone_map, dict):
-                    for zone, content in raw_zone_map.items():
-                        zone_value = str(zone).strip() or "instruction_appendix"
-                        content_value = str(content or "").strip()
-                        if not content_value:
-                            continue
-                        edits.append(
-                            PromptEdit(
-                                zone=zone_value,
-                                change_type="append",
-                                old=current_prompt_appendix,
-                                new=content_value,
-                            )
-                        )
-
-            if not edits:
-                legacy_appendix = str(payload.get("instruction_appendix", "")).strip()
-                if legacy_appendix:
+                appendix = str(getattr(payload, "instruction_appendix", "")).strip()
+                if appendix:
+                    if not _is_general_instruction(appendix):
+                        appendix = _sanitize_specific_references(appendix)
+                    if not appendix:
+                        appendix = _fallback_instruction(analysis.selected_targets)
                     edits.append(
                         PromptEdit(
                             zone="instruction_appendix",
                             change_type="append",
                             old=current_prompt_appendix,
-                            new=legacy_appendix,
+                            new=appendix,
                         )
                     )
         except Exception as exc:
@@ -220,7 +239,7 @@ class PromptOptimizer:
                     new=instruction_appendix,
                 )
             ]
-            if self.last_debug.get("status") == "llm_success":
+            if self.last_debug.get("status") == "baml_success":
                 self.last_debug["status"] = "fallback_no_valid_edits"
 
         self.last_debug.setdefault("selected_targets", analysis.selected_targets)
