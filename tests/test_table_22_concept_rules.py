@@ -42,6 +42,7 @@ DOCLING_TABLE_63_PATH = Path(
     )
 )
 DOCLING_TABLE_PATHS = [DOCLING_TABLE_62_PATH, DOCLING_TABLE_63_PATH]
+TABLE_CLEAN_PATH = Path(os.environ.get("CARDIO_GRAPH_TABLE_CLEAN_PATH", ""))
 TABLE_IDS_RAW = os.environ.get("CARDIO_GRAPH_TABLE22_TABLE_IDS", "0")
 TABLE_IDS = {int(value.strip()) for value in TABLE_IDS_RAW.split(",") if value.strip()}
 TARGET_ROWS_RAW = os.environ.get("CARDIO_GRAPH_TABLE22_TARGET_ROWS", "")
@@ -110,10 +111,34 @@ def _load_rules():
 
 def _load_ground_truth():
     with open(GROUND_TRUTH_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+        payload = json.load(f)
+    if isinstance(payload, dict) and "tables" in payload:
+        return payload
+    if isinstance(payload, dict) and "data" in payload:
+        table_id = payload.get("table_id", 0)
+        return {
+            "tables": [
+                {
+                    "table_id": table_id,
+                    "data": payload.get("data", []),
+                }
+            ]
+        }
+    return {"tables": []}
 
 
 def _load_docling_rows():
+    if TABLE_CLEAN_PATH and str(TABLE_CLEAN_PATH) and TABLE_CLEAN_PATH.is_file():
+        with open(TABLE_CLEAN_PATH, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict) and "tables" in payload:
+            rows = []
+            for table in payload.get("tables", []):
+                rows.extend(table.get("data", []))
+            return rows
+        if isinstance(payload, dict) and "data" in payload:
+            return payload.get("data", [])
+
     rows = []
     for path in DOCLING_TABLE_PATHS:
         with open(path, "r", encoding="utf-8") as f:
@@ -994,13 +1019,18 @@ class Table22ConceptRulesTests(unittest.TestCase):
                 + str(GROUND_TRUTH_PATH)
                 + ". Set CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH."
             )
-        missing_docling = [path for path in DOCLING_TABLE_PATHS if not path.is_file()]
-        if missing_docling:
-            self.skipTest(
-                "Missing docling table(s): "
-                + ", ".join(str(path) for path in missing_docling)
-                + ". Set CARDIO_GRAPH_TABLE22_DOCLING_62/63."
-            )
+        if not (
+            TABLE_CLEAN_PATH and str(TABLE_CLEAN_PATH) and TABLE_CLEAN_PATH.is_file()
+        ):
+            missing_docling = [
+                path for path in DOCLING_TABLE_PATHS if not path.is_file()
+            ]
+            if missing_docling:
+                self.skipTest(
+                    "Missing docling table(s): "
+                    + ", ".join(str(path) for path in missing_docling)
+                    + ". Set CARDIO_GRAPH_TABLE22_DOCLING_62/63 or CARDIO_GRAPH_TABLE_CLEAN_PATH."
+                )
 
     def _assert_verbose(self, label, expected, actual, note):
         print("\nCHECK: " + label)

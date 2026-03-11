@@ -165,6 +165,7 @@ def _run_evaluation(
     skip_rows: str,
     live_llm: bool,
     use_snapshot: bool,
+    benchmark_manifest: str | None,
 ) -> Tuple[bool, Dict[str, str], Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     rows_dir = out_dir / "rows"
@@ -198,6 +199,9 @@ def _run_evaluation(
         "true" if ground_after_extraction else "false"
     )
     env["CARDIO_GRAPH_EXTRACTION_PROMPT_APPENDIX_PATH"] = str(prompt_appendix_path)
+    env["CARDIO_GRAPH_TUNING_SPLIT_NAME"] = split_name
+    if benchmark_manifest:
+        env["CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST"] = benchmark_manifest
 
     click.echo(
         "[autotune] eval_start "
@@ -305,7 +309,13 @@ def _run_evaluation(
 )
 @click.option(
     "--eval-command",
-    default=("poetry run python -m cardio_graph_core.tuning.table22_dev_eval"),
+    default=("poetry run python -m cardio_graph_core.tuning.table_multi_dev_eval"),
+    show_default=True,
+)
+@click.option(
+    "--benchmark-manifest",
+    type=click.Path(path_type=Path),
+    default=Path("config/table22/benchmark_manifest_v1.jsonc"),
     show_default=True,
 )
 @click.option(
@@ -344,12 +354,21 @@ def main(
     llm3_model: str | None,
     ground_after_extraction: bool,
     eval_command: str,
+    benchmark_manifest: Path,
     stream_eval_logs: bool,
     dry_run: bool,
 ) -> None:
     if candidates_per_iter <= 0:
         raise click.ClickException("candidates_per_iter must be > 0")
     manifest = _load_split_manifest(split_manifest)
+    resolved_benchmark_manifest = None
+    if benchmark_manifest and benchmark_manifest.is_file():
+        resolved_benchmark_manifest = str(benchmark_manifest)
+    elif manifest.benchmark_manifest:
+        candidate_manifest = Path(manifest.benchmark_manifest)
+        if candidate_manifest.is_file():
+            resolved_benchmark_manifest = str(candidate_manifest)
+
     rng = random.Random(seed)
     thresholds = GateThresholds()
 
@@ -446,6 +465,7 @@ def main(
                 skip_rows=skip_rows,
                 live_llm=live_llm,
                 use_snapshot=use_snapshot,
+                benchmark_manifest=resolved_benchmark_manifest,
             )
             _write_json(iteration_dir / "champion_dev_logs.json", champion_logs)
             score_report_champion = build_score_report_from_alignment(
@@ -550,6 +570,7 @@ def main(
                     skip_rows=skip_rows,
                     live_llm=live_llm,
                     use_snapshot=use_snapshot,
+                    benchmark_manifest=resolved_benchmark_manifest,
                 )
                 _write_json(candidate_dir / "challenger_dev_logs.json", challenger_logs)
                 score_report = build_score_report_from_alignment(
@@ -689,6 +710,7 @@ def main(
                             skip_rows=skip_rows,
                             live_llm=live_llm,
                             use_snapshot=use_snapshot,
+                            benchmark_manifest=resolved_benchmark_manifest,
                         )
                     )
                     _write_json(
@@ -727,6 +749,7 @@ def main(
                         skip_rows=skip_rows,
                         live_llm=live_llm,
                         use_snapshot=use_snapshot,
+                        benchmark_manifest=resolved_benchmark_manifest,
                     )
                     _write_json(
                         iteration_dir / "challenger_test_logs.json",
@@ -847,6 +870,7 @@ def main(
             "llm2_model": llm2_model or model,
             "llm3_model": llm3_model or model,
             "eval_command": eval_command,
+            "benchmark_manifest": resolved_benchmark_manifest,
             "ground_after_extraction": ground_after_extraction,
             "candidates_per_iter": candidates_per_iter,
             "early_stop_patience": early_stop_patience,

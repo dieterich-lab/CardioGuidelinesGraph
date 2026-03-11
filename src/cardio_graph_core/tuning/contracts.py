@@ -147,6 +147,7 @@ class SplitManifest:
     table_id: int
     dev_rows: List[str]
     locked_test_rows: List[str]
+    benchmark_manifest: Optional[str] = None
 
     @classmethod
     def from_dict(cls, payload: Dict[str, Any]) -> "SplitManifest":
@@ -155,4 +156,5 @@ class SplitManifest:
             table_id=int(payload.get("table_id", 0)),
             dev_rows=list(payload.get("dev_rows", [])),
             locked_test_rows=list(payload.get("locked_test_rows", [])),
+            benchmark_manifest=payload.get("benchmark_manifest"),
         )

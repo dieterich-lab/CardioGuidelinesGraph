@@ -61,6 +61,16 @@ def _submit(
         "CARDIO_GRAPH_TUNING_LENIENT_EXTRAS": os.environ.get(
             "CARDIO_GRAPH_TUNING_LENIENT_EXTRAS", "true"
         ),
+        "CARDIO_GRAPH_TUNING_SCORE_PROFILE": os.environ.get(
+            "CARDIO_GRAPH_TUNING_SCORE_PROFILE", "tolerant"
+        ),
+        "CARDIO_GRAPH_TUNING_ENABLE_SEMANTIC_NORMALIZATION": os.environ.get(
+            "CARDIO_GRAPH_TUNING_ENABLE_SEMANTIC_NORMALIZATION", "true"
+        ),
+        "CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST": os.environ.get(
+            "CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST",
+            str(PROJECT_ROOT / "config" / "table22" / "benchmark_manifest_v1.jsonc"),
+        ),
         "CARDIO_GRAPH_TABLE22_USE_SNAPSHOT": "false",
     }
     ground_after_extraction = (
@@ -86,9 +96,10 @@ def _submit(
         f"--model {shlex.quote(model)} "
         f"--node {shlex.quote(node)} "
         f"--port {port} "
+        f"--benchmark-manifest {shlex.quote(env_vars['CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST'])} "
         f"{ground_flag} "
         "--no-stream-eval-logs "
-        "--eval-command 'poetry run python -m cardio_graph_core.tuning.table22_dev_eval'"
+        "--eval-command 'poetry run python -m cardio_graph_core.tuning.table_multi_dev_eval'"
     )
     wrapped = (
         f"cd {shlex.quote(str(PROJECT_ROOT))} && "
