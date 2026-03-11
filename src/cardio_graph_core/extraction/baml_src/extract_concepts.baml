@@ -170,7 +170,9 @@ function ExtractRulesV2(text: string) -> ExtractRulesResultV2 {
        - Output short, specific noun phrases (singular). Avoid full sentences and lists.
        - Do not combine multiple distinct conditions into a single entity.
      6. Focus-specific constraints:
-       - If [FOCUS: MAIN], each rule must include at least one action.
+       - If [FOCUS: MAIN], each rule must include at least one condition AND at least one action.
+       - If a candidate rule has actions but no condition, DO NOT return that rule as-is.
+       - In such cases, recover at least one eligibility/population condition from the sentence (e.g., leading cohort phrase like "in patients with...", "for ... cases") and put qualifiers into condition context.
        - If [FOCUS: POPULATION], actions MUST be an empty array and output only eligibility/population conditions.
 
     Sentence: {{text}}

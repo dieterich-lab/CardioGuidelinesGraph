@@ -547,6 +547,11 @@ class GuidelineGraphBuilder:
     def _is_population_focus(self, focus: Optional[str]) -> bool:
         return (focus or "").strip().upper() == "POPULATION"
 
+    def _require_both_sides_for_main(self) -> bool:
+        return os.environ.get(
+            "CARDIO_GRAPH_REQUIRE_BOTH_SIDES_MAIN", "true"
+        ).strip().lower() not in {"0", "false", "no", "off"}
+
     def _concept_side(self, concept: Any) -> Optional[str]:
         raw_logic = (getattr(concept, "logic", None) or "").strip().lower()
         if raw_logic in {"condition", "action"}:
@@ -581,6 +586,10 @@ class GuidelineGraphBuilder:
         if is_population_focus:
             return condition_concepts
 
+        if self._require_both_sides_for_main():
+            if not condition_concepts or not action_concepts:
+                return []
+
         return condition_concepts + action_concepts
 
     def _validate_extracted_rules(
@@ -588,6 +597,7 @@ class GuidelineGraphBuilder:
     ) -> List[Any]:
         valid_rules: List[Any] = []
         is_population_focus = self._is_population_focus(focus)
+        require_both_sides_main = self._require_both_sides_for_main()
 
         for rule in rules or []:
             conditions = [
@@ -606,6 +616,9 @@ class GuidelineGraphBuilder:
 
             if is_population_focus:
                 if not conditions:
+                    continue
+            elif require_both_sides_main:
+                if not conditions or not actions:
                     continue
 
             valid_rules.append(rule)
