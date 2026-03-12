@@ -229,12 +229,12 @@ def _extract_concept_fields(concept: Dict[str, Any]) -> Dict[str, Optional[str]]
     }
 
 
-def _extract_decision_context(concept: Dict[str, Any]) -> Optional[str]:
+def _extract_concept_context(concept: Dict[str, Any]) -> Optional[str]:
     logic_structured = concept.get("logic_structured") or {}
     for candidate in (
+        concept.get("concept_context"),
+        concept.get("context"),
         logic_structured.get("context"),
-        concept.get("source_context"),
-        concept.get("chunk_id"),
     ):
         if candidate is None:
             continue
@@ -352,7 +352,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                 for step_index, concept in enumerate(concepts_group, start=1):
                     role = (concept.get("role") or "").strip()
                     logic_structured = concept.get("logic_structured") or {}
-                    context_value = _extract_decision_context(concept)
+                    context_value = _extract_concept_context(concept)
                     concept_fields = _extract_concept_fields(concept)
                     snomed_id = concept.get("snomed_id")
                     target_label = concept.get("target_label") or "Concept"
@@ -455,7 +455,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
             for step_index, concept in enumerate(concepts_group, start=1):
                 role = (concept.get("role") or "").strip()
                 logic_structured = concept.get("logic_structured") or {}
-                context_value = _extract_decision_context(concept)
+                context_value = _extract_concept_context(concept)
                 concept_fields = _extract_concept_fields(concept)
                 snomed_id = concept.get("snomed_id")
                 target_label = concept.get("target_label") or "Concept"
@@ -575,8 +575,11 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                     decision_id=prev_id,
                 )
 
-        for concept in action_concepts:
+        for action_order, concept in enumerate(action_concepts, start=1):
             logic_structured = concept.get("logic_structured") or {}
+            action_context = _extract_concept_context(concept)
+            logic_type = (logic_structured.get("logic_type") or "NULL").upper()
+            logic_group = logic_structured.get("logic_group") or f"action_{logic_type}"
             concept_fields = _extract_concept_fields(concept)
             snomed_id = concept.get("snomed_id")
             target_label = concept.get("target_label") or "Concept"
@@ -596,12 +599,23 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         a.name = coalesce(a.name, $entity)
                     MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
                     MERGE (rec)-[r:{relation}]->(a)
+                    SET r.context = CASE
+                            WHEN coalesce(r.context, '') = '' THEN $action_context
+                            ELSE r.context
+                        END,
+                        r.logic_type = coalesce(r.logic_type, $logic_type),
+                        r.logic_group = coalesce(r.logic_group, $logic_group),
+                        r.action_order = coalesce(r.action_order, $action_order)
                     """,
                     snomed_id=str(snomed_id),
                     entity=concept_name,
                     entity_original=entity_original,
                     entity_standardized_candidate=entity_standardized_candidate,
                     rule_key=str(rule_key),
+                    action_context=action_context,
+                    logic_type=logic_type,
+                    logic_group=logic_group,
+                    action_order=action_order,
                 )
             else:
                 session.run(
@@ -612,6 +626,13 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         u.entity_standardized_candidate = $entity_standardized_candidate
                     MERGE (rec:RecommendationNode {{rule_unique_id: $rule_key}})
                     MERGE (rec)-[r:{relation}]->(u)
+                    SET r.context = CASE
+                            WHEN coalesce(r.context, '') = '' THEN $action_context
+                            ELSE r.context
+                        END,
+                        r.logic_type = coalesce(r.logic_type, $logic_type),
+                        r.logic_group = coalesce(r.logic_group, $logic_group),
+                        r.action_order = coalesce(r.action_order, $action_order)
                     """,
                     name=concept_name,
                     target_label=target_label,
@@ -619,6 +640,10 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                     entity_original=entity_original,
                     entity_standardized_candidate=entity_standardized_candidate,
                     rule_key=str(rule_key),
+                    action_context=action_context,
+                    logic_type=logic_type,
+                    logic_group=logic_group,
+                    action_order=action_order,
                 )
 
 
