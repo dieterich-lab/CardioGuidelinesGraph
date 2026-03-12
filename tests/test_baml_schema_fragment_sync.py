@@ -55,7 +55,7 @@ class TestBamlSchemaFragmentSync(unittest.TestCase):
         current = BAML_PATH.read_text(encoding="utf-8")
         required_manual_lines = [
             "Core requirement: NEVER mix conditions and actions in the same list.",
-            "If [FOCUS: MAIN], each rule must include at least one action.",
+            "If [FOCUS: MAIN], each rule must include at least one condition AND at least one action.",
             "If [FOCUS: POPULATION], actions MUST be an empty array and output only eligibility/population conditions.",
             'For class strength, always output "Class I", "Class IIa", "Class IIb", or "Class III".',
         ]
