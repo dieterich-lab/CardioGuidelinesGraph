@@ -17,8 +17,7 @@ import click
 import yaml
 from neo4j import GraphDatabase
 
-from cardio_graph_core.neo4j.feedneo4jdb import AUTH as DEFAULT_AUTH
-from cardio_graph_core.neo4j.feedneo4jdb import URI as DEFAULT_URI
+from cardio_graph_core.neo4j.feedneo4jdb import DEFAULT_URI, DEFAULT_USER
 from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
@@ -701,13 +700,13 @@ def _recommendation_relation(
 )
 @click.option(
     "--user",
-    default=DEFAULT_AUTH[0],
+    default=DEFAULT_USER,
     show_default=True,
     help="Neo4j username",
 )
 @click.option(
     "--password",
-    default=DEFAULT_AUTH[1],
+    default="",
     show_default=False,
     help="Neo4j password",
 )
