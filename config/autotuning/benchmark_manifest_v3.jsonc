@@ -1,0 +1,88 @@
+{
+  "version": "v3",
+  "notes": "Few-shot leakage-safe split. Rows used as few-shot exemplars are excluded from both dev and locked_test.",
+  "fewshot_excluded_rows": {
+    "table17": [
+      "t0_row_01"
+    ],
+    "table8": [
+      "row_01"
+    ]
+  },
+  "benchmarks": [
+    {
+      "name": "table22",
+      "ground_truth_path": "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json",
+      "table_clean_path": "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_clean_headers.json",
+      "table_ids": "0",
+      "dev_rows": [
+        "row_02",
+        "row_03",
+        "row_04",
+        "row_05",
+        "row_06",
+        "row_09",
+        "row_10",
+        "row_11",
+        "row_12",
+        "row_13",
+        "row_14",
+        "row_15",
+        "row_17"
+      ],
+      "locked_test_rows": [
+        "row_01",
+        "row_07",
+        "row_08",
+        "row_16",
+        "row_18",
+        "row_19"
+      ]
+    },
+    {
+      "name": "table17",
+      "ground_truth_path": "/prj/doctoral_letters/guide/data/evaluation/table_17_manual_1.3.json",
+      "table_clean_path": "/prj/doctoral_letters/guide/data/evaluation/table_17_manual_clean.json",
+      "table_ids": "0,1",
+      "dev_rows": [
+        "t0_row_03",
+        "t0_row_05",
+        "t1_row_01",
+        "t1_row_03",
+        "t1_row_05",
+        "t1_row_07",
+        "t1_row_09",
+        "t1_row_11",
+        "t1_row_13",
+        "t1_row_15",
+        "t1_row_17"
+      ],
+      "locked_test_rows": [
+        "t0_row_02",
+        "t0_row_04",
+        "t0_row_06",
+        "t1_row_02",
+        "t1_row_04",
+        "t1_row_06",
+        "t1_row_08",
+        "t1_row_10",
+        "t1_row_12",
+        "t1_row_14",
+        "t1_row_16"
+      ]
+    },
+    {
+      "name": "table8",
+      "ground_truth_path": "/prj/doctoral_letters/guide/data/evaluation/table_8_manual_1.3.json",
+      "table_clean_path": "/prj/doctoral_letters/guide/data/evaluation/table_8_manual_clean.json",
+      "table_ids": "0",
+      "dev_rows": [
+        "row_03"
+      ],
+      "locked_test_rows": [
+        "row_02",
+        "row_04"
+      ]
+    }
+  ]
+}

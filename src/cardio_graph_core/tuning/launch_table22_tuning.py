@@ -69,7 +69,7 @@ def _submit(
         ),
         "CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST": os.environ.get(
             "CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST",
-            str(PROJECT_ROOT / "config" / "table22" / "benchmark_manifest_v1.jsonc"),
+            str(PROJECT_ROOT / "config" / "autotuning" / "benchmark_manifest_v1.jsonc"),
         ),
         "CARDIO_GRAPH_TABLE22_USE_SNAPSHOT": "false",
     }
@@ -91,7 +91,7 @@ def _submit(
         f"--iterations {iterations} "
         f"--candidates-per-iter {candidates_per_iter} "
         "--run-locked-every 9999 "
-        "--split-manifest config/table22/split_v1.json "
+        "--split-manifest config/autotuning/split_v1.json "
         f"--output-dir {shlex.quote(str(out_root))} "
         f"--model {shlex.quote(model)} "
         f"--node {shlex.quote(node)} "

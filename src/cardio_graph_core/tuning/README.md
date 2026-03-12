@@ -12,8 +12,8 @@ poetry run python -m cardio_graph_core.tuning.launch_table22_tuning
 Default behavior:
 
 - Runs `cardio_graph_core.tuning.controller` in live mode (`--dry-run=false`)
-- Uses `config/table22/split_v1.json` for row split control
-- Uses benchmark manifest: `config/table22/benchmark_manifest_v1.jsonc`
+- Uses `config/autotuning/split_v1.json` for row split control
+- Uses benchmark manifest: `config/autotuning/benchmark_manifest_v1.jsonc`
 - Uses multi-table eval wrapper: `cardio_graph_core.tuning.table_multi_dev_eval`
 - Uses live extraction+grounding (`g5:11435` by default)
 - Disables snapshot mode (`CARDIO_GRAPH_TABLE22_USE_SNAPSHOT=false`)
@@ -30,7 +30,7 @@ Optional semantic LLM matching (for phrase-equivalent variants beyond hardcoded 
 
 ## Benchmark manifest
 
-`config/table22/benchmark_manifest_v1.jsonc` contains one entry per table with:
+`config/autotuning/benchmark_manifest_v1.jsonc` contains one entry per table with:
 
 - `ground_truth_path`
 - `table_clean_path`
