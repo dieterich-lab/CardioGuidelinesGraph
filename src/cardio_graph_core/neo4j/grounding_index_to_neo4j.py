@@ -229,6 +229,21 @@ def _extract_concept_fields(concept: Dict[str, Any]) -> Dict[str, Optional[str]]
     }
 
 
+def _extract_decision_context(concept: Dict[str, Any]) -> Optional[str]:
+    logic_structured = concept.get("logic_structured") or {}
+    for candidate in (
+        logic_structured.get("context"),
+        concept.get("source_context"),
+        concept.get("chunk_id"),
+    ):
+        if candidate is None:
+            continue
+        value = str(candidate).strip()
+        if value:
+            return value
+    return None
+
+
 def _infer_year(source_text: Optional[str]) -> Optional[int]:
     if not source_text:
         return None
@@ -337,6 +352,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                 for step_index, concept in enumerate(concepts_group, start=1):
                     role = (concept.get("role") or "").strip()
                     logic_structured = concept.get("logic_structured") or {}
+                    context_value = _extract_decision_context(concept)
                     concept_fields = _extract_concept_fields(concept)
                     snomed_id = concept.get("snomed_id")
                     target_label = concept.get("target_label") or "Concept"
@@ -377,7 +393,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             operator=logic_structured.get("operator"),
                             threshold=logic_structured.get("threshold"),
                             unit=logic_structured.get("unit"),
-                            context=logic_structured.get("context"),
+                            context=context_value,
                             entity=concept_name,
                             entity_original=entity_original,
                             entity_standardized_candidate=entity_standardized_candidate,
@@ -413,7 +429,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                             operator=logic_structured.get("operator"),
                             threshold=logic_structured.get("threshold"),
                             unit=logic_structured.get("unit"),
-                            context=logic_structured.get("context"),
+                            context=context_value,
                             logic_type=logic_type,
                         )
 
@@ -439,6 +455,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
             for step_index, concept in enumerate(concepts_group, start=1):
                 role = (concept.get("role") or "").strip()
                 logic_structured = concept.get("logic_structured") or {}
+                context_value = _extract_decision_context(concept)
                 concept_fields = _extract_concept_fields(concept)
                 snomed_id = concept.get("snomed_id")
                 target_label = concept.get("target_label") or "Concept"
@@ -477,7 +494,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         operator=logic_structured.get("operator"),
                         threshold=logic_structured.get("threshold"),
                         unit=logic_structured.get("unit"),
-                        context=logic_structured.get("context"),
+                        context=context_value,
                         entity=concept_name,
                         entity_original=entity_original,
                         entity_standardized_candidate=entity_standardized_candidate,
@@ -513,7 +530,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
                         operator=logic_structured.get("operator"),
                         threshold=logic_structured.get("threshold"),
                         unit=logic_structured.get("unit"),
-                        context=logic_structured.get("context"),
+                        context=context_value,
                         logic_type=logic_type,
                     )
 
