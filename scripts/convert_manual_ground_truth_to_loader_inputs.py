@@ -100,6 +100,13 @@ def convert_manual_payloads(
                         target_label = role_to_label.get(role, "Concept")
 
                         logic_structured = dict(concept.get("logic_structured") or {})
+                        concept_context = (
+                            concept.get("context")
+                            or logic_structured.get("context")
+                            or None
+                        )
+                        if isinstance(concept_context, str):
+                            concept_context = concept_context.strip() or None
                         entity_original = (
                             concept.get("entity_original")
                             or concept.get("entity_standardized_candidate")
@@ -119,6 +126,7 @@ def convert_manual_payloads(
                                     "role": role,
                                     "logic": side_name,
                                     "logic_structured": logic_structured,
+                                    "concept_context": concept_context,
                                     "snomed_id": snomed_id or None,
                                     "target_label": target_label,
                                 }
