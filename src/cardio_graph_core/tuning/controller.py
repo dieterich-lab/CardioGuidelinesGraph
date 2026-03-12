@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import random
 import re
 import shutil
@@ -264,7 +265,7 @@ def _run_evaluation(
 @click.option(
     "--split-manifest",
     type=click.Path(path_type=Path),
-    default=Path("config/table22/split_v1.json"),
+    default=Path("config/autotuning/split_v1.json"),
     show_default=True,
 )
 @click.option("--iterations", type=int, default=5, show_default=True)
@@ -315,7 +316,7 @@ def _run_evaluation(
 @click.option(
     "--benchmark-manifest",
     type=click.Path(path_type=Path),
-    default=Path("config/table22/benchmark_manifest_v1.jsonc"),
+    default=Path("config/autotuning/benchmark_manifest_v1.jsonc"),
     show_default=True,
 )
 @click.option(
@@ -370,7 +371,11 @@ def main(
             resolved_benchmark_manifest = str(candidate_manifest)
 
     rng = random.Random(seed)
-    thresholds = GateThresholds()
+    thresholds = GateThresholds(
+        min_locked_test_operator_gain=float(
+            os.environ.get("CARDIO_GRAPH_TUNING_MIN_LOCKED_OPERATOR_GAIN", "0.0")
+        )
+    )
 
     model_lower = model.lower()
     effective_llm2_model = llm2_model or model

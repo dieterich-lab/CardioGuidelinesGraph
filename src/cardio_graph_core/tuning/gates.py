@@ -11,6 +11,7 @@ class GateThresholds:
     min_rule_exact_gain: float = 0.005
     max_secondary_drop: float = 0.01
     max_locked_test_drop: float = 0.01
+    min_locked_test_operator_gain: float = 0.0
     bootstrap_rule_exact_floor: float = 0.05
     bootstrap_min_concept_f1_gain: float = 0.03
     bootstrap_max_operator_drop: float = 0.005
@@ -105,6 +106,12 @@ def evaluate_locked_test_gate(
         reasons.append(
             "locked-test rule_exact_match regression exceeded threshold "
             f"({deltas['rule_exact_match']:.4f} < {-thresholds.max_locked_test_drop:.4f})"
+        )
+
+    if deltas["operator_accuracy"] < thresholds.min_locked_test_operator_gain:
+        reasons.append(
+            "locked-test operator_accuracy did not meet minimum gain "
+            f"({deltas['operator_accuracy']:.4f} < {thresholds.min_locked_test_operator_gain:.4f})"
         )
 
     return GateDecision(accepted=not reasons, reasons=reasons, deltas=deltas)
