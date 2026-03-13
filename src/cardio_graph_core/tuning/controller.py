@@ -52,6 +52,34 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def _write_run_summary(
+    run_root: Path,
+    run_tag: str,
+    manifest: SplitManifest,
+    iterations: int,
+    iterations_executed: int,
+    accepted_promotions: int,
+    champion_prompt: str,
+    champion_dev: Metrics,
+    champion_test: Metrics,
+    dry_run: bool,
+    config_payload: Dict[str, object],
+) -> None:
+    payload = {
+        "run_tag": run_tag,
+        "split_version": manifest.split_version,
+        "iterations": iterations,
+        "iterations_executed": iterations_executed,
+        "accepted_promotions": accepted_promotions,
+        "final_prompt": champion_prompt,
+        "final_dev_metrics": champion_dev.to_dict(),
+        "final_locked_test_metrics": champion_test.to_dict(),
+        "dry_run": dry_run,
+        "config": config_payload,
+    }
+    _write_json(run_root / "run_summary.json", payload)
+
+
 def _simulate_error_rows(row_ids: List[str], rng: random.Random) -> List[RowErrors]:
     candidate_classes = [
         "B1_missing_concept",
@@ -428,6 +456,41 @@ def main(
         f"dev_rows={manifest.dev_rows} locked_test_rows={manifest.locked_test_rows}"
     )
     click.echo(f"[autotune] run_root={run_root}")
+
+    summary_config_payload = {
+        "model": model,
+        "node": node,
+        "port": port,
+        "graph_dir": graph_dir,
+        "ground_truth_path": ground_truth_path,
+        "rules_path": rules_path,
+        "table_ids": table_ids,
+        "entry_match_threshold": entry_match_threshold,
+        "skip_rows": skip_rows,
+        "live_llm": live_llm,
+        "use_snapshot": use_snapshot,
+        "llm2_model": llm2_model or model,
+        "llm3_model": llm3_model or model,
+        "eval_command": eval_command,
+        "benchmark_manifest": resolved_benchmark_manifest,
+        "ground_after_extraction": ground_after_extraction,
+        "candidates_per_iter": candidates_per_iter,
+        "early_stop_patience": early_stop_patience,
+        "ucb_exploration": ucb_exploration,
+    }
+    _write_run_summary(
+        run_root=run_root,
+        run_tag=run_tag,
+        manifest=manifest,
+        iterations=iterations,
+        iterations_executed=0,
+        accepted_promotions=accepted_promotions,
+        champion_prompt=champion_prompt,
+        champion_dev=champion_dev,
+        champion_test=champion_test,
+        dry_run=dry_run,
+        config_payload=summary_config_payload,
+    )
 
     for iteration in range(1, iterations + 1):
         iterations_executed = iteration
@@ -833,6 +896,19 @@ def main(
             "dev_metrics": champion_dev.to_dict(),
         }
         _write_json(iteration_dir / "iteration_summary.json", summary_payload)
+        _write_run_summary(
+            run_root=run_root,
+            run_tag=run_tag,
+            manifest=manifest,
+            iterations=iterations,
+            iterations_executed=iterations_executed,
+            accepted_promotions=accepted_promotions,
+            champion_prompt=champion_prompt,
+            champion_dev=champion_dev,
+            champion_test=champion_test,
+            dry_run=dry_run,
+            config_payload=summary_config_payload,
+        )
         click.echo(
             "[autotune] iteration_done "
             f"iteration={iteration} promotion_reason={promotion_reason} "
@@ -850,39 +926,19 @@ def main(
             )
             break
 
-    final_summary = {
-        "run_tag": run_tag,
-        "split_version": manifest.split_version,
-        "iterations": iterations,
-        "iterations_executed": iterations_executed,
-        "accepted_promotions": accepted_promotions,
-        "final_prompt": champion_prompt,
-        "final_dev_metrics": champion_dev.to_dict(),
-        "final_locked_test_metrics": champion_test.to_dict(),
-        "dry_run": dry_run,
-        "config": {
-            "model": model,
-            "node": node,
-            "port": port,
-            "graph_dir": graph_dir,
-            "ground_truth_path": ground_truth_path,
-            "rules_path": rules_path,
-            "table_ids": table_ids,
-            "entry_match_threshold": entry_match_threshold,
-            "skip_rows": skip_rows,
-            "live_llm": live_llm,
-            "use_snapshot": use_snapshot,
-            "llm2_model": llm2_model or model,
-            "llm3_model": llm3_model or model,
-            "eval_command": eval_command,
-            "benchmark_manifest": resolved_benchmark_manifest,
-            "ground_after_extraction": ground_after_extraction,
-            "candidates_per_iter": candidates_per_iter,
-            "early_stop_patience": early_stop_patience,
-            "ucb_exploration": ucb_exploration,
-        },
-    }
-    _write_json(run_root / "run_summary.json", final_summary)
+    _write_run_summary(
+        run_root=run_root,
+        run_tag=run_tag,
+        manifest=manifest,
+        iterations=iterations,
+        iterations_executed=iterations_executed,
+        accepted_promotions=accepted_promotions,
+        champion_prompt=champion_prompt,
+        champion_dev=champion_dev,
+        champion_test=champion_test,
+        dry_run=dry_run,
+        config_payload=summary_config_payload,
+    )
     mode = "dryrun" if dry_run else "live"
     run_success = accepted_promotions > 0
     click.echo(
