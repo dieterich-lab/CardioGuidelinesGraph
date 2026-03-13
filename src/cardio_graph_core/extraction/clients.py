@@ -30,6 +30,8 @@ ollama_models = {
     "Qwen17b": "qwen3:1.7b",
     "Qwen3next": "qwen3-next:latest",
     "Qwen3embed": "qwen3-embedding",
+    "GLM": "glm-4.7-flash",
+    "GLMQ8": "glm-4.7-flash:q8_0",
 }
 
 # OpenAI models

@@ -68,10 +68,7 @@ class Neo4jVectorCandidateRetriever:
         query = """
         CALL db.index.vector.queryNodes($index_name, $k, $embedding)
         YIELD node, score
-        RETURN
-            coalesce(node.concept_id, node.snomed_id, node.conceptId, node.id) AS conceptid,
-            coalesce(node.term, node.preferred_term, node.name, node.label) AS term,
-            score
+        RETURN node, score
         """
 
         with self.driver.session() as session:
@@ -84,17 +81,36 @@ class Neo4jVectorCandidateRetriever:
 
             out: List[Dict[str, Any]] = []
             for row in rows:
-                concept_id = row.get("conceptid")
+                node = row.get("node") or {}
+                concept_id = None
+                for concept_key in ("concept_id", "snomed_id", "conceptId", "id"):
+                    try:
+                        concept_id = node.get(concept_key)
+                    except Exception:
+                        concept_id = None
+                    if concept_id is not None:
+                        break
                 if concept_id is None:
                     continue
                 try:
                     concept_id = int(concept_id)
                 except (TypeError, ValueError):
                     continue
+
+                term_value = ""
+                for term_key in ("term", "preferred_term", "name", "label"):
+                    try:
+                        candidate = node.get(term_key)
+                    except Exception:
+                        candidate = None
+                    if candidate:
+                        term_value = str(candidate)
+                        break
+
                 out.append(
                     {
                         "conceptid": concept_id,
-                        "term": row.get("term") or "",
+                        "term": term_value,
                         "vector_score": float(row.get("score") or 0.0),
                     }
                 )

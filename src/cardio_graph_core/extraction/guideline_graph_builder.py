@@ -150,6 +150,42 @@ STUDY_SOURCE_PATTERNS = [
     r"\bguideline source\b",
 ]
 
+FEWSHOT_EXAMPLES_TABLE17_TABLE8_V1 = """
+[FEWSHOT_EXAMPLES]
+Purpose: Demonstrate robust left/right rule structure, junction handling, and concise clinical concept representation.
+
+Example 1 (Table17-style, cohort + OR junction + single action):
+Input sentence:
+"In chronic coronary syndrome patients with prior myocardial infarction or remote percutaneous coronary intervention, aspirin 75-100 mg daily is recommended lifelong."
+
+Expected structure (pattern-level):
+- conditions:
+    - role: ClinicalCondition, entity: chronic coronary syndrome, operator: PRESENT, logic_type: AND, logic_group: and_1
+    - role: ClinicalCondition, entity: prior myocardial infarction, operator: PRESENT, logic_type: OR, logic_group: or_1
+    - role: Procedure, entity: percutaneous coronary intervention, context: remote, operator: PRESENT, logic_type: OR, logic_group: or_1
+- actions:
+    - role: Medication, entity: aspirin, context: 75-100 mg daily lifelong, strength: Class I, level: A, direction: POSITIVE
+
+Example 2 (Table8-style, OR+AND cohort + dual action):
+Input sentence:
+"In patients with chronic coronary disease or symptomatic peripheral arterial disease at high ischaemic risk, rivaroxaban 2.5 mg twice daily plus aspirin 100 mg once daily should be used."
+
+Expected structure (pattern-level):
+- conditions:
+    - role: ClinicalCondition, entity: chronic coronary disease, operator: PRESENT, logic_type: OR, logic_group: or_1
+    - role: ClinicalCondition, entity: symptomatic peripheral arterial disease, operator: PRESENT, logic_type: OR, logic_group: or_1
+    - role: ClinicalCondition, entity: high ischaemic risk, operator: PRESENT, logic_type: AND, logic_group: and_1
+- actions:
+    - role: Medication, entity: rivaroxaban, context: 2.5 mg twice daily, direction: POSITIVE
+    - role: Medication, entity: aspirin, context: 100 mg once daily, direction: POSITIVE
+
+Hard constraints illustrated by both examples:
+- MAIN focus must contain at least one condition and one action.
+- Do not output action-only rules.
+- Keep eligibility/cohort phrase on the left side; keep intervention on the right side.
+[/FEWSHOT_EXAMPLES]
+""".strip()
+
 
 @dataclass
 class ExtractedConcept:
@@ -1372,8 +1408,30 @@ class GuidelineGraphBuilder:
             except Exception:
                 appendix_file = ""
         if appendix_inline and appendix_file:
-            return appendix_file + "\n" + appendix_inline
-        return appendix_file or appendix_inline
+            appendix = appendix_file + "\n" + appendix_inline
+        else:
+            appendix = appendix_file or appendix_inline
+
+        enable_fewshot = os.environ.get(
+            "CARDIO_GRAPH_ENABLE_FEWSHOT_EXAMPLES", "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        if not enable_fewshot:
+            return appendix
+
+        fewshot_set = (
+            os.environ.get("CARDIO_GRAPH_FEWSHOT_EXAMPLE_SET", "table17_table8_v1")
+            .strip()
+            .lower()
+        )
+        fewshot_appendix = ""
+        if fewshot_set == "table17_table8_v1":
+            fewshot_appendix = FEWSHOT_EXAMPLES_TABLE17_TABLE8_V1
+
+        if not fewshot_appendix:
+            return appendix
+        if appendix:
+            return fewshot_appendix + "\n" + appendix
+        return fewshot_appendix
 
     def extract_concepts(
         self,

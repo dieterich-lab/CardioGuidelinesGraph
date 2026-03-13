@@ -86,7 +86,7 @@ def main() -> int:
     manifest_path = Path(
         os.environ.get(
             "CARDIO_GRAPH_TUNING_BENCHMARK_MANIFEST",
-            PROJECT_ROOT / "config" / "table22" / "benchmark_manifest_v1.jsonc",
+            PROJECT_ROOT / "config" / "autotuning" / "benchmark_manifest_v1.jsonc",
         )
     )
 
