@@ -108,9 +108,9 @@ def _evaluate(
         for role in sorted(role_total)
     }
 
-    if builder.vector_retriever:
+    if builder.vector_retriever and hasattr(builder.vector_retriever, "close"):
         builder.vector_retriever.close()
-    if builder.snomed_explorer:
+    if builder.snomed_explorer and hasattr(builder.snomed_explorer, "close"):
         builder.snomed_explorer.close()
 
     return {
