@@ -394,8 +394,21 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_TOP_K", "40") or "40"
         )
         self.vector_rerank_weight = float(
-            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RERANK_WEIGHT", "0.25")
-            or "0.25"
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RERANK_WEIGHT", "0.10")
+            or "0.10"
+        )
+        self.vector_min_lexical_for_bonus = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_MIN_LEXICAL_FOR_BONUS", "0.70"
+            )
+            or "0.70"
+        )
+        self.vector_bonus_cap = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_BONUS_CAP", "0.12") or "0.12"
+        )
+        self.vector_tie_epsilon = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_TIE_EPSILON", "0.002")
+            or "0.002"
         )
         self.vector_retriever: Optional[Neo4jVectorCandidateRetriever] = None
         if self.enable_vector_grounding:
@@ -853,6 +866,38 @@ class GuidelineGraphBuilder:
             return 0.0
         return len(tokens & term_tokens) / max(len(tokens), 1)
 
+    def _specificity_penalty(self, query_tokens: set, candidate_tokens: set) -> float:
+        if not query_tokens or not candidate_tokens:
+            return 0.0
+
+        penalty = 0.0
+        contradictions = (
+            ("multi", "single"),
+            ("single", "multi"),
+            ("triple", "single"),
+            ("left", "right"),
+            ("right", "left"),
+            ("proximal", "distal"),
+            ("distal", "proximal"),
+        )
+        for expected, conflicting in contradictions:
+            if expected in query_tokens and conflicting in candidate_tokens:
+                penalty += 0.08
+
+        has_coronary_artery_query = {"coronary", "artery"}.issubset(query_tokens)
+        has_bypass_graft_candidate = (
+            "bypass" in candidate_tokens or "graft" in candidate_tokens
+        )
+        if (
+            has_coronary_artery_query
+            and "bypass" not in query_tokens
+            and "graft" not in query_tokens
+            and has_bypass_graft_candidate
+        ):
+            penalty += 0.10
+
+        return min(0.25, penalty)
+
     def _is_noise_phrase(self, text: str) -> bool:
         if not text:
             return True
@@ -1050,6 +1095,13 @@ class GuidelineGraphBuilder:
             vector_search_terms = [term]
             if stripped_term and stripped_term != term:
                 vector_search_terms.append(stripped_term)
+            compact_tokens = important_tokens[:MAX_QUERY_TOKENS]
+            if compact_tokens:
+                vector_search_terms.append(" ".join(compact_tokens))
+            if len(important_tokens) > MAX_QUERY_TOKENS:
+                vector_search_terms.append(
+                    " ".join(important_tokens[-MAX_QUERY_TOKENS:])
+                )
             for vt in vector_search_terms:
                 retrieved, score_map = self._vector_candidates(vt)
                 vector_results.extend(retrieved)
@@ -1118,7 +1170,9 @@ class GuidelineGraphBuilder:
         def score_candidates(concept_items_to_score, role_filter):
             local_best_id = None
             local_best_term = None
-            local_best_score = 0.0
+            local_best_score = -1.0
+            local_best_lexical = -1.0
+            local_best_overlap = -1.0
             for concept_id, terms in concept_items_to_score:
                 if role_filter and not self._candidate_matches_role(
                     concept_id, role_filter
@@ -1140,6 +1194,7 @@ class GuidelineGraphBuilder:
                 best_candidate_term = None
                 for candidate in candidates:
                     candidate_norm = self._normalize(candidate)
+                    candidate_tokens = set(self._important_tokens(candidate))
                     candidate_score = max(
                         (self._score(q, candidate) for q in query_terms if q),
                         default=0.0,
@@ -1160,6 +1215,11 @@ class GuidelineGraphBuilder:
                         candidate_score = min(
                             1.0, candidate_score + overlap_ratio * 0.1
                         )
+                    penalty = self._specificity_penalty(
+                        important_query_tokens, candidate_tokens
+                    )
+                    if penalty:
+                        candidate_score = max(0.0, candidate_score - penalty)
                     if candidate_score > score:
                         score = candidate_score
                         best_candidate_term = candidate
@@ -1171,12 +1231,28 @@ class GuidelineGraphBuilder:
                     if preferred_overlap < 0.5:
                         continue
 
-                if score > local_best_score:
-                    vector_bonus = (
-                        vector_score_by_concept.get(int(concept_id), 0.0)
-                        * self.vector_rerank_weight
+                vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
+                vector_bonus = 0.0
+                if score >= self.vector_min_lexical_for_bonus:
+                    vector_bonus = min(
+                        self.vector_bonus_cap,
+                        vector_raw * self.vector_rerank_weight,
                     )
-                    local_best_score = min(1.0, score + vector_bonus)
+                final_score = min(1.0, score + vector_bonus)
+
+                better_final = final_score > (
+                    local_best_score + self.vector_tie_epsilon
+                )
+                tied_final = (
+                    abs(final_score - local_best_score) <= self.vector_tie_epsilon
+                )
+                better_lexical = score > local_best_lexical
+                better_overlap = preferred_overlap > local_best_overlap
+
+                if better_final or (tied_final and (better_lexical or better_overlap)):
+                    local_best_score = final_score
+                    local_best_lexical = score
+                    local_best_overlap = preferred_overlap
                     local_best_id = concept_id
                     local_best_term = preferred or best_candidate_term
             return local_best_id, local_best_term, local_best_score
