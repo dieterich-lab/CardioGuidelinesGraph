@@ -292,7 +292,7 @@ def render_baml_type_contract_block(schema: Dict) -> str:
         "class RuleConditionV2 {\n"
         "  entity_original string\n"
         "  entity_standardized_candidate string\n"
-        '  role string @description("ClinicalCondition, ClinicalParameter, Procedure")\n'
+        '  role string @description("ClinicalCondition, ClinicalParameter, Procedure, Qualifier Value")\n'
         "  logic RuleLogicV2\n"
         "}\n"
         "\n"

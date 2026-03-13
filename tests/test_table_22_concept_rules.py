@@ -290,7 +290,12 @@ def _build_entry_with_side(entity, entity_original, role, logic, side):
 def _infer_side(role, logic):
     role_name = _normalize_role(role)
     logic = logic or {}
-    if role_name in {"ClinicalCondition", "ClinicalParameter", "Condition"}:
+    if role_name in {
+        "ClinicalCondition",
+        "ClinicalParameter",
+        "Qualifier Value",
+        "Condition",
+    }:
         return "condition"
     if role_name in {"Procedure", "Medication", "ClinicalAction"}:
         logic_type = _normalize_text(logic.get("logic_type"))
@@ -393,7 +398,7 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
             side = "action"
         else:
             role = getattr(concept, "role", None)
-            if role in {"ClinicalCondition", "ClinicalParameter"}:
+            if role in {"ClinicalCondition", "ClinicalParameter", "Qualifier Value"}:
                 side = "condition"
             elif role in {"Procedure", "Medication"}:
                 side = "action"
@@ -429,7 +434,11 @@ def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False)
                 side = "action"
             else:
                 role = getattr(concept, "role", None)
-                if role in {"ClinicalCondition", "ClinicalParameter"}:
+                if role in {
+                    "ClinicalCondition",
+                    "ClinicalParameter",
+                    "Qualifier Value",
+                }:
                     side = "condition"
                 elif role in {"Procedure", "Medication"}:
                     side = "action"
@@ -896,7 +905,11 @@ def _build_mermaid(entries, title):
         side = (entry.get("_side") or "").strip().lower()
         if side:
             return side == "condition"
-        if entry.get("role") in {"ClinicalCondition", "ClinicalParameter"}:
+        if entry.get("role") in {
+            "ClinicalCondition",
+            "ClinicalParameter",
+            "Qualifier Value",
+        }:
             return True
         return bool(entry.get("logic_type") or entry.get("logic_group"))
 

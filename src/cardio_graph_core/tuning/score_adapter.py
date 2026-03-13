@@ -225,7 +225,12 @@ def _rule_fields_match(expected: Dict[str, Any], actual: Dict[str, Any]) -> bool
 
 def _entry_side(entry: Dict[str, Any]) -> str | None:
     role_name = str(entry.get("role") or "").strip()
-    if role_name in {"ClinicalCondition", "ClinicalParameter", "Condition"}:
+    if role_name in {
+        "ClinicalCondition",
+        "ClinicalParameter",
+        "Qualifier Value",
+        "Condition",
+    }:
         return "condition"
     if role_name in {"Procedure", "Medication", "ClinicalAction"}:
         logic_type = str(entry.get("logic_type") or "").strip()

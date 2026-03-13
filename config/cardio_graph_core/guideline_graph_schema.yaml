@@ -115,7 +115,7 @@ nodes:
       - name: "root_concept_term"
         type: "string"
 
-    - label: "Qualifier Value"
+  - label: "Qualifier Value"
     description: "Diagnostic or therapeutic procedures (e.g., PCI, ECG, Echo)."
     attributes:
       - name: "snomed_id"

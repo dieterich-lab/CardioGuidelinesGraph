@@ -34,6 +34,7 @@ REQUIRED_NODE_LABELS = {
     "Medication",
     "ClinicalParameter",
     "Procedure",
+    "Qualifier Value",
     "GuidelineSource",
     "DecisionNode",
     "RecommendationNode",
@@ -312,7 +313,7 @@ def _create_rule_nodes(session, grouped_rules: Dict[str, List[Dict[str, Any]]]) 
             side = (concept.get("logic") or "").strip().lower()
 
             is_condition = (
-                role in {"ClinicalCondition", "ClinicalParameter"}
+                role in {"ClinicalCondition", "ClinicalParameter", "Qualifier Value"}
                 or side == "condition"
             )
             is_action = role in {"Medication", "Procedure"} or side == "action"

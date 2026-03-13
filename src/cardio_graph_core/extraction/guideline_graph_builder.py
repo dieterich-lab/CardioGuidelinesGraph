@@ -92,7 +92,6 @@ STOPWORD_TOKENS = {
 DISALLOWED_SEMANTIC_TAGS = {
     "occupation",
     "ethnic group finding",
-    "qualifier value",
     "event",
 }
 ALLOWED_SEMANTIC_TAGS_BY_ROLE = {
@@ -100,12 +99,14 @@ ALLOWED_SEMANTIC_TAGS_BY_ROLE = {
     "ClinicalParameter": {"observable entity"},
     "Medication": {"substance", "product"},
     "Procedure": {"procedure"},
+    "Qualifier Value": {"qualifier value"},
 }
 ALLOWED_ROLES = {
     "ClinicalCondition",
     "ClinicalParameter",
     "Medication",
     "Procedure",
+    "Qualifier Value",
     "Other",
 }
 BLOCKED_ROLES = {
@@ -558,6 +559,7 @@ class GuidelineGraphBuilder:
             "clinicalparameter": "ClinicalParameter",
             "medication": "Medication",
             "procedure": "Procedure",
+            "qualifiervalue": "Qualifier Value",
             "other": "Other",
         }
         return normalized_map.get(text.replace(" ", "").lower())
@@ -593,7 +595,7 @@ class GuidelineGraphBuilder:
         if raw_logic in {"condition", "action"}:
             return raw_logic
         role = (getattr(concept, "role", None) or "").strip()
-        if role in {"ClinicalCondition", "ClinicalParameter"}:
+        if role in {"ClinicalCondition", "ClinicalParameter", "Qualifier Value"}:
             return "condition"
         if role in {"Medication", "Procedure"}:
             return "action"
@@ -674,7 +676,11 @@ class GuidelineGraphBuilder:
             return token
         if token.endswith("ies") and len(token) > 5:
             return token[:-3] + "y"
-        if token.endswith("es") and len(token) > 5:
+        if (
+            token.endswith("es")
+            and len(token) > 5
+            and token.endswith(("ches", "shes", "xes", "zes", "oes", "sses"))
+        ):
             return token[:-2]
         if token.endswith("s") and len(token) > 4:
             return token[:-1]
@@ -1511,6 +1517,7 @@ class GuidelineGraphBuilder:
                         "ClinicalCondition",
                         "ClinicalParameter",
                         "Procedure",
+                        "Qualifier Value",
                     }:
                         continue
                     logic_structured = _default_logic_structured()
@@ -1633,7 +1640,7 @@ class GuidelineGraphBuilder:
             role = (concept.role or "").strip()
             side = (concept.logic or "").strip().lower()
             return (
-                role in {"ClinicalCondition", "ClinicalParameter"}
+                role in {"ClinicalCondition", "ClinicalParameter", "Qualifier Value"}
                 or side == "condition"
             )
 

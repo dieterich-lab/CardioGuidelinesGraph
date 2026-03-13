@@ -66,6 +66,7 @@ class TestTable22V13ContractRoundtrip(unittest.TestCase):
             "ClinicalParameter",
             "Medication",
             "Procedure",
+            "Qualifier Value",
         }
 
         for rule in row["rules"]:
