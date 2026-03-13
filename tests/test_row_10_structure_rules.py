@@ -45,13 +45,13 @@ def _normalize(value):
 
 def _normalize_logic(logic, role=None):
     operator = logic.get("operator")
-    if operator is None and role in {"Condition", "ClinicalParameter"}:
+    if operator is None and role in {"ClinicalCondition", "ClinicalParameter"}:
         operator = "PRESENT"
     return {
         "operator": operator,
         "threshold": logic.get("threshold"),
         "unit": logic.get("unit"),
-        "condition_context": logic.get("condition_context"),
+        "context": logic.get("context"),
         "logic_type": logic.get("logic_type"),
         "logic_group": logic.get("logic_group"),
     }
@@ -69,13 +69,11 @@ def _normalize_action_logic(logic):
 
 
 def _summarize_rules(rules_rows):
-    grouped = {}
+    grouped = {1: {"conditions": [], "actions": []}}
     for row in rules_rows:
-        rule_id = row.get("rule_id") or 1
-        grouped.setdefault(rule_id, {"conditions": [], "actions": []})
         role = (row.get("role") or "").strip()
-        if role in {"Condition", "ClinicalParameter"}:
-            grouped[rule_id]["conditions"].append(
+        if role in {"ClinicalCondition", "ClinicalParameter"}:
+            grouped[1]["conditions"].append(
                 {
                     "entity_original": row.get("entity_original"),
                     "entity_standardized_candidate": _normalize(
@@ -89,7 +87,7 @@ def _summarize_rules(rules_rows):
                 }
             )
         elif role in {"Procedure", "Medication"}:
-            grouped[rule_id]["actions"].append(
+            grouped[1]["actions"].append(
                 {
                     "entity_original": row.get("entity_original"),
                     "entity_standardized_candidate": _normalize(
@@ -105,13 +103,11 @@ def _summarize_rules(rules_rows):
 
 
 def _summarize_human(human):
-    grouped = {}
+    grouped = {1: {"conditions": [], "actions": []}}
     for rule in human.get("rules", []):
-        rule_id = rule.get("rule_id") or 1
-        grouped.setdefault(rule_id, {"conditions": [], "actions": []})
         for condition in rule.get("conditions", []):
             role = condition.get("role")
-            grouped[rule_id]["conditions"].append(
+            grouped[1]["conditions"].append(
                 {
                     "entity_original": condition.get("entity_original"),
                     "entity_standardized_candidate": _normalize(
@@ -125,7 +121,7 @@ def _summarize_human(human):
                 }
             )
         for action in rule.get("actions", []):
-            grouped[rule_id]["actions"].append(
+            grouped[1]["actions"].append(
                 {
                     "entity_original": action.get("entity_original"),
                     "entity_standardized_candidate": _normalize(

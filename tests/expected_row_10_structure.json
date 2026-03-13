@@ -10,12 +10,12 @@
         {
           "entity_original": "CCS",
           "entity_standardized_candidate": "chronic coronary syndrome",
-          "role": "Condition",
+          "role": "ClinicalCondition",
           "logic_structured": {
             "operator": "PRESENT",
             "threshold": null,
             "unit": null,
-            "condition_context": null,
+            "context": null,
             "logic_type": "AND",
             "logic_group": "and_1"
           }
@@ -28,7 +28,7 @@
             "operator": ">",
             "threshold": "35",
             "unit": "%",
-            "condition_context": null,
+            "context": null,
             "logic_type": "AND",
             "logic_group": "and_1"
           }
@@ -36,12 +36,12 @@
         {
           "entity_original": "functionally significant three-vessel disease",
           "entity_standardized_candidate": "three-vessel coronary disease",
-          "role": "Condition",
+          "role": "ClinicalCondition",
           "logic_structured": {
             "operator": "PRESENT",
             "threshold": null,
             "unit": null,
-            "condition_context": "functionally significant",
+            "context": "functionally significant",
             "logic_type": "AND",
             "logic_group": "and_1"
           }

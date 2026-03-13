@@ -14,15 +14,21 @@ import os
 import re
 import sys
 import time
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from difflib import SequenceMatcher
-from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 import click
 import yaml
 
-from cardio_graph_core.extraction.clients import create_client_registry
+from cardio_graph_core.extraction.clients import create_client_registry, ip_dict
+from cardio_graph_core.extraction.vector_candidate_retriever import (
+    Neo4jVectorCandidateRetriever,
+    VectorRetrieverConfig,
+)
 from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -38,9 +44,17 @@ logger = logging.getLogger("GuidelineGraphBuilder")
 
 IS_A_TYPE_ID = 116680003
 DEFAULT_CONFIG_PATH = os.path.join(
-    os.path.dirname(__file__), "../snomedct/guideline_graph_schema.yaml"
+    Path(__file__).resolve().parents[3],
+    "config",
+    "cardio_graph_core",
+    "guideline_graph_schema.yaml",
 )
-DEFAULT_ABBRV_PATH = os.path.join(os.path.dirname(__file__), "../snomedct/abbrv.txt")
+DEFAULT_ABBRV_PATH = os.path.join(
+    Path(__file__).resolve().parents[3],
+    "config",
+    "cardio_graph_core",
+    "abbrv.txt",
+)
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
 DEFAULT_MIN_MATCH_SCORE = 0.6
@@ -82,13 +96,13 @@ DISALLOWED_SEMANTIC_TAGS = {
     "event",
 }
 ALLOWED_SEMANTIC_TAGS_BY_ROLE = {
-    "Condition": {"disorder", "finding"},
+    "ClinicalCondition": {"disorder", "finding"},
     "ClinicalParameter": {"observable entity"},
     "Medication": {"substance", "product"},
     "Procedure": {"procedure"},
 }
 ALLOWED_ROLES = {
-    "Condition",
+    "ClinicalCondition",
     "ClinicalParameter",
     "Medication",
     "Procedure",
@@ -136,10 +150,45 @@ STUDY_SOURCE_PATTERNS = [
     r"\bguideline source\b",
 ]
 
+FEWSHOT_EXAMPLES_TABLE17_TABLE8_V1 = """
+[FEWSHOT_EXAMPLES]
+Purpose: Demonstrate robust left/right rule structure, junction handling, and concise clinical concept representation.
+
+Example 1 (Table17-style, cohort + OR junction + single action):
+Input sentence:
+"In chronic coronary syndrome patients with prior myocardial infarction or remote percutaneous coronary intervention, aspirin 75-100 mg daily is recommended lifelong."
+
+Expected structure (pattern-level):
+- conditions:
+    - role: ClinicalCondition, entity: chronic coronary syndrome, operator: PRESENT, logic_type: AND, logic_group: and_1
+    - role: ClinicalCondition, entity: prior myocardial infarction, operator: PRESENT, logic_type: OR, logic_group: or_1
+    - role: Procedure, entity: percutaneous coronary intervention, context: remote, operator: PRESENT, logic_type: OR, logic_group: or_1
+- actions:
+    - role: Medication, entity: aspirin, context: 75-100 mg daily lifelong, strength: Class I, level: A, direction: POSITIVE
+
+Example 2 (Table8-style, OR+AND cohort + dual action):
+Input sentence:
+"In patients with chronic coronary disease or symptomatic peripheral arterial disease at high ischaemic risk, rivaroxaban 2.5 mg twice daily plus aspirin 100 mg once daily should be used."
+
+Expected structure (pattern-level):
+- conditions:
+    - role: ClinicalCondition, entity: chronic coronary disease, operator: PRESENT, logic_type: OR, logic_group: or_1
+    - role: ClinicalCondition, entity: symptomatic peripheral arterial disease, operator: PRESENT, logic_type: OR, logic_group: or_1
+    - role: ClinicalCondition, entity: high ischaemic risk, operator: PRESENT, logic_type: AND, logic_group: and_1
+- actions:
+    - role: Medication, entity: rivaroxaban, context: 2.5 mg twice daily, direction: POSITIVE
+    - role: Medication, entity: aspirin, context: 100 mg once daily, direction: POSITIVE
+
+Hard constraints illustrated by both examples:
+- MAIN focus must contain at least one condition and one action.
+- Do not output action-only rules.
+- Keep eligibility/cohort phrase on the left side; keep intervention on the right side.
+[/FEWSHOT_EXAMPLES]
+""".strip()
+
 
 @dataclass
 class ExtractedConcept:
-    rule_id: Optional[int]
     entity_original: str
     entity_standardized_candidate: str
     role: str
@@ -149,7 +198,6 @@ class ExtractedConcept:
 
 @dataclass
 class GroundedConcept:
-    rule_id: Optional[int]
     entity_original: str
     entity_standardized_candidate: str
     role: str
@@ -157,6 +205,7 @@ class GroundedConcept:
     logic_structured: Dict[str, str]
     snomed_id: Optional[int]
     preferred_term: Optional[str]
+    alt_names: List[str]
     score: float
     taxonomy_path: List[Dict[str, str]]
     target_label: Optional[str]
@@ -242,14 +291,77 @@ class GuidelineGraphBuilder:
         self.mapping_rules = self.config.get("snomed_mapping", {}).get(
             "mapping_rules", []
         )
+        nodes = self.config.get("nodes") or []
+
+        def _node_attr_names(label: str) -> set:
+            for node in nodes:
+                if (node.get("label") or "").strip() != label:
+                    continue
+                attrs = node.get("attributes") or []
+                return {
+                    (attr.get("name") or "").strip()
+                    for attr in attrs
+                    if (attr.get("name") or "").strip()
+                }
+            return set()
+
+        def _node_attr_allowed(label: str, attr_name: str) -> set:
+            for node in nodes:
+                if (node.get("label") or "").strip() != label:
+                    continue
+                attrs = node.get("attributes") or []
+                for attr in attrs:
+                    if (attr.get("name") or "").strip() != attr_name:
+                        continue
+                    allowed = attr.get("allowed") or []
+                    return {
+                        str(value).strip()
+                        for value in allowed
+                        if value is not None and str(value).strip()
+                    }
+            return set()
+
+        decision_attr_names = _node_attr_names("DecisionNode")
+        recommendation_attr_names = _node_attr_names("RecommendationNode")
+        extraction_logic_keys = {
+            "operator",
+            "threshold",
+            "unit",
+            "context",
+            "logic_type",
+            "logic_group",
+            "strength",
+            "level",
+            "direction",
+        }
+        profile_allowed_logic_keys = (
+            {"logic_group"} | decision_attr_names | recommendation_attr_names
+        )
+        derived_allowed_logic_keys = extraction_logic_keys & profile_allowed_logic_keys
+        self._allowed_logic_structured_keys = (
+            derived_allowed_logic_keys or extraction_logic_keys
+        )
+        self._allowed_operator_values = _node_attr_allowed("DecisionNode", "operator")
+        self._allowed_logic_type_values = _node_attr_allowed(
+            "DecisionNode", "logic_type"
+        )
+        self._allowed_direction_values = _node_attr_allowed(
+            "RecommendationNode", "direction"
+        )
+        self._allowed_strength_values = _node_attr_allowed(
+            "RecommendationNode", "strength"
+        )
+        self._allowed_level_values = _node_attr_allowed("RecommendationNode", "level")
         self.root_concepts = self._collect_root_concepts(self.mapping_rules)
 
         self.client_registry = create_client_registry(model, node, port)
 
-        self.snomed_explorer = SnomedExplorer()
-        self.snomed_explorer.connect()
+        # Establish SNOMED connectivity lazily so extraction-only flows can run
+        # without paying grounding setup cost.
+        self.snomed_explorer: Optional[SnomedExplorer] = None
 
         self._preferred_term_cache: Dict[int, str] = {}
+        self._alt_names_cache: Dict[int, List[str]] = {}
         self._taxonomy_path_cache: Dict[int, List[int]] = {}
         self._relationships_cache: Dict[int, List[Dict[str, Any]]] = {}
         self._search_cache: Dict[str, List[Dict[str, Any]]] = {}
@@ -274,6 +386,87 @@ class GuidelineGraphBuilder:
         self.enable_domain_filter = enable_domain_filter
         self.enable_semantic_tag_filter = enable_semantic_tag_filter
         self.off_domain_min_score = off_domain_min_score
+        self.enable_vector_grounding = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ENABLE_VECTOR", "false") or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.vector_top_k = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_TOP_K", "40") or "40"
+        )
+        self.vector_rerank_weight = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RERANK_WEIGHT", "0.25")
+            or "0.25"
+        )
+        self.vector_retriever: Optional[Neo4jVectorCandidateRetriever] = None
+        if self.enable_vector_grounding:
+            try:
+                embedding_node = (
+                    os.environ.get("CARDIO_GRAPH_GROUNDING_EMBEDDING_NODE", "g4")
+                    or "g4"
+                ).strip()
+                embedding_port = int(
+                    os.environ.get("CARDIO_GRAPH_GROUNDING_EMBEDDING_PORT", "11434")
+                    or "11434"
+                )
+                default_embedding_url = f"http://{ip_dict.get(embedding_node, embedding_node)}:{embedding_port}"
+                vector_config = VectorRetrieverConfig(
+                    uri=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_VECTOR_URI",
+                            "bolt://neo4j-dev3.internal:7687",
+                        )
+                        or "bolt://neo4j-dev3.internal:7687"
+                    ).strip(),
+                    user=(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_USER", "neo4j")
+                        or "neo4j"
+                    ).strip(),
+                    password=(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_PASSWORD", "")
+                        or ""
+                    ).strip(),
+                    index_name=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_VECTOR_INDEX",
+                            "snomed_term_embeddings",
+                        )
+                        or "snomed_term_embeddings"
+                    ).strip(),
+                    embedding_url=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_EMBEDDING_URL",
+                            default_embedding_url,
+                        )
+                        or default_embedding_url
+                    ).strip(),
+                    embedding_model=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_EMBEDDING_MODEL", "Qwen3embed"
+                        )
+                        or "Qwen3embed"
+                    ).strip(),
+                    top_k=self.vector_top_k,
+                    timeout_seconds=int(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_EMBEDDING_TIMEOUT", "20")
+                        or "20"
+                    ),
+                )
+                if vector_config.embedding_model:
+                    self.vector_retriever = Neo4jVectorCandidateRetriever(vector_config)
+                    logger.info(
+                        "Vector grounding enabled (index=%s, top_k=%d)",
+                        vector_config.index_name,
+                        self.vector_top_k,
+                    )
+                else:
+                    logger.warning(
+                        "Vector grounding enabled but no embedding model set; disabling vector retrieval"
+                    )
+                    self.enable_vector_grounding = False
+            except Exception as exc:
+                logger.warning(
+                    "Failed to initialize vector grounding retriever: %s", exc
+                )
+                self.enable_vector_grounding = False
 
     def _collect_root_concepts(self, mapping_rules: List[Dict]) -> List[int]:
         roots = []
@@ -285,8 +478,207 @@ class GuidelineGraphBuilder:
                     continue
         return list(sorted(set(roots)))
 
+    def _filter_logic_structured(
+        self, logic_structured: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        payload = dict(logic_structured or {})
+        if not self._allowed_logic_structured_keys:
+            return payload
+        filtered = {
+            key: value
+            for key, value in payload.items()
+            if key in self._allowed_logic_structured_keys
+        }
+
+        filtered["operator"] = self._normalize_enum_value(
+            filtered.get("operator"), self._allowed_operator_values
+        )
+        filtered["logic_type"] = self._normalize_enum_value(
+            filtered.get("logic_type"), self._allowed_logic_type_values
+        )
+        filtered["direction"] = self._normalize_enum_value(
+            filtered.get("direction"), self._allowed_direction_values
+        )
+        filtered["strength"] = self._normalize_strength_value(
+            filtered.get("strength"), self._allowed_strength_values
+        )
+        filtered["level"] = self._normalize_enum_value(
+            filtered.get("level"), self._allowed_level_values
+        )
+        return filtered
+
+    def _normalize_enum_value(self, value: Any, allowed_values: set) -> Optional[str]:
+        if not allowed_values:
+            text = (str(value or "") or "").strip()
+            return text or None
+        text = (str(value or "") or "").strip()
+        if not text:
+            return None
+        if text in allowed_values:
+            return text
+        upper = text.upper()
+        if upper in allowed_values:
+            return upper
+        return None
+
+    def _normalize_strength_value(
+        self, value: Any, allowed_values: set
+    ) -> Optional[str]:
+        text = (str(value or "") or "").strip()
+        if not text:
+            return None
+        direct = self._normalize_enum_value(text, allowed_values)
+        if direct is not None:
+            return direct
+
+        if text.lower().startswith("class "):
+            suffix = text.split(" ", 1)[1].strip()
+            candidate = f"Class {suffix}"
+            direct = self._normalize_enum_value(candidate, allowed_values)
+            if direct is not None:
+                return direct
+
+        prefixed = f"Class {text}"
+        direct = self._normalize_enum_value(prefixed, allowed_values)
+        if direct is not None:
+            return direct
+
+        return None
+
+    def _normalize_extracted_role(self, role: Any) -> Optional[str]:
+        text = (str(role or "") or "").strip()
+        if not text:
+            return None
+        if text in ALLOWED_ROLES:
+            return text
+        if text in BLOCKED_ROLES:
+            return None
+        normalized_map = {
+            "clinicalcondition": "ClinicalCondition",
+            "clinicalparameter": "ClinicalParameter",
+            "medication": "Medication",
+            "procedure": "Procedure",
+            "other": "Other",
+        }
+        return normalized_map.get(text.replace(" ", "").lower())
+
+    def _is_nonempty_concept(self, concept: Any) -> bool:
+        if concept is None:
+            return False
+        entity_original = (getattr(concept, "entity_original", None) or "").strip()
+        entity_standardized = (
+            getattr(concept, "entity_standardized_candidate", None) or ""
+        ).strip()
+        role = (getattr(concept, "role", None) or "").strip()
+        if role.lower() == "string":
+            return False
+        return bool(role and (entity_original or entity_standardized))
+
+    def _ensure_snomed_connected(self) -> SnomedExplorer:
+        if self.snomed_explorer is None:
+            self.snomed_explorer = SnomedExplorer()
+            self.snomed_explorer.connect()
+        return self.snomed_explorer
+
+    def _is_population_focus(self, focus: Optional[str]) -> bool:
+        return (focus or "").strip().upper() == "POPULATION"
+
+    def _require_both_sides_for_main(self) -> bool:
+        return os.environ.get(
+            "CARDIO_GRAPH_REQUIRE_BOTH_SIDES_MAIN", "true"
+        ).strip().lower() not in {"0", "false", "no", "off"}
+
+    def _concept_side(self, concept: Any) -> Optional[str]:
+        raw_logic = (getattr(concept, "logic", None) or "").strip().lower()
+        if raw_logic in {"condition", "action"}:
+            return raw_logic
+        role = (getattr(concept, "role", None) or "").strip()
+        if role in {"ClinicalCondition", "ClinicalParameter"}:
+            return "condition"
+        if role in {"Medication", "Procedure"}:
+            return "action"
+        return None
+
+    def _validate_extracted_concepts(
+        self, concepts: List[ExtractedConcept], focus: Optional[str]
+    ) -> List[ExtractedConcept]:
+        if not concepts:
+            return []
+        is_population_focus = self._is_population_focus(focus)
+
+        condition_concepts = [
+            concept
+            for concept in concepts
+            if self._is_nonempty_concept(concept)
+            and self._concept_side(concept) == "condition"
+        ]
+        action_concepts = [
+            concept
+            for concept in concepts
+            if self._is_nonempty_concept(concept)
+            and self._concept_side(concept) == "action"
+        ]
+
+        if is_population_focus:
+            return condition_concepts
+
+        if self._require_both_sides_for_main():
+            if not condition_concepts or not action_concepts:
+                return []
+
+        return condition_concepts + action_concepts
+
+    def _validate_extracted_rules(
+        self, rules: List[Any], focus: Optional[str]
+    ) -> List[Any]:
+        valid_rules: List[Any] = []
+        is_population_focus = self._is_population_focus(focus)
+        require_both_sides_main = self._require_both_sides_for_main()
+
+        for rule in rules or []:
+            conditions = [
+                condition
+                for condition in (getattr(rule, "conditions", []) or [])
+                if self._is_nonempty_concept(condition)
+            ]
+            actions = [
+                action
+                for action in (getattr(rule, "actions", []) or [])
+                if self._is_nonempty_concept(action)
+            ]
+
+            if not conditions and not actions:
+                continue
+
+            if is_population_focus:
+                if not conditions:
+                    continue
+            elif require_both_sides_main:
+                if not conditions or not actions:
+                    continue
+
+            valid_rules.append(rule)
+        return valid_rules
+
     def _normalize(self, text: str) -> str:
-        return " ".join(text.lower().strip().split())
+        normalized = unicodedata.normalize("NFKD", str(text or ""))
+        normalized = normalized.encode("ascii", "ignore").decode("ascii")
+        normalized = normalized.lower()
+        normalized = re.sub(r"[/_\-]", " ", normalized)
+        normalized = re.sub(r"[^a-z0-9()%\s]", " ", normalized)
+        return " ".join(normalized.strip().split())
+
+    def _normalize_token(self, token: str) -> str:
+        token = self._normalize(token)
+        if len(token) <= 4:
+            return token
+        if token.endswith("ies") and len(token) > 5:
+            return token[:-3] + "y"
+        if token.endswith("es") and len(token) > 5:
+            return token[:-2]
+        if token.endswith("s") and len(token) > 4:
+            return token[:-1]
+        return token
 
     def _load_abbreviations(self, abbrv_path: str) -> Dict[str, List[str]]:
         mapping: Dict[str, List[str]] = {}
@@ -335,9 +727,47 @@ class GuidelineGraphBuilder:
                 variants.add(variant)
         return list(variants)
 
+    def _query_variants(self, term: str) -> List[str]:
+        variants = []
+
+        def add(value: str) -> None:
+            value = " ".join(str(value or "").strip().split())
+            if value:
+                variants.append(value)
+
+        add(term)
+        stripped = re.sub(r"\s*\([^)]*\)\s*", " ", term).strip()
+        add(stripped)
+
+        normalized = self._normalize(term)
+        add(normalized)
+
+        de_prefixed = re.sub(
+            r"^(patients?|subjects?)\s+(scheduled\s+for|with|having)\s+",
+            "",
+            normalized,
+            flags=re.IGNORECASE,
+        ).strip()
+        add(de_prefixed)
+        add(re.sub(r"\bpatients?\b", "", normalized, flags=re.IGNORECASE).strip())
+
+        tokenized = [self._normalize_token(t) for t in normalized.split()]
+        add(" ".join([t for t in tokenized if t]))
+
+        seen = set()
+        deduped = []
+        for variant in variants:
+            key = self._normalize(variant)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            deduped.append(variant)
+        return deduped
+
     def _important_tokens(self, text: str) -> List[str]:
         tokens = re.findall(r"[a-z0-9]+", self._normalize(text))
-        return [t for t in tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
+        normalized_tokens = [self._normalize_token(t) for t in tokens]
+        return [t for t in normalized_tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
 
     def _has_disallowed_semantic_tag(self, term: Optional[str]) -> bool:
         if not term:
@@ -369,7 +799,45 @@ class GuidelineGraphBuilder:
             return 0.0
         if q == c:
             return 1.0
-        return SequenceMatcher(None, q, c).ratio()
+        seq = SequenceMatcher(None, q, c).ratio()
+        partial = 0.0
+        if q in c or c in q:
+            partial = min(len(q), len(c)) / max(len(q), len(c))
+        q_tokens = set(self._important_tokens(q))
+        c_tokens = set(self._important_tokens(c))
+        token_jaccard = 0.0
+        if q_tokens and c_tokens:
+            token_jaccard = len(q_tokens & c_tokens) / len(q_tokens | c_tokens)
+        return max(seq, partial, token_jaccard)
+
+    def _vector_candidates(
+        self, term: str
+    ) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
+        if not self.enable_vector_grounding or not self.vector_retriever:
+            return [], {}
+        try:
+            candidates = self.vector_retriever.retrieve(term, top_k=self.vector_top_k)
+        except Exception as exc:
+            logger.warning("Vector retrieval failed for '%s': %s", term, exc)
+            return [], {}
+
+        vector_score_by_concept: Dict[int, float] = {}
+        for row in candidates:
+            concept_id = row.get("conceptid")
+            if concept_id is None:
+                continue
+            try:
+                concept_id = int(concept_id)
+            except (TypeError, ValueError):
+                continue
+            row_score = float(row.get("vector_score") or 0.0)
+            if concept_id not in vector_score_by_concept:
+                vector_score_by_concept[concept_id] = row_score
+            else:
+                vector_score_by_concept[concept_id] = max(
+                    vector_score_by_concept[concept_id], row_score
+                )
+        return candidates, vector_score_by_concept
 
     def _token_overlap_ratio(self, tokens: set, term: Optional[str]) -> float:
         if not tokens or not term:
@@ -466,10 +934,35 @@ class GuidelineGraphBuilder:
     def _get_preferred_term(self, concept_id: int) -> Optional[str]:
         if concept_id in self._preferred_term_cache:
             return self._preferred_term_cache[concept_id]
-        term = self.snomed_explorer.get_preferred_term(concept_id)
+        explorer = self._ensure_snomed_connected()
+        term = explorer.get_preferred_term(concept_id)
         if term:
             self._preferred_term_cache[concept_id] = term
         return term
+
+    def _get_alt_names(
+        self, concept_id: int, preferred_term: Optional[str]
+    ) -> List[str]:
+        if concept_id in self._alt_names_cache:
+            return self._alt_names_cache[concept_id]
+        explorer = self._ensure_snomed_connected()
+        descriptions = explorer.get_descriptions_for_concept(concept_id)
+        seen = set()
+        alt_names: List[str] = []
+        normalized_preferred = self._normalize(preferred_term or "")
+        for description in descriptions:
+            term = (description.get("term") or "").strip()
+            if not term:
+                continue
+            normalized_term = self._normalize(term)
+            if normalized_preferred and normalized_term == normalized_preferred:
+                continue
+            if normalized_term in seen:
+                continue
+            seen.add(normalized_term)
+            alt_names.append(term)
+        self._alt_names_cache[concept_id] = alt_names
+        return alt_names
 
     def _search_best_concept(
         self, term: str, role: Optional[str], limit: int = 100
@@ -514,11 +1007,11 @@ class GuidelineGraphBuilder:
         else:
             expanded_terms = self._expand_term(term)
             expanded_terms.extend(self._expand_term_variants(term))
-            search_terms.append(term)
+            search_terms.extend(self._query_variants(term))
             search_terms.extend(expanded_terms)
             search_terms.extend(normalized_tokens)
             if stripped_term and stripped_term != term:
-                search_terms.append(stripped_term)
+                search_terms.extend(self._query_variants(stripped_term))
                 search_terms.extend(self._expand_term(stripped_term))
             if paren_tokens:
                 search_terms.extend(paren_tokens)
@@ -540,9 +1033,25 @@ class GuidelineGraphBuilder:
             seen.add(t)
             cached = self._search_cache.get(t)
             if cached is None:
-                cached = self.snomed_explorer.search_concepts_by_term(t, limit=limit)
+                explorer = self._ensure_snomed_connected()
+                cached = explorer.search_concepts_by_term(t, limit=limit)
                 self._search_cache[t] = cached
             results.extend(cached)
+
+        vector_results: List[Dict[str, Any]] = []
+        vector_score_by_concept: Dict[int, float] = {}
+        if self.enable_vector_grounding and self.vector_retriever:
+            vector_search_terms = [term]
+            if stripped_term and stripped_term != term:
+                vector_search_terms.append(stripped_term)
+            for vt in vector_search_terms:
+                retrieved, score_map = self._vector_candidates(vt)
+                vector_results.extend(retrieved)
+                for concept_id, vector_score in score_map.items():
+                    prev = vector_score_by_concept.get(concept_id, 0.0)
+                    vector_score_by_concept[concept_id] = max(prev, vector_score)
+
+        results.extend(vector_results)
 
         if not results:
             return None, None, 0.0
@@ -657,7 +1166,11 @@ class GuidelineGraphBuilder:
                         continue
 
                 if score > local_best_score:
-                    local_best_score = score
+                    vector_bonus = (
+                        vector_score_by_concept.get(int(concept_id), 0.0)
+                        * self.vector_rerank_weight
+                    )
+                    local_best_score = min(1.0, score + vector_bonus)
                     local_best_id = concept_id
                     local_best_term = preferred or best_candidate_term
             return local_best_id, local_best_term, local_best_score
@@ -712,7 +1225,8 @@ class GuidelineGraphBuilder:
     def _get_parents(self, concept_id: int) -> List[int]:
         cached = self._relationships_cache.get(concept_id)
         if cached is None:
-            cached = self.snomed_explorer.get_relationships(concept_id)
+            explorer = self._ensure_snomed_connected()
+            cached = explorer.get_relationships(concept_id)
             self._relationships_cache[concept_id] = cached
         relationships = cached
         parents = []
@@ -800,8 +1314,8 @@ class GuidelineGraphBuilder:
         formatted_rows: List[Tuple[str, str]] = []
         for idx, row in enumerate(rows, start=1):
             recommendation = (row.get("Recommendations") or "").strip()
-            cls = (row.get("Class a") or "").strip()
-            level = (row.get("Level b") or "").strip()
+            cls = (row.get("Class") or "").strip()
+            level = (row.get("Level") or "").strip()
             if not recommendation and not cls and not level:
                 continue
             recommendation = self._expand_abbreviations_in_text(recommendation)
@@ -837,8 +1351,8 @@ class GuidelineGraphBuilder:
         row_lines: List[str] = []
         for idx, row in enumerate(rows, start=1):
             recommendation = (row.get("Recommendations") or "").strip()
-            cls = (row.get("Class a") or "").strip()
-            level = (row.get("Level b") or "").strip()
+            cls = (row.get("Class") or "").strip()
+            level = (row.get("Level") or "").strip()
             if not recommendation and not cls and not level:
                 continue
             recommendation = self._expand_abbreviations_in_text(recommendation)
@@ -880,6 +1394,45 @@ class GuidelineGraphBuilder:
     def _log_grounded_concepts(self, grounded: List[GroundedConcept]) -> None:
         return
 
+    def _load_prompt_appendix(self) -> str:
+        appendix_inline = (
+            os.environ.get("CARDIO_GRAPH_EXTRACTION_PROMPT_APPENDIX", "") or ""
+        ).strip()
+        appendix_path = (
+            os.environ.get("CARDIO_GRAPH_EXTRACTION_PROMPT_APPENDIX_PATH", "") or ""
+        ).strip()
+        appendix_file = ""
+        if appendix_path and os.path.isfile(appendix_path):
+            try:
+                appendix_file = Path(appendix_path).read_text(encoding="utf-8").strip()
+            except Exception:
+                appendix_file = ""
+        if appendix_inline and appendix_file:
+            appendix = appendix_file + "\n" + appendix_inline
+        else:
+            appendix = appendix_file or appendix_inline
+
+        enable_fewshot = os.environ.get(
+            "CARDIO_GRAPH_ENABLE_FEWSHOT_EXAMPLES", "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        if not enable_fewshot:
+            return appendix
+
+        fewshot_set = (
+            os.environ.get("CARDIO_GRAPH_FEWSHOT_EXAMPLE_SET", "table17_table8_v1")
+            .strip()
+            .lower()
+        )
+        fewshot_appendix = ""
+        if fewshot_set == "table17_table8_v1":
+            fewshot_appendix = FEWSHOT_EXAMPLES_TABLE17_TABLE8_V1
+
+        if not fewshot_appendix:
+            return appendix
+        if appendix:
+            return fewshot_appendix + "\n" + appendix
+        return fewshot_appendix
+
     def extract_concepts(
         self,
         sentence: str,
@@ -892,62 +1445,142 @@ class GuidelineGraphBuilder:
         baml_options = {"client_registry": self.client_registry}
         os.environ["BAML_LOG"] = "OFF"
         focus_tag = f"[FOCUS: {focus}] " if focus else ""
+        prompt_appendix = self._load_prompt_appendix()
+        appendix_block = (
+            f"[TUNING_APPENDIX]\n{prompt_appendix}\n[/TUNING_APPENDIX]\n"
+            if prompt_appendix
+            else ""
+        )
         tagged_text = (
+            f"{appendix_block}"
             f"{focus_tag}[GUIDELINE: {guideline_title}] "
             f"[SOURCE_TYPE: {source_type}]\n{sentence}"
         )
+        incremental_review_enabled = (
+            os.environ.get("CARDIO_GRAPH_ENABLE_INCREMENTAL_REVIEW", "1") or "1"
+        ).strip().lower() not in {"0", "false", "no", "off"}
         concepts: List[ExtractedConcept] = []
 
         def _default_logic_structured() -> Dict[str, Optional[str]]:
             return {
                 "strength": "Unknown",
                 "level": "Unknown",
-                "direction": "UNKNOWN",
+                "direction": None,
                 "operator": None,
                 "threshold": None,
                 "unit": None,
-                "condition_context": None,
+                "context": None,
                 "logic_type": None,
                 "logic_group": None,
             }
 
+        def _concepts_from_extract_concepts_result(
+            result_obj: Any,
+        ) -> List[ExtractedConcept]:
+            parsed: List[ExtractedConcept] = []
+            for concept in getattr(result_obj, "concepts", []) or []:
+                logic_structured = _default_logic_structured()
+                if getattr(concept, "logic_structured", None):
+                    logic_structured.update(concept.logic_structured.model_dump())
+                logic_structured = self._filter_logic_structured(logic_structured)
+                parsed.append(
+                    ExtractedConcept(
+                        entity_original=concept.entity_original,
+                        entity_standardized_candidate=concept.entity_standardized_candidate,
+                        role=self._normalize_extracted_role(concept.role) or "Other",
+                        logic=concept.logic,
+                        logic_structured=logic_structured,
+                    )
+                )
+            return parsed
+
         try:
             rules_result = b.ExtractRulesV2(tagged_text, baml_options=baml_options)
-            _ = self._serialize_baml_result(rules_result)
-            for rule in getattr(rules_result, "rules", []) or []:
-                rule_id = getattr(rule, "rule_id", None)
+            rules_serialized = self._serialize_baml_result(rules_result)
+            valid_rules = self._validate_extracted_rules(
+                getattr(rules_result, "rules", []) or [], focus=focus
+            )
+            for rule in valid_rules:
                 for condition in getattr(rule, "conditions", []) or []:
+                    if not self._is_nonempty_concept(condition):
+                        continue
+                    normalized_role = self._normalize_extracted_role(
+                        getattr(condition, "role", None)
+                    )
+                    if normalized_role not in {
+                        "ClinicalCondition",
+                        "ClinicalParameter",
+                        "Procedure",
+                    }:
+                        continue
                     logic_structured = _default_logic_structured()
                     logic = getattr(condition, "logic", None)
                     if logic is not None:
                         logic_structured.update(logic.model_dump())
+                    logic_structured = self._filter_logic_structured(logic_structured)
                     concepts.append(
                         ExtractedConcept(
-                            rule_id=rule_id,
                             entity_original=condition.entity_original,
                             entity_standardized_candidate=condition.entity_standardized_candidate,
-                            role=condition.role,
+                            role=normalized_role,
                             logic="condition",
                             logic_structured=logic_structured,
                         )
                     )
                 for action in getattr(rule, "actions", []) or []:
+                    if not self._is_nonempty_concept(action):
+                        continue
+                    normalized_role = self._normalize_extracted_role(
+                        getattr(action, "role", None)
+                    )
+                    if normalized_role not in {"Medication", "Procedure"}:
+                        continue
                     logic_structured = _default_logic_structured()
                     recommendation = getattr(action, "recommendation", None)
                     if recommendation is not None:
                         logic_structured.update(recommendation.model_dump())
+                    logic_structured = self._filter_logic_structured(logic_structured)
                     concepts.append(
                         ExtractedConcept(
-                            rule_id=rule_id,
                             entity_original=action.entity_original,
                             entity_standardized_candidate=action.entity_standardized_candidate,
-                            role=action.role,
+                            role=normalized_role,
                             logic="action",
                             logic_structured=logic_structured,
                         )
                     )
             if concepts:
-                return concepts
+                if incremental_review_enabled:
+                    try:
+                        draft_rules_json = json.dumps(
+                            rules_serialized, ensure_ascii=False, sort_keys=True
+                        )
+                        review_input = (
+                            f"[DRAFT_RULES]\n{draft_rules_json}\n[/DRAFT_RULES]\n"
+                            f"{tagged_text}"
+                        )
+                        reviewed_result = b.ExtractConcepts(
+                            review_input, baml_options=baml_options
+                        )
+                        _ = self._serialize_baml_result(reviewed_result)
+                        reviewed_concepts = _concepts_from_extract_concepts_result(
+                            reviewed_result
+                        )
+                        validated_reviewed = self._validate_extracted_concepts(
+                            reviewed_concepts, focus=focus
+                        )
+                        if validated_reviewed:
+                            return validated_reviewed
+                    except Exception as exc:
+                        logger.warning(
+                            "Incremental review pass failed; using first-pass rules. Error: %s",
+                            exc,
+                        )
+                validated_first_pass = self._validate_extracted_concepts(
+                    concepts, focus=focus
+                )
+                if validated_first_pass:
+                    return validated_first_pass
         except Exception as exc:
             logger.warning(
                 "BAML ExtractRulesV2 failed; falling back to ExtractConcepts. Error: %s",
@@ -963,22 +1596,8 @@ class GuidelineGraphBuilder:
             )
             return []
         _ = self._serialize_baml_result(result)
-
-        for concept in result.concepts or []:
-            logic_structured = _default_logic_structured()
-            if getattr(concept, "logic_structured", None):
-                logic_structured.update(concept.logic_structured.model_dump())
-            concepts.append(
-                ExtractedConcept(
-                    rule_id=getattr(concept, "rule_id", None),
-                    entity_original=concept.entity_original,
-                    entity_standardized_candidate=concept.entity_standardized_candidate,
-                    role=concept.role,
-                    logic=concept.logic,
-                    logic_structured=logic_structured,
-                )
-            )
-        return concepts
+        fallback_concepts = _concepts_from_extract_concepts_result(result)
+        return self._validate_extracted_concepts(fallback_concepts, focus=focus)
 
     def _merge_extracted_concepts(
         self, primary: List[ExtractedConcept], secondary: List[ExtractedConcept]
@@ -996,7 +1615,7 @@ class GuidelineGraphBuilder:
                 str(logic.get("operator") or ""),
                 str(logic.get("threshold") or ""),
                 str(logic.get("unit") or ""),
-                str(logic.get("condition_context") or ""),
+                str(logic.get("context") or ""),
             )
 
         for concept in primary + secondary:
@@ -1013,7 +1632,10 @@ class GuidelineGraphBuilder:
         def is_condition(concept: ExtractedConcept) -> bool:
             role = (concept.role or "").strip()
             side = (concept.logic or "").strip().lower()
-            return role in {"Condition", "ClinicalParameter"} or side == "condition"
+            return (
+                role in {"ClinicalCondition", "ClinicalParameter"}
+                or side == "condition"
+            )
 
         condition_concepts = [c for c in concepts if is_condition(c)]
         if not condition_concepts:
@@ -1062,7 +1684,7 @@ class GuidelineGraphBuilder:
         for concept in concepts:
             side = (concept.logic or "").strip().lower()
             if (concept.role or "").strip() not in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and side != "condition":
                 expanded.append(concept)
@@ -1084,10 +1706,10 @@ class GuidelineGraphBuilder:
             for idx, part in enumerate(parts, start=1):
                 logic_structured = dict(concept.logic_structured or {})
                 logic_structured["logic_type"] = "OR"
-                logic_structured["logic_group"] = f"or_{concept.rule_id}"
+                logic_structured["logic_group"] = "or_1"
+                logic_structured = self._filter_logic_structured(logic_structured)
                 expanded.append(
                     ExtractedConcept(
-                        rule_id=concept.rule_id,
                         entity_original=concept.entity_original,
                         entity_standardized_candidate=part,
                         role=concept.role,
@@ -1112,27 +1734,22 @@ class GuidelineGraphBuilder:
         extracted_population = self.extract_concepts(
             filtered_sentence, source_type, guideline_title, focus="POPULATION"
         )
-        if extracted_main and extracted_population:
-            primary_rule_id = extracted_main[0].rule_id
-            for concept in extracted_population:
-                if concept.rule_id is None:
-                    concept.rule_id = primary_rule_id
         extracted = self._merge_extracted_concepts(extracted_main, extracted_population)
         extracted = self._explode_or_conditions(extracted)
         extracted = self._drop_redundant_compound_conditions(extracted)
         self._log_extracted_concepts(extracted)
         grounded: List[GroundedConcept] = []
         has_clinical_anchor = any(
-            c.role in {"Condition", "Medication", "Procedure"} for c in extracted
+            c.role in {"ClinicalCondition", "Medication", "Procedure"}
+            for c in extracted
         )
 
         for concept in extracted:
             if (concept.role or "").strip() == "Recommendation":
-                concept.role = "Condition"
+                concept.role = "ClinicalCondition"
             if (concept.role or "").strip() == "Other":
                 grounded.append(
                     GroundedConcept(
-                        rule_id=concept.rule_id,
                         entity_original=concept.entity_original,
                         entity_standardized_candidate=concept.entity_standardized_candidate,
                         role=concept.role,
@@ -1140,6 +1757,7 @@ class GuidelineGraphBuilder:
                         logic_structured=concept.logic_structured,
                         snomed_id=None,
                         preferred_term=None,
+                        alt_names=[],
                         score=0.0,
                         taxonomy_path=[],
                         target_label=self._fallback_target_label_for_role("Other"),
@@ -1177,7 +1795,6 @@ class GuidelineGraphBuilder:
                     continue
                 grounded.append(
                     GroundedConcept(
-                        rule_id=concept.rule_id,
                         entity_original=concept.entity_original,
                         entity_standardized_candidate=concept.entity_standardized_candidate,
                         role=concept.role,
@@ -1185,6 +1802,7 @@ class GuidelineGraphBuilder:
                         logic_structured=concept.logic_structured,
                         snomed_id=cached.get("snomed_id"),
                         preferred_term=cached.get("preferred_term"),
+                        alt_names=cached.get("alt_names", []),
                         score=cached.get("score", 1.0),
                         taxonomy_path=cached.get("taxonomy_path", []),
                         target_label=cached.get("target_label"),
@@ -1208,6 +1826,7 @@ class GuidelineGraphBuilder:
             if target_label is None and concept.role and len(path_ids) <= 1:
                 target_label = self._fallback_target_label_for_role(concept.role)
             taxonomy_path = self._format_taxonomy_path(path_ids)
+            alt_names: List[str] = []
 
             if concept_id is None or score < self.min_match_score:
                 concept_id = None
@@ -1215,7 +1834,10 @@ class GuidelineGraphBuilder:
                 score = 0.0
                 path_ids = []
                 taxonomy_path = []
+                alt_names = []
                 target_label = self._fallback_target_label_for_role(concept.role)
+            else:
+                alt_names = self._get_alt_names(concept_id, preferred_term)
 
             if self._should_skip_concept(
                 concept, score, target_label, has_clinical_anchor, allow_unmapped=True
@@ -1223,7 +1845,6 @@ class GuidelineGraphBuilder:
                 continue
 
             grounded_concept = GroundedConcept(
-                rule_id=concept.rule_id,
                 entity_original=concept.entity_original,
                 entity_standardized_candidate=concept.entity_standardized_candidate,
                 role=concept.role,
@@ -1231,6 +1852,7 @@ class GuidelineGraphBuilder:
                 logic_structured=concept.logic_structured,
                 snomed_id=concept_id,
                 preferred_term=preferred_term,
+                alt_names=alt_names,
                 score=score,
                 taxonomy_path=taxonomy_path,
                 target_label=target_label,
@@ -1242,6 +1864,7 @@ class GuidelineGraphBuilder:
                     "entity_standardized_candidate": concept.entity_standardized_candidate,
                     "snomed_id": concept_id,
                     "preferred_term": preferred_term,
+                    "alt_names": alt_names,
                     "score": score,
                     "taxonomy_path": taxonomy_path,
                     "target_label": target_label,
@@ -1254,6 +1877,7 @@ class GuidelineGraphBuilder:
                         "entity_standardized_candidate": concept.entity_standardized_candidate,
                         "snomed_id": concept_id,
                         "preferred_term": preferred_term,
+                        "alt_names": alt_names,
                         "score": score,
                         "taxonomy_path": taxonomy_path,
                         "target_label": target_label,
@@ -1471,23 +2095,23 @@ class GuidelineGraphBuilder:
     ) -> None:
         for concept in grounded:
             logic_structured = dict(concept.logic_structured or {})
+            logic_structured = self._filter_logic_structured(logic_structured)
             if (concept.role or "").strip() in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_type"):
                 logic_structured["logic_type"] = "AND"
             if (concept.role or "").strip() in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_group"):
-                logic_structured["logic_group"] = f"and_{concept.rule_id}"
+                logic_structured["logic_group"] = "and_1"
             entry = {
                 "entity_standardized_candidate": concept.entity_standardized_candidate,
                 "snomed_id": concept.snomed_id,
                 "role": concept.role,
                 "target_label": concept.target_label,
                 "logic_structured": logic_structured,
-                "rule_id": concept.rule_id,
                 "chunk_id": chunk_id,
                 "source_context": source_context,
                 "source_type": source_type,
@@ -1516,16 +2140,17 @@ class GuidelineGraphBuilder:
             if target_label == "ClinicalParameter":
                 role = "ClinicalParameter"
             logic_structured = dict(concept.logic_structured or {})
+            logic_structured = self._filter_logic_structured(logic_structured)
             if (role or "").strip() in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_type"):
                 logic_structured["logic_type"] = "AND"
             if (role or "").strip() in {
-                "Condition",
+                "ClinicalCondition",
                 "ClinicalParameter",
             } and not logic_structured.get("logic_group"):
-                logic_structured["logic_group"] = f"and_{concept.rule_id}"
+                logic_structured["logic_group"] = "and_1"
             entry = {
                 "entity_original": concept.entity_original,
                 "entity_standardized_candidate": concept.entity_standardized_candidate,
@@ -1533,7 +2158,6 @@ class GuidelineGraphBuilder:
                 "role": role,
                 "target_label": target_label,
                 "logic_structured": logic_structured,
-                "rule_id": concept.rule_id,
                 "chunk_id": chunk_id,
                 "source_context": source_context,
                 "source_type": source_type,
@@ -1546,7 +2170,7 @@ class GuidelineGraphBuilder:
         self, role: str, path_ids: List[int]
     ) -> Optional[str]:
         role_map = {
-            "Condition": "ClinicalCondition",
+            "ClinicalCondition": "ClinicalCondition",
             "ClinicalParameter": "ClinicalParameter",
             "Medication": "Medication",
             "Procedure": "Procedure",
@@ -1570,7 +2194,7 @@ class GuidelineGraphBuilder:
 
     def _allowed_root_concepts_for_role(self, role: str) -> set:
         role_map = {
-            "Condition": "ClinicalCondition",
+            "ClinicalCondition": "ClinicalCondition",
             "ClinicalParameter": "ClinicalParameter",
             "Medication": "Medication",
             "Procedure": "Procedure",
@@ -1583,7 +2207,7 @@ class GuidelineGraphBuilder:
 
     def _fallback_target_label_for_role(self, role: str) -> Optional[str]:
         role_map = {
-            "Condition": "ClinicalCondition",
+            "ClinicalCondition": "ClinicalCondition",
             "ClinicalParameter": "ClinicalParameter",
             "Medication": "Medication",
             "Procedure": "Procedure",
@@ -1753,7 +2377,6 @@ def main(
 
     for r in results:
         click.echo("---")
-        click.echo(f"Rule ID: {r.rule_id}")
         click.echo(f"Entity: {r.entity_original}")
         click.echo(f"Standardized: {r.entity_standardized_candidate}")
         click.echo(f"Role: {r.role}")

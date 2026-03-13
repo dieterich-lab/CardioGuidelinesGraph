@@ -1,0 +1,2 @@
+row_id,mapped_actual_row,match_score,expected_concepts,actual_concepts,concept_matches,concept_missing,concept_extra,expected_rules,actual_rules,rule_matches,rule_missing,rule_extra
+row_02,row_02,0.500,2,3,0,2,3,2,3,0,2,3

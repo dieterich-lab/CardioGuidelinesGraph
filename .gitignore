@@ -12,10 +12,12 @@ baml_client/
 *.log
 *.drawio
 *.txt
+!config/cardio_graph_core/abbrv.txt
 *.faiss
 *.pkl
 *.pdf
 *.json
+!config/table22/split_v1.json
 *.owl
 !tests/expected_row_10_structure.json
 !tests/expected_rows/
@@ -65,4 +67,14 @@ outputs/
 slurm/
 *.sh
 
+# Generated autotuning runs
+docs/table22_tuning_runs/
+
 .coverage
+
+.gpg-recipients
+
+# Local secrets/env files
+.env
+.env.*
+!.env.example

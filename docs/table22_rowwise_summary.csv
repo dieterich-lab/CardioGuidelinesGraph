@@ -1,2 +1,0 @@
-row_id,mapped_actual_row,match_score,expected_concepts,actual_concepts,concept_matches,concept_missing,concept_extra,expected_rules,actual_rules,rule_matches,rule_missing,rule_extra
-row_01,row_01,0.714,7,3,2,5,1,7,3,0,7,3

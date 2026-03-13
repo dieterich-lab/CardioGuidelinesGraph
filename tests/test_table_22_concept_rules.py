@@ -12,7 +12,9 @@ DATA_DIR = Path(os.environ.get("CARDIO_GRAPH_DATA_DIR", DEFAULT_DATA_DIR))
 GRAPH_DIR = Path(os.environ.get("CARDIO_GRAPH_GRAPH_DIR", DATA_DIR / "graph"))
 DOCS_DIR = Path(os.environ.get("CARDIO_GRAPH_DOCS_DIR", PROJECT_ROOT / "docs"))
 ROWS_DIR = Path(
-    os.environ.get("CARDIO_GRAPH_TABLE22_ROWS_DIR", DOCS_DIR / "table22_rows")
+    os.environ.get(
+        "CARDIO_GRAPH_TABLE22_ROWS_DIR", DOCS_DIR / "table22_rows_comparison"
+    )
 )
 RULES_PATH = Path(
     os.environ.get(
@@ -24,7 +26,7 @@ RULES_PATH = Path(
 GROUND_TRUTH_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH",
-        DATA_DIR / "evaluation" / "table_22_manual_full_graph.json",
+        "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json",
     )
 )
 DOCLING_TABLE_62_PATH = Path(
@@ -40,6 +42,7 @@ DOCLING_TABLE_63_PATH = Path(
     )
 )
 DOCLING_TABLE_PATHS = [DOCLING_TABLE_62_PATH, DOCLING_TABLE_63_PATH]
+TABLE_CLEAN_PATH = Path(os.environ.get("CARDIO_GRAPH_TABLE_CLEAN_PATH", ""))
 TABLE_IDS_RAW = os.environ.get("CARDIO_GRAPH_TABLE22_TABLE_IDS", "0")
 TABLE_IDS = {int(value.strip()) for value in TABLE_IDS_RAW.split(",") if value.strip()}
 TARGET_ROWS_RAW = os.environ.get("CARDIO_GRAPH_TABLE22_TARGET_ROWS", "")
@@ -50,32 +53,49 @@ MIN_ROW_MATCH = float(os.environ.get("CARDIO_GRAPH_TABLE22_MIN_ROW_MATCH", "0.2"
 ENTRY_MATCH_THRESHOLD = float(
     os.environ.get("CARDIO_GRAPH_TABLE22_ENTRY_MATCH_THRESHOLD", "0.6")
 )
+
+
+def _env_flag(name, default="false"):
+    return os.environ.get(name, default).lower() in {"1", "true", "yes"}
+
+
 LIVE_LLM = os.environ.get("CARDIO_GRAPH_TABLE22_LIVE_LLM", "false").lower() in {
     "1",
     "true",
     "yes",
 }
+GROUND_AFTER_EXTRACTION = _env_flag(
+    "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION", "false"
+)
+CHECK_CONTEXT = _env_flag("CARDIO_GRAPH_TABLE22_CHECK_CONTEXT", "false")
 LLM_MODEL = os.environ.get("CARDIO_GRAPH_TABLE22_LLM_MODEL", "Qwen30b")
 LLM_NODE = os.environ.get("CARDIO_GRAPH_TABLE22_LLM_NODE", "g5")
 LLM_PORT = int(os.environ.get("CARDIO_GRAPH_TABLE22_LLM_PORT", "11435"))
 REPORT_MD_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_MD",
-        DOCS_DIR / "table22_rowwise_comparison.md",
+        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_comparison.md",
     )
 )
 REPORT_JSON_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_JSON",
-        DOCS_DIR / "table22_rowwise_alignment.json",
+        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_alignment.json",
     )
 )
 REPORT_CSV_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_CSV",
-        DOCS_DIR / "table22_rowwise_summary.csv",
+        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_summary.csv",
     )
 )
+LLM_SNAPSHOT_PATH = Path(
+    os.environ.get(
+        "CARDIO_GRAPH_TABLE22_LLM_SNAPSHOT",
+        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_alignment.json",
+    )
+)
+USE_SNAPSHOT = _env_flag("CARDIO_GRAPH_TABLE22_USE_SNAPSHOT", "false")
 
 
 def _load_rules():
@@ -91,10 +111,34 @@ def _load_rules():
 
 def _load_ground_truth():
     with open(GROUND_TRUTH_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+        payload = json.load(f)
+    if isinstance(payload, dict) and "tables" in payload:
+        return payload
+    if isinstance(payload, dict) and "data" in payload:
+        table_id = payload.get("table_id", 0)
+        return {
+            "tables": [
+                {
+                    "table_id": table_id,
+                    "data": payload.get("data", []),
+                }
+            ]
+        }
+    return {"tables": []}
 
 
 def _load_docling_rows():
+    if TABLE_CLEAN_PATH and str(TABLE_CLEAN_PATH) and TABLE_CLEAN_PATH.is_file():
+        with open(TABLE_CLEAN_PATH, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict) and "tables" in payload:
+            rows = []
+            for table in payload.get("tables", []):
+                rows.extend(table.get("data", []))
+            return rows
+        if isinstance(payload, dict) and "data" in payload:
+            return payload.get("data", [])
+
     rows = []
     for path in DOCLING_TABLE_PATHS:
         with open(path, "r", encoding="utf-8") as f:
@@ -103,10 +147,35 @@ def _load_docling_rows():
     return rows
 
 
+def _load_llm_snapshot():
+    if not LLM_SNAPSHOT_PATH.is_file():
+        raise FileNotFoundError(
+            f"Missing LLM snapshot alignment JSON: {LLM_SNAPSHOT_PATH}"
+        )
+    with open(LLM_SNAPSHOT_PATH, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    return payload.get("rows", [])
+
+
 def _normalize_text(value):
     if value is None:
         return None
     return " ".join(str(value).strip().split()).lower()
+
+
+def _table_row_id(table_id, index):
+    base_id = f"row_{index:02d}"
+    if TABLE_IDS and len(TABLE_IDS) <= 1:
+        return base_id
+    safe_table = "unknown" if table_id is None else str(table_id)
+    return f"t{safe_table}_{base_id}"
+
+
+def _display_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(PROJECT_ROOT.resolve()))
+    except Exception:
+        return str(path)
 
 
 def _row_text(row_dict):
@@ -128,39 +197,59 @@ def _docling_row_values(row):
 def _normalize_role(role):
     if role is None:
         return None
-    role_text = str(role).strip()
-    lowered = role_text.lower()
-    if lowered == "clinicalcondition":
-        return "Condition"
-    if lowered == "clinicalparameter":
-        return "ClinicalParameter"
-    if lowered == "clinicalaction":
-        return "Procedure"
-    return role_text
+    return str(role).strip()
 
 
 def _normalize_strength(strength):
     if strength is None:
         return None
-    value = str(strength).strip()
-    if value.lower().startswith("class "):
-        value = value.split(" ", 1)[1].strip()
-    return value
+    return str(strength).strip()
 
 
 def _normalize_level(level):
     if level is None:
         return None
-    value = str(level).strip()
-    if value.lower().startswith("level "):
-        value = value.split(" ", 1)[1].strip()
-    return value
+    return str(level).strip()
 
 
 def _normalize_direction(direction):
     if direction is None:
         return None
-    return str(direction).strip().upper()
+    return str(direction).strip()
+
+
+SCHEMA_ENTRY_KEYS = {
+    "entity",
+    "entity_original",
+    "role",
+    "operator",
+    "threshold",
+    "unit",
+    "context",
+    "logic_type",
+    "logic_group",
+    "strength",
+    "level",
+    "direction",
+}
+
+SCHEMA_GROUNDING_KEYS = {
+    "preferred_term",
+    "synonyms",
+    "snomed_id",
+    "target_label",
+    "taxonomy_path",
+    "root_concept_id",
+    "root_concept_term",
+    "mapped_target_label",
+}
+
+
+def _postfilter_entry(entry, include_grounding=False):
+    allowed = set(SCHEMA_ENTRY_KEYS)
+    if include_grounding:
+        allowed.update(SCHEMA_GROUNDING_KEYS)
+    return {k: v for k, v in entry.items() if k in allowed or k.startswith("_")}
 
 
 def _normalize_logic(logic):
@@ -171,7 +260,7 @@ def _normalize_logic(logic):
         "operator": operator,
         "threshold": logic.get("threshold"),
         "unit": logic.get("unit"),
-        "condition_context": _normalize_text(logic.get("condition_context")),
+        "context": _normalize_text(logic.get("context")),
         "logic_type": logic.get("logic_type"),
         "logic_group": logic.get("logic_group"),
         "strength": _normalize_strength(logic.get("strength")),
@@ -182,20 +271,34 @@ def _normalize_logic(logic):
 
 def _build_entry(entity, entity_original, role, logic):
     normalized_logic = _normalize_logic(logic or {})
-    return {
+    entry = {
         "entity": _normalize_text(entity),
         "entity_original": _normalize_text(entity_original),
         "role": _normalize_role(role),
         **normalized_logic,
     }
+    return _postfilter_entry(entry)
 
 
-def _build_entry_with_side(entity, entity_original, role, logic, side, rule_id):
+def _build_entry_with_side(entity, entity_original, role, logic, side):
     entry = _build_entry(entity, entity_original, role, logic)
-    entry["rule_id"] = rule_id
     if side:
-        entry["side"] = side
+        entry["_side"] = side
     return entry
+
+
+def _infer_side(role, logic):
+    role_name = _normalize_role(role)
+    logic = logic or {}
+    if role_name in {"ClinicalCondition", "ClinicalParameter", "Condition"}:
+        return "condition"
+    if role_name in {"Procedure", "Medication", "ClinicalAction"}:
+        logic_type = _normalize_text(logic.get("logic_type"))
+        logic_group = _normalize_text(logic.get("logic_group"))
+        if logic_type or logic_group:
+            return "condition"
+        return "action"
+    return None
 
 
 def _summarize_rules(rules_rows):
@@ -212,18 +315,73 @@ def _summarize_rules(rules_rows):
             row.get("role"),
             row.get("logic_structured") or {},
         )
+        entry.update(
+            {
+                "preferred_term": row.get("preferred_term"),
+                "synonyms": row.get("synonyms") or row.get("alt_names") or [],
+                "snomed_id": row.get("snomed_id"),
+                "target_label": row.get("target_label"),
+                "taxonomy_path": row.get("taxonomy_path") or [],
+                "root_concept_id": row.get("root_concept_id"),
+                "root_concept_term": row.get("root_concept_term"),
+                "mapped_target_label": row.get("mapped_target_label"),
+            }
+        )
+        side = _infer_side(row.get("role"), row.get("logic_structured") or {})
+        if side:
+            entry["_side"] = side
+        entry = _postfilter_entry(entry, include_grounding=True)
         entry["_source_index"] = index
         grouped.setdefault(row_id, []).append(entry)
     return grouped
 
 
-def _extract_entries_live(row_text_dict, builder):
+def _root_map_from_builder(builder):
+    root_map = {}
+    for rule in getattr(builder, "mapping_rules", []) or []:
+        label = rule.get("target_label")
+        for root in rule.get("root_concepts", []) or []:
+            try:
+                root_map[int(root)] = label
+            except (TypeError, ValueError):
+                continue
+    return root_map
+
+
+def _extract_root_hit(taxonomy_path, root_map):
+    for node in taxonomy_path or []:
+        concept_id = node.get("concept_id")
+        try:
+            concept_id_int = int(concept_id)
+        except (TypeError, ValueError):
+            continue
+        if concept_id_int in root_map:
+            return {
+                "root_concept_id": str(concept_id_int),
+                "root_concept_term": node.get("term"),
+                "mapped_target_label": root_map.get(concept_id_int),
+            }
+    return None
+
+
+def _extract_entries_live(row_text_dict, builder, ground_after_extraction=False):
     if not row_text_dict:
-        return []
+        return [], None, None
     text = _row_text(row_text_dict)
-    concepts = builder.extract_concepts(
-        text, source_type="table_row", guideline_title="ESC Guidelines"
-    )
+    concepts = []
+    grounded = []
+
+    if ground_after_extraction:
+        extracted_concepts, grounded_concepts = builder.extract_and_ground(
+            text, source_type="table_row", guideline_title="ESC Guidelines"
+        )
+        concepts = extracted_concepts
+        grounded = grounded_concepts
+    else:
+        concepts = builder.extract_concepts(
+            text, source_type="table_row", guideline_title="ESC Guidelines"
+        )
+
     entries = []
     for concept in concepts:
         logic_structured = getattr(concept, "logic_structured", None) or {}
@@ -235,7 +393,7 @@ def _extract_entries_live(row_text_dict, builder):
             side = "action"
         else:
             role = getattr(concept, "role", None)
-            if role in {"Condition", "ClinicalParameter"}:
+            if role in {"ClinicalCondition", "ClinicalParameter"}:
                 side = "condition"
             elif role in {"Procedure", "Medication"}:
                 side = "action"
@@ -246,10 +404,104 @@ def _extract_entries_live(row_text_dict, builder):
             getattr(concept, "role", None),
             logic_structured,
             side,
-            getattr(concept, "rule_id", None),
         )
         entries.append(entry)
-    return entries
+
+    grounding_summary = None
+    grounded_display_entries = None
+    if ground_after_extraction:
+        root_map = _root_map_from_builder(builder)
+        root_hits = []
+        target_label_counts = {}
+        root_hit_counts = {}
+        grounded_display_entries = []
+
+        for concept in grounded:
+            taxonomy_path = getattr(concept, "taxonomy_path", None) or []
+            root_hit = _extract_root_hit(taxonomy_path, root_map)
+            target_label = getattr(concept, "target_label", None)
+            logic_structured = getattr(concept, "logic_structured", None) or {}
+            logic_side = (getattr(concept, "logic", None) or "").strip().lower()
+            side = None
+            if logic_side == "condition":
+                side = "condition"
+            elif logic_side == "action":
+                side = "action"
+            else:
+                role = getattr(concept, "role", None)
+                if role in {"ClinicalCondition", "ClinicalParameter"}:
+                    side = "condition"
+                elif role in {"Procedure", "Medication"}:
+                    side = "action"
+
+            if target_label:
+                target_label_counts[target_label] = (
+                    target_label_counts.get(target_label, 0) + 1
+                )
+
+            if root_hit:
+                root_key = root_hit["root_concept_id"]
+                root_hit_counts[root_key] = root_hit_counts.get(root_key, 0) + 1
+
+            display_entry = _build_entry_with_side(
+                getattr(concept, "entity_standardized_candidate", None)
+                or getattr(concept, "entity_original", ""),
+                getattr(concept, "entity_original", ""),
+                getattr(concept, "role", None),
+                logic_structured,
+                side,
+            )
+            display_entry.update(
+                {
+                    "preferred_term": getattr(concept, "preferred_term", None),
+                    "synonyms": (
+                        getattr(concept, "synonyms", None)
+                        or getattr(concept, "alt_names", None)
+                        or []
+                    ),
+                    "snomed_id": getattr(concept, "snomed_id", None),
+                    "target_label": target_label,
+                    "taxonomy_path": taxonomy_path,
+                    "root_concept_id": (
+                        root_hit.get("root_concept_id") if root_hit else None
+                    ),
+                    "root_concept_term": (
+                        root_hit.get("root_concept_term") if root_hit else None
+                    ),
+                }
+            )
+            grounded_display_entries.append(
+                _postfilter_entry(display_entry, include_grounding=True)
+            )
+
+            root_hits.append(
+                {
+                    "entity": getattr(concept, "entity_standardized_candidate", None)
+                    or getattr(concept, "entity_original", None),
+                    "entity_original": getattr(concept, "entity_original", None),
+                    "role": getattr(concept, "role", None),
+                    "preferred_term": getattr(concept, "preferred_term", None),
+                    "synonyms": (
+                        getattr(concept, "synonyms", None)
+                        or getattr(concept, "alt_names", None)
+                        or []
+                    ),
+                    "snomed_id": getattr(concept, "snomed_id", None),
+                    "target_label": target_label,
+                    "taxonomy_path": taxonomy_path,
+                    "root_hit": root_hit,
+                }
+            )
+
+        grounding_summary = {
+            "enabled": True,
+            "total_grounded": len(grounded),
+            "target_label_counts": target_label_counts,
+            "root_hit_counts": root_hit_counts,
+            "root_hits": root_hits,
+        }
+
+    return entries, grounding_summary, grounded_display_entries
 
 
 def _summarize_ground_truth(truth):
@@ -259,10 +511,9 @@ def _summarize_ground_truth(truth):
         if TABLE_IDS and table_id not in TABLE_IDS:
             continue
         for index, row in enumerate(table.get("data", []), start=1):
-            row_id = f"row_{index:02d}"
+            row_id = _table_row_id(table_id, index)
             row_entries = []
             for rule in row.get("rules", []):
-                rule_id = rule.get("rule_id")
                 for condition in rule.get("conditions", []):
                     entity = condition.get(
                         "entity_standardized_candidate"
@@ -275,8 +526,7 @@ def _summarize_ground_truth(truth):
                         condition.get("role"),
                         condition.get("logic_structured") or {},
                     )
-                    entry["side"] = "condition"
-                    entry["rule_id"] = rule_id
+                    entry["_side"] = "condition"
                     row_entries.append(entry)
                 for action in rule.get("actions", []):
                     entity = action.get("entity_standardized_candidate") or action.get(
@@ -290,8 +540,7 @@ def _summarize_ground_truth(truth):
                         action.get("role"),
                         action.get("logic_structured") or {},
                     )
-                    entry["side"] = "action"
-                    entry["rule_id"] = rule_id
+                    entry["_side"] = "action"
                     row_entries.append(entry)
             if row_entries:
                 grouped[row_id] = row_entries
@@ -305,10 +554,9 @@ def _summarize_ground_truth_grouped(truth):
         if TABLE_IDS and table_id not in TABLE_IDS:
             continue
         for index, row in enumerate(table.get("data", []), start=1):
-            row_id = f"row_{index:02d}"
+            row_id = _table_row_id(table_id, index)
             rules_payload = []
             for rule in row.get("rules", []):
-                rule_id = rule.get("rule_id")
                 conditions = []
                 actions = []
 
@@ -318,14 +566,24 @@ def _summarize_ground_truth_grouped(truth):
                     ) or condition.get("entity_original")
                     if _normalize_text(entity) == "string":
                         continue
-                    conditions.append(
-                        _build_entry(
-                            entity,
-                            condition.get("entity_original"),
-                            condition.get("role"),
-                            condition.get("logic_structured") or {},
-                        )
+                    entry = _build_entry(
+                        entity,
+                        condition.get("entity_original"),
+                        condition.get("role"),
+                        condition.get("logic_structured") or {},
                     )
+                    entry.update(
+                        {
+                            "preferred_term": condition.get("preferred_term"),
+                            "synonyms": condition.get("synonyms") or [],
+                            "snomed_id": condition.get("snomed_id"),
+                            "target_label": condition.get("target_label"),
+                            "taxonomy_path": condition.get("taxonomy_path") or [],
+                            "root_concept_id": condition.get("root_concept_id"),
+                            "root_concept_term": condition.get("root_concept_term"),
+                        }
+                    )
+                    conditions.append(_postfilter_entry(entry, include_grounding=True))
 
                 for action in rule.get("actions", []):
                     entity = action.get("entity_standardized_candidate") or action.get(
@@ -333,19 +591,28 @@ def _summarize_ground_truth_grouped(truth):
                     )
                     if _normalize_text(entity) == "string":
                         continue
-                    actions.append(
-                        _build_entry(
-                            entity,
-                            action.get("entity_original"),
-                            action.get("role"),
-                            action.get("logic_structured") or {},
-                        )
+                    entry = _build_entry(
+                        entity,
+                        action.get("entity_original"),
+                        action.get("role"),
+                        action.get("logic_structured") or {},
                     )
+                    entry.update(
+                        {
+                            "preferred_term": action.get("preferred_term"),
+                            "synonyms": action.get("synonyms") or [],
+                            "snomed_id": action.get("snomed_id"),
+                            "target_label": action.get("target_label"),
+                            "taxonomy_path": action.get("taxonomy_path") or [],
+                            "root_concept_id": action.get("root_concept_id"),
+                            "root_concept_term": action.get("root_concept_term"),
+                        }
+                    )
+                    actions.append(_postfilter_entry(entry, include_grounding=True))
 
                 if conditions or actions:
                     rules_payload.append(
                         {
-                            "rule_id": rule_id,
                             "conditions": conditions,
                             "actions": actions,
                         }
@@ -405,12 +672,15 @@ def _sorted_entries(entries):
 
 
 def _strip_internal_keys(entries):
-    cleaned = []
-    for entry in entries:
-        cleaned.append(
-            {key: value for key, value in entry.items() if not key.startswith("_")}
-        )
-    return cleaned
+    if isinstance(entries, dict):
+        return {
+            key: _strip_internal_keys(value)
+            for key, value in entries.items()
+            if not str(key).startswith("_")
+        }
+    if isinstance(entries, list):
+        return [_strip_internal_keys(item) for item in entries]
+    return entries
 
 
 def _concept_key(entry):
@@ -424,7 +694,7 @@ def _rule_key(entry):
         entry.get("operator"),
         entry.get("threshold"),
         entry.get("unit"),
-        entry.get("condition_context"),
+        entry.get("context") if CHECK_CONTEXT else None,
         entry.get("logic_type"),
         entry.get("logic_group"),
         entry.get("strength"),
@@ -483,8 +753,8 @@ def _ground_truth_row_text(row):
         "Recommendation",
         "input",
         "recommendation",
-        "Class a",
-        "Level b",
+        "Class",
+        "Level",
     ]
     payload = {}
     for key in keys:
@@ -510,7 +780,7 @@ def _collect_ground_truth_rows(truth):
         if TABLE_IDS and table_id not in TABLE_IDS:
             continue
         for index, row in enumerate(table.get("data", []), start=1):
-            row_id = f"row_{index:02d}"
+            row_id = _table_row_id(table_id, index)
             rows[row_id] = _ground_truth_row_text(row)
     return rows
 
@@ -526,7 +796,7 @@ def _collect_docling_rows(truth):
         if TABLE_IDS and table_id not in TABLE_IDS:
             continue
         for index, row in enumerate(table.get("data", []), start=1):
-            row_id = f"row_{index:02d}"
+            row_id = _table_row_id(table_id, index)
             match_text = _ground_truth_match_text(row)
             matched_row = None
             if match_text:
@@ -560,16 +830,24 @@ def _group_entries(entries):
 
 
 def _group_entries_by_rule(entries):
-    grouped = {}
+    grouped = {"rules": [{"conditions": [], "actions": []}]}
     for entry in entries:
-        rule_id = entry.get("rule_id")
-        if rule_id not in grouped:
-            grouped[rule_id] = {"conditions": [], "actions": []}
-        side = (entry.get("side") or "").lower()
+        side = (entry.get("_side") or "").lower()
+        if not side:
+            side = (
+                _infer_side(
+                    entry.get("role"),
+                    {
+                        "logic_type": entry.get("logic_type"),
+                        "logic_group": entry.get("logic_group"),
+                    },
+                )
+                or ""
+            )
         if side == "condition":
-            grouped[rule_id]["conditions"].append(entry)
+            grouped["rules"][0]["conditions"].append(entry)
         elif side == "action":
-            grouped[rule_id]["actions"].append(entry)
+            grouped["rules"][0]["actions"].append(entry)
     return grouped
 
 
@@ -583,17 +861,52 @@ def _group_type(group_name, entries):
 
 
 def _build_mermaid(entries, title):
+    def _flatten_entries_with_side(payload):
+        if isinstance(payload, dict) and isinstance(payload.get("rules"), list):
+            payload = payload.get("rules")
+
+        if (
+            isinstance(payload, list)
+            and payload
+            and all(
+                isinstance(item, dict)
+                and {"conditions", "actions"}.issubset(item.keys())
+                for item in payload
+            )
+        ):
+            flattened = []
+            for rule in payload:
+                for condition in rule.get("conditions", []):
+                    item = dict(condition)
+                    item["_side"] = "condition"
+                    flattened.append(item)
+                for action in rule.get("actions", []):
+                    item = dict(action)
+                    item["_side"] = "action"
+                    flattened.append(item)
+            return flattened
+
+        if isinstance(payload, list):
+            return payload
+        return []
+
+    entries = _flatten_entries_with_side(entries)
+
     def is_condition(entry):
-        side = (entry.get("side") or "").strip().lower()
+        side = (entry.get("_side") or "").strip().lower()
         if side:
             return side == "condition"
-        return entry.get("role") in {"Condition", "ClinicalParameter"}
+        if entry.get("role") in {"ClinicalCondition", "ClinicalParameter"}:
+            return True
+        return bool(entry.get("logic_type") or entry.get("logic_group"))
 
     def is_action(entry):
-        side = (entry.get("side") or "").strip().lower()
+        side = (entry.get("_side") or "").strip().lower()
         if side:
             return side == "action"
-        return entry.get("role") in {"Procedure", "Medication"}
+        if entry.get("role") in {"Procedure", "Medication", "ClinicalAction"}:
+            return not (entry.get("logic_type") or entry.get("logic_group"))
+        return False
 
     condition_entries_all = [entry for entry in entries if is_condition(entry)]
     groups = _group_entries(condition_entries_all)
@@ -687,26 +1000,37 @@ def _build_mermaid(entries, title):
 
 class Table22ConceptRulesTests(unittest.TestCase):
     def setUp(self):
-        if not LIVE_LLM:
+        if not LIVE_LLM and not USE_SNAPSHOT:
             if not RULES_PATH.is_file():
                 self.skipTest(
                     "Missing rules file: "
                     + str(RULES_PATH)
-                    + ". Set CARDIO_GRAPH_TABLE22_RULES_PATH."
+                    + ". Set CARDIO_GRAPH_TABLE22_RULES_PATH or enable CARDIO_GRAPH_TABLE22_USE_SNAPSHOT."
                 )
+        if (not LIVE_LLM) and USE_SNAPSHOT and not LLM_SNAPSHOT_PATH.is_file():
+            self.skipTest(
+                "Missing LLM snapshot alignment JSON: "
+                + str(LLM_SNAPSHOT_PATH)
+                + ". Set CARDIO_GRAPH_TABLE22_LLM_SNAPSHOT or disable CARDIO_GRAPH_TABLE22_USE_SNAPSHOT."
+            )
         if not GROUND_TRUTH_PATH.is_file():
             self.skipTest(
                 "Missing ground-truth file: "
                 + str(GROUND_TRUTH_PATH)
                 + ". Set CARDIO_GRAPH_TABLE22_GROUND_TRUTH_PATH."
             )
-        missing_docling = [path for path in DOCLING_TABLE_PATHS if not path.is_file()]
-        if missing_docling:
-            self.skipTest(
-                "Missing docling table(s): "
-                + ", ".join(str(path) for path in missing_docling)
-                + ". Set CARDIO_GRAPH_TABLE22_DOCLING_62/63."
-            )
+        if not (
+            TABLE_CLEAN_PATH and str(TABLE_CLEAN_PATH) and TABLE_CLEAN_PATH.is_file()
+        ):
+            missing_docling = [
+                path for path in DOCLING_TABLE_PATHS if not path.is_file()
+            ]
+            if missing_docling:
+                self.skipTest(
+                    "Missing docling table(s): "
+                    + ", ".join(str(path) for path in missing_docling)
+                    + ". Set CARDIO_GRAPH_TABLE22_DOCLING_62/63 or CARDIO_GRAPH_TABLE_CLEAN_PATH."
+                )
 
     def _assert_verbose(self, label, expected, actual, note):
         print("\nCHECK: " + label)
@@ -716,8 +1040,15 @@ class Table22ConceptRulesTests(unittest.TestCase):
         self.assertEqual(actual, expected)
 
     def test_table_22_rules_match_ground_truth(self):
-        rules_rows = [] if LIVE_LLM else _load_rules()
         truth = _load_ground_truth()
+
+        use_snapshot = USE_SNAPSHOT and LLM_SNAPSHOT_PATH.is_file()
+        snapshot_rows = (
+            {row.get("row_id"): row for row in _load_llm_snapshot()}
+            if use_snapshot
+            else {}
+        )
+        rules_rows = [] if (LIVE_LLM or use_snapshot) else _load_rules()
 
         builder = (
             GuidelineGraphBuilder(model=LLM_MODEL, node=LLM_NODE, port=LLM_PORT)
@@ -742,9 +1073,23 @@ class Table22ConceptRulesTests(unittest.TestCase):
             expected_rows = expected_rows_full
             expected_rows_grouped = _summarize_ground_truth_grouped(truth)
 
-        actual_rows = [] if LIVE_LLM else _ordered_rows(_summarize_rules(rules_rows))
+        if use_snapshot:
+            actual_rows = _ordered_rows(
+                {
+                    row_id: snapshot_rows[row_id].get("actual_entries", []) or []
+                    for row_id in snapshot_rows
+                }
+            )
+        else:
+            actual_rows = (
+                [] if LIVE_LLM else _ordered_rows(_summarize_rules(rules_rows))
+            )
 
-        if (not LIVE_LLM) and len(actual_rows) < len(expected_rows):
+        if (
+            (not LIVE_LLM)
+            and (not use_snapshot)
+            and len(actual_rows) < len(expected_rows)
+        ):
             self.fail(
                 "Extracted rows are fewer than expected. "
                 + str(len(actual_rows))
@@ -756,22 +1101,42 @@ class Table22ConceptRulesTests(unittest.TestCase):
         for expected_row_id, expected_entries in expected_rows:
             if LIVE_LLM:
                 actual_row_id = expected_row_id
-                actual_entries_raw = _extract_entries_live(
-                    truth_rows.get(expected_row_id, {}), builder
+                (
+                    actual_entries_raw,
+                    grounding_summary,
+                    grounded_display_entries,
+                ) = _extract_entries_live(
+                    truth_rows.get(expected_row_id, {}),
+                    builder,
+                    ground_after_extraction=GROUND_AFTER_EXTRACTION,
                 )
-                actual_entries_ordered = _strip_internal_keys(
-                    _sorted_entries(actual_entries_raw)
-                )
+                actual_entries_sorted_raw = _sorted_entries(actual_entries_raw)
+                actual_entries_ordered = _strip_internal_keys(actual_entries_sorted_raw)
+            elif use_snapshot:
+                snapshot_row = snapshot_rows.get(expected_row_id)
+                if not snapshot_row:
+                    self.fail(
+                        "Snapshot missing row: "
+                        + expected_row_id
+                        + f" (expected rows {sorted(snapshot_rows.keys())})"
+                    )
+                actual_row_id = snapshot_row.get("mapped_actual_row") or expected_row_id
+                actual_entries_raw = snapshot_row.get("actual_entries") or []
+                actual_entries_sorted_raw = _sorted_entries(actual_entries_raw)
+                actual_entries_ordered = _strip_internal_keys(actual_entries_sorted_raw)
+                grounding_summary = None
+                grounded_display_entries = snapshot_row.get("actual_entries_display")
             else:
+                grounding_summary = None
+                grounded_display_entries = None
                 expected_index = int(expected_row_id.split("_")[-1])
                 actual_row_id = f"row_{expected_index + 1:02d}"
                 actual_entries_raw = dict(actual_rows).get(actual_row_id, [])
-                actual_entries_ordered = _strip_internal_keys(
-                    sorted(
-                        actual_entries_raw,
-                        key=lambda entry: entry.get("_source_index", 0),
-                    )
+                actual_entries_sorted_raw = sorted(
+                    actual_entries_raw,
+                    key=lambda entry: entry.get("_source_index", 0),
                 )
+                actual_entries_ordered = _strip_internal_keys(actual_entries_sorted_raw)
 
             expected_sorted = _sorted_entries(expected_entries)
             actual_sorted = _sorted_entries(actual_entries_ordered)
@@ -800,8 +1165,18 @@ class Table22ConceptRulesTests(unittest.TestCase):
                         expected_row_id, expected_entries
                     ),
                     "actual_entries": actual_entries_ordered,
-                    "actual_entries_display": _group_entries_by_rule(
-                        actual_entries_ordered
+                    "actual_entries_display": (
+                        _strip_internal_keys(grounded_display_entries)
+                        if (grounded_display_entries is not None and use_snapshot)
+                        else (
+                            _strip_internal_keys(
+                                _group_entries_by_rule(grounded_display_entries)
+                            )
+                            if grounded_display_entries
+                            else _strip_internal_keys(
+                                _group_entries_by_rule(actual_entries_sorted_raw)
+                            )
+                        )
                     ),
                     "concept_summary": {
                         "expected": len(expected_concepts),
@@ -825,8 +1200,11 @@ class Table22ConceptRulesTests(unittest.TestCase):
                     "rule_extra": sorted(
                         rule_extra, key=lambda x: json.dumps(x, sort_keys=True)
                     ),
+                    "grounding_summary": grounding_summary,
                 }
             )
+
+        report_rows = _strip_internal_keys(report_rows)
 
         DOCS_DIR.mkdir(parents=True, exist_ok=True)
         REPORT_JSON_PATH.write_text(
@@ -839,6 +1217,7 @@ class Table22ConceptRulesTests(unittest.TestCase):
                         if LIVE_LLM
                         else "truth row_N -> extracted row_{N+1} (skip extracted row_01 header)"
                     ),
+                    "ground_after_extraction": GROUND_AFTER_EXTRACTION,
                     "rows": report_rows,
                 },
                 indent=2,
@@ -869,16 +1248,21 @@ class Table22ConceptRulesTests(unittest.TestCase):
             mapping_text = (
                 "Live LLM extraction"
                 if LIVE_LLM
-                else "Mapping: truth row_N -> extracted row_{N+1} (skip extracted row_01 header)"
+                else (
+                    f"Snapshot LLM alignment: {LLM_SNAPSHOT_PATH}"
+                    if use_snapshot
+                    else "Mapping: truth row_N -> extracted row_{N+1} (skip extracted row_01 header)"
+                )
             )
             f.write(mapping_text + "\n\n")
-            f.write(f"Summary CSV: {REPORT_CSV_PATH.relative_to(PROJECT_ROOT)}\n")
-            f.write(f"Aligned JSON: {REPORT_JSON_PATH.relative_to(PROJECT_ROOT)}\n\n")
+            f.write(f"Ground after extraction: {GROUND_AFTER_EXTRACTION}\n\n")
+            f.write(f"Summary CSV: {_display_path(REPORT_CSV_PATH)}\n")
+            f.write(f"Aligned JSON: {_display_path(REPORT_JSON_PATH)}\n\n")
             f.write("Per-row reports:\n\n")
             for row in report_rows:
                 row_file = ROWS_DIR / f"{row['row_id']}.md"
                 f.write(
-                    f"- {row['row_id']} -> {row_file.relative_to(PROJECT_ROOT)} "
+                    f"- {row['row_id']} -> {_display_path(row_file)} "
                     f"(match_score={row['match_score']:.3f})\n"
                 )
 
@@ -909,13 +1293,19 @@ class Table22ConceptRulesTests(unittest.TestCase):
 
                 f.write("Mermaid (Human Annotation):\n\n")
                 f.write("```mermaid\n")
-                f.write(_build_mermaid(row["expected_entries"], "Human"))
+                f.write(_build_mermaid(row.get("expected_entries_display"), "Human"))
                 f.write("\n```\n\n")
 
                 f.write("Mermaid (LLM Generated):\n\n")
                 f.write("```mermaid\n")
-                f.write(_build_mermaid(row["actual_entries"], "LLM"))
+                f.write(_build_mermaid(row.get("actual_entries_display"), "LLM"))
                 f.write("\n```\n\n")
+
+                if row.get("grounding_summary"):
+                    f.write("Grounding summary (optional):\n\n")
+                    f.write("```json\n")
+                    f.write(json.dumps(row.get("grounding_summary"), indent=2))
+                    f.write("\n```\n\n")
 
                 f.write("Concepts:\n")
                 f.write(f"- expected: {row['concept_summary']['expected']}\n")

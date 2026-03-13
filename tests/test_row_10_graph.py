@@ -27,12 +27,12 @@ AUTH = (
 
 
 class Row10GraphTests(unittest.TestCase):
-    RULE_KEY = "_62_63/table_000.json:row_10::1"
+    RULE_KEY = "_62_63/table_000.json:row_10"
     EXPECTED_DECISION_COUNT = 3
     EXPECTED_DECISION_IDS = {
-        "_62_63/table_000.json:row_10::1::g1::s1",
-        "_62_63/table_000.json:row_10::1::g1::s2",
-        "_62_63/table_000.json:row_10::1::g1::s3",
+        "_62_63/table_000.json:row_10::g1::s1",
+        "_62_63/table_000.json:row_10::g1::s2",
+        "_62_63/table_000.json:row_10::g1::s3",
     }
 
     @classmethod
@@ -100,7 +100,7 @@ class Row10GraphTests(unittest.TestCase):
     def test_recommendation_class_level(self):
         query = (
             "MATCH (rec:RecommendationNode {rule_unique_id: $rule}) "
-            "RETURN [rec.class, rec.level]"
+            "RETURN [rec.strength, rec.level]"
         )
         rec_props = self._fetch_single_value(query, rule=self.RULE_KEY)
         self._assert_verbose(
@@ -184,11 +184,11 @@ class Row10GraphTests(unittest.TestCase):
                     "EVALUATES",
                     "ClinicalParameter should use EVALUATES relation.",
                 )
-            elif role == "Condition":
+            elif role == "ClinicalCondition":
                 self.assertEqual(
                     row.get("rel_type"),
                     "CHECKS_FOR",
-                    "Condition should use CHECKS_FOR relation.",
+                    "ClinicalCondition should use CHECKS_FOR relation.",
                 )
 
     def test_decision_chain_reaches_recommendation(self):
@@ -204,9 +204,9 @@ class Row10GraphTests(unittest.TestCase):
         result = self._fetch_rows(
             path_query,
             rule=self.RULE_KEY,
-            d1="_62_63/table_000.json:row_10::1::g1::s1",
-            d2="_62_63/table_000.json:row_10::1::g1::s2",
-            d3="_62_63/table_000.json:row_10::1::g1::s3",
+            d1="_62_63/table_000.json:row_10::g1::s1",
+            d2="_62_63/table_000.json:row_10::g1::s2",
+            d3="_62_63/table_000.json:row_10::g1::s3",
         )
         self._assert_verbose(
             path_query,
