@@ -8,7 +8,7 @@ from cardio_graph_core.table_parsing.inspect_pdf_drawings import (
     looks_like_recommendation_body,
 )
 
-pdf_page_path = "/prj/doctoral_letters/guide/data/guidelines/pdf/pages/_63.pdf"
+pdf_page_path = "/prj/doctoral_letters/guide/data/guidelines/pdf/pages/_82.pdf"
 
 CLASS_LEVEL_PATTERN = re.compile(r"(IIa|IIb|III|II|I)(A|B|C)")
 CLASS_LEVEL_AT_END_PATTERN = re.compile(
@@ -59,56 +59,31 @@ def is_continued_block(block):
     return text_clean == "Continued"
 
 
-def parse_recommendation_blocks(page, debug=False):
+def parse_recommendation_blocks(page, start_y=0, end_y=None, debug=False):
     """
-    Parse a guideline recommendation table in reading order and reconstruct
-    recommendation entries.
+    Parse recommendation blocks in reading order within a vertical region of the page.
 
-    The parser maintains the currently active subheader and subsubheader while
-    buffering ordinary recommendation text blocks. When a class/level block is
-    encountered, it finalizes one recommendation record consisting of:
-
-        {
-            "recommendation": <full recommendation text>,
-            "class": <recommendation class>,
-            "level": <evidence level>,
-            "subheader": <current subheader>,
-            "subsubheader": <current subsubheader or None>,
-        }
-
-    Parsing logic per block:
-    1. If block is a subheader:
-       - replace current subheader
-       - clear current subsubheader
-       - clear pending recommendation text
-    2. Else if block is a subsubheader:
-       - replace current subsubheader
-       - clear pending recommendation text
-    3. Else if block is a class/level block:
-       - combine buffered text with the current block text stripped of the
-         trailing class/level marker
-       - save a recommendation entry
-       - clear pending recommendation text
-    4. Else:
-       - append block to pending recommendation text
-
-    The function also detects whether the page contains a block with the exact
-    text 'Continued' and returns this as a boolean flag.
+    Args:
+        page: fitz.Page
+        start_y: start parsing from this y-position (inclusive)
+        end_y: stop parsing at this y-position (exclusive). If None, parse to page end.
+        debug: bool
 
     Returns:
         tuple[list[dict], bool]:
             - results: parsed recommendation entries
-            - continued: True if a 'Continued' block was detected, else False
+            - continued: True if a 'Continued' block was detected in this region
     """
-
     drawing_rects = get_drawing_rects_with_fill(page)
     blocks = page.get_text("blocks")
+
+    if end_y is None:
+        end_y = float("inf")
 
     current_subheader = None
     current_subsubheader = None
     pending_blocks = []
     continued = False
-
     results = []
 
     for i, block in enumerate(blocks):
@@ -118,15 +93,21 @@ def parse_recommendation_blocks(page, debug=False):
         if not text:
             continue
 
+        # Only parse blocks inside the requested vertical slice
+        if y1 <= start_y:
+            continue
+        if y0 >= end_y:
+            continue
+
         if is_continued_block(block):
             continued = True
             if debug:
                 print(f"\nBLOCK {i} -> CONTINUED")
                 print("text:", repr(text))
+                print("region:", (start_y, end_y))
             continue
 
         block_rect = fitz.Rect(x0, y0, x1, y1)
-
         match = get_matching_rect_for_block(block, drawing_rects, min_overlap=0.10)
 
         header_fill_ok = False
@@ -149,6 +130,7 @@ def parse_recommendation_blocks(page, debug=False):
             if debug:
                 print(f"\nBLOCK {i} -> SUBHEADER")
                 print("text:", repr(text))
+                print("region:", (start_y, end_y))
             continue
 
         if is_subsubheader:
@@ -158,6 +140,7 @@ def parse_recommendation_blocks(page, debug=False):
             if debug:
                 print(f"\nBLOCK {i} -> SUBSUBHEADER")
                 print("text:", repr(text))
+                print("region:", (start_y, end_y))
             continue
 
         if check_class_level_block(block):
@@ -199,6 +182,7 @@ def parse_recommendation_blocks(page, debug=False):
                 print("level:", rec_level)
                 print("subheader:", repr(current_subheader))
                 print("subsubheader:", repr(current_subsubheader))
+                print("region:", (start_y, end_y))
 
             pending_blocks = []
             continue
@@ -208,83 +192,38 @@ def parse_recommendation_blocks(page, debug=False):
         if debug:
             print(f"\nBLOCK {i} -> TEXT")
             print("text:", repr(text))
+            print("region:", (start_y, end_y))
 
     return results, continued
 
 
-def results_to_json(
-    results,
-    source_file,
-    table_header,
-    table_id=0,
-    caption=None,
-    include_subheader_field=True,
-):
-    """
-    Convert parsed recommendation results into the target JSON structure.
-
-    Mapping:
-    - Table Header   <- table_header
-    - Section Header <- parsed item["subheader"]
-    - Subheader      <- parsed item["subsubheader"]   (if present)
-    - Recommendations<- parsed item["recommendation"]
-    - Class a        <- parsed item["class"]
-    - Level b        <- parsed item["level"]
-    """
-    if caption is None:
-        caption = []
-
-    data = []
-
-    for item in results:
-        row = {
-            "Table Header": table_header,
-            "Section Header": item.get("subheader"),
-            "Subheader": item.get("subsubheader"),
-            "Recommendations": item.get("recommendation", ""),
-            "Class a": item.get("class", ""),
-            "Level b": item.get("level", ""),
-        }
-        data.append(row)
-
-    output = {
-        "source_file": source_file,
-        "total_tables": 1,
-        "tables": [
-            {
-                "table_id": table_id,
-                "source_file": source_file,
-                "caption": caption,
-                "data": data,
-            }
-        ],
-    }
-
-    return output
+def get_table_headers(page, debug=False):
+    return [h["text"] for h in get_table_header_blocks(page, debug=debug)]
 
 
 def get_table_header(page, debug=False):
+    headers = get_table_headers(page, debug=debug)
+    return headers[0] if headers else None
+
+
+def get_table_header_blocks(page, debug=False):
     """
-    Return the table header from the page.
+    Return all detected table header blocks with coordinates.
 
-    Heuristic:
-    - iterate blocks in reading order
-    - find the first block that is a subheader
-    - the table header is assumed to be the closest non-empty text block
-      immediately before that first subheader
-
-    This matches pages where the structure is:
-        [table header]
-        [first section header / subheader]
-        [recommendation rows...]
+    A table header is the closest non-empty text block immediately before a
+    subheader block, and must start with 'Recommendation Table'.
 
     Returns:
-        str | None
+        list[dict] with keys:
+            - text: str
+            - block: original PyMuPDF block tuple
+            - rect: fitz.Rect
     """
     drawing_rects = get_drawing_rects_with_fill(page)
     blocks = page.get_text("blocks")
 
-    prev_text_block = None
+    prev_block = None
+    header_blocks = []
 
     for i, block in enumerate(blocks):
         x0, y0, x1, y1, text, *_ = block
@@ -294,7 +233,6 @@ def get_table_header(page, debug=False):
             continue
 
         block_rect = fitz.Rect(x0, y0, x1, y1)
-
         match = get_matching_rect_for_block(block, drawing_rects, min_overlap=0.10)
 
         header_fill_ok = False
@@ -308,41 +246,204 @@ def get_table_header(page, debug=False):
 
         is_subheader = header_fill_ok and bold_ok and not recommendation_like
 
-        if debug:
-            print(f"\nBLOCK {i}")
-            print("text:", repr(text))
-            print("is_subheader:", is_subheader)
-            print("prev_text_block:", repr(prev_text_block))
+        if prev_block is not None and is_subheader:
+            px0, py0, px1, py1, ptext, *_ = prev_block
+            ptext = ptext.strip()
 
-        if is_subheader:
+            valid_table_header = ptext.startswith("Recommendation Table")
+
             if debug:
-                print("\n-> FIRST SUBHEADER FOUND")
+                print(f"\nBLOCK {i}")
                 print("subheader:", repr(text))
-                print("table_header:", repr(prev_text_block))
-            return prev_text_block
+                print("prev_text_block:", repr(ptext))
+                print("valid_table_header:", valid_table_header)
 
-        prev_text_block = text
+            if valid_table_header:
+                header_blocks.append(
+                    {
+                        "text": ptext,
+                        "block": prev_block,
+                        "rect": fitz.Rect(px0, py0, px1, py1),
+                    }
+                )
 
-    return None
+        prev_block = block
+
+    return header_blocks
 
 
-def page_to_json_table(pdf_page_path, debug=False):
+def parse_all_tables_on_page(page, continued=False, debug=False):
+    """
+    Parse all recommendation tables on a page.
 
+    Rules:
+    - If continued=False:
+        parse starting at each detected table header.
+    - If continued=True:
+        parse the first table from the top of the page (y=0),
+        then parse any later tables starting at their detected headers.
+
+    Returns:
+        list[dict], bool
+
+        tables = [
+            {
+                "table_header": <str | None>,
+                "results": <list[dict]>,
+            },
+            ...
+        ]
+
+        page_continued = True if any parsed region contains a 'Continued' marker.
+    """
+    header_blocks = get_table_header_blocks(page, debug=debug)
+
+    start_points = []
+
+    if continued:
+        start_points.append(
+            {
+                "kind": "page_start",
+                "table_header": None,
+                "y0": 0,
+            }
+        )
+
+    for hb in header_blocks:
+        start_points.append(
+            {
+                "kind": "header",
+                "table_header": hb["text"],
+                "y0": hb["rect"].y0,
+            }
+        )
+
+    start_points.sort(key=lambda x: x["y0"])
+
+    # Deduplicate exact same start positions if necessary
+    deduped = []
+    seen = set()
+    for sp in start_points:
+        key = (round(sp["y0"], 1), sp["table_header"], sp["kind"])
+        if key not in seen:
+            seen.add(key)
+            deduped.append(sp)
+    start_points = deduped
+
+    tables = []
+    page_continued = False
+
+    for i, sp in enumerate(start_points):
+        start_y = sp["y0"]
+        end_y = start_points[i + 1]["y0"] if i + 1 < len(start_points) else None
+
+        if debug:
+            print("\n===== TABLE REGION =====")
+            print("kind:", sp["kind"])
+            print("table_header:", repr(sp["table_header"]))
+            print("start_y:", start_y)
+            print("end_y:", end_y)
+
+        results, region_continued = parse_recommendation_blocks(
+            page,
+            start_y=start_y,
+            end_y=end_y,
+            debug=debug,
+        )
+
+        page_continued = page_continued or region_continued
+
+        # Skip empty parses
+        if results:
+            tables.append(
+                {
+                    "table_header": sp["table_header"],
+                    "results": results,
+                }
+            )
+
+    return tables, page_continued
+
+
+def results_to_json(
+    parsed_tables,
+    source_file,
+    caption=None,
+    include_subheader_field=True,
+):
+    """
+    Convert parsed tables into the target JSON structure.
+
+    Args:
+        parsed_tables: list[dict]
+            [
+                {
+                    "table_header": <str | None>,
+                    "results": <list[dict]>
+                },
+                ...
+            ]
+    """
+    if caption is None:
+        caption = []
+
+    tables_json = []
+
+    for table_id, table in enumerate(parsed_tables):
+        table_header = table.get("table_header")
+        results = table.get("results", [])
+
+        data = []
+        for item in results:
+            row = {
+                "Table Header": table_header,
+                "Section Header": item.get("subheader"),
+                "Subheader": item.get("subsubheader"),
+                "Recommendations": item.get("recommendation", ""),
+                "Class a": item.get("class", ""),
+                "Level b": item.get("level", ""),
+            }
+            data.append(row)
+
+        tables_json.append(
+            {
+                "table_id": table_id,
+                "source_file": source_file,
+                "caption": caption,
+                "data": data,
+            }
+        )
+
+    output = {
+        "source_file": source_file,
+        "total_tables": len(tables_json),
+        "tables": tables_json,
+    }
+
+    return output
+
+
+def page_to_json_table(pdf_page_path, continued=False, debug=False):
     doc = fitz.open(pdf_page_path)
     page = doc[0]
 
-    # debug_blocks(page)
-    table_header = get_table_header(page, debug)
-    results, continued = parse_recommendation_blocks(page, debug)
-    print("\nContinued on next page:", continued)
+    parsed_tables, page_continued = parse_all_tables_on_page(
+        page,
+        continued=continued,
+        debug=debug,
+    )
+
+    print("\nContinued on next page:", page_continued)
     print("\n===== FINAL OUTPUT =====")
-    for r in results:
-        print(r)
+    for t in parsed_tables:
+        print("\n--- TABLE ---")
+        print("header:", repr(t["table_header"]))
+        for r in t["results"]:
+            print(r)
+
     final_json = results_to_json(
-        results,
+        parsed_tables,
         source_file=pdf_page_path,
-        table_header=table_header,
-        table_id=0,
         caption=None,
         include_subheader_field=True,
     )
@@ -350,23 +451,20 @@ def page_to_json_table(pdf_page_path, debug=False):
 
 
 if __name__ == "__main__":
-
     doc = fitz.open(pdf_page_path)
     page = doc[0]
 
-    # debug_blocks(page)
-    table_header = get_table_header(page, debug=True)
-    results, continued = parse_recommendation_blocks(page, debug=True)
-    print("\nContinued on next page:", continued)
-    print("\n===== FINAL OUTPUT =====")
-    for r in results:
-        print(r)
-    final = results_to_json(
-        results,
-        source_file=pdf_page_path,
-        table_header=table_header,
-        table_id=0,
-        caption=None,
-        include_subheader_field=True,
+    header_blocks = get_table_header_blocks(page, debug=True)
+
+    print("\n===== TABLE HEADERS =====")
+    for hb in header_blocks:
+        print(repr(hb["text"]), hb["rect"])
+
+    json_out = page_to_json_table(
+        pdf_page_path,
+        continued=False,  # set True when this page continues a table from previous page
+        debug=True,
     )
-    print(json.dumps(final, indent=4, ensure_ascii=False))
+
+    print("\n===== FINAL JSON OUTPUT =====")
+    print(json.dumps(json_out, indent=2))
