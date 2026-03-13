@@ -47,7 +47,7 @@ class RuleLogicV2 {
 class RuleConditionV2 {
   entity_original string
   entity_standardized_candidate string
-  role string @description("ClinicalCondition, ClinicalParameter, Procedure")
+  role string @description("ClinicalCondition, ClinicalParameter, Procedure, Qualifier Value")
   logic RuleLogicV2
 }
 
