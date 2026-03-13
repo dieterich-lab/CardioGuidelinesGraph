@@ -115,6 +115,30 @@ nodes:
       - name: "root_concept_term"
         type: "string"
 
+    - label: "Qualifier Value"
+    description: "Diagnostic or therapeutic procedures (e.g., PCI, ECG, Echo)."
+    attributes:
+      - name: "snomed_id"
+        type: "string"
+      - name: "preferred_term"
+        type: "string"
+      - name: "synonyms"
+        type: "list"
+      - name: "entity"
+        type: "string"
+      - name: "entity_original"
+        type: "string"
+      - name: "entity_standardized_candidate"
+        type: "string"
+      - name: "target_label"
+        type: "string"
+      - name: "taxonomy_path"
+        type: "list"
+      - name: "root_concept_id"
+        type: "string"
+      - name: "root_concept_term"
+        type: "string"
+
   # --- B. Logic Layer (The Guideline Structure) ---
   # Diese Knoten bilden den Entscheidungsbaum/DAG ab.
   # Sie werden NICHT zwingend auf SNOMED gemappt, sondern strukturieren den Ablauf.
@@ -249,13 +273,13 @@ snomed_mapping:
       root_concepts: 
         - "105590001" # Substance
         - "373873005" # Pharmaceutical / biologic product (product)
-        - "373247007" # Cardiovascular agent (substance)
-        - "410942007" # Drug or medicament (substance)
+        #- "373247007" # Cardiovascular agent (substance) ROOT Substance
+        #- "410942007" # Drug or medicament (substance) ROOT Substance
       
     - target_label: "ClinicalCondition"
       root_concepts:
-        - "49601007"  # Disorder of cardiovascular system
-        - "404684003" # Clinical finding (für Symptome)
+        #- "49601007"  # Disorder of cardiovascular system  ROOT Clinical finding
+        - "404684003" # Clinical finding (für Symptome) 
 
     - target_label: "Procedure"
       root_concepts:
@@ -264,6 +288,11 @@ snomed_mapping:
     - target_label: "ClinicalParameter"
       root_concepts:
         - "363787002" # Observable entity (z.B. Blood Pressure)
+
+    - target_label: "Qualifier Value"
+      root_concepts:
+        - "362981000" # concept used to modify, refine, or describe another concept
+        
 
 
 # ==========================================
