@@ -13,6 +13,25 @@ The three scripts are:
 - `snomed_vector_ingest.py`
 
 
+## Neo4j instance map (current)
+
+Use this quick mapping to avoid mixing environments:
+
+- `bolt://neo4j-dev3.internal:7687`
+   - SNOMED keyword/vector index (semantic candidate retrieval).
+   - Used by vector grounding/evaluation and SNOMED embedding ingest.
+
+- `bolt://neo4j-dev2.internal:7687`
+   - Manual ground-truth rules graph from the 3 benchmark tables (`table_8_manual_1.3`, `table_17_manual_1.3`, `table_22_manual_1.3`).
+   - Validation evidence exists in `docs/dev2_ground_truth_sanity_report.json`.
+
+- `bolt://neo4j-dev4.internal:7687`
+   - Automatically generated rules graph (graph builder / graph loading target).
+   - Default target used by `feedneo4jdb.py`.
+
+If in doubt, treat dev2 as manual benchmark truth, dev3 as vector retrieval infrastructure, and dev4 as the generated KG target.
+
+
 ## Secrets setup (recommended)
 
 Do not store Neo4j passwords in source files.

@@ -183,6 +183,17 @@ The loader builds:
 - Decision and recommendation nodes from rules
 - Edges: CHECKS_FOR, EVALUATES, LEADS_TO, RESULTS_IN, RECOMMENDS_PROCEDURE, RECOMMENDS_MEDICATION
 
+### Neo4j instance map (current)
+
+- bolt://neo4j-dev3.internal:7687
+  - SNOMED keyword/vector index for semantic candidate retrieval.
+- bolt://neo4j-dev2.internal:7687
+  - Manual ground-truth rules graph for the 3 benchmark tables.
+- bolt://neo4j-dev4.internal:7687
+  - Automatically generated rules graph (graph builder loading target).
+
+Operational shorthand: dev2 = manual truth, dev3 = vector retrieval infra, dev4 = generated KG.
+
 ## Quickstart
 
 ```bash
