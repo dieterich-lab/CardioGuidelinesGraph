@@ -192,10 +192,16 @@ def _entry_similarity(expected: Dict[str, Any], actual: Dict[str, Any]) -> float
             if not actual_tokens:
                 continue
             overlap = expected_tokens.intersection(actual_tokens)
-            coverage = len(overlap) / len(expected_tokens)
-            if coverage > best:
-                best = coverage
-            if coverage >= 0.55:
+            precision = len(overlap) / max(len(actual_tokens), 1)
+            recall = len(overlap) / max(len(expected_tokens), 1)
+            f1 = _safe_div(2 * precision * recall, precision + recall)
+            jaccard = len(overlap) / max(len(expected_tokens | actual_tokens), 1)
+            lexical_score = max(recall, f1, jaccard)
+            if expected_alias in actual_alias or actual_alias in expected_alias:
+                lexical_score = min(1.0, lexical_score + 0.08)
+            if lexical_score > best:
+                best = lexical_score
+            if lexical_score >= 0.45:
                 # Good enough lexical overlap; skip expensive LLM call.
                 continue
             llm_score = _llm_semantic_equivalent(
@@ -206,6 +212,30 @@ def _entry_similarity(expected: Dict[str, Any], actual: Dict[str, Any]) -> float
             if llm_score > best:
                 best = llm_score
     return best
+
+
+def _pair_threshold(
+    expected_entry: Dict[str, Any],
+    base_threshold: float,
+) -> float:
+    role = str(expected_entry.get("role") or "")
+    expected_tokens = _tokenize(
+        expected_entry.get("entity") or expected_entry.get("entity_original") or ""
+    )
+    token_count = len(expected_tokens)
+
+    threshold = base_threshold
+    if token_count >= 7:
+        threshold = min(threshold, 0.34)
+    elif token_count >= 5:
+        threshold = min(threshold, 0.38)
+    elif token_count >= 3:
+        threshold = min(threshold, 0.45)
+
+    if role == "Procedure" and token_count >= 4:
+        threshold = min(threshold, 0.35)
+
+    return max(0.30, min(0.75, threshold))
 
 
 def _rule_fields_match(expected: Dict[str, Any], actual: Dict[str, Any]) -> bool:
@@ -303,7 +333,8 @@ def _pair_entries(
             if similarity > best_similarity:
                 best_similarity = similarity
                 best_index = index
-        if best_index >= 0 and best_similarity >= threshold:
+        pair_threshold = _pair_threshold(expected_entry, threshold)
+        if best_index >= 0 and best_similarity >= pair_threshold:
             pairs.append((expected_entry, remaining_actual.pop(best_index)))
     return pairs
 
@@ -356,13 +387,21 @@ def build_score_report_from_alignment(
 
     row_errors: List[RowErrors] = []
 
+    pair_min_threshold = float(
+        os.environ.get("CARDIO_GRAPH_TUNING_PAIR_MIN_THRESHOLD", "0.50") or "0.50"
+    )
+
     for row in rows:
         concept_summary = row.get("concept_summary", {})
         rule_summary = row.get("rule_summary", {})
 
         expected_entries = list(row.get("expected_entries") or [])
         actual_entries = list(row.get("actual_entries") or [])
-        entry_pairs = _pair_entries(expected_entries, actual_entries)
+        entry_pairs = _pair_entries(
+            expected_entries,
+            actual_entries,
+            threshold=pair_min_threshold,
+        )
         expected_counts = _side_counts(expected_entries)
         actual_counts = _side_counts(actual_entries)
 

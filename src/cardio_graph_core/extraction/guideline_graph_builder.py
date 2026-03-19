@@ -89,6 +89,23 @@ STOPWORD_TOKENS = {
     "to",
     "with",
 }
+GENERIC_CONCEPT_TOKENS = {
+    "clinical",
+    "condition",
+    "disease",
+    "disorder",
+    "heart",
+    "coronary",
+    "artery",
+    "therapy",
+    "medical",
+    "procedure",
+    "patient",
+    "risk",
+    "syndrome",
+    "revascularization",
+    "intervention",
+}
 DISALLOWED_SEMANTIC_TAGS = {
     "occupation",
     "ethnic group finding",
@@ -410,6 +427,24 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_TIE_EPSILON", "0.002")
             or "0.002"
         )
+        self.min_weighted_query_coverage = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_MIN_WEIGHTED_QUERY_COVERAGE", "0.45")
+            or "0.45"
+        )
+        self.low_coverage_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_LOW_COVERAGE_PENALTY", "0.12")
+            or "0.12"
+        )
+        self.missing_discriminative_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MISSING_DISCRIMINATIVE_PENALTY", "0.10"
+            )
+            or "0.10"
+        )
+        self.enable_grounding_candidate_debug = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_DEBUG_TOP_CANDIDATES", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
         self.vector_retriever: Optional[Neo4jVectorCandidateRetriever] = None
         if self.enable_vector_grounding:
             try:
@@ -827,7 +862,38 @@ class GuidelineGraphBuilder:
         token_jaccard = 0.0
         if q_tokens and c_tokens:
             token_jaccard = len(q_tokens & c_tokens) / len(q_tokens | c_tokens)
-        return max(seq, partial, token_jaccard)
+        coverage = self._weighted_query_coverage(q_tokens, c_tokens)
+        combined = 0.45 * coverage + 0.25 * token_jaccard + 0.20 * seq + 0.10 * partial
+        return min(1.0, max(combined, coverage, token_jaccard))
+
+    def _token_weight(self, token: str) -> float:
+        if not token:
+            return 0.0
+        if token in GENERIC_CONCEPT_TOKENS:
+            return 0.35
+        return min(1.5, 0.8 + (len(token) / 12.0))
+
+    def _weighted_query_coverage(
+        self, query_tokens: set[str], candidate_tokens: set[str]
+    ) -> float:
+        if not query_tokens:
+            return 0.0
+        denom = sum(self._token_weight(token) for token in query_tokens)
+        if denom <= 0:
+            return 0.0
+        numer = sum(
+            self._token_weight(token)
+            for token in query_tokens
+            if token in candidate_tokens
+        )
+        return numer / denom
+
+    def _discriminative_query_tokens(self, query_tokens: set[str]) -> set[str]:
+        return {
+            token
+            for token in query_tokens
+            if token not in GENERIC_CONCEPT_TOKENS and len(token) >= 5
+        }
 
     def _vector_candidates(
         self, term: str
@@ -1173,6 +1239,7 @@ class GuidelineGraphBuilder:
             local_best_score = -1.0
             local_best_lexical = -1.0
             local_best_overlap = -1.0
+            candidate_debug_rows: List[Dict[str, Any]] = []
             for concept_id, terms in concept_items_to_score:
                 if role_filter and not self._candidate_matches_role(
                     concept_id, role_filter
@@ -1192,6 +1259,7 @@ class GuidelineGraphBuilder:
 
                 score = 0.0
                 best_candidate_term = None
+                best_candidate_overlap = 0.0
                 for candidate in candidates:
                     candidate_norm = self._normalize(candidate)
                     candidate_tokens = set(self._important_tokens(candidate))
@@ -1211,9 +1279,16 @@ class GuidelineGraphBuilder:
                     overlap_ratio = self._token_overlap_ratio(
                         important_query_tokens, candidate
                     )
+                    weighted_coverage = self._weighted_query_coverage(
+                        important_query_tokens, candidate_tokens
+                    )
                     if overlap_ratio:
                         candidate_score = min(
-                            1.0, candidate_score + overlap_ratio * 0.1
+                            1.0, candidate_score + overlap_ratio * 0.08
+                        )
+                    if weighted_coverage:
+                        candidate_score = min(
+                            1.0, candidate_score + weighted_coverage * 0.10
                         )
                     penalty = self._specificity_penalty(
                         important_query_tokens, candidate_tokens
@@ -1223,13 +1298,32 @@ class GuidelineGraphBuilder:
                     if candidate_score > score:
                         score = candidate_score
                         best_candidate_term = candidate
+                        best_candidate_overlap = weighted_coverage
 
                 preferred_overlap = self._token_overlap_ratio(
                     important_query_tokens, preferred or ""
                 )
-                if preferred and important_query_tokens:
-                    if preferred_overlap < 0.5:
-                        continue
+                best_overlap = max(
+                    preferred_overlap,
+                    best_candidate_overlap,
+                )
+
+                discriminative_tokens = self._discriminative_query_tokens(
+                    important_query_tokens
+                )
+                candidate_tokens_for_best = set(
+                    self._important_tokens(best_candidate_term or preferred or "")
+                )
+                final_penalty = 0.0
+                if (
+                    important_query_tokens
+                    and best_overlap < self.min_weighted_query_coverage
+                ):
+                    final_penalty += self.low_coverage_penalty
+                if discriminative_tokens and not (
+                    discriminative_tokens & candidate_tokens_for_best
+                ):
+                    final_penalty += self.missing_discriminative_penalty
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
                 vector_bonus = 0.0
@@ -1238,7 +1332,22 @@ class GuidelineGraphBuilder:
                         self.vector_bonus_cap,
                         vector_raw * self.vector_rerank_weight,
                     )
-                final_score = min(1.0, score + vector_bonus)
+                final_score = min(1.0, max(0.0, score + vector_bonus - final_penalty))
+
+                if self.enable_grounding_candidate_debug:
+                    candidate_debug_rows.append(
+                        {
+                            "concept_id": concept_id,
+                            "preferred": preferred,
+                            "best_candidate_term": best_candidate_term,
+                            "lexical": round(score, 6),
+                            "vector_raw": round(vector_raw, 6),
+                            "vector_bonus": round(vector_bonus, 6),
+                            "coverage": round(best_overlap, 6),
+                            "final_penalty": round(final_penalty, 6),
+                            "final_score": round(final_score, 6),
+                        }
+                    )
 
                 better_final = final_score > (
                     local_best_score + self.vector_tie_epsilon
@@ -1252,9 +1361,22 @@ class GuidelineGraphBuilder:
                 if better_final or (tied_final and (better_lexical or better_overlap)):
                     local_best_score = final_score
                     local_best_lexical = score
-                    local_best_overlap = preferred_overlap
+                    local_best_overlap = best_overlap
                     local_best_id = concept_id
                     local_best_term = preferred or best_candidate_term
+
+            if self.enable_grounding_candidate_debug and candidate_debug_rows:
+                top_rows = sorted(
+                    candidate_debug_rows,
+                    key=lambda row: row["final_score"],
+                    reverse=True,
+                )[:5]
+                logger.info(
+                    "Grounding top candidates term='%s' role='%s': %s",
+                    term,
+                    role_filter or "ANY",
+                    top_rows,
+                )
             return local_best_id, local_best_term, local_best_score
 
         best_id, best_term, best_score = score_candidates(concept_items, role)

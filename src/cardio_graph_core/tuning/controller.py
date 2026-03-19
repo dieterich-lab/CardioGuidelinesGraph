@@ -175,6 +175,14 @@ def _ucb_bonus(
     return exploration_weight * (sum(terms) / len(terms))
 
 
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name, str(default))
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return default
+
+
 def _run_evaluation(
     split_name: str,
     row_ids: List[str],
@@ -400,9 +408,40 @@ def main(
 
     rng = random.Random(seed)
     thresholds = GateThresholds(
-        min_locked_test_operator_gain=float(
-            os.environ.get("CARDIO_GRAPH_TUNING_MIN_LOCKED_OPERATOR_GAIN", "0.0")
-        )
+        min_rule_exact_gain=_env_float(
+            "CARDIO_GRAPH_TUNING_MIN_RULE_EXACT_GAIN", 0.005
+        ),
+        max_secondary_drop=_env_float("CARDIO_GRAPH_TUNING_MAX_SECONDARY_DROP", 0.01),
+        max_locked_test_drop=_env_float(
+            "CARDIO_GRAPH_TUNING_MAX_LOCKED_TEST_DROP", 0.01
+        ),
+        min_locked_test_operator_gain=_env_float(
+            "CARDIO_GRAPH_TUNING_MIN_LOCKED_OPERATOR_GAIN", 0.0
+        ),
+        bootstrap_rule_exact_floor=_env_float(
+            "CARDIO_GRAPH_TUNING_BOOTSTRAP_RULE_EXACT_FLOOR", 0.05
+        ),
+        bootstrap_min_concept_f1_gain=_env_float(
+            "CARDIO_GRAPH_TUNING_BOOTSTRAP_MIN_CONCEPT_F1_GAIN", 0.03
+        ),
+        bootstrap_max_operator_drop=_env_float(
+            "CARDIO_GRAPH_TUNING_BOOTSTRAP_MAX_OPERATOR_DROP", 0.005
+        ),
+        bootstrap_max_logic_drop=_env_float(
+            "CARDIO_GRAPH_TUNING_BOOTSTRAP_MAX_LOGIC_DROP", 0.005
+        ),
+        cold_start_rule_exact_floor=_env_float(
+            "CARDIO_GRAPH_TUNING_COLD_START_RULE_EXACT_FLOOR", 0.01
+        ),
+        cold_start_min_operator_gain=_env_float(
+            "CARDIO_GRAPH_TUNING_COLD_START_MIN_OPERATOR_GAIN", 0.10
+        ),
+        cold_start_min_logic_gain=_env_float(
+            "CARDIO_GRAPH_TUNING_COLD_START_MIN_LOGIC_GAIN", 0.10
+        ),
+        cold_start_min_concept_f1_gain=_env_float(
+            "CARDIO_GRAPH_TUNING_COLD_START_MIN_CONCEPT_F1_GAIN", 0.01
+        ),
     )
 
     model_lower = model.lower()
