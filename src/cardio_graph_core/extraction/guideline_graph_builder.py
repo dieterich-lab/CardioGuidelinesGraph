@@ -459,6 +459,34 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_DEBUG_TOP_CANDIDATES", "false")
             or "false"
         ).strip().lower() in {"1", "true", "yes", "on"}
+        self.hard_negative_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_PENALTY", "0.05")
+            or "0.05"
+        )
+        self.ambiguity_abstain_margin = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_ABSTAIN_MARGIN", "0.0")
+            or "0.0"
+        )
+        self.ambiguity_min_coverage = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_MIN_COVERAGE", "0.55")
+            or "0.55"
+        )
+        self.hard_negative_manifest_path = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_MANIFEST",
+                os.path.join(
+                    Path(__file__).resolve().parents[3],
+                    "docs",
+                    "table22_snomed_grounding_compare",
+                    "grounding_only",
+                    "persistent_error_manifest.json",
+                ),
+            )
+            or ""
+        ).strip()
+        self.hard_negative_map = self._load_hard_negative_manifest(
+            self.hard_negative_manifest_path
+        )
         self.vector_retriever: Optional[Neo4jVectorCandidateRetriever] = None
         if self.enable_vector_grounding:
             try:
@@ -530,6 +558,62 @@ class GuidelineGraphBuilder:
                     "Failed to initialize vector grounding retriever: %s", exc
                 )
                 self.enable_vector_grounding = False
+
+    def _load_hard_negative_manifest(
+        self, manifest_path: str
+    ) -> Dict[Tuple[str, str], set[int]]:
+        if not manifest_path or not os.path.exists(manifest_path):
+            return {}
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except Exception as exc:
+            logger.warning(
+                "Failed to read hard-negative manifest '%s': %s", manifest_path, exc
+            )
+            return {}
+
+        rows = payload.get("top_persistent_errors") or []
+        mapping: Dict[Tuple[str, str], set[int]] = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            term = self._normalize((row.get("term") or "").strip())
+            role = (row.get("role") or "").strip()
+            if not term or not role:
+                continue
+            wrong_ids = row.get("predicted_snomed_ids_on_miss") or {}
+            if not isinstance(wrong_ids, dict):
+                continue
+            ids: set[int] = set()
+            for raw in wrong_ids.keys():
+                try:
+                    ids.add(int(raw))
+                except (TypeError, ValueError):
+                    continue
+            if ids:
+                mapping[(term, role)] = ids
+        if mapping:
+            logger.info(
+                "Loaded hard-negative manifest (%d term-role rows): %s",
+                len(mapping),
+                manifest_path,
+            )
+        return mapping
+
+    def _hard_negative_penalty_for(
+        self, term: str, role: Optional[str], concept_id: int
+    ) -> float:
+        if self.hard_negative_penalty <= 0.0:
+            return 0.0
+        normalized_term = self._normalize(term)
+        role_key = (role or "").strip()
+        if not normalized_term or not role_key:
+            return 0.0
+        blocked = self.hard_negative_map.get((normalized_term, role_key), set())
+        if concept_id in blocked:
+            return self.hard_negative_penalty
+        return 0.0
 
     def _collect_root_concepts(self, mapping_rules: List[Dict]) -> List[int]:
         roots = []
@@ -1359,6 +1443,11 @@ class GuidelineGraphBuilder:
                 final_penalty += (
                     extra_qualifier_ratio * self.extra_qualifier_penalty_weight
                 )
+                final_penalty += self._hard_negative_penalty_for(
+                    term=term,
+                    role=role_filter,
+                    concept_id=int(concept_id),
+                )
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
                 vector_bonus = 0.0
@@ -1461,7 +1550,18 @@ class GuidelineGraphBuilder:
                 top = top_two[0]
                 runner = top_two[1]
                 if (
-                    (top["final_score"] - runner["final_score"])
+                    self.ambiguity_abstain_margin > 0.0
+                    and (top["final_score"] - runner["final_score"])
+                    <= self.ambiguity_abstain_margin
+                    and top["coverage"] < self.ambiguity_min_coverage
+                    and runner["coverage"] < self.ambiguity_min_coverage
+                ):
+                    local_best_id = None
+                    local_best_term = None
+                    local_best_score = 0.0
+                if (
+                    local_best_id is not None
+                    and (top["final_score"] - runner["final_score"])
                     <= self.guarded_fallback_margin
                     and top["discriminative_coverage"]
                     < self.min_discriminative_coverage_for_top
