@@ -902,22 +902,27 @@ def pretty_print_filtered_groups(groups):
 
 
 def decision_main(
-    URI, AUTH, entity, model="mxbai-embed-large:latest", host="http://localhost:11434"
+    URI,
+    AUTH,
+    entity,
+    model="mxbai-embed-large:latest",
+    host="http://localhost:11434",
+    embed=False,
 ):
 
     embedder = SimpleOllamaEmbedder(
         model=model,
         host=host,
     )
-
-    embed_decisionnodes_and_create_indexes(
-        uri=URI,
-        auth=AUTH,
-        embedder=embedder,
-        dimensions=1024,
-        source_property="entity_standardized_candidate",
-        embedding_property="embedding_entity_standardized",
-    )
+    if embed:
+        embed_decisionnodes_and_create_indexes(
+            uri=URI,
+            auth=AUTH,
+            embedder=embedder,
+            dimensions=1024,
+            source_property="entity_standardized_candidate",
+            embedding_property="embedding_entity_standardized",
+        )
 
     driver = GraphDatabase.driver(URI, auth=AUTH)
 

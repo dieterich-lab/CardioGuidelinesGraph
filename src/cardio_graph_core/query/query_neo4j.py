@@ -1162,9 +1162,9 @@ if __name__ == "__main__":
     # for rule in result["true_rules"]:
     #     summarize_rule_evaluation(rule)
     results = test_battery(
-        test_inputs=q4,
+        test_inputs=test_inputs,
         URI=URI,
         AUTH=AUTH,
         host=host,
-        output_path="/prj/doctoral_letters/guide/data/query_test_output/guideline_q4_report.txt",
+        output_path="/prj/doctoral_letters/guide/data/query_test_output/guideline_testv3_report.txt",
     )
