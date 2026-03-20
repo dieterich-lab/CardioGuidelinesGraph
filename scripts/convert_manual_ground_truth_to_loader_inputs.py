@@ -3,6 +3,7 @@
 import argparse
 import json
 import re
+import socket
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -103,11 +104,61 @@ def _dedupe_synonyms(values: List[str], concept: str, max_items: int = 10) -> Li
     return cleaned
 
 
+def _synonym_cache_key(concept: str, role: str) -> str:
+    return f"{_normalize_term(concept)}||{_normalize_term(role)}"
+
+
+def _load_synonym_cache(path: Path) -> Dict[str, List[str]]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"WARNING: failed to read synonym cache at {path}: {exc}")
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+
+    cache: Dict[str, List[str]] = {}
+    for key, value in payload.items():
+        if not isinstance(key, str) or not isinstance(value, list):
+            continue
+        cache[key] = [str(v).strip() for v in value if str(v).strip()]
+    return cache
+
+
+def _save_synonym_cache(path: Path, cache: Dict[str, List[str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(cache, indent=2) + "\n", encoding="utf-8")
+
+
+def _ensure_ollama_reachable(
+    node: str, port: Optional[int], timeout_s: float = 3.0
+) -> None:
+    from cardio_graph_core.extraction.clients import resolve_ollama_base_url
+
+    base_url = resolve_ollama_base_url(node=node, port=port)
+    host_port = base_url.split("//", 1)[-1].split("/", 1)[0]
+    host, raw_port = host_port.rsplit(":", 1)
+    target_port = int(raw_port)
+    try:
+        with socket.create_connection((host, target_port), timeout=timeout_s):
+            return
+    except Exception as exc:
+        raise RuntimeError(
+            f"Ollama endpoint unavailable at {base_url} for synonym generation. "
+            "Start the server or disable --enable-llm-synonyms. "
+            f"Underlying error: {exc}"
+        ) from exc
+
+
 def _build_synonyms_generator(
     enabled: bool,
     model: str,
     node: str,
     port: Optional[int],
+    synonym_cache: Optional[Dict[str, List[str]]] = None,
+    synonym_stats: Optional[Dict[str, int]] = None,
 ):
     if not enabled:
         return None
@@ -115,10 +166,22 @@ def _build_synonyms_generator(
     from cardio_graph_core.extraction.baml_client.sync_client import b
     from cardio_graph_core.extraction.clients import create_client_registry
 
+    _ensure_ollama_reachable(node=node, port=port)
+
     client_registry = create_client_registry(model, node=node, port=port)
     baml_options = {"client_registry": client_registry}
 
     def _generate(concept: str, role: str) -> List[str]:
+        cache_key = _synonym_cache_key(concept, role)
+        if synonym_cache is not None and cache_key in synonym_cache:
+            if synonym_stats is not None:
+                synonym_stats["cache_hits"] = synonym_stats.get("cache_hits", 0) + 1
+            return _dedupe_synonyms(
+                synonym_cache.get(cache_key, []), concept=concept, max_items=10
+            )
+
+        if synonym_stats is not None:
+            synonym_stats["llm_calls"] = synonym_stats.get("llm_calls", 0) + 1
         try:
             result = b.GenerateConceptSynonyms(
                 concept=concept,
@@ -126,10 +189,14 @@ def _build_synonyms_generator(
                 baml_options=baml_options,
             )
             synonyms = list(getattr(result, "synonyms", []) or [])
-            return _dedupe_synonyms(synonyms, concept=concept, max_items=10)
+            cleaned = _dedupe_synonyms(synonyms, concept=concept, max_items=10)
+            if synonym_cache is not None:
+                synonym_cache[cache_key] = cleaned
+            return cleaned
         except Exception as exc:
-            print(f"WARNING: synonym generation failed for '{concept}': {exc}")
-            return []
+            raise RuntimeError(
+                f"Synonym generation failed for concept '{concept}' (role '{role}'): {exc}"
+            ) from exc
 
     return _generate
 
@@ -296,6 +363,16 @@ def main() -> int:
         default=11436,
         help="Port for synonym generation model endpoint",
     )
+    parser.add_argument(
+        "--synonym-cache-path",
+        default=None,
+        help="Optional JSON cache path for concept+role -> synonyms",
+    )
+    parser.add_argument(
+        "--out-concept-dict",
+        default=None,
+        help="Optional output path for reusable concept dictionary JSON",
+    )
     args = parser.parse_args()
 
     input_paths = [Path(p) for p in args.input]
@@ -306,18 +383,31 @@ def main() -> int:
     else:
         print(f"WARNING: abbreviation file not found at {abbrv_path}")
 
-    synonym_generator = _build_synonyms_generator(
-        enabled=args.enable_llm_synonyms,
-        model=args.synonym_model,
-        node=args.synonym_node,
-        port=args.synonym_port,
-    )
+    synonym_cache: Optional[Dict[str, List[str]]] = None
+    synonym_cache_path: Optional[Path] = None
+    synonym_stats: Dict[str, int] = {"cache_hits": 0, "llm_calls": 0}
+    if args.synonym_cache_path:
+        synonym_cache_path = Path(args.synonym_cache_path)
+        synonym_cache = _load_synonym_cache(synonym_cache_path)
 
-    by_snomed_id, rules_rows, used_sources = convert_manual_payloads(
-        input_paths,
-        abbreviation_lookup=abbreviation_lookup,
-        synonym_generator=synonym_generator,
-    )
+    try:
+        synonym_generator = _build_synonyms_generator(
+            enabled=args.enable_llm_synonyms,
+            model=args.synonym_model,
+            node=args.synonym_node,
+            port=args.synonym_port,
+            synonym_cache=synonym_cache,
+            synonym_stats=synonym_stats,
+        )
+
+        by_snomed_id, rules_rows, used_sources = convert_manual_payloads(
+            input_paths,
+            abbreviation_lookup=abbreviation_lookup,
+            synonym_generator=synonym_generator,
+        )
+    except RuntimeError as exc:
+        print(f"ERROR: {exc}")
+        return 2
 
     out_index = Path(args.out_index)
     out_rules = Path(args.out_rules)
@@ -328,6 +418,40 @@ def main() -> int:
         json.dumps({"by_snomed_id": by_snomed_id}, indent=2) + "\n",
         encoding="utf-8",
     )
+
+    if (
+        args.enable_llm_synonyms
+        and synonym_cache_path is not None
+        and synonym_cache is not None
+    ):
+        _save_synonym_cache(synonym_cache_path, synonym_cache)
+
+    if args.out_concept_dict:
+        out_concept_dict = Path(args.out_concept_dict)
+        out_concept_dict.parent.mkdir(parents=True, exist_ok=True)
+        out_concept_dict.write_text(
+            json.dumps(
+                {
+                    "generated_from": used_sources,
+                    "abbreviation_source": str(abbrv_path),
+                    "llm_synonym_generation": args.enable_llm_synonyms,
+                    "synonym_model": (
+                        args.synonym_model if args.enable_llm_synonyms else None
+                    ),
+                    "synonym_node": (
+                        args.synonym_node if args.enable_llm_synonyms else None
+                    ),
+                    "synonym_port": (
+                        args.synonym_port if args.enable_llm_synonyms else None
+                    ),
+                    "concepts_by_snomed_id": by_snomed_id,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
     with out_rules.open("w", encoding="utf-8") as handle:
         for row in rules_rows:
             handle.write(json.dumps(row) + "\n")
@@ -339,10 +463,17 @@ def main() -> int:
     print(
         f"LLM synonym generation: {'enabled' if args.enable_llm_synonyms else 'disabled'}"
     )
+    if args.enable_llm_synonyms:
+        print(f"Synonym cache hits: {synonym_stats.get('cache_hits', 0)}")
+        print(f"Synonym LLM calls: {synonym_stats.get('llm_calls', 0)}")
+        if synonym_cache_path is not None:
+            print(f"Synonym cache path: {synonym_cache_path}")
     print(f"Rules rows: {len(rules_rows)}")
     print(f"Unique SNOMED concepts: {len(by_snomed_id)}")
     print(f"Index output: {out_index}")
     print(f"Rules output: {out_rules}")
+    if args.out_concept_dict:
+        print(f"Concept dictionary output: {args.out_concept_dict}")
     return 0
 
 
