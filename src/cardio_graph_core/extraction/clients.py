@@ -13,7 +13,7 @@ port_dict = {
     "g2": 32,
     "g3": 33,
     "g4": 34,
-    "g5": 35,
+    "g5": 36,
 }
 
 # Available Ollama models and their model strings from clients.baml

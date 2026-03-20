@@ -126,6 +126,7 @@ def _merge_concepts(session, label: str, rows: List[Dict[str, Any]]) -> None:
         n.entity_original = row.entity_original,
         n.entity_standardized_candidate = row.entity_standardized_candidate,
         n.target_label = row.target_label,
+        n.abbr = row.abbr,
         n.synonyms = row.synonyms,
         n.drug_class = row.drug_class,
         n.unit = row.unit
@@ -147,6 +148,7 @@ def _merge_concepts(session, label: str, rows: List[Dict[str, Any]]) -> None:
         normalized["synonyms"] = (
             normalized.get("synonyms") or normalized.get("alt_names") or []
         )
+        normalized["abbr"] = normalized.get("abbr")
         normalized["drug_class"] = normalized.get("drug_class")
         normalized["unit"] = normalized.get("unit")
         normalized_rows.append(normalized)

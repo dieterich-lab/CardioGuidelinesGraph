@@ -441,6 +441,20 @@ class GuidelineGraphBuilder:
             )
             or "0.10"
         )
+        self.extra_qualifier_penalty_weight = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_EXTRA_QUALIFIER_PENALTY", "0.10")
+            or "0.10"
+        )
+        self.guarded_fallback_margin = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_GUARDED_FALLBACK_MARGIN", "0.015")
+            or "0.015"
+        )
+        self.min_discriminative_coverage_for_top = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MIN_DISCRIMINATIVE_COVERAGE_FOR_TOP", "0.60"
+            )
+            or "0.60"
+        )
         self.enable_grounding_candidate_debug = (
             os.environ.get("CARDIO_GRAPH_GROUNDING_DEBUG_TOP_CANDIDATES", "false")
             or "false"
@@ -895,6 +909,21 @@ class GuidelineGraphBuilder:
             if token not in GENERIC_CONCEPT_TOKENS and len(token) >= 5
         }
 
+    def _extra_qualifier_ratio(
+        self, query_tokens: set[str], candidate_tokens: set[str]
+    ) -> float:
+        if not candidate_tokens:
+            return 0.0
+        discriminative_candidate_tokens = {
+            token
+            for token in candidate_tokens
+            if token not in GENERIC_CONCEPT_TOKENS and len(token) >= 5
+        }
+        if not discriminative_candidate_tokens:
+            return 0.0
+        extra = discriminative_candidate_tokens - query_tokens
+        return len(extra) / max(len(discriminative_candidate_tokens), 1)
+
     def _vector_candidates(
         self, term: str
     ) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
@@ -1234,12 +1263,11 @@ class GuidelineGraphBuilder:
             important_query_tokens.update(self._important_tokens(q))
 
         def score_candidates(concept_items_to_score, role_filter):
-            local_best_id = None
-            local_best_term = None
-            local_best_score = -1.0
-            local_best_lexical = -1.0
-            local_best_overlap = -1.0
             candidate_debug_rows: List[Dict[str, Any]] = []
+            scored_candidates: List[Dict[str, Any]] = []
+            normalized_query_terms = {
+                self._normalize(q) for q in query_terms if self._normalize(q)
+            }
             for concept_id, terms in concept_items_to_score:
                 if role_filter and not self._candidate_matches_role(
                     concept_id, role_filter
@@ -1271,11 +1299,11 @@ class GuidelineGraphBuilder:
                         self._normalize(stripped_term) if stripped_term else ""
                     )
                     if stripped_norm and stripped_norm in candidate_norm:
-                        candidate_score = min(1.0, candidate_score + 0.05)
+                        candidate_score = candidate_score + 0.05
                     if paren_tokens and any(
                         token.lower() in candidate_norm for token in paren_tokens
                     ):
-                        candidate_score = min(1.0, candidate_score + 0.03)
+                        candidate_score = candidate_score + 0.03
                     overlap_ratio = self._token_overlap_ratio(
                         important_query_tokens, candidate
                     )
@@ -1283,13 +1311,9 @@ class GuidelineGraphBuilder:
                         important_query_tokens, candidate_tokens
                     )
                     if overlap_ratio:
-                        candidate_score = min(
-                            1.0, candidate_score + overlap_ratio * 0.08
-                        )
+                        candidate_score = candidate_score + overlap_ratio * 0.08
                     if weighted_coverage:
-                        candidate_score = min(
-                            1.0, candidate_score + weighted_coverage * 0.10
-                        )
+                        candidate_score = candidate_score + weighted_coverage * 0.10
                     penalty = self._specificity_penalty(
                         important_query_tokens, candidate_tokens
                     )
@@ -1314,6 +1338,11 @@ class GuidelineGraphBuilder:
                 candidate_tokens_for_best = set(
                     self._important_tokens(best_candidate_term or preferred or "")
                 )
+                discriminative_coverage = 0.0
+                if discriminative_tokens:
+                    discriminative_coverage = len(
+                        discriminative_tokens & candidate_tokens_for_best
+                    ) / max(len(discriminative_tokens), 1)
                 final_penalty = 0.0
                 if (
                     important_query_tokens
@@ -1324,6 +1353,12 @@ class GuidelineGraphBuilder:
                     discriminative_tokens & candidate_tokens_for_best
                 ):
                     final_penalty += self.missing_discriminative_penalty
+                extra_qualifier_ratio = self._extra_qualifier_ratio(
+                    important_query_tokens, candidate_tokens_for_best
+                )
+                final_penalty += (
+                    extra_qualifier_ratio * self.extra_qualifier_penalty_weight
+                )
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
                 vector_bonus = 0.0
@@ -1344,26 +1379,99 @@ class GuidelineGraphBuilder:
                             "vector_raw": round(vector_raw, 6),
                             "vector_bonus": round(vector_bonus, 6),
                             "coverage": round(best_overlap, 6),
+                            "discriminative_coverage": round(
+                                discriminative_coverage, 6
+                            ),
+                            "extra_qualifier_ratio": round(extra_qualifier_ratio, 6),
                             "final_penalty": round(final_penalty, 6),
                             "final_score": round(final_score, 6),
                         }
                     )
 
-                better_final = final_score > (
-                    local_best_score + self.vector_tie_epsilon
+                preferred_norm = self._normalize(preferred or "")
+                best_term_norm = self._normalize(best_candidate_term or "")
+                exact_query_match = (
+                    preferred_norm in normalized_query_terms
+                    or best_term_norm in normalized_query_terms
+                )
+
+                scored_candidates.append(
+                    {
+                        "concept_id": concept_id,
+                        "term": preferred or best_candidate_term,
+                        "final_score": final_score,
+                        "lexical": score,
+                        "coverage": best_overlap,
+                        "preferred_overlap": preferred_overlap,
+                        "exact_query_match": exact_query_match,
+                        "extra_qualifier_ratio": extra_qualifier_ratio,
+                        "discriminative_coverage": discriminative_coverage,
+                        "term_len": len((preferred_norm or best_term_norm).split()),
+                    }
+                )
+
+            local_best_id = None
+            local_best_term = None
+            local_best_score = -1.0
+
+            for candidate in scored_candidates:
+                if local_best_id is None:
+                    local_best_id = candidate["concept_id"]
+                    local_best_term = candidate["term"]
+                    local_best_score = candidate["final_score"]
+                    local_best = candidate
+                    continue
+
+                better_final = candidate["final_score"] > (
+                    local_best["final_score"] + self.vector_tie_epsilon
                 )
                 tied_final = (
-                    abs(final_score - local_best_score) <= self.vector_tie_epsilon
+                    abs(candidate["final_score"] - local_best["final_score"])
+                    <= self.vector_tie_epsilon
                 )
-                better_lexical = score > local_best_lexical
-                better_overlap = preferred_overlap > local_best_overlap
+                candidate_rank = (
+                    int(candidate["exact_query_match"]),
+                    candidate["coverage"],
+                    candidate["lexical"],
+                    -candidate["extra_qualifier_ratio"],
+                    -candidate["term_len"],
+                    -int(candidate["concept_id"]),
+                )
+                local_best_rank = (
+                    int(local_best["exact_query_match"]),
+                    local_best["coverage"],
+                    local_best["lexical"],
+                    -local_best["extra_qualifier_ratio"],
+                    -local_best["term_len"],
+                    -int(local_best["concept_id"]),
+                )
 
-                if better_final or (tied_final and (better_lexical or better_overlap)):
-                    local_best_score = final_score
-                    local_best_lexical = score
-                    local_best_overlap = best_overlap
-                    local_best_id = concept_id
-                    local_best_term = preferred or best_candidate_term
+                if better_final or (tied_final and candidate_rank > local_best_rank):
+                    local_best_id = candidate["concept_id"]
+                    local_best_term = candidate["term"]
+                    local_best_score = candidate["final_score"]
+                    local_best = candidate
+
+            if len(scored_candidates) >= 2:
+                top_two = sorted(
+                    scored_candidates,
+                    key=lambda row: row["final_score"],
+                    reverse=True,
+                )[:2]
+                top = top_two[0]
+                runner = top_two[1]
+                if (
+                    (top["final_score"] - runner["final_score"])
+                    <= self.guarded_fallback_margin
+                    and top["discriminative_coverage"]
+                    < self.min_discriminative_coverage_for_top
+                    and runner["discriminative_coverage"]
+                    > top["discriminative_coverage"]
+                    and runner["coverage"] >= top["coverage"]
+                ):
+                    local_best_id = runner["concept_id"]
+                    local_best_term = runner["term"]
+                    local_best_score = runner["final_score"]
 
             if self.enable_grounding_candidate_debug and candidate_debug_rows:
                 top_rows = sorted(
