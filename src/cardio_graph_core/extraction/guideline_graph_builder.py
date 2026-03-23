@@ -404,6 +404,36 @@ class GuidelineGraphBuilder:
         self.enable_domain_filter = enable_domain_filter
         self.enable_semantic_tag_filter = enable_semantic_tag_filter
         self.off_domain_min_score = off_domain_min_score
+        self.enable_role_soft_constraints = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_SOFT_CONSTRAINTS", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.role_mismatch_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_MISMATCH_PENALTY", "0.08")
+            or "0.08"
+        )
+        self.role_tension_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_TENSION_PENALTY", "0.03")
+            or "0.03"
+        )
+        default_tension_terms = (
+            "using decision making strategies,preferences,health literacy,"
+            "intracoronary pressure guide wire,assessment score,"
+            "general characteristic of patient,left ventricular ejection fraction,"
+            "coronary artery structure,likely outcome"
+        )
+        configured_tension_terms = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_ROLE_TENSION_TERMS",
+                default_tension_terms,
+            )
+            or default_tension_terms
+        )
+        self.role_tension_terms = {
+            self._normalize(token)
+            for token in configured_tension_terms.split(",")
+            if self._normalize(token)
+        }
         self.enable_vector_grounding = (
             os.environ.get("CARDIO_GRAPH_GROUNDING_ENABLE_VECTOR", "false") or "false"
         ).strip().lower() in {"1", "true", "yes", "on"}
@@ -1352,10 +1382,13 @@ class GuidelineGraphBuilder:
             normalized_query_terms = {
                 self._normalize(q) for q in query_terms if self._normalize(q)
             }
+            normalized_source_term = self._normalize(term)
+            is_role_tension_term = normalized_source_term in self.role_tension_terms
             for concept_id, terms in concept_items_to_score:
-                if role_filter and not self._candidate_matches_role(
+                role_mismatch = bool(role_filter) and not self._candidate_matches_role(
                     concept_id, role_filter
-                ):
+                )
+                if role_mismatch and not self.enable_role_soft_constraints:
                     continue
                 preferred = self._get_preferred_term(concept_id)
                 candidates = list(terms)
@@ -1448,6 +1481,11 @@ class GuidelineGraphBuilder:
                     role=role_filter,
                     concept_id=int(concept_id),
                 )
+                if role_mismatch:
+                    if is_role_tension_term:
+                        final_penalty += self.role_tension_penalty
+                    else:
+                        final_penalty += self.role_mismatch_penalty
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
                 vector_bonus = 0.0
@@ -1471,6 +1509,7 @@ class GuidelineGraphBuilder:
                             "discriminative_coverage": round(
                                 discriminative_coverage, 6
                             ),
+                            "role_mismatch": role_mismatch,
                             "extra_qualifier_ratio": round(extra_qualifier_ratio, 6),
                             "final_penalty": round(final_penalty, 6),
                             "final_score": round(final_score, 6),
