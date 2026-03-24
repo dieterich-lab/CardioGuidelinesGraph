@@ -502,15 +502,36 @@ class GuidelineGraphBuilder:
             or "0.55"
         )
         self.ambiguity_lexical_force_pick = float(
-            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_LEXICAL_FORCE_PICK", "0.90")
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_AMBIGUITY_LEXICAL_FORCE_PICK", "0.90"
+            )
             or "0.90"
         )
+        self.ambiguity_confidence_backoff_enabled = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_AMBIGUITY_CONFIDENCE_BACKOFF_ENABLED",
+                "true",
+            )
+            or "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.ambiguity_backoff_max_drop = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_BACKOFF_MAX_DROP", "0.05")
+            or "0.05"
+        )
+        self.ambiguity_backoff_min_score = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_BACKOFF_MIN_SCORE", "0.35")
+            or "0.35"
+        )
         self.role_semantic_mismatch_penalty = float(
-            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_MISMATCH_PENALTY", "0.06")
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_MISMATCH_PENALTY", "0.06"
+            )
             or "0.06"
         )
         self.role_semantic_crossclass_penalty = float(
-            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_CROSSCLASS_PENALTY", "0.02")
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_CROSSCLASS_PENALTY", "0.02"
+            )
             or "0.02"
         )
         self.hard_negative_manifest_path = (
@@ -1654,9 +1675,49 @@ class GuidelineGraphBuilder:
                     and runner["coverage"] < self.ambiguity_min_coverage
                     and top["lexical"] < self.ambiguity_lexical_force_pick
                 ):
-                    local_best_id = None
-                    local_best_term = None
-                    local_best_score = 0.0
+                    backoff_candidate = None
+                    if self.ambiguity_confidence_backoff_enabled:
+                        min_backoff_score = max(
+                            self.ambiguity_backoff_min_score,
+                            top["final_score"] - self.ambiguity_backoff_max_drop,
+                        )
+                        backoff_pool = [
+                            row
+                            for row in scored_candidates
+                            if row["final_score"] >= min_backoff_score
+                        ]
+                        if role_filter and self.enable_semantic_tag_filter:
+                            role_compatible_pool = [
+                                row
+                                for row in backoff_pool
+                                if self._has_allowed_semantic_tag(
+                                    role_filter,
+                                    row.get("term"),
+                                )
+                            ]
+                            if role_compatible_pool:
+                                backoff_pool = role_compatible_pool
+
+                        if backoff_pool:
+                            backoff_candidate = max(
+                                backoff_pool,
+                                key=lambda row: (
+                                    row["final_score"],
+                                    row["coverage"],
+                                    row["lexical"],
+                                    row["discriminative_coverage"],
+                                    -row["extra_qualifier_ratio"],
+                                ),
+                            )
+
+                    if backoff_candidate is None:
+                        local_best_id = None
+                        local_best_term = None
+                        local_best_score = 0.0
+                    else:
+                        local_best_id = backoff_candidate["concept_id"]
+                        local_best_term = backoff_candidate["term"]
+                        local_best_score = backoff_candidate["final_score"]
                 if (
                     local_best_id is not None
                     and (top["final_score"] - runner["final_score"])
