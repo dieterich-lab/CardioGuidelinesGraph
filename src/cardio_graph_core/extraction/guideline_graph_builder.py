@@ -501,6 +501,18 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_MIN_COVERAGE", "0.55")
             or "0.55"
         )
+        self.ambiguity_lexical_force_pick = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_LEXICAL_FORCE_PICK", "0.90")
+            or "0.90"
+        )
+        self.role_semantic_mismatch_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_MISMATCH_PENALTY", "0.06")
+            or "0.06"
+        )
+        self.role_semantic_crossclass_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_CROSSCLASS_PENALTY", "0.02")
+            or "0.02"
+        )
         self.hard_negative_manifest_path = (
             os.environ.get(
                 "CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_MANIFEST",
@@ -974,6 +986,37 @@ class GuidelineGraphBuilder:
         tag = match.group(1).strip().lower()
         return tag in allowed
 
+    def _semantic_tag(self, term: Optional[str]) -> str:
+        if not term:
+            return ""
+        match = re.search(r"\(([^)]+)\)\s*$", term)
+        if not match:
+            return ""
+        return match.group(1).strip().lower()
+
+    def _role_semantic_penalty(self, role: Optional[str], term: Optional[str]) -> float:
+        if not role or not term:
+            return 0.0
+        allowed = ALLOWED_SEMANTIC_TAGS_BY_ROLE.get(role)
+        if not allowed:
+            return 0.0
+        tag = self._semantic_tag(term)
+        if not tag:
+            return 0.0
+        if tag in allowed:
+            return 0.0
+        crossclass_tags = {
+            "finding",
+            "observable entity",
+            "qualifier value",
+            "physical object",
+            "assessment scale",
+            "body structure",
+        }
+        if tag in crossclass_tags:
+            return self.role_semantic_crossclass_penalty
+        return self.role_semantic_mismatch_penalty
+
     def _score(self, query: str, candidate: str) -> float:
         q = self._normalize(query)
         c = self._normalize(candidate)
@@ -990,9 +1033,20 @@ class GuidelineGraphBuilder:
         token_jaccard = 0.0
         if q_tokens and c_tokens:
             token_jaccard = len(q_tokens & c_tokens) / len(q_tokens | c_tokens)
+        q_chars = set(re.findall(r"....", f" {q} "))
+        c_chars = set(re.findall(r"....", f" {c} "))
+        char_jaccard = 0.0
+        if q_chars and c_chars:
+            char_jaccard = len(q_chars & c_chars) / len(q_chars | c_chars)
         coverage = self._weighted_query_coverage(q_tokens, c_tokens)
-        combined = 0.45 * coverage + 0.25 * token_jaccard + 0.20 * seq + 0.10 * partial
-        return min(1.0, max(combined, coverage, token_jaccard))
+        combined = (
+            0.40 * coverage
+            + 0.22 * token_jaccard
+            + 0.18 * seq
+            + 0.10 * partial
+            + 0.10 * char_jaccard
+        )
+        return min(1.0, max(combined, coverage, token_jaccard, char_jaccard))
 
     def _token_weight(self, token: str) -> float:
         if not token:
@@ -1486,6 +1540,10 @@ class GuidelineGraphBuilder:
                         final_penalty += self.role_tension_penalty
                     else:
                         final_penalty += self.role_mismatch_penalty
+                final_penalty += self._role_semantic_penalty(
+                    role_filter,
+                    preferred or best_candidate_term,
+                )
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
                 vector_bonus = 0.0
@@ -1594,6 +1652,7 @@ class GuidelineGraphBuilder:
                     <= self.ambiguity_abstain_margin
                     and top["coverage"] < self.ambiguity_min_coverage
                     and runner["coverage"] < self.ambiguity_min_coverage
+                    and top["lexical"] < self.ambiguity_lexical_force_pick
                 ):
                     local_best_id = None
                     local_best_term = None
