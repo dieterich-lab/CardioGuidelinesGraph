@@ -7,7 +7,7 @@ import socket
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from neo4j import GraphDatabase
+from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 
 def _extract_rows(payload: dict) -> List[dict]:
@@ -146,10 +146,10 @@ def _synonym_cache_key(concept: str, role: str) -> str:
 
 def _normalize_cache_entry(value: Any) -> Dict[str, List[str]]:
     if isinstance(value, list):
-        llm_synonyms = [str(v).strip() for v in value if str(v).strip()]
-        merged = _dedupe_synonyms(llm_synonyms, concept="", max_items=50)
+        legacy_synonyms = [str(v).strip() for v in value if str(v).strip()]
+        merged = _dedupe_synonyms(legacy_synonyms, concept="", max_items=50)
         return {
-            "llm_synonyms": merged,
+            "llm_synonyms": [],
             "snomed_synonyms": [],
             "abbreviations": [],
             "synonyms": merged,
@@ -190,6 +190,14 @@ def _normalize_cache_entry(value: Any) -> Dict[str, List[str]]:
         "abbreviations": [],
         "synonyms": [],
     }
+
+
+def _normalize_synonym_channels(
+    llm_synonyms: List[str], snomed_synonyms: List[str]
+) -> Tuple[List[str], List[str]]:
+    llm_clean = _dedupe_synonyms(llm_synonyms or [], concept="", max_items=50)
+    snomed_clean = _dedupe_synonyms(snomed_synonyms or [], concept="", max_items=50)
+    return llm_clean, snomed_clean
 
 
 def _load_synonym_cache(path: Path) -> Dict[str, Dict[str, List[str]]]:
@@ -242,10 +250,11 @@ def _build_snomed_synonyms_fetcher(
     user: Optional[str],
     password: Optional[str],
 ):
-    if not enabled or not uri or not user or not password:
+    if not enabled:
         return None, None
 
-    driver = GraphDatabase.driver(uri, auth=(user, password))
+    explorer = SnomedExplorer()
+    explorer.connect()
     cache: Dict[str, List[str]] = {}
 
     def _fetch(snomed_id: str, preferred_term: str) -> List[str]:
@@ -253,36 +262,28 @@ def _build_snomed_synonyms_fetcher(
         if key in cache:
             return cache[key]
 
-        query = """
-        MATCH (c {snomed_id: $snomed_id})
-        WITH c,
-             coalesce(c.synonyms, []) +
-             coalesce(c.alt_names, []) +
-             CASE WHEN c.preferred_term IS NULL THEN [] ELSE [c.preferred_term] END +
-             CASE WHEN c.entity IS NULL THEN [] ELSE [c.entity] END +
-             CASE WHEN c.entity_standardized_candidate IS NULL THEN [] ELSE [c.entity_standardized_candidate] END AS raw_terms
-        UNWIND raw_terms AS term
-        WITH trim(toString(term)) AS term
-        WHERE term <> ''
-        RETURN collect(DISTINCT term) AS terms
-        """
-
         collected: List[str] = []
-        with driver.session() as session:
-            result = session.run(query, snomed_id=key)
-            record = result.single()
-            if record is not None:
-                collected = [
-                    str(v).strip()
-                    for v in (record.get("terms") or [])
-                    if str(v).strip()
-                ]
+        try:
+            descriptions = explorer.get_descriptions_for_concept(int(key))
+        except Exception:
+            descriptions = []
+
+        for row in descriptions:
+            if not isinstance(row, dict):
+                continue
+            term = str(row.get("term") or "").strip()
+            if not term:
+                continue
+            desc_type = str(row.get("type") or "").strip().lower()
+            if desc_type == "fsn":
+                continue
+            collected.append(term)
 
         cleaned = _dedupe_synonyms(collected, concept=preferred_term, max_items=50)
         cache[key] = cleaned
         return cleaned
 
-    return _fetch, driver
+    return _fetch, explorer
 
 
 def _build_synonyms_generator(
@@ -454,10 +455,7 @@ def convert_manual_payloads(
                                 snomed_synonyms = (
                                     cache_entry.get("snomed_synonyms") or []
                                 )
-                                if (
-                                    snomed_synonym_fetcher is not None
-                                    and not snomed_synonyms
-                                ):
+                                if snomed_synonym_fetcher is not None:
                                     snomed_synonyms = snomed_synonym_fetcher(
                                         snomed_id,
                                         standardized,
@@ -471,6 +469,13 @@ def convert_manual_payloads(
                                 llm_synonyms = cache_entry.get("llm_synonyms") or []
                                 if synonym_generator is not None and not llm_synonyms:
                                     llm_synonyms = synonym_generator(standardized, role)
+
+                                llm_synonyms, snomed_synonyms = (
+                                    _normalize_synonym_channels(
+                                        llm_synonyms=llm_synonyms or [],
+                                        snomed_synonyms=snomed_synonyms or [],
+                                    )
+                                )
 
                                 merged_synonyms = _dedupe_synonyms(
                                     (llm_synonyms or [])
@@ -499,7 +504,6 @@ def convert_manual_payloads(
                                     "abbreviations": abbreviations,
                                     "llm_synonyms": llm_synonyms or [],
                                     "snomed_synonyms": snomed_synonyms or [],
-                                    "synonyms": merged_synonyms,
                                     "taxonomy_path": [],
                                 }
 
@@ -601,9 +605,9 @@ def main() -> int:
         synonym_cache = _load_synonym_cache(synonym_cache_path)
 
     snomed_synonym_fetcher = None
-    snomed_driver = None
+    snomed_resource = None
     try:
-        snomed_synonym_fetcher, snomed_driver = _build_snomed_synonyms_fetcher(
+        snomed_synonym_fetcher, snomed_resource = _build_snomed_synonyms_fetcher(
             enabled=args.enable_snomed_db_synonyms,
             uri=args.snomed_db_uri,
             user=args.snomed_db_user,
@@ -630,8 +634,11 @@ def main() -> int:
         print(f"ERROR: {exc}")
         return 2
     finally:
-        if snomed_driver is not None:
-            snomed_driver.close()
+        if snomed_resource is not None:
+            if hasattr(snomed_resource, "disconnect"):
+                snomed_resource.disconnect()
+            elif hasattr(snomed_resource, "close"):
+                snomed_resource.close()
 
     out_index = Path(args.out_index)
     out_rules = Path(args.out_rules)
