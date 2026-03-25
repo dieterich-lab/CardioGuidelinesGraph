@@ -6,6 +6,12 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from cardio_graph_core.paths import (
+    grounding_manifest_path,
+    grounding_runs_dir,
+    grounding_tracker_path,
+)
+
 
 def _load_eval(path: Path) -> Dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -17,17 +23,24 @@ def _collect_run_files(
     if run_ids:
         pairs = []
         for rid in run_ids:
-            fp = base_dir / f"vector_job_{rid}" / "vector_eval.json"
-            if fp.is_file():
-                pairs.append((rid, fp))
+            candidates = [
+                base_dir / f"job_{rid}" / "eval.json",
+                base_dir / f"vector_job_{rid}" / "vector_eval.json",
+            ]
+            for fp in candidates:
+                if fp.is_file():
+                    pairs.append((rid, fp))
+                    break
         return pairs
 
-    candidates = sorted(base_dir.glob("vector_job_*/vector_eval.json"))
+    candidates = sorted(base_dir.glob("job_*/eval.json"))
+    if not candidates:
+        candidates = sorted(base_dir.glob("vector_job_*/vector_eval.json"))
     if latest_n > 0:
         candidates = candidates[-latest_n:]
     pairs = []
     for fp in candidates:
-        rid = fp.parent.name.replace("vector_job_", "")
+        rid = fp.parent.name.replace("vector_job_", "").replace("job_", "")
         pairs.append((rid, fp))
     return pairs
 
@@ -167,8 +180,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--base-dir",
-        default="docs/table22_snomed_grounding_compare/grounding_only",
-        help="Directory containing vector_job_<id>/vector_eval.json",
+        default=str(grounding_runs_dir("table_22", "vector")),
+        help="Directory containing job_<id>/eval.json artifacts",
     )
     parser.add_argument(
         "--run-id",
@@ -184,12 +197,12 @@ def main() -> int:
     )
     parser.add_argument(
         "--manifest-out",
-        default="docs/vector_grounding_persistent_error_manifest.json",
+        default=str(grounding_manifest_path("table_22", "vector")),
         help="Output path for machine-readable manifest",
     )
     parser.add_argument(
         "--milestone-out",
-        default="docs/vector_grounding_milestone.md",
+        default=str(grounding_tracker_path("table_22")),
         help="Output path for markdown milestone report",
     )
     args = parser.parse_args()

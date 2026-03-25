@@ -1,10 +1,10 @@
 import json
 import os
 import re
-import unittest
 from pathlib import Path
 
 from cardio_graph_core.extraction.guideline_graph_builder import GuidelineGraphBuilder
+from cardio_graph_core.paths import rule_alignment_rows_dir
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
@@ -12,7 +12,7 @@ DATA_DIR = Path(os.environ.get("CARDIO_GRAPH_DATA_DIR", DEFAULT_DATA_DIR))
 GRAPH_DIR = Path(os.environ.get("CARDIO_GRAPH_GRAPH_DIR", DATA_DIR / "graph"))
 DOCS_DIR = Path(os.environ.get("CARDIO_GRAPH_DOCS_DIR", PROJECT_ROOT / "docs"))
 ROWS_DIR = Path(
-    os.environ.get("CARDIO_GRAPH_TABLE22_ROWS_DIR", DOCS_DIR / "table22_rows")
+    os.environ.get("CARDIO_GRAPH_TABLE22_ROWS_DIR", rule_alignment_rows_dir("table_22"))
 )
 RULES_PATH = Path(
     os.environ.get(
@@ -282,8 +282,8 @@ def _summarize_ground_truth_grouped(truth, row_id):
     return grouped
 
 
-class TestTable22Row(unittest.TestCase):
-    def setUp(self):
+class Table22RowEvaluator:
+    def __init__(self):
         self.ground_truth = _load_ground_truth()
         self.rules_rows = _load_rules()
         self.builder = GuidelineGraphBuilder(model="Qwen30b", node="g5", port=11435)
@@ -326,12 +326,11 @@ class TestTable22Row(unittest.TestCase):
             actual_entries = []
 
         match_score = _row_match_score(expected_entries, actual_entries)
-        self.assertGreaterEqual(
-            match_score,
-            MIN_ROW_MATCH,
-            f"Row {row_id} match score {match_score:.2f} is too low. "
-            f"Expected {len(expected_entries)} entries, got {len(actual_entries)}.",
-        )
+        if match_score < MIN_ROW_MATCH:
+            raise AssertionError(
+                f"Row {row_id} match score {match_score:.2f} is too low. "
+                f"Expected {len(expected_entries)} entries, got {len(actual_entries)}."
+            )
 
         # Generate reports
         ROWS_DIR.mkdir(parents=True, exist_ok=True)
@@ -363,9 +362,11 @@ class TestTable22Row(unittest.TestCase):
             f.write("\n```\n\n")
             f.write(f"Match Score: {match_score:.2f}\n")
 
-    def test_row_01(self):
+    def evaluate_row_01(self):
         self._test_row("row_01")
 
 
 if __name__ == "__main__":
-    unittest.main()
+    evaluator = Table22RowEvaluator()
+    evaluator.evaluate_row_01()
+    print("[table22-row-eval] wrote row_01 report")

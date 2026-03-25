@@ -3,6 +3,8 @@ import json
 import re
 from pathlib import Path
 
+from cardio_graph_core.paths import rule_alignment_report_json_path
+
 
 def _sanitize_label(value):
     if value is None:
@@ -542,10 +544,12 @@ def render_reports(alignment_path: Path, grounding_alignment_path: Path | None =
                 grounding_rows_by_id[row_id] = row
 
     out_dir = alignment_path.parent
+    rows_dir = out_dir / "rows"
+    rows_dir.mkdir(parents=True, exist_ok=True)
     project_root = Path(__file__).resolve().parents[1]
 
-    summary_csv = out_dir / "table22_rowwise_summary.csv"
-    report_md = out_dir / "table22_rowwise_comparison.md"
+    summary_csv = out_dir / "summary.csv"
+    report_md = out_dir / "overview.md"
 
     summary_csv.write_text(
         "row_id,mapped_actual_row,match_score,expected_concepts,actual_concepts,concept_matches,concept_missing,concept_extra,expected_rules,actual_rules,rule_matches,rule_missing,rule_extra\n",
@@ -573,14 +577,14 @@ def render_reports(alignment_path: Path, grounding_alignment_path: Path | None =
         f.write(f"Aligned JSON: {_display_path(alignment_path, project_root)}\n\n")
         f.write("Per-row reports:\n\n")
         for row in rows:
-            row_file = out_dir / f"{row['row_id']}.md"
+            row_file = rows_dir / f"{row['row_id']}.md"
             f.write(
                 f"- {row['row_id']} -> {_display_path(row_file, project_root)} "
                 f"(match_score={row['match_score']:.3f})\n"
             )
 
     for row in rows:
-        row_file = out_dir / f"{row['row_id']}.md"
+        row_file = rows_dir / f"{row['row_id']}.md"
         with row_file.open("w", encoding="utf-8") as f:
             f.write(f"# {row['row_id']} (mapped to {row['mapped_actual_row']})\n\n")
             f.write("Original table row text (ground truth):\n\n")
@@ -690,7 +694,7 @@ def main():
     )
     parser.add_argument(
         "--alignment",
-        default="docs/table22_rows_comparison/table22_rowwise_alignment.json",
+        default=str(rule_alignment_report_json_path("table_22")),
         help="Path to table22 alignment JSON",
     )
     parser.add_argument(

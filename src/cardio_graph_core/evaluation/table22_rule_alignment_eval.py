@@ -5,16 +5,20 @@ import unittest
 from pathlib import Path
 
 from cardio_graph_core.extraction.guideline_graph_builder import GuidelineGraphBuilder
+from cardio_graph_core.paths import (
+    rule_alignment_report_csv_path,
+    rule_alignment_report_json_path,
+    rule_alignment_report_md_path,
+    rule_alignment_rows_dir,
+)
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
 DATA_DIR = Path(os.environ.get("CARDIO_GRAPH_DATA_DIR", DEFAULT_DATA_DIR))
 GRAPH_DIR = Path(os.environ.get("CARDIO_GRAPH_GRAPH_DIR", DATA_DIR / "graph"))
 DOCS_DIR = Path(os.environ.get("CARDIO_GRAPH_DOCS_DIR", PROJECT_ROOT / "docs"))
 ROWS_DIR = Path(
-    os.environ.get(
-        "CARDIO_GRAPH_TABLE22_ROWS_DIR", DOCS_DIR / "table22_rows_comparison"
-    )
+    os.environ.get("CARDIO_GRAPH_TABLE22_ROWS_DIR", rule_alignment_rows_dir("table_22"))
 )
 RULES_PATH = Path(
     os.environ.get(
@@ -74,25 +78,25 @@ LLM_PORT = int(os.environ.get("CARDIO_GRAPH_TABLE22_LLM_PORT", "11435"))
 REPORT_MD_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_MD",
-        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_comparison.md",
+        rule_alignment_report_md_path("table_22"),
     )
 )
 REPORT_JSON_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_JSON",
-        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_alignment.json",
+        rule_alignment_report_json_path("table_22"),
     )
 )
 REPORT_CSV_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_REPORT_CSV",
-        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_summary.csv",
+        rule_alignment_report_csv_path("table_22"),
     )
 )
 LLM_SNAPSHOT_PATH = Path(
     os.environ.get(
         "CARDIO_GRAPH_TABLE22_LLM_SNAPSHOT",
-        DOCS_DIR / "table22_rows_comparison" / "table22_rowwise_alignment.json",
+        rule_alignment_report_json_path("table_22"),
     )
 )
 USE_SNAPSHOT = _env_flag("CARDIO_GRAPH_TABLE22_USE_SNAPSHOT", "false")
@@ -1367,5 +1371,12 @@ class Table22ConceptRulesTests(unittest.TestCase):
         self.assertTrue(REPORT_CSV_PATH.is_file(), "CSV report was not written.")
 
 
+def run_table22_rule_alignment_eval() -> None:
+    """Run the row-wise table22 rule alignment evaluation and emit artifacts."""
+    case = Table22ConceptRulesTests(methodName="test_table_22_rules_match_ground_truth")
+    case.setUp()
+    case.test_table_22_rules_match_ground_truth()
+
+
 if __name__ == "__main__":
-    unittest.main()
+    run_table22_rule_alignment_eval()

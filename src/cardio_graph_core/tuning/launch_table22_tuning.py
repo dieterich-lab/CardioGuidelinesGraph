@@ -8,6 +8,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
+from cardio_graph_core.paths import autotuning_dev_dir
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SLURM_DIR = PROJECT_ROOT / "slurm"
 DEFAULT_GROUND_TRUTH = (
@@ -28,7 +30,7 @@ def _submit(
     out_root = Path(
         os.environ.get(
             "CARDIO_GRAPH_TABLE22_AUTOTUNE_OUT_DIR",
-            PROJECT_ROOT / "docs" / "table22_tuning_runs" / "autotune_dev",
+            str(autotuning_dev_dir("table_22")),
         )
     )
 

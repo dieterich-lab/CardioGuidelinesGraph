@@ -36,7 +36,7 @@ Launcher defaults:
 - lenient extras: `true`
 - semantic normalization: `true`
 - benchmark manifest: `config/autotuning/benchmark_manifest_v1.jsonc`
-- output root: `docs/table22_tuning_runs/autotune_dev/`
+- output root: `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/autotuning/table_22/dev/`
 
 ## Controller defaults (if run directly)
 
@@ -46,7 +46,7 @@ Launcher defaults:
 - `--run-locked-every=3`
 - `--early-stop-patience=2`
 - `--ucb-exploration=0.02`
-- `--output-dir=docs/table22_tuning_runs/autotune_dryrun`
+- `--output-dir=/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/autotuning/table_22/dry_run`
 
 If you run controller directly, ensure flags/env match your intended live experiment.
 
@@ -105,7 +105,7 @@ scancel <JOB_ID>
 
 Launcher runs write to:
 
-- `docs/table22_tuning_runs/autotune_dev/<RUN_TAG>/`
+- `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/autotuning/table_22/dev/<RUN_TAG>/`
 
 Key files:
 

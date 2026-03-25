@@ -29,6 +29,7 @@ from cardio_graph_core.extraction.vector_candidate_retriever import (
     Neo4jVectorCandidateRetriever,
     VectorRetrieverConfig,
 )
+from cardio_graph_core.paths import grounding_manifest_path
 from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -607,13 +608,7 @@ class GuidelineGraphBuilder:
         self.hard_negative_manifest_path = (
             os.environ.get(
                 "CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_MANIFEST",
-                os.path.join(
-                    Path(__file__).resolve().parents[3],
-                    "docs",
-                    "table22_snomed_grounding_compare",
-                    "grounding_only",
-                    "persistent_error_manifest.json",
-                ),
+                str(grounding_manifest_path("table_22", "vector")),
             )
             or ""
         ).strip()

@@ -42,10 +42,10 @@ Current job configuration (local runner):
    - Vector DB: `bolt://neo4j-dev3.internal:7687`
    - Embedding endpoint: local Ollama (`--embedding-node local`)
 6. Write run output:
-   - `docs/table22_snomed_grounding_compare/grounding_only/vector_job_<job_id>/vector_eval.json`
+   - `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/vector/runs/job_<job_id>/eval.json`
 7. Regenerate persistent error artifacts:
-   - `docs/vector_grounding_persistent_error_manifest.json`
-   - `docs/vector_grounding_milestone.md`
+   - `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/vector/persistent_error_manifest.json`
+   - `docs/trackers/grounding/table_22.md`
 
 ## Runtime Knobs (Default Behavior)
 
