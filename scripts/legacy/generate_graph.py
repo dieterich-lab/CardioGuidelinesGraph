@@ -4,13 +4,16 @@ import pickle
 import re
 from pathlib import Path
 
-from graph_utils import escape_json
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from llm import llm
-from prompt_utils import create_unstructured_prompt
-from templates import (
+
+from cardio_graph_core.legacy_graph_pipeline.graph_utils import escape_json
+from cardio_graph_core.legacy_graph_pipeline.llm import llm
+from cardio_graph_core.legacy_graph_pipeline.prompt_utils import (
+    create_unstructured_prompt,
+)
+from cardio_graph_core.legacy_graph_pipeline.templates import (
     GUIDELINES_BASESTRINGPARTS_JSON,
     GUIDELINES_EXAMPLES,
     NODES,

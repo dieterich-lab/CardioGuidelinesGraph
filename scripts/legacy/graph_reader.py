@@ -1,21 +1,26 @@
 import pickle
-from parser import args
 from pathlib import Path
 
-from graph_utils import attempt, parse_msg
 from langchain_community.graphs.graph_document import GraphDocument, Node, Relationship
 from langchain_core.runnables import RunnableLambda
 from langchain_core.utils.function_calling import convert_to_openai_tool
 from langchain_text_splitters import MarkdownTextSplitter
-from llm import llm
-from prompts import (
+
+from cardio_graph_core.legacy_graph_pipeline.graph_utils import attempt, parse_msg
+from cardio_graph_core.legacy_graph_pipeline.llm import llm
+from cardio_graph_core.legacy_graph_pipeline.parser import args
+from cardio_graph_core.legacy_graph_pipeline.prompts import (
     hallu_prompt,
     simplify_prompt,
     table_prompt,
     table_routing_prompt,
     text_prompt,
 )
-from structured_classes import HalluRouter, TableRouter, Triples
+from cardio_graph_core.legacy_graph_pipeline.structured_classes import (
+    HalluRouter,
+    TableRouter,
+    Triples,
+)
 
 text_splitter = MarkdownTextSplitter(
     chunk_size=1000,

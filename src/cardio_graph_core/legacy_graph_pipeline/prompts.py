@@ -1,10 +1,11 @@
 import argparse
 
-from graph_utils import escape_json
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from structured_classes import MedicRouter, TableRouter, Triples
-from templates import (
+
+from .graph_utils import escape_json
+from .structured_classes import MedicRouter, TableRouter, Triples
+from .templates import (
     GUIDELINES_EXAMPLES,
     GUIDELINES_EXAMPLES_SIMPLE,
     TABLE_PROMPT,

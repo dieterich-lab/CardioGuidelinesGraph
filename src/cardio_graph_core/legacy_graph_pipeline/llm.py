@@ -1,6 +1,6 @@
-from parser import args
-
 from langchain_ollama import ChatOllama
+
+from .parser import args
 
 model_dict = {
     "nemo": "mistral-nemo",

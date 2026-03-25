@@ -10,7 +10,8 @@ from langchain_core.output_parsers import (
     JsonOutputToolsParser,
 )
 from langchain_core.outputs import ChatGeneration, Generation
-from utils import Timeout
+
+from .utils import Timeout
 
 BASE_ENTITY_LABEL = "__Entity__"
 EXCLUDED_LABELS = ["_Bloom_Perspective_", "_Bloom_Scene_"]

@@ -1,7 +1,7 @@
 import os
 import pickle
 
-from graph_utils import MyNeo4jGraph
+from cardio_graph_core.legacy_graph_pipeline.graph_utils import MyNeo4jGraph
 
 # from langchain_community.graphs import Neo4jGraph
 

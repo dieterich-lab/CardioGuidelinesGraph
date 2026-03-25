@@ -2,7 +2,6 @@ import argparse
 import os
 from operator import itemgetter
 
-from graph_utils import MyNeo4jGraph
 from langchain_community.vectorstores import Neo4jVector
 from langchain_community.vectorstores.neo4j_vector import remove_lucene_chars
 from langchain_core.output_parsers import JsonOutputParser
@@ -13,10 +12,15 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 # from langchain_experimental.llms.ollama_functions import OllamaFunctions
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from pydantic import BaseModel, Field
-from questions import *
-from rerank import rerank
-from structured_classes import Entities, MedicEntities
-from templates import NODES
+
+from cardio_graph_core.legacy_graph_pipeline.graph_utils import MyNeo4jGraph
+from cardio_graph_core.legacy_graph_pipeline.questions import *
+from cardio_graph_core.legacy_graph_pipeline.rerank import rerank
+from cardio_graph_core.legacy_graph_pipeline.structured_classes import (
+    Entities,
+    MedicEntities,
+)
+from cardio_graph_core.legacy_graph_pipeline.templates import NODES
 
 os.environ["NEO4J_URI"] = f"bolt+s://neo4j-dev1.dieterichlab.org:7687"
 os.environ["NEO4J_USERNAME"] = "neo4j"
