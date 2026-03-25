@@ -3,9 +3,14 @@ from __future__ import annotations
 import json
 import re
 import time
+import unicodedata
+from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Tuple
 
 from cardio_graph_core.extraction.guideline_graph_builder import (
+    ALLOWED_SEMANTIC_TAGS_BY_ROLE,
+    DISALLOWED_SEMANTIC_TAGS,
+    GENERIC_CONCEPT_TOKENS,
     MAX_CONCEPT_CANDIDATES,
     MAX_QUERY_TOKENS,
     STOPWORD_TOKENS,
@@ -19,6 +24,273 @@ class EntityGroundingService:
 
     def __init__(self, builder: Any):
         self.builder = builder
+
+    def _normalize(self, text: str) -> str:
+        text = (text or "").strip().lower()
+        text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+        text = re.sub(r"[^a-z0-9\s\-/()]+", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    def _normalize_token(self, token: str) -> str:
+        token = self._normalize(token)
+        if token.endswith("ies") and len(token) > 4:
+            token = token[:-3] + "y"
+        elif token.endswith("es") and len(token) > 4 and not token.endswith("ses"):
+            token = token[:-2]
+        elif token.endswith("s") and len(token) > 3 and not token.endswith("ss"):
+            token = token[:-1]
+        if token.endswith("ing") and len(token) > 6:
+            token = token[:-3]
+        elif token.endswith("ed") and len(token) > 5:
+            token = token[:-2]
+        return token
+
+    def _important_tokens(self, text: str) -> List[str]:
+        tokens = re.findall(r"[a-z0-9]+", self._normalize(text))
+        normalized_tokens = [self._normalize_token(t) for t in tokens]
+        return [t for t in normalized_tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
+
+    def _context_query_variants(self, context: Any) -> List[str]:
+        b = self.builder
+        if context is None or not b.enable_vector_context_query:
+            return []
+        if isinstance(context, (dict, list)):
+            raw_context = json.dumps(context, ensure_ascii=False, sort_keys=True)
+        else:
+            raw_context = str(context)
+        cleaned_context = re.sub(r"\s+", " ", raw_context).strip()
+        if not cleaned_context:
+            return []
+        context_tokens = self._important_tokens(cleaned_context)
+        if not context_tokens:
+            return []
+        max_tokens = max(2, b.vector_context_max_tokens)
+        variants: List[str] = [" ".join(context_tokens[:max_tokens])]
+        if len(context_tokens) > max_tokens:
+            variants.append(" ".join(context_tokens[-max_tokens:]))
+        for fragment in re.split(r"[;|,.]", cleaned_context):
+            fragment_tokens = self._important_tokens(fragment)
+            if 2 <= len(fragment_tokens) <= max_tokens:
+                variants.append(" ".join(fragment_tokens))
+        deduped: List[str] = []
+        seen = set()
+        for variant in variants:
+            key = self._normalize(variant)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            deduped.append(variant)
+            if len(deduped) >= 3:
+                break
+        return deduped
+
+    def _has_disallowed_semantic_tag(self, term: Optional[str]) -> bool:
+        if not term:
+            return False
+        match = re.search(r"\(([^)]+)\)\s*$", term)
+        if not match:
+            return False
+        tag = match.group(1).strip().lower()
+        return tag in DISALLOWED_SEMANTIC_TAGS
+
+    def _has_allowed_semantic_tag(self, role: Optional[str], term: Optional[str]) -> bool:
+        if not role or not term:
+            return True
+        allowed = ALLOWED_SEMANTIC_TAGS_BY_ROLE.get(role)
+        if not allowed:
+            return True
+        match = re.search(r"\(([^)]+)\)\s*$", term)
+        if not match:
+            return False
+        tag = match.group(1).strip().lower()
+        return tag in allowed
+
+    def _semantic_tag(self, term: Optional[str]) -> str:
+        if not term:
+            return ""
+        match = re.search(r"\(([^)]+)\)\s*$", term)
+        if not match:
+            return ""
+        return match.group(1).strip().lower()
+
+    def _role_semantic_penalty(self, role: Optional[str], term: Optional[str]) -> float:
+        b = self.builder
+        if not role or not term:
+            return 0.0
+        allowed = ALLOWED_SEMANTIC_TAGS_BY_ROLE.get(role)
+        if not allowed:
+            return 0.0
+        tag = self._semantic_tag(term)
+        if not tag:
+            return 0.0
+        if tag in allowed:
+            return 0.0
+        crossclass_tags = {
+            "finding",
+            "observable entity",
+            "qualifier value",
+            "physical object",
+            "assessment scale",
+            "body structure",
+        }
+        if tag in crossclass_tags:
+            return b.role_semantic_crossclass_penalty
+        return b.role_semantic_mismatch_penalty
+
+    def _score(self, query: str, candidate: str) -> float:
+        q = self._normalize(query)
+        c = self._normalize(candidate)
+        if not q or not c:
+            return 0.0
+        if q == c:
+            return 1.0
+        seq = SequenceMatcher(None, q, c).ratio()
+        partial = 0.0
+        if q in c or c in q:
+            partial = min(len(q), len(c)) / max(len(q), len(c))
+        q_tokens = set(self._important_tokens(q))
+        c_tokens = set(self._important_tokens(c))
+        token_jaccard = 0.0
+        if q_tokens and c_tokens:
+            token_jaccard = len(q_tokens & c_tokens) / len(q_tokens | c_tokens)
+        q_chars = set(re.findall(r"....", f" {q} "))
+        c_chars = set(re.findall(r"....", f" {c} "))
+        char_jaccard = 0.0
+        if q_chars and c_chars:
+            char_jaccard = len(q_chars & c_chars) / len(q_chars | c_chars)
+        coverage = self._weighted_query_coverage(q_tokens, c_tokens)
+        combined = (
+            0.40 * coverage
+            + 0.22 * token_jaccard
+            + 0.18 * seq
+            + 0.10 * partial
+            + 0.10 * char_jaccard
+        )
+        return min(1.0, max(combined, coverage, token_jaccard, char_jaccard))
+
+    def _token_weight(self, token: str) -> float:
+        if not token:
+            return 0.0
+        if token in GENERIC_CONCEPT_TOKENS:
+            return 0.35
+        return min(1.5, 0.8 + (len(token) / 12.0))
+
+    def _weighted_query_coverage(self, query_tokens: set[str], candidate_tokens: set[str]) -> float:
+        if not query_tokens:
+            return 0.0
+        denom = sum(self._token_weight(token) for token in query_tokens)
+        if denom <= 0:
+            return 0.0
+        numer = sum(
+            self._token_weight(token)
+            for token in query_tokens
+            if token in candidate_tokens
+        )
+        return numer / denom
+
+    def _discriminative_query_tokens(self, query_tokens: set[str]) -> set[str]:
+        return {
+            token
+            for token in query_tokens
+            if token not in GENERIC_CONCEPT_TOKENS and len(token) >= 5
+        }
+
+    def _extra_qualifier_ratio(self, query_tokens: set[str], candidate_tokens: set[str]) -> float:
+        if not candidate_tokens:
+            return 0.0
+        discriminative_candidate_tokens = {
+            token
+            for token in candidate_tokens
+            if token not in GENERIC_CONCEPT_TOKENS and len(token) >= 5
+        }
+        if not discriminative_candidate_tokens:
+            return 0.0
+        extra = discriminative_candidate_tokens - query_tokens
+        return len(extra) / max(len(discriminative_candidate_tokens), 1)
+
+    def _vector_candidates(self, term: str) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
+        b = self.builder
+        if not b.enable_vector_grounding or not b.vector_retriever:
+            return [], {}
+        try:
+            candidates = b.vector_retriever.retrieve(term, top_k=b.vector_top_k)
+        except Exception as exc:
+            logger.warning("Vector retrieval failed for '%s': %s", term, exc)
+            return [], {}
+
+        vector_score_by_concept: Dict[int, float] = {}
+        for row in candidates:
+            concept_id = row.get("conceptid")
+            if concept_id is None:
+                continue
+            try:
+                concept_id = int(concept_id)
+            except (TypeError, ValueError):
+                continue
+            row_score = float(row.get("vector_score") or 0.0)
+            if concept_id not in vector_score_by_concept:
+                vector_score_by_concept[concept_id] = row_score
+            else:
+                vector_score_by_concept[concept_id] = max(
+                    vector_score_by_concept[concept_id], row_score
+                )
+        return candidates, vector_score_by_concept
+
+    def _token_overlap_ratio(self, tokens: set, term: Optional[str]) -> float:
+        if not tokens or not term:
+            return 0.0
+        term_tokens = set(self._important_tokens(term))
+        if not term_tokens:
+            return 0.0
+        return len(tokens & term_tokens) / max(len(tokens), 1)
+
+    def _specificity_penalty(self, query_tokens: set, candidate_tokens: set) -> float:
+        if not query_tokens or not candidate_tokens:
+            return 0.0
+
+        penalty = 0.0
+        contradictions = (
+            ("multi", "single"),
+            ("single", "multi"),
+            ("triple", "single"),
+            ("left", "right"),
+            ("right", "left"),
+            ("proximal", "distal"),
+            ("distal", "proximal"),
+        )
+        for expected, conflicting in contradictions:
+            if expected in query_tokens and conflicting in candidate_tokens:
+                penalty += 0.08
+
+        has_coronary_artery_query = {"coronary", "artery"}.issubset(query_tokens)
+        has_bypass_graft_candidate = (
+            "bypass" in candidate_tokens or "graft" in candidate_tokens
+        )
+        if (
+            has_coronary_artery_query
+            and "bypass" not in query_tokens
+            and "graft" not in query_tokens
+            and has_bypass_graft_candidate
+        ):
+            penalty += 0.10
+
+        return min(0.25, penalty)
+
+    def _hard_negative_penalty_for(
+        self, term: str, role: Optional[str], concept_id: int
+    ) -> float:
+        b = self.builder
+        if b.hard_negative_penalty <= 0.0:
+            return 0.0
+        normalized_term = self._normalize(term)
+        role_key = (role or "").strip()
+        if not normalized_term or not role_key:
+            return 0.0
+        blocked = b.hard_negative_map.get((normalized_term, role_key), set())
+        if concept_id in blocked:
+            return b.hard_negative_penalty
+        return 0.0
 
     def _build_context_hint(self, concept: Any) -> str:
         context_hint = ""
@@ -46,7 +318,7 @@ class EntityGroundingService:
         search_start = time.perf_counter()
 
         stripped_term = re.sub(r"\s*\([^)]*\)\s*", " ", term).strip()
-        normalized_term = b._normalize(term)
+        normalized_term = self._normalize(term)
         paren_tokens = []
         for group in re.findall(r"\(([^)]+)\)", term):
             for token in re.findall(r"[A-Za-z0-9]+", group):
@@ -55,10 +327,10 @@ class EntityGroundingService:
 
         normalized_tokens = [
             t
-            for t in b._normalize(term).split()
+            for t in self._normalize(term).split()
             if len(t) > 2 and t not in STOPWORD_TOKENS
         ]
-        important_tokens = b._important_tokens(term)
+        important_tokens = self._important_tokens(term)
         use_short_query = len(normalized_tokens) > MAX_QUERY_TOKENS
 
         search_terms: List[str] = []
@@ -124,17 +396,17 @@ class EntityGroundingService:
                 vector_search_terms.append(
                     " ".join(important_tokens[-MAX_QUERY_TOKENS:])
                 )
-            for context_variant in b._context_query_variants(query_context):
+            for context_variant in self._context_query_variants(query_context):
                 vector_search_terms.append(context_variant)
                 vector_search_terms.append(f"{term} {context_variant}")
             seen_vector_terms = set()
             for vt in vector_search_terms:
                 vt = " ".join(str(vt or "").split()).strip()
-                vt_key = b._normalize(vt)
+                vt_key = self._normalize(vt)
                 if not vt_key or vt_key in seen_vector_terms:
                     continue
                 seen_vector_terms.add(vt_key)
-                retrieved, score_map = b._vector_candidates(vt)
+                retrieved, score_map = self._vector_candidates(vt)
                 vector_results.extend(retrieved)
                 for concept_id, vector_score in score_map.items():
                     prev = vector_score_by_concept.get(concept_id, 0.0)
@@ -196,15 +468,15 @@ class EntityGroundingService:
 
         important_query_tokens = set()
         for q in query_terms:
-            important_query_tokens.update(b._important_tokens(q))
+            important_query_tokens.update(self._important_tokens(q))
 
         def score_candidates(concept_items_to_score, role_filter):
             candidate_debug_rows: List[Dict[str, Any]] = []
             scored_candidates: List[Dict[str, Any]] = []
             normalized_query_terms = {
-                b._normalize(q) for q in query_terms if b._normalize(q)
+                self._normalize(q) for q in query_terms if self._normalize(q)
             }
-            normalized_source_term = b._normalize(term)
+            normalized_source_term = self._normalize(term)
             is_role_tension_term = normalized_source_term in b.role_tension_terms
             for concept_id, terms in concept_items_to_score:
                 role_mismatch = bool(role_filter) and not b._candidate_matches_role(
@@ -219,7 +491,7 @@ class EntityGroundingService:
 
                 if important_query_tokens:
                     if not any(
-                        important_query_tokens & set(b._important_tokens(candidate))
+                        important_query_tokens & set(self._important_tokens(candidate))
                         for candidate in candidates
                     ):
                         continue
@@ -228,30 +500,30 @@ class EntityGroundingService:
                 best_candidate_term = None
                 best_candidate_overlap = 0.0
                 for candidate in candidates:
-                    candidate_norm = b._normalize(candidate)
-                    candidate_tokens = set(b._important_tokens(candidate))
+                    candidate_norm = self._normalize(candidate)
+                    candidate_tokens = set(self._important_tokens(candidate))
                     candidate_score = max(
-                        (b._score(q, candidate) for q in query_terms if q),
+                        (self._score(q, candidate) for q in query_terms if q),
                         default=0.0,
                     )
-                    stripped_norm = b._normalize(stripped_term) if stripped_term else ""
+                    stripped_norm = self._normalize(stripped_term) if stripped_term else ""
                     if stripped_norm and stripped_norm in candidate_norm:
                         candidate_score = candidate_score + 0.05
                     if paren_tokens and any(
                         token.lower() in candidate_norm for token in paren_tokens
                     ):
                         candidate_score = candidate_score + 0.03
-                    overlap_ratio = b._token_overlap_ratio(
+                    overlap_ratio = self._token_overlap_ratio(
                         important_query_tokens, candidate
                     )
-                    weighted_coverage = b._weighted_query_coverage(
+                    weighted_coverage = self._weighted_query_coverage(
                         important_query_tokens, candidate_tokens
                     )
                     if overlap_ratio:
                         candidate_score = candidate_score + overlap_ratio * 0.08
                     if weighted_coverage:
                         candidate_score = candidate_score + weighted_coverage * 0.10
-                    penalty = b._specificity_penalty(
+                    penalty = self._specificity_penalty(
                         important_query_tokens, candidate_tokens
                     )
                     if penalty:
@@ -261,7 +533,7 @@ class EntityGroundingService:
                         best_candidate_term = candidate
                         best_candidate_overlap = weighted_coverage
 
-                preferred_overlap = b._token_overlap_ratio(
+                preferred_overlap = self._token_overlap_ratio(
                     important_query_tokens, preferred or ""
                 )
                 best_overlap = max(
@@ -269,11 +541,11 @@ class EntityGroundingService:
                     best_candidate_overlap,
                 )
 
-                discriminative_tokens = b._discriminative_query_tokens(
+                discriminative_tokens = self._discriminative_query_tokens(
                     important_query_tokens
                 )
                 candidate_tokens_for_best = set(
-                    b._important_tokens(best_candidate_term or preferred or "")
+                    self._important_tokens(best_candidate_term or preferred or "")
                 )
                 discriminative_coverage = 0.0
                 if discriminative_tokens:
@@ -290,18 +562,18 @@ class EntityGroundingService:
                     discriminative_tokens & candidate_tokens_for_best
                 ):
                     final_penalty += b.missing_discriminative_penalty
-                extra_qualifier_ratio = b._extra_qualifier_ratio(
+                extra_qualifier_ratio = self._extra_qualifier_ratio(
                     important_query_tokens, candidate_tokens_for_best
                 )
                 final_penalty += (
                     extra_qualifier_ratio * b.extra_qualifier_penalty_weight
                 )
-                final_penalty += b._hard_negative_penalty_for(
+                final_penalty += self._hard_negative_penalty_for(
                     normalized_source_term,
                     role_filter,
                     concept_id,
                 )
-                semantic_penalty = b._role_semantic_penalty(role_filter, preferred)
+                semantic_penalty = self._role_semantic_penalty(role_filter, preferred)
                 final_penalty += semantic_penalty
                 if role_mismatch:
                     final_penalty += b.role_mismatch_penalty
@@ -400,7 +672,7 @@ class EntityGroundingService:
                             role_compatible_pool = [
                                 row
                                 for row in backoff_pool
-                                if b._has_allowed_semantic_tag(
+                                if self._has_allowed_semantic_tag(
                                     role_filter,
                                     row.get("term"),
                                 )
@@ -467,9 +739,9 @@ class EntityGroundingService:
                 if off_score >= b.off_domain_min_score and off_score > best_score:
                     best_id, best_term, best_score = off_id, off_term, off_score
 
-        if b._has_disallowed_semantic_tag(best_term):
+        if self._has_disallowed_semantic_tag(best_term):
             return None, None, 0.0
-        if b.enable_semantic_tag_filter and not b._has_allowed_semantic_tag(
+        if b.enable_semantic_tag_filter and not self._has_allowed_semantic_tag(
             role, best_term
         ):
             return None, None, 0.0
@@ -512,7 +784,7 @@ class EntityGroundingService:
                     "entity_standardized_candidate"
                 )
                 cache_tokens = set(
-                    b._important_tokens(
+                    self._important_tokens(
                         concept.entity_standardized_candidate
                         or concept.entity_original
                         or ""
@@ -520,7 +792,7 @@ class EntityGroundingService:
                 )
                 if (
                     cache_tokens
-                    and b._token_overlap_ratio(cache_tokens, cache_term) < 0.5
+                    and self._token_overlap_ratio(cache_tokens, cache_term) < 0.5
                 ):
                     cached = None
             if cached:
@@ -564,9 +836,7 @@ class EntityGroundingService:
             path_ids = b._get_taxonomy_path_cached(concept_id)
             target_label = b._resolve_target_label(path_ids)
             if target_label is None and concept.role:
-                target_label = b._resolve_target_label_for_role(
-                    concept.role, path_ids
-                )
+                target_label = b._resolve_target_label_for_role(concept.role, path_ids)
             if target_label is None and concept.role and len(path_ids) <= 1:
                 target_label = b._fallback_target_label_for_role(concept.role)
             taxonomy_path = b._format_taxonomy_path(path_ids)
@@ -643,7 +913,11 @@ class EntityGroundingService:
         return self.builder._get_preferred_term(concept_id_int) or ""
 
     def close(self) -> None:
-        if self.builder.vector_retriever and hasattr(self.builder.vector_retriever, "close"):
+        if self.builder.vector_retriever and hasattr(
+            self.builder.vector_retriever, "close"
+        ):
             self.builder.vector_retriever.close()
-        if self.builder.snomed_explorer and hasattr(self.builder.snomed_explorer, "close"):
+        if self.builder.snomed_explorer and hasattr(
+            self.builder.snomed_explorer, "close"
+        ):
             self.builder.snomed_explorer.close()
