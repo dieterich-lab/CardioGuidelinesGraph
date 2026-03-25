@@ -8,6 +8,20 @@ from typing import Any, Dict, List, Tuple
 from cardio_graph_core.extraction.guideline_graph_builder import GuidelineGraphBuilder
 
 
+def _compose_context(row: Dict[str, Any], concept: Dict[str, Any]) -> str:
+    parts: List[str] = []
+    concept_context = concept.get("context")
+    if concept_context:
+        parts.append(str(concept_context))
+    logic_structured = concept.get("logic_structured")
+    if logic_structured:
+        parts.append(json.dumps(logic_structured, ensure_ascii=False, sort_keys=True))
+    recommendation = row.get("recommendation")
+    if recommendation:
+        parts.append(str(recommendation))
+    return " ".join(part.strip() for part in parts if str(part).strip())
+
+
 def _read_gold_items(gold_path: Path, deduplicate: bool = True) -> List[Dict[str, str]]:
     payload = json.loads(gold_path.read_text(encoding="utf-8"))
     tables = payload.get("tables") or []
@@ -39,6 +53,7 @@ def _read_gold_items(gold_path: Path, deduplicate: bool = True) -> List[Dict[str
                                 "term": term,
                                 "role": role,
                                 "gold_snomed_id": gold_snomed_id,
+                                "context": _compose_context(row, concept),
                             }
                         )
 
@@ -90,7 +105,9 @@ def _evaluate(
 
     for item in items:
         concept_id, preferred_term, score = builder._search_best_concept(
-            item["term"], item["role"]
+            item["term"],
+            item["role"],
+            query_context=item.get("context") or "",
         )
         pred_snomed_id = "" if concept_id is None else str(concept_id)
         hit = pred_snomed_id == item["gold_snomed_id"]

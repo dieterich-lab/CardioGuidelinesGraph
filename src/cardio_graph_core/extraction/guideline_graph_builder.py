@@ -457,6 +457,14 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_TIE_EPSILON", "0.002")
             or "0.002"
         )
+        self.enable_vector_context_query = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.vector_context_max_tokens = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_MAX_TOKENS", "8")
+            or "8"
+        )
         self.min_weighted_query_coverage = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_MIN_WEIGHTED_QUERY_COVERAGE", "0.45")
             or "0.45"
@@ -984,6 +992,45 @@ class GuidelineGraphBuilder:
         normalized_tokens = [self._normalize_token(t) for t in tokens]
         return [t for t in normalized_tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
 
+    def _context_query_variants(self, context: Any) -> List[str]:
+        if context is None or not self.enable_vector_context_query:
+            return []
+
+        if isinstance(context, (dict, list)):
+            raw_context = json.dumps(context, ensure_ascii=False, sort_keys=True)
+        else:
+            raw_context = str(context)
+        cleaned_context = re.sub(r"\s+", " ", raw_context).strip()
+        if not cleaned_context:
+            return []
+
+        context_tokens = self._important_tokens(cleaned_context)
+        if not context_tokens:
+            return []
+
+        max_tokens = max(2, self.vector_context_max_tokens)
+        variants: List[str] = [" ".join(context_tokens[:max_tokens])]
+
+        if len(context_tokens) > max_tokens:
+            variants.append(" ".join(context_tokens[-max_tokens:]))
+
+        for fragment in re.split(r"[;|,.]", cleaned_context):
+            fragment_tokens = self._important_tokens(fragment)
+            if 2 <= len(fragment_tokens) <= max_tokens:
+                variants.append(" ".join(fragment_tokens))
+
+        deduped: List[str] = []
+        seen = set()
+        for variant in variants:
+            key = self._normalize(variant)
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            deduped.append(variant)
+            if len(deduped) >= 3:
+                break
+        return deduped
+
     def _has_disallowed_semantic_tag(self, term: Optional[str]) -> bool:
         if not term:
             return False
@@ -1300,7 +1347,11 @@ class GuidelineGraphBuilder:
         return alt_names
 
     def _search_best_concept(
-        self, term: str, role: Optional[str], limit: int = 100
+        self,
+        term: str,
+        role: Optional[str],
+        limit: int = 100,
+        query_context: Any = None,
     ) -> Tuple[Optional[int], Optional[str], float]:
         if not term:
             return None, None, 0.0
@@ -1386,7 +1437,16 @@ class GuidelineGraphBuilder:
                 vector_search_terms.append(
                     " ".join(important_tokens[-MAX_QUERY_TOKENS:])
                 )
+            for context_variant in self._context_query_variants(query_context):
+                vector_search_terms.append(context_variant)
+                vector_search_terms.append(f"{term} {context_variant}")
+            seen_vector_terms = set()
             for vt in vector_search_terms:
+                vt = " ".join(str(vt or "").split()).strip()
+                vt_key = self._normalize(vt)
+                if not vt_key or vt_key in seen_vector_terms:
+                    continue
+                seen_vector_terms.add(vt_key)
                 retrieved, score_map = self._vector_candidates(vt)
                 vector_results.extend(retrieved)
                 for concept_id, vector_score in score_map.items():
@@ -2386,8 +2446,19 @@ class GuidelineGraphBuilder:
                 search_term = re.sub(
                     r"\bscheduled\b", "", search_term, flags=re.IGNORECASE
                 ).strip()
+            context_hint = ""
+            if concept.logic_structured:
+                context_hint = json.dumps(
+                    concept.logic_structured,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
+            if concept.logic:
+                context_hint = f"{context_hint} {concept.logic}".strip()
             concept_id, preferred_term, score = self._search_best_concept(
-                search_term, concept.role
+                search_term,
+                concept.role,
+                query_context=context_hint,
             )
             path_ids = self._get_taxonomy_path_cached(concept_id)
             target_label = self._resolve_target_label(path_ids)
