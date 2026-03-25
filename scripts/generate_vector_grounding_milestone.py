@@ -184,12 +184,12 @@ def main() -> int:
     )
     parser.add_argument(
         "--manifest-out",
-        default="docs/table22_snomed_grounding_compare/grounding_only/persistent_error_manifest.json",
+        default="docs/vector_grounding_persistent_error_manifest.json",
         help="Output path for machine-readable manifest",
     )
     parser.add_argument(
         "--milestone-out",
-        default="docs/table22_snomed_grounding_compare/grounding_only/persistent_error_milestone.md",
+        default="docs/vector_grounding_milestone.md",
         help="Output path for markdown milestone report",
     )
     args = parser.parse_args()

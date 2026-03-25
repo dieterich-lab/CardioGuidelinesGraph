@@ -44,8 +44,8 @@ Current job configuration (local runner):
 6. Write run output:
    - `docs/table22_snomed_grounding_compare/grounding_only/vector_job_<job_id>/vector_eval.json`
 7. Regenerate persistent error artifacts:
-   - `docs/table22_snomed_grounding_compare/grounding_only/persistent_error_manifest.json`
-   - `docs/table22_snomed_grounding_compare/grounding_only/persistent_error_milestone.md`
+   - `docs/vector_grounding_persistent_error_manifest.json`
+   - `docs/vector_grounding_milestone.md`
 
 ## Runtime Knobs (Default Behavior)
 

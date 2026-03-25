@@ -54,3 +54,36 @@ When summarizing externally, include:
 3. Gate decision paths (dev + locked where available).
 4. Final promoted prompt path.
 5. Before/after key metrics (`rule_exact_match`, `operator_accuracy`, `concept_f1`).
+
+## Grounding selection patch track (2026-03-25)
+
+Goal:
+- Reduce persistent Table22 vector grounding misses caused by semantic type drift,
+  while preserving already correct mappings.
+
+Evidence snapshot (latest completed run `628273`):
+- Overall: `0.666667` (`56/84`).
+- Misses: `28`.
+- Manual vector probe (`628307`) showed gold concept appears in vector top-25 for
+  `26/28` misses (median gold rank `1.0`).
+- Implication: retrieval is usually good; post-retrieval selection/reranking is
+  the main bottleneck.
+
+Patch components currently implemented (opt-in; default off):
+- Vector-rank prior bonus for high-rank vector candidates under lexical floor.
+- Near-tie vector-rank rescue promotion rule.
+- Evidence-weighted semantic-penalty relief when coverage and vector rank are
+  both strong.
+
+Implementation files:
+- `src/cardio_graph_core/extraction/guideline_graph_builder.py`
+- `src/cardio_graph_core/grounding/entity_grounding_service.py`
+- `tests/test_entity_grounding_rank_rescue.py`
+
+Validation status:
+- Focused tests pass (`4 passed`) for helper logic and safety guards.
+
+Next decision gate (after reduced-knob runs `628305/628306` complete):
+1. Refresh `docs/vector_grounding_milestone.md` as the single tuning milestone doc.
+2. Compare reduced-knob results vs baseline (`627576`, `628273`).
+3. If no severe regression, run one A/B with the new patch toggles enabled.
