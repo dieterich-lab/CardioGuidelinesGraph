@@ -17,7 +17,7 @@ This file records prompt patch candidates produced by autotuning runs and whethe
 
 ## Run: cascade_16h / 20260311_165230
 
-Root: `docs/table22_tuning_runs/cascade_16h/20260311_165230`
+Root: `autotuning/table_22/cascade_16h/20260311_165230` in the external artifact store
 
 ### Phase 1 smoke (`phase_1_smoke_1x1`)
 
@@ -41,7 +41,7 @@ Root: `docs/table22_tuning_runs/cascade_16h/20260311_165230`
 ## Current promoted prompt delta
 
 Promoted prompt file:
-- `docs/table22_tuning_runs/cascade_16h/20260311_165230/phase_4_locked_checks/prompts/prompt_v2_candidate_01.txt`
+- `autotuning/table_22/cascade_16h/20260311_165230/phase_4_locked_checks/prompts/prompt_v2_candidate_01.txt` in the external artifact store
 
 Observed active appendix content in promoted prompt:
 - `[condition_extraction] Extract all clinical conditions, parameters, and procedures from text. Capture role, operator, threshold, unit, context, and logical group. Do not omit any concepts.`
@@ -84,6 +84,6 @@ Validation status:
 - Focused tests pass (`4 passed`) for helper logic and safety guards.
 
 Next decision gate (after reduced-knob runs `628305/628306` complete):
-1. Refresh `docs/vector_grounding_milestone.md` as the single tuning milestone doc.
+1. Refresh `docs/trackers/grounding/table_22.md` as the single tuning milestone doc.
 2. Compare reduced-knob results vs baseline (`627576`, `628273`).
 3. If no severe regression, run one A/B with the new patch toggles enabled.
