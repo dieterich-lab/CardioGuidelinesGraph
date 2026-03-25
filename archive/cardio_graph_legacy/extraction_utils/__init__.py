@@ -1,3 +1,0 @@
-"""
-LLM utilities for the CardioGuidelinesGraph project.
-"""
