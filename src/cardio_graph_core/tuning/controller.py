@@ -14,7 +14,7 @@ from typing import Dict, List, Set, Tuple
 
 import click
 
-from cardio_graph_core.paths import autotuning_dry_run_dir
+from cardio_graph_core.common.paths import autotuning_dry_run_dir
 from cardio_graph_core.tuning.contracts import (
     ErrorItem,
     Metrics,

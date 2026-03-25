@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from cardio_graph_core.paths import (
+from cardio_graph_core.common.paths import (
     grounding_manifest_path,
     grounding_runs_dir,
     grounding_tracker_path,

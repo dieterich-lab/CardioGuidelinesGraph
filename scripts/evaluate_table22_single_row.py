@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 from cardio_graph_core.extraction.guideline_graph_builder import GuidelineGraphBuilder
-from cardio_graph_core.paths import rule_alignment_rows_dir
+from cardio_graph_core.common.paths import rule_alignment_rows_dir
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_DIR = PROJECT_ROOT / "data"

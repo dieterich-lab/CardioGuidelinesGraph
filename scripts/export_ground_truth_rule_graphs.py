@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
-from cardio_graph_core.paths import ground_truth_rule_graphs_root
+from cardio_graph_core.common.paths import ground_truth_rule_graphs_root
 
 DEFAULT_SOURCES = {
     "22": "/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json",

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from cardio_graph_core.extraction.guideline_graph_builder import GuidelineGraphBuilder
-from cardio_graph_core.paths import (
+from cardio_graph_core.common.paths import (
     rule_alignment_report_csv_path,
     rule_alignment_report_json_path,
     rule_alignment_report_md_path,

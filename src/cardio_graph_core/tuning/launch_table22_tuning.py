@@ -8,7 +8,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from cardio_graph_core.paths import autotuning_dev_dir
+from cardio_graph_core.common.paths import autotuning_dev_dir
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SLURM_DIR = PROJECT_ROOT / "slurm"

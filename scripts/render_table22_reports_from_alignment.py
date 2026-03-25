@@ -3,7 +3,7 @@ import json
 import re
 from pathlib import Path
 
-from cardio_graph_core.paths import rule_alignment_report_json_path
+from cardio_graph_core.common.paths import rule_alignment_report_json_path
 
 
 def _sanitize_label(value):

@@ -29,7 +29,7 @@ from cardio_graph_core.extraction.vector_candidate_retriever import (
     Neo4jVectorCandidateRetriever,
     VectorRetrieverConfig,
 )
-from cardio_graph_core.paths import grounding_manifest_path
+from cardio_graph_core.common.paths import grounding_manifest_path
 from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 if hasattr(sys.stdout, "reconfigure"):
