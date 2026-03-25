@@ -630,6 +630,12 @@ class GuidelineGraphBuilder:
                 )
                 self.enable_vector_grounding = False
 
+        from cardio_graph_core.grounding.entity_grounding_service import (
+            EntityGroundingService,
+        )
+
+        self.entity_grounding_service = EntityGroundingService(self)
+
     def _load_hard_negative_manifest(
         self, manifest_path: str
     ) -> Dict[Tuple[str, str], set[int]]:
@@ -2370,166 +2376,7 @@ class GuidelineGraphBuilder:
         extracted = self._explode_or_conditions(extracted)
         extracted = self._drop_redundant_compound_conditions(extracted)
         self._log_extracted_concepts(extracted)
-        grounded: List[GroundedConcept] = []
-        has_clinical_anchor = any(
-            c.role in {"ClinicalCondition", "Medication", "Procedure"}
-            for c in extracted
-        )
-
-        for concept in extracted:
-            if (concept.role or "").strip() == "Recommendation":
-                concept.role = "ClinicalCondition"
-            if (concept.role or "").strip() == "Other":
-                grounded.append(
-                    GroundedConcept(
-                        entity_original=concept.entity_original,
-                        entity_standardized_candidate=concept.entity_standardized_candidate,
-                        role=concept.role,
-                        logic=concept.logic,
-                        logic_structured=concept.logic_structured,
-                        snomed_id=None,
-                        preferred_term=None,
-                        alt_names=[],
-                        score=0.0,
-                        taxonomy_path=[],
-                        target_label=self._fallback_target_label_for_role("Other"),
-                    )
-                )
-                continue
-            cached = self.index.lookup(concept.entity_standardized_candidate)
-            if cached:
-                cache_term = cached.get("preferred_term") or cached.get(
-                    "entity_standardized_candidate"
-                )
-                cache_tokens = set(
-                    self._important_tokens(
-                        concept.entity_standardized_candidate
-                        or concept.entity_original
-                        or ""
-                    )
-                )
-                if (
-                    cache_tokens
-                    and self._token_overlap_ratio(cache_tokens, cache_term) < 0.5
-                ):
-                    cached = None
-            if cached:
-                if cached.get("target_label") is None and concept.role:
-                    fallback_label = self._fallback_target_label_for_role(concept.role)
-                    if fallback_label:
-                        cached["target_label"] = fallback_label
-                if self._should_skip_concept(
-                    concept,
-                    cached.get("score", 1.0),
-                    cached.get("target_label"),
-                    has_clinical_anchor,
-                ):
-                    continue
-                grounded.append(
-                    GroundedConcept(
-                        entity_original=concept.entity_original,
-                        entity_standardized_candidate=concept.entity_standardized_candidate,
-                        role=concept.role,
-                        logic=concept.logic,
-                        logic_structured=concept.logic_structured,
-                        snomed_id=cached.get("snomed_id"),
-                        preferred_term=cached.get("preferred_term"),
-                        alt_names=cached.get("alt_names", []),
-                        score=cached.get("score", 1.0),
-                        taxonomy_path=cached.get("taxonomy_path", []),
-                        target_label=cached.get("target_label"),
-                    )
-                )
-                continue
-            search_term = concept.entity_standardized_candidate
-            if search_term and "scheduled" in search_term.lower():
-                search_term = re.sub(
-                    r"\bscheduled\b", "", search_term, flags=re.IGNORECASE
-                ).strip()
-            context_hint = ""
-            if concept.logic_structured:
-                context_hint = json.dumps(
-                    concept.logic_structured,
-                    ensure_ascii=False,
-                    sort_keys=True,
-                )
-            if concept.logic:
-                context_hint = f"{context_hint} {concept.logic}".strip()
-            concept_id, preferred_term, score = self._search_best_concept(
-                search_term,
-                concept.role,
-                query_context=context_hint,
-            )
-            path_ids = self._get_taxonomy_path_cached(concept_id)
-            target_label = self._resolve_target_label(path_ids)
-            if target_label is None and concept.role:
-                target_label = self._resolve_target_label_for_role(
-                    concept.role, path_ids
-                )
-            if target_label is None and concept.role and len(path_ids) <= 1:
-                target_label = self._fallback_target_label_for_role(concept.role)
-            taxonomy_path = self._format_taxonomy_path(path_ids)
-            alt_names: List[str] = []
-
-            if concept_id is None or score < self.min_match_score:
-                concept_id = None
-                preferred_term = None
-                score = 0.0
-                path_ids = []
-                taxonomy_path = []
-                alt_names = []
-                target_label = self._fallback_target_label_for_role(concept.role)
-            else:
-                alt_names = self._get_alt_names(concept_id, preferred_term)
-
-            if self._should_skip_concept(
-                concept, score, target_label, has_clinical_anchor, allow_unmapped=True
-            ):
-                continue
-
-            grounded_concept = GroundedConcept(
-                entity_original=concept.entity_original,
-                entity_standardized_candidate=concept.entity_standardized_candidate,
-                role=concept.role,
-                logic=concept.logic,
-                logic_structured=concept.logic_structured,
-                snomed_id=concept_id,
-                preferred_term=preferred_term,
-                alt_names=alt_names,
-                score=score,
-                taxonomy_path=taxonomy_path,
-                target_label=target_label,
-            )
-            grounded.append(grounded_concept)
-
-            self.index.add(
-                {
-                    "entity_standardized_candidate": concept.entity_standardized_candidate,
-                    "snomed_id": concept_id,
-                    "preferred_term": preferred_term,
-                    "alt_names": alt_names,
-                    "score": score,
-                    "taxonomy_path": taxonomy_path,
-                    "target_label": target_label,
-                }
-            )
-            logger.info(
-                "Index output entry: %s",
-                json.dumps(
-                    {
-                        "entity_standardized_candidate": concept.entity_standardized_candidate,
-                        "snomed_id": concept_id,
-                        "preferred_term": preferred_term,
-                        "alt_names": alt_names,
-                        "score": score,
-                        "taxonomy_path": taxonomy_path,
-                        "target_label": target_label,
-                    }
-                ),
-            )
-
-        self.index.save()
-        self._log_grounded_concepts(grounded)
+        grounded = self.entity_grounding_service.ground_extracted_concepts(extracted)
         return extracted, grounded
 
     def ground_sentence(

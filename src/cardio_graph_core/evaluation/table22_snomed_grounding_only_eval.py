@@ -84,7 +84,12 @@ def _evaluate(
         "true" if mode == "vector" else "false"
     )
 
-    service = EntityGroundingService(model=model, node=node, port=port)
+    from cardio_graph_core.extraction.guideline_graph_builder import (
+        GuidelineGraphBuilder,
+    )
+
+    builder = GuidelineGraphBuilder(model=model, node=node, port=port)
+    service = EntityGroundingService(builder)
     role_total = Counter()
     role_hits = Counter()
     predictions: List[Dict[str, Any]] = []
