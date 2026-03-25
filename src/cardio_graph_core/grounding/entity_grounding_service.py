@@ -217,18 +217,19 @@ class EntityGroundingService:
 
     def _vector_candidates(
         self, term: str
-    ) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
+    ) -> Tuple[List[Dict[str, Any]], Dict[int, float], Dict[int, int]]:
         b = self.builder
         if not b.enable_vector_grounding or not b.vector_retriever:
-            return [], {}
+            return [], {}, {}
         try:
             candidates = b.vector_retriever.retrieve(term, top_k=b.vector_top_k)
         except Exception as exc:
             logger.warning("Vector retrieval failed for '%s': %s", term, exc)
-            return [], {}
+            return [], {}, {}
 
         vector_score_by_concept: Dict[int, float] = {}
-        for row in candidates:
+        vector_rank_by_concept: Dict[int, int] = {}
+        for rank_index, row in enumerate(candidates, start=1):
             concept_id = row.get("conceptid")
             if concept_id is None:
                 continue
@@ -243,7 +244,54 @@ class EntityGroundingService:
                 vector_score_by_concept[concept_id] = max(
                     vector_score_by_concept[concept_id], row_score
                 )
-        return candidates, vector_score_by_concept
+            prior_rank = vector_rank_by_concept.get(concept_id)
+            if prior_rank is None or rank_index < prior_rank:
+                vector_rank_by_concept[concept_id] = rank_index
+        return candidates, vector_score_by_concept, vector_rank_by_concept
+
+    def _effective_semantic_penalty(
+        self,
+        base_penalty: float,
+        weighted_coverage: float,
+        vector_rank: Optional[int],
+    ) -> float:
+        b = self.builder
+        if base_penalty <= 0.0:
+            return 0.0
+        if not b.semantic_penalty_evidence_relief_enabled:
+            return base_penalty
+        if weighted_coverage < b.semantic_penalty_evidence_min_coverage:
+            return base_penalty
+        if (
+            vector_rank is None
+            or vector_rank > b.semantic_penalty_evidence_max_vector_rank
+        ):
+            return base_penalty
+        scale = min(1.0, max(0.0, b.semantic_penalty_evidence_scale))
+        return base_penalty * scale
+
+    def _should_vector_rank_promote(
+        self, top: Dict[str, Any], runner: Dict[str, Any]
+    ) -> bool:
+        b = self.builder
+        if not b.vector_rank_rescue_enabled:
+            return False
+        score_gap = float(top.get("final_score", 0.0)) - float(
+            runner.get("final_score", 0.0)
+        )
+        if score_gap < 0.0 or score_gap > b.vector_rank_rescue_margin:
+            return False
+        runner_rank = runner.get("vector_rank")
+        if runner_rank is None or runner_rank > b.vector_rank_rescue_max_rank:
+            return False
+        top_rank = top.get("vector_rank")
+        if top_rank is not None and top_rank <= b.vector_rank_rescue_max_rank:
+            return False
+        if float(runner.get("coverage", 0.0)) < b.vector_rank_rescue_min_coverage:
+            return False
+        if float(runner.get("lexical", 0.0)) + 0.02 < float(top.get("lexical", 0.0)):
+            return False
+        return True
 
     def _token_overlap_ratio(self, tokens: set, term: Optional[str]) -> float:
         if not tokens or not term:
@@ -393,6 +441,7 @@ class EntityGroundingService:
 
         vector_results: List[Dict[str, Any]] = []
         vector_score_by_concept: Dict[int, float] = {}
+        vector_rank_by_concept: Dict[int, int] = {}
         if b.enable_vector_grounding and b.vector_retriever:
             vector_search_terms = [term]
             if stripped_term and stripped_term != term:
@@ -414,11 +463,15 @@ class EntityGroundingService:
                 if not vt_key or vt_key in seen_vector_terms:
                     continue
                 seen_vector_terms.add(vt_key)
-                retrieved, score_map = self._vector_candidates(vt)
+                retrieved, score_map, rank_map = self._vector_candidates(vt)
                 vector_results.extend(retrieved)
                 for concept_id, vector_score in score_map.items():
                     prev = vector_score_by_concept.get(concept_id, 0.0)
                     vector_score_by_concept[concept_id] = max(prev, vector_score)
+                for concept_id, vector_rank in rank_map.items():
+                    prev_rank = vector_rank_by_concept.get(concept_id)
+                    if prev_rank is None or vector_rank < prev_rank:
+                        vector_rank_by_concept[concept_id] = vector_rank
 
         results.extend(vector_results)
 
@@ -583,20 +636,38 @@ class EntityGroundingService:
                     role_filter,
                     concept_id,
                 )
-                semantic_penalty = self._role_semantic_penalty(role_filter, preferred)
-                final_penalty += semantic_penalty
+                base_semantic_penalty = self._role_semantic_penalty(
+                    role_filter, preferred
+                )
                 if role_mismatch:
                     final_penalty += b.role_mismatch_penalty
                 if role_mismatch and is_role_tension_term:
                     final_penalty += b.role_tension_penalty
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
+                vector_rank = vector_rank_by_concept.get(int(concept_id))
                 vector_bonus = 0.0
                 if score >= b.vector_min_lexical_for_bonus:
                     vector_bonus = min(
                         b.vector_bonus_cap,
                         vector_raw * b.vector_rerank_weight,
                     )
+                if (
+                    b.vector_rank_prior_enabled
+                    and vector_rank is not None
+                    and vector_rank <= b.vector_rank_prior_top_k
+                    and score >= b.vector_rank_prior_lexical_floor
+                ):
+                    rank_weight = (b.vector_rank_prior_top_k - vector_rank + 1) / max(
+                        float(b.vector_rank_prior_top_k), 1.0
+                    )
+                    vector_bonus += b.vector_rank_prior_bonus * rank_weight
+                semantic_penalty = self._effective_semantic_penalty(
+                    base_semantic_penalty,
+                    best_overlap,
+                    vector_rank,
+                )
+                final_penalty += semantic_penalty
                 final_score = min(1.0, max(0.0, score + vector_bonus - final_penalty))
 
                 if b.enable_grounding_candidate_debug:
@@ -611,6 +682,7 @@ class EntityGroundingService:
                             ),
                             "extra_qualifier_ratio": round(extra_qualifier_ratio, 6),
                             "vector_raw": round(vector_raw, 6),
+                            "vector_rank": vector_rank,
                             "vector_bonus": round(vector_bonus, 6),
                             "semantic_penalty": round(semantic_penalty, 6),
                             "role_mismatch": role_mismatch,
@@ -628,6 +700,7 @@ class EntityGroundingService:
                         "lexical": score,
                         "discriminative_coverage": discriminative_coverage,
                         "extra_qualifier_ratio": extra_qualifier_ratio,
+                        "vector_rank": vector_rank,
                     }
                 )
 
@@ -719,6 +792,12 @@ class EntityGroundingService:
                     and runner["discriminative_coverage"]
                     > top["discriminative_coverage"]
                     and runner["coverage"] >= top["coverage"]
+                ):
+                    local_best_id = runner["concept_id"]
+                    local_best_term = runner["term"]
+                    local_best_score = runner["final_score"]
+                if local_best_id is not None and self._should_vector_rank_promote(
+                    top, runner
                 ):
                     local_best_id = runner["concept_id"]
                     local_best_term = runner["term"]

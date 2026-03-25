@@ -465,6 +465,41 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_MAX_TOKENS", "8")
             or "8"
         )
+        self.vector_rank_prior_enabled = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.vector_rank_prior_top_k = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_TOP_K", "3") or "3"
+        )
+        self.vector_rank_prior_bonus = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_BONUS", "0.03")
+            or "0.03"
+        )
+        self.vector_rank_prior_lexical_floor = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_LEXICAL_FLOOR", "0.55"
+            )
+            or "0.55"
+        )
+        self.vector_rank_rescue_enabled = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.vector_rank_rescue_margin = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MARGIN", "0.015")
+            or "0.015"
+        )
+        self.vector_rank_rescue_max_rank = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MAX_RANK", "3")
+            or "3"
+        )
+        self.vector_rank_rescue_min_coverage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MIN_COVERAGE", "0.70"
+            )
+            or "0.70"
+        )
         self.min_weighted_query_coverage = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_MIN_WEIGHTED_QUERY_COVERAGE", "0.45")
             or "0.45"
@@ -541,6 +576,33 @@ class GuidelineGraphBuilder:
                 "CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_CROSSCLASS_PENALTY", "0.02"
             )
             or "0.02"
+        )
+        self.semantic_penalty_evidence_relief_enabled = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_RELIEF_ENABLED",
+                "false",
+            )
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.semantic_penalty_evidence_min_coverage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_MIN_COVERAGE",
+                "0.75",
+            )
+            or "0.75"
+        )
+        self.semantic_penalty_evidence_max_vector_rank = int(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_MAX_VECTOR_RANK",
+                "3",
+            )
+            or "3"
+        )
+        self.semantic_penalty_evidence_scale = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_SCALE", "0.5"
+            )
+            or "0.5"
         )
         self.hard_negative_manifest_path = (
             os.environ.get(
