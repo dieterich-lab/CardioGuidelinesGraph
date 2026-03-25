@@ -87,6 +87,7 @@ These defaults are exported by the local runner and represent the current frozen
 ## Context-Aware Retrieval (Current Implementation)
 
 Implemented in:
+- `src/cardio_graph_core/grounding/entity_grounding_service.py`
 - `src/cardio_graph_core/extraction/guideline_graph_builder.py`
 - `src/cardio_graph_core/evaluation/table22_snomed_grounding_only_eval.py`
 

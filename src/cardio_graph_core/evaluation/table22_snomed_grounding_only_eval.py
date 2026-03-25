@@ -5,7 +5,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from cardio_graph_core.extraction.guideline_graph_builder import GuidelineGraphBuilder
+from cardio_graph_core.grounding.entity_grounding_service import EntityGroundingService
 
 
 def _compose_context(row: Dict[str, Any], concept: Dict[str, Any]) -> str:
@@ -84,7 +84,7 @@ def _evaluate(
         "true" if mode == "vector" else "false"
     )
 
-    builder = GuidelineGraphBuilder(model=model, node=node, port=port)
+    service = EntityGroundingService(model=model, node=node, port=port)
     role_total = Counter()
     role_hits = Counter()
     predictions: List[Dict[str, Any]] = []
@@ -99,12 +99,12 @@ def _evaluate(
             return ""
         if concept_id_int in concept_term_cache:
             return concept_term_cache[concept_id_int]
-        concept_term = builder._get_preferred_term(concept_id_int) or ""
+        concept_term = service.get_concept_term(concept_id_int) or ""
         concept_term_cache[concept_id_int] = concept_term
         return concept_term
 
     for item in items:
-        concept_id, preferred_term, score = builder._search_best_concept(
+        concept_id, preferred_term, score = service.ground_entity(
             item["term"],
             item["role"],
             query_context=item.get("context") or "",
@@ -145,10 +145,7 @@ def _evaluate(
         for role in sorted(role_total)
     }
 
-    if builder.vector_retriever and hasattr(builder.vector_retriever, "close"):
-        builder.vector_retriever.close()
-    if builder.snomed_explorer and hasattr(builder.snomed_explorer, "close"):
-        builder.snomed_explorer.close()
+    service.close()
 
     return {
         "mode": mode,
