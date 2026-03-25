@@ -24,12 +24,12 @@ from typing import Any, Dict, List, Optional, Tuple
 import click
 import yaml
 
+from cardio_graph_core.common.paths import grounding_manifest_path
 from cardio_graph_core.extraction.clients import create_client_registry, ip_dict
 from cardio_graph_core.extraction.vector_candidate_retriever import (
     Neo4jVectorCandidateRetriever,
     VectorRetrieverConfig,
 )
-from cardio_graph_core.common.paths import grounding_manifest_path
 from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -460,6 +460,21 @@ class GuidelineGraphBuilder:
         )
         self.enable_vector_context_query = (
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        configured_context_roles = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ALLOWED_ROLES", "Procedure"
+            )
+            or "Procedure"
+        )
+        self.vector_context_allowed_roles = {
+            token.strip().lower()
+            for token in configured_context_roles.split(",")
+            if token.strip()
+        }
+        self.vector_context_append_term = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_APPEND_TERM", "false")
             or "false"
         ).strip().lower() in {"1", "true", "yes", "on"}
         self.vector_context_max_tokens = int(
@@ -1053,8 +1068,10 @@ class GuidelineGraphBuilder:
     def _important_tokens(self, text: str) -> List[str]:
         return self.entity_grounding_service._important_tokens(text)
 
-    def _context_query_variants(self, context: Any) -> List[str]:
-        return self.entity_grounding_service._context_query_variants(context)
+    def _context_query_variants(
+        self, context: Any, role: Optional[str] = None
+    ) -> List[str]:
+        return self.entity_grounding_service._context_query_variants(context, role)
 
     def _has_disallowed_semantic_tag(self, term: Optional[str]) -> bool:
         return self.entity_grounding_service._has_disallowed_semantic_tag(term)

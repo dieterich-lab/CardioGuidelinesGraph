@@ -1,14 +1,18 @@
 # Table22 Vector Grounding Persistent Error Milestone
 
-Runs analyzed: 627576, 627880, 628092
+Runs analyzed: 627576, 627880, 628092, 628305, 628306
 
 Criterion: term-role pairs that missed in at least 2 analyzed runs.
 
 ## Latest Run Gate
-- Latest run 628092 accuracy: 0.535714 (45/84)
+
+- Latest run 628306 accuracy: 0.535714 (45/84)
 - 0.60 gate: FAILED
+- Companion run 628305 accuracy: 0.619048 (52/84) -> PASSED 0.60 gate
 
 ## Top Persistent Error Terms
+
+Note: table below is the pre-reduced-knob persistent set (runs 627576, 627880, 628092). The latest two runs are summarized in the findings and next-run plan below.
 
 | Rank | Term | Role | Runs Missed | Misses (analyzed runs) | Typical Wrong Prediction IDs | Example Rows |
 |---:|---|---|---|---:|---|---|
@@ -35,12 +39,16 @@ Criterion: term-role pairs that missed in at least 2 analyzed runs.
 | 627576 | 0.793 | 1.000 | 0.551 | 0.667 |
 | 627880 | 0.793 | 1.000 | 0.551 | 0.667 |
 | 628092 | 0.759 | 1.000 | 0.347 | 0.536 |
+| 628305 | 0.759 | 1.000 | 0.490 | 0.619 |
+| 628306 | 0.517 | 1.000 | 0.490 | 0.536 |
 
 ## Latest Findings (2026-03-25)
 
-- Current best remains tied at runs 627576 and 627880 (overall 0.667).
-- Latest local-ollama run 628092 regressed to 0.536, driven mainly by Procedure collapse (0.551 -> 0.347).
-- Infrastructure looked healthy during 628092 (embedding endpoint active), so this appears to be scoring/retrieval behavior rather than service failure.
+- Current best still remains 627576/627880 (overall 0.667).
+- Run 628305 recovered from 0.536 to 0.619 (+7 hits; 45 -> 52) and passed the 0.60 gate.
+- Run 628306 regressed back to 0.536 (45/84), with Procedure unchanged vs 628305 (0.490) but a sharp ClinicalCondition drop (0.759 -> 0.517).
+- Miss overlap between 628305 and 628306 is high (27 shared misses), indicating the core Procedure miss set remains mostly stable.
+- New misses in 628306 are dominated by ClinicalCondition confusions (for example multivessel CAD and left main stem stenosis mappings), suggesting instability in condition-side disambiguation rather than a broad retrieval outage.
 
 ## Frozen Baseline Knobs (A Arm)
 
@@ -55,7 +63,7 @@ These are now fixed as script defaults in both vector wrappers and represent Arm
 - `CARDIO_GRAPH_GROUNDING_EXTRA_QUALIFIER_PENALTY=0.10`
 - `CARDIO_GRAPH_GROUNDING_GUARDED_FALLBACK_MARGIN=0.015`
 - `CARDIO_GRAPH_GROUNDING_MIN_DISCRIMINATIVE_COVERAGE_FOR_TOP=0.60`
-- `CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_PENALTY=0.05`
+- `CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_PENALTY=0.0`
 - `CARDIO_GRAPH_GROUNDING_AMBIGUITY_ABSTAIN_MARGIN=0.012`
 - `CARDIO_GRAPH_GROUNDING_AMBIGUITY_MIN_COVERAGE=0.55`
 - `CARDIO_GRAPH_GROUNDING_AMBIGUITY_CONFIDENCE_BACKOFF_ENABLED=true`
@@ -68,10 +76,41 @@ These are now fixed as script defaults in both vector wrappers and represent Arm
 - `CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_CROSSCLASS_PENALTY=0.02`
 - `CARDIO_GRAPH_GROUNDING_AMBIGUITY_LEXICAL_FORCE_PICK=0.90`
 - `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ENABLED=false`
+- `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ALLOWED_ROLES=Procedure`
+- `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_APPEND_TERM=false`
 - `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_MAX_TOKENS=8`
+
+## Near-Hardcoded Knob Analysis
+
+Current runtime behavior is effectively controlled by launcher defaults in [slurm/run_table22_snomed_grounding_only_vector_with_local_ollama.sh](slurm/run_table22_snomed_grounding_only_vector_with_local_ollama.sh), even though each variable can still be overridden via `--export`.
+
+Near-hardcoded in practice (defaulted every run unless explicitly overridden):
+
+- Vector rerank and lexical gate trio: `VECTOR_RERANK_WEIGHT`, `VECTOR_BONUS_CAP`, `VECTOR_MIN_LEXICAL_FOR_BONUS`.
+- Coverage and qualifier penalties: `MIN_WEIGHTED_QUERY_COVERAGE`, `LOW_COVERAGE_PENALTY`, `MISSING_DISCRIMINATIVE_PENALTY`, `EXTRA_QUALIFIER_PENALTY`.
+- Ambiguity bundle: `AMBIGUITY_ABSTAIN_MARGIN`, `AMBIGUITY_MIN_COVERAGE`, `AMBIGUITY_CONFIDENCE_BACKOFF_ENABLED`, `AMBIGUITY_BACKOFF_MAX_DROP`, `AMBIGUITY_BACKOFF_MIN_SCORE`, `AMBIGUITY_LEXICAL_FORCE_PICK`.
+- Role penalties: `ROLE_MISMATCH_PENALTY`, `ROLE_TENSION_PENALTY`, `ROLE_SEMANTIC_MISMATCH_PENALTY`, `ROLE_SEMANTIC_CROSSCLASS_PENALTY`.
+
+Not hardcoded (already safely off by default):
+
+- `CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_PENALTY=0.0`
+- `CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_MANIFEST` empty
+
+Decision from latest evidence:
+
+- Reduced-knob variants (628305/628306) are not promoted over the stable baseline (627576/627880 at 0.667).
+- Context-sensitive search proceeds only as controlled A/B against frozen baseline and now uses a conservative scope (`Procedure` only, no `term + context` concatenation by default).
 
 ## A/B Experiment Definition
 
 - Arm A (baseline): frozen knobs above, context vector query disabled.
 - Arm B (context-aware): identical knobs, enable context query via `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ENABLED=true`.
 - Success criteria: non-negative overall delta vs Arm A and Procedure accuracy improvement without large ClinicalCondition regressions.
+
+## Prospected Next Runs
+
+- Re-run Arm A once (same settings as 628305) as a reproducibility check; only promote if overall remains >= 0.60 and ClinicalCondition >= 0.70.
+- Run Arm B once with context enabled and all other knobs frozen; compare directly against Arm A on the same node/model window.
+- If Arm B improves Procedure without ClinicalCondition collapse, run one confirmation replicate before promoting.
+- Keep a focused error watchlist for recurring Procedure misses: Intracoronary pressure guide wire, Percutaneous coronary revascularization, Using decision making strategies.
+- If ClinicalCondition drift reappears, test a stricter condition-side disambiguation variant before changing retrieval settings.

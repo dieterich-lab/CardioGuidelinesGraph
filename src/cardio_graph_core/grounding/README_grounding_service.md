@@ -68,6 +68,8 @@ so it is clear which knobs are core logic and which are high overfit risk.
 | `CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_MISMATCH_PENALTY` | `0.06` | Penalizes semantic class mismatch. | Stricter semantic role match. | Looser semantic role match. |
 | `CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_CROSSCLASS_PENALTY` | `0.02` | Softer penalty for allowed cross-class cases. | Less tolerance for cross-class. | More tolerance for cross-class. |
 | `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ENABLED` | `false` | A/B switch for context-expanded vector queries. | n/a | n/a |
+| `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ALLOWED_ROLES` | `Procedure` | Restricts context-expanded queries to selected roles. | Broader role coverage (higher drift risk). | Narrower, safer scope. |
+| `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_APPEND_TERM` | `false` | If true, also queries `term + context` strings. | More aggressive retrieval expansion. | More conservative retrieval expansion. |
 | `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_MAX_TOKENS` | `8` | Limits query-context length. | Longer context variants. | Shorter context variants. |
 
 ### High-Risk Controls (Overfit-Prone)

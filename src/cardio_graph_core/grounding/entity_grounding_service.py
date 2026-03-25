@@ -51,9 +51,15 @@ class EntityGroundingService:
         normalized_tokens = [self._normalize_token(t) for t in tokens]
         return [t for t in normalized_tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
 
-    def _context_query_variants(self, context: Any) -> List[str]:
+    def _context_query_variants(self, context: Any, role: Optional[str]) -> List[str]:
         b = self.builder
         if context is None or not b.enable_vector_context_query:
+            return []
+        role_key = (role or "").strip().lower()
+        if (
+            b.vector_context_allowed_roles
+            and role_key not in b.vector_context_allowed_roles
+        ):
             return []
         if isinstance(context, (dict, list)):
             raw_context = json.dumps(context, ensure_ascii=False, sort_keys=True)
@@ -453,9 +459,10 @@ class EntityGroundingService:
                 vector_search_terms.append(
                     " ".join(important_tokens[-MAX_QUERY_TOKENS:])
                 )
-            for context_variant in self._context_query_variants(query_context):
+            for context_variant in self._context_query_variants(query_context, role):
                 vector_search_terms.append(context_variant)
-                vector_search_terms.append(f"{term} {context_variant}")
+                if b.vector_context_append_term:
+                    vector_search_terms.append(f"{term} {context_variant}")
             seen_vector_terms = set()
             for vt in vector_search_terms:
                 vt = " ".join(str(vt or "").split()).strip()
