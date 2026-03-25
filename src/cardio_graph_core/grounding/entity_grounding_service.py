@@ -94,7 +94,9 @@ class EntityGroundingService:
         tag = match.group(1).strip().lower()
         return tag in DISALLOWED_SEMANTIC_TAGS
 
-    def _has_allowed_semantic_tag(self, role: Optional[str], term: Optional[str]) -> bool:
+    def _has_allowed_semantic_tag(
+        self, role: Optional[str], term: Optional[str]
+    ) -> bool:
         if not role or not term:
             return True
         allowed = ALLOWED_SEMANTIC_TAGS_BY_ROLE.get(role)
@@ -176,7 +178,9 @@ class EntityGroundingService:
             return 0.35
         return min(1.5, 0.8 + (len(token) / 12.0))
 
-    def _weighted_query_coverage(self, query_tokens: set[str], candidate_tokens: set[str]) -> float:
+    def _weighted_query_coverage(
+        self, query_tokens: set[str], candidate_tokens: set[str]
+    ) -> float:
         if not query_tokens:
             return 0.0
         denom = sum(self._token_weight(token) for token in query_tokens)
@@ -196,7 +200,9 @@ class EntityGroundingService:
             if token not in GENERIC_CONCEPT_TOKENS and len(token) >= 5
         }
 
-    def _extra_qualifier_ratio(self, query_tokens: set[str], candidate_tokens: set[str]) -> float:
+    def _extra_qualifier_ratio(
+        self, query_tokens: set[str], candidate_tokens: set[str]
+    ) -> float:
         if not candidate_tokens:
             return 0.0
         discriminative_candidate_tokens = {
@@ -209,7 +215,9 @@ class EntityGroundingService:
         extra = discriminative_candidate_tokens - query_tokens
         return len(extra) / max(len(discriminative_candidate_tokens), 1)
 
-    def _vector_candidates(self, term: str) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
+    def _vector_candidates(
+        self, term: str
+    ) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
         b = self.builder
         if not b.enable_vector_grounding or not b.vector_retriever:
             return [], {}
@@ -506,7 +514,9 @@ class EntityGroundingService:
                         (self._score(q, candidate) for q in query_terms if q),
                         default=0.0,
                     )
-                    stripped_norm = self._normalize(stripped_term) if stripped_term else ""
+                    stripped_norm = (
+                        self._normalize(stripped_term) if stripped_term else ""
+                    )
                     if stripped_norm and stripped_norm in candidate_norm:
                         candidate_score = candidate_score + 0.05
                     if paren_tokens and any(
