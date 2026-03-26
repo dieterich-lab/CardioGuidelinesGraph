@@ -5,12 +5,13 @@ runtime defaults and the simplification policy for upcoming runs.
 
 ## Entry Scripts
 
-- General vector entry: `slurm/run_table22_snomed_grounding_only_vector.sh`
-- Local-Ollama runner:
-  `slurm/run_table22_snomed_grounding_only_vector_with_local_ollama.sh`
+- Canonical ground-truth vector run: `slurm/gt-eval-vector.sbatch`
+- Ground-truth 3-table ablation alias: `slurm/gt3-eval-vector-ablation.sbatch`
+- Ground-truth 3-table compatibility alias: `slurm/gt3-eval-vector-ablation-compat.sbatch`
 
 Current behavior:
-- The general vector entry is an alias that executes the local-Ollama runner.
+- Canonical runs use `gt-eval-vector.sbatch`.
+- Ablation wrappers are explicitly separated under `ablation-*.sbatch`.
 - All vector grounding runs use a local Ollama server on the allocated GPU node.
 
 ## SLURM Runtime Configuration
@@ -127,18 +128,18 @@ Behavior:
 Baseline (A):
 
 ```bash
-sbatch slurm/run_table22_snomed_grounding_only_vector_with_local_ollama.sh
+sbatch slurm/gt-eval-vector.sbatch
 ```
 
 Context arm (B):
 
 ```bash
 sbatch --export=ALL,CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ENABLED=true \
-  slurm/run_table22_snomed_grounding_only_vector_with_local_ollama.sh
+   slurm/gt-eval-vector.sbatch
 ```
 
-General entry (also local Ollama):
+Table22 ablation entry:
 
 ```bash
-sbatch slurm/run_table22_snomed_grounding_only_vector.sh
+sbatch slurm/gt3-eval-vector-ablation.sbatch
 ```

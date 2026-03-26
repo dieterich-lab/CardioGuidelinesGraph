@@ -71,19 +71,19 @@ poetry run python -m cardio_graph_core.evaluation.ground_truth_snomed_grounding_
 
 Current launcher script:
 
-- `slurm/run_table22_snomed_grounding_only_vector.sh`
+- `slurm/gt3-eval-vector-ablation.sbatch`
 
 Submit:
 
 ```bash
-sbatch slurm/run_table22_snomed_grounding_only_vector.sh
+sbatch slurm/gt3-eval-vector-ablation.sbatch
 ```
 
 Monitor:
 
 ```bash
 squeue -j <JOB_ID>
-tail -f slurm/run_table22_snomed_grounding_only_vector.log
+tail -f slurm/gt3-eval-vector-ablation_<JOB_ID>.log
 ```
 
 Output artifact:

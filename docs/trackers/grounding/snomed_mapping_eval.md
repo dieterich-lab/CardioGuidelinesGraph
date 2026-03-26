@@ -86,7 +86,7 @@ These are now fixed as script defaults in both vector wrappers and represent Arm
 
 ## Near-Hardcoded Knob Analysis
 
-Current runtime behavior is effectively controlled by launcher defaults in [slurm/run_vector_grounding_ground_truth.sh](slurm/run_vector_grounding_ground_truth.sh), even though each variable can still be overridden via `--export`.
+Current runtime behavior is effectively controlled by launcher defaults in [slurm/gt-eval-vector.sbatch](slurm/gt-eval-vector.sbatch), even though each variable can still be overridden via `--export`.
 
 Near-hardcoded in practice (defaulted every run unless explicitly overridden):
 
