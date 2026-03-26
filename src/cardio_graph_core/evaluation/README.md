@@ -6,7 +6,7 @@ This module evaluates concept-to-SNOMED grounding quality against:
 
 Evaluator entrypoint:
 
-- `cardio_graph_core.evaluation.table22_snomed_grounding_only_eval`
+- `cardio_graph_core.evaluation.ground_truth_snomed_grounding_eval`
 
 Artifact policy:
 
@@ -33,7 +33,7 @@ cd /home/pwiesenbach/CardioGuidelinesGraph
 ### 1) Non-vector baseline
 
 ```bash
-poetry run python -m cardio_graph_core.evaluation.table22_snomed_grounding_only_eval \
+poetry run python -m cardio_graph_core.evaluation.ground_truth_snomed_grounding_eval \
   --mode non-vector \
   --gold-path /prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json \
   --model Qwen3next \
@@ -51,7 +51,7 @@ poetry run python -m cardio_graph_core.evaluation.table22_snomed_grounding_only_
 ### 2) Vector run (compared to baseline)
 
 ```bash
-poetry run python -m cardio_graph_core.evaluation.table22_snomed_grounding_only_eval \
+poetry run python -m cardio_graph_core.evaluation.ground_truth_snomed_grounding_eval \
   --mode vector \
   --gold-path /prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json \
   --model Qwen3next \
@@ -96,7 +96,7 @@ Persistent machine-readable manifest:
 
 Durable milestone doc:
 
-- `docs/trackers/grounding/table_22.md`
+- `docs/trackers/grounding/snomed_mapping_eval.md`
 
 ## Important grounding env knobs
 

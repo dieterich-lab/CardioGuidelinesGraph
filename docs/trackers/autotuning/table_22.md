@@ -84,6 +84,6 @@ Validation status:
 - Focused tests pass (`4 passed`) for helper logic and safety guards.
 
 Next decision gate (after reduced-knob runs `628305/628306` complete):
-1. Refresh `docs/trackers/grounding/table_22.md` as the single tuning milestone doc.
+1. Refresh `docs/trackers/grounding/snomed_mapping_eval.md` as the single tuning milestone doc.
 2. Compare reduced-knob results vs baseline (`627576`, `628273`).
 3. If no severe regression, run one A/B with the new patch toggles enabled.

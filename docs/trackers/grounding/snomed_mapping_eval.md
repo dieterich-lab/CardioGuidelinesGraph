@@ -1,4 +1,4 @@
-# Table22 Vector Grounding Persistent Error Milestone
+# Automated SNOMED Mapping Evaluation Milestone
 
 Runs analyzed: 627576, 627880, 628092, 628305, 628306
 
@@ -50,6 +50,10 @@ Note: table below is the pre-reduced-knob persistent set (runs 627576, 627880, 6
 - Miss overlap between 628305 and 628306 is high (27 shared misses), indicating the core Procedure miss set remains mostly stable.
 - New misses in 628306 are dominated by ClinicalCondition confusions (for example multivessel CAD and left main stem stenosis mappings), suggesting instability in condition-side disambiguation rather than a broad retrieval outage.
 
+Generated milestone/manifest snapshots are written to `docs/generated/grounding/`.
+Raw shared ground-truth evaluation runs are stored under
+`docs/generated/ground_truth/grounding_only/`.
+
 ## Frozen Baseline Knobs (A Arm)
 
 These are now fixed as script defaults in both vector wrappers and represent Arm A:
@@ -82,7 +86,7 @@ These are now fixed as script defaults in both vector wrappers and represent Arm
 
 ## Near-Hardcoded Knob Analysis
 
-Current runtime behavior is effectively controlled by launcher defaults in [slurm/run_table22_snomed_grounding_only_vector_with_local_ollama.sh](slurm/run_table22_snomed_grounding_only_vector_with_local_ollama.sh), even though each variable can still be overridden via `--export`.
+Current runtime behavior is effectively controlled by launcher defaults in [slurm/run_vector_grounding_ground_truth.sh](slurm/run_vector_grounding_ground_truth.sh), even though each variable can still be overridden via `--export`.
 
 Near-hardcoded in practice (defaulted every run unless explicitly overridden):
 

@@ -35,7 +35,7 @@ Current job configuration (local runner):
    - Port default: `11434 + (SLURM_JOB_ID % 1000)`
 4. Wait for Ollama readiness (`/api/tags`).
 5. Run grounding eval:
-   - Module: `cardio_graph_core.evaluation.table22_snomed_grounding_only_eval`
+   - Module: `cardio_graph_core.evaluation.ground_truth_snomed_grounding_eval`
    - Mode: `vector`
    - Gold:
      `/prj/doctoral_letters/guide/data/evaluation/table_22_manual_snomed.json`
@@ -45,7 +45,7 @@ Current job configuration (local runner):
    - `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/vector/runs/job_<job_id>/eval.json`
 7. Regenerate persistent error artifacts:
    - `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/vector/persistent_error_manifest.json`
-   - `docs/trackers/grounding/table_22.md`
+   - `docs/trackers/grounding/snomed_mapping_eval.md`
 
 ## Runtime Knobs (Default Behavior)
 
@@ -110,7 +110,7 @@ Reduction protocol after context A/B:
 Implemented in:
 - `src/cardio_graph_core/grounding/entity_grounding_service.py`
 - `src/cardio_graph_core/extraction/guideline_graph_builder.py`
-- `src/cardio_graph_core/evaluation/table22_snomed_grounding_only_eval.py`
+- `src/cardio_graph_core/evaluation/ground_truth_snomed_grounding_eval.py`
 
 Behavior:
 - Eval composes context from concept `context`, `logic_structured`, and row
