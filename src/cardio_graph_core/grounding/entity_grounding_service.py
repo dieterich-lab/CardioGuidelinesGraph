@@ -372,10 +372,22 @@ class EntityGroundingService:
         role: Optional[str],
         query_context: Any = None,
         limit: int = 100,
-    ) -> Tuple[Optional[int], Optional[str], float]:
+        return_ranked: bool = False,
+    ) -> Any:
         b = self.builder
+
+        def _return_result(
+            best_id: Optional[int],
+            best_term: Optional[str],
+            best_score: float,
+            ranked_candidates: Optional[List[Dict[str, Any]]] = None,
+        ):
+            if return_ranked:
+                return best_id, best_term, best_score, ranked_candidates or []
+            return best_id, best_term, best_score
+
         if not term:
-            return None, None, 0.0
+            return _return_result(None, None, 0.0, [])
 
         search_start = time.perf_counter()
 
@@ -483,7 +495,7 @@ class EntityGroundingService:
         results.extend(vector_results)
 
         if not results:
-            return None, None, 0.0
+            return _return_result(None, None, 0.0, [])
 
         concept_terms: Dict[int, List[str]] = {}
         for r in results:
@@ -712,7 +724,7 @@ class EntityGroundingService:
                 )
 
             if not scored_candidates:
-                return None, None, 0.0
+                return None, None, 0.0, []
 
             scored_candidates = sorted(
                 scored_candidates,
@@ -725,6 +737,9 @@ class EntityGroundingService:
                 ),
                 reverse=True,
             )
+
+            for idx, row in enumerate(scored_candidates, start=1):
+                row["rank"] = idx
 
             local_best = scored_candidates[0]
             local_best_id = local_best["concept_id"]
@@ -822,29 +837,38 @@ class EntityGroundingService:
                     role_filter or "ANY",
                     top_rows,
                 )
-            return local_best_id, local_best_term, local_best_score
+            return local_best_id, local_best_term, local_best_score, scored_candidates
 
-        best_id, best_term, best_score = score_candidates(concept_items, role)
+        best_id, best_term, best_score, ranked_candidates = score_candidates(
+            concept_items, role
+        )
 
         if b.off_domain_min_score is not None and role:
             if best_score < b.off_domain_min_score:
                 fallback_items = concept_items_all
                 if len(fallback_items) > MAX_CONCEPT_CANDIDATES:
                     fallback_items = fallback_items[:MAX_CONCEPT_CANDIDATES]
-                off_id, off_term, off_score = score_candidates(fallback_items, None)
+                off_id, off_term, off_score, off_ranked = score_candidates(
+                    fallback_items, None
+                )
                 if off_score >= b.off_domain_min_score and off_score > best_score:
-                    best_id, best_term, best_score = off_id, off_term, off_score
+                    best_id, best_term, best_score, ranked_candidates = (
+                        off_id,
+                        off_term,
+                        off_score,
+                        off_ranked,
+                    )
 
         if self._has_disallowed_semantic_tag(best_term):
-            return None, None, 0.0
+            return _return_result(None, None, 0.0, ranked_candidates)
         if b.enable_semantic_tag_filter and not self._has_allowed_semantic_tag(
             role, best_term
         ):
-            return None, None, 0.0
+            return _return_result(None, None, 0.0, ranked_candidates)
 
         _ = time.perf_counter() - search_start
 
-        return best_id, best_term, best_score
+        return _return_result(best_id, best_term, best_score, ranked_candidates)
 
     def ground_extracted_concepts(self, extracted: List[Any]) -> List[GroundedConcept]:
         b = self.builder

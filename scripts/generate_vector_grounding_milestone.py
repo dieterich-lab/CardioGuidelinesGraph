@@ -26,6 +26,7 @@ def _collect_run_files(
             candidates = [
                 base_dir / f"job_{rid}" / "eval.json",
                 base_dir / f"vector_job_{rid}" / "vector_eval.json",
+                base_dir / f"vector_job_{rid}" / "ground_truth_vector_eval.json",
             ]
             for fp in candidates:
                 if fp.is_file():
@@ -36,6 +37,8 @@ def _collect_run_files(
     candidates = sorted(base_dir.glob("job_*/eval.json"))
     if not candidates:
         candidates = sorted(base_dir.glob("vector_job_*/vector_eval.json"))
+    if not candidates:
+        candidates = sorted(base_dir.glob("vector_job_*/ground_truth_vector_eval.json"))
     if latest_n > 0:
         candidates = candidates[-latest_n:]
     pairs = []
@@ -123,7 +126,7 @@ def _build_outputs(run_pairs: List[Tuple[str, Path]]) -> Tuple[Dict, str]:
         )
 
     lines = []
-    lines.append("# Table22 Vector Grounding Persistent Error Milestone")
+    lines.append("# Ground Truth Vector Grounding Persistent Error Milestone")
     lines.append("")
     lines.append("Runs analyzed: " + ", ".join(runs))
     lines.append("")
@@ -210,7 +213,9 @@ def main() -> int:
     base_dir = Path(args.base_dir)
     run_pairs = _collect_run_files(base_dir, args.run_id, args.latest_n)
     if len(run_pairs) < 2:
-        print("ERROR: Need at least 2 vector_eval.json runs to build milestone report")
+        print(
+            "ERROR: Need at least 2 grounding evaluation runs to build milestone report"
+        )
         return 2
 
     manifest, markdown = _build_outputs(run_pairs)
