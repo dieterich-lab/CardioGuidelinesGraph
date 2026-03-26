@@ -324,6 +324,46 @@ def _build_synonyms_generator(
     return _generate
 
 
+def _build_embedding_generator(
+    enabled: bool,
+    model: str,
+    node: str,
+    port: Optional[int],
+    embedding_stats: Optional[Dict[str, int]] = None,
+):
+    if not enabled:
+        return None
+
+    from cardio_graph_core.extraction.clients import (
+        resolve_ollama_base_url,
+        resolve_ollama_model_name,
+    )
+    from cardio_graph_core.query.langchain_replacement import OllamaEmbeddings
+
+    _ensure_ollama_reachable(node=node, port=port)
+
+    model_id = resolve_ollama_model_name(model)
+    base_url = resolve_ollama_base_url(node=node, port=port)
+    ollama_base_url = base_url[:-3] if base_url.endswith("/v1") else base_url
+    embedder = OllamaEmbeddings(model=model_id, base_url=ollama_base_url, timeout=60)
+    cache: Dict[str, List[float]] = {}
+
+    def _embed(text: str) -> List[float]:
+        normalized = _normalize_term(text)
+        if normalized in cache:
+            if embedding_stats is not None:
+                embedding_stats["cache_hits"] = embedding_stats.get("cache_hits", 0) + 1
+            return cache[normalized]
+
+        vector = embedder.embed_query(text)
+        cache[normalized] = vector
+        if embedding_stats is not None:
+            embedding_stats["calls"] = embedding_stats.get("calls", 0) + 1
+        return vector
+
+    return _embed
+
+
 def convert_manual_payloads(
     input_paths: List[Path],
     abbreviation_lookup: Optional[Dict[str, List[str]]] = None,
@@ -331,6 +371,7 @@ def convert_manual_payloads(
     synonym_cache: Optional[Dict[str, Dict[str, List[str]]]] = None,
     snomed_synonym_fetcher=None,
     synonym_stats: Optional[Dict[str, int]] = None,
+    embedding_generator=None,
 ) -> Tuple[Dict[str, dict], List[dict], List[str]]:
     role_to_label = {
         "ClinicalCondition": "ClinicalCondition",
@@ -493,6 +534,12 @@ def convert_manual_payloads(
                                         "synonyms": merged_synonyms,
                                     }
 
+                                embedding_entity_standardized_4096 = None
+                                if embedding_generator is not None:
+                                    embedding_entity_standardized_4096 = (
+                                        embedding_generator(standardized)
+                                    )
+
                                 by_snomed_id[snomed_id] = {
                                     "snomed_id": snomed_id,
                                     "preferred_term": standardized,
@@ -505,6 +552,7 @@ def convert_manual_payloads(
                                     "llm_synonyms": llm_synonyms or [],
                                     "snomed_synonyms": snomed_synonyms or [],
                                     "taxonomy_path": [],
+                                    "embedding_entity_standardized_4096": embedding_entity_standardized_4096,
                                 }
 
     return by_snomed_id, rules_rows, used_sources
@@ -583,6 +631,27 @@ def main() -> int:
         default=None,
         help="Optional output path for reusable concept dictionary JSON",
     )
+    parser.add_argument(
+        "--enable-entity-standardized-embeddings",
+        action="store_true",
+        help="Generate embedding_entity_standardized_4096 using Ollama embeddings.",
+    )
+    parser.add_argument(
+        "--embedding-model",
+        default="Qwen3embed",
+        help="Embedding model alias passed through resolve_ollama_model_name.",
+    )
+    parser.add_argument(
+        "--embedding-node",
+        default="127.0.0.1",
+        help="Node/host used for embedding generation endpoint.",
+    )
+    parser.add_argument(
+        "--embedding-port",
+        type=int,
+        default=11434,
+        help="Port used for embedding generation endpoint.",
+    )
     args = parser.parse_args()
 
     input_paths = [Path(p) for p in args.input]
@@ -604,6 +673,11 @@ def main() -> int:
         synonym_cache_path = Path(args.synonym_cache_path)
         synonym_cache = _load_synonym_cache(synonym_cache_path)
 
+    embedding_stats: Dict[str, int] = {
+        "calls": 0,
+        "cache_hits": 0,
+    }
+
     snomed_synonym_fetcher = None
     snomed_resource = None
     try:
@@ -622,6 +696,14 @@ def main() -> int:
             synonym_stats=synonym_stats,
         )
 
+        embedding_generator = _build_embedding_generator(
+            enabled=args.enable_entity_standardized_embeddings,
+            model=args.embedding_model,
+            node=args.embedding_node,
+            port=args.embedding_port,
+            embedding_stats=embedding_stats,
+        )
+
         by_snomed_id, rules_rows, used_sources = convert_manual_payloads(
             input_paths,
             abbreviation_lookup=abbreviation_lookup,
@@ -629,6 +711,7 @@ def main() -> int:
             synonym_cache=synonym_cache,
             snomed_synonym_fetcher=snomed_synonym_fetcher,
             synonym_stats=synonym_stats,
+            embedding_generator=embedding_generator,
         )
     except RuntimeError as exc:
         print(f"ERROR: {exc}")
@@ -672,6 +755,22 @@ def main() -> int:
                     "synonym_port": (
                         args.synonym_port if args.enable_llm_synonyms else None
                     ),
+                    "entity_standardized_embeddings_enabled": args.enable_entity_standardized_embeddings,
+                    "embedding_model": (
+                        args.embedding_model
+                        if args.enable_entity_standardized_embeddings
+                        else None
+                    ),
+                    "embedding_node": (
+                        args.embedding_node
+                        if args.enable_entity_standardized_embeddings
+                        else None
+                    ),
+                    "embedding_port": (
+                        args.embedding_port
+                        if args.enable_entity_standardized_embeddings
+                        else None
+                    ),
                     "concepts_by_snomed_id": by_snomed_id,
                 },
                 indent=2,
@@ -694,11 +793,18 @@ def main() -> int:
     print(
         f"SNOMED DB synonym generation: {'enabled' if args.enable_snomed_db_synonyms else 'disabled'}"
     )
+    print(
+        "Entity standardized embeddings: "
+        f"{'enabled' if args.enable_entity_standardized_embeddings else 'disabled'}"
+    )
     print(f"Synonym cache hits: {synonym_stats.get('cache_hits', 0)}")
     if args.enable_llm_synonyms:
         print(f"Synonym LLM calls: {synonym_stats.get('llm_calls', 0)}")
     if args.enable_snomed_db_synonyms:
         print(f"SNOMED DB lookups: {synonym_stats.get('snomed_db_lookups', 0)}")
+    if args.enable_entity_standardized_embeddings:
+        print(f"Embedding calls: {embedding_stats.get('calls', 0)}")
+        print(f"Embedding cache hits: {embedding_stats.get('cache_hits', 0)}")
     if synonym_cache_path is not None:
         print(f"Synonym cache path: {synonym_cache_path}")
     print(f"Rules rows: {len(rules_rows)}")
