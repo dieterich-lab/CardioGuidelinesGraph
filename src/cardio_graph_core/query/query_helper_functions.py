@@ -21,6 +21,207 @@ def entities_to_list(entities):
 
 
 # ollama_host = "10.250.135.143:11430"
+GENERIC_TOKENS = {
+    "patient",
+    "patients",
+    "with",
+    "without",
+    "and",
+    "or",
+    "the",
+    "a",
+    "an",
+    "of",
+    "for",
+    "in",
+    "on",
+    "to",
+    "due",
+    "functionally",
+    "significant",
+}
+
+CONTRADICTION_PAIRS = [
+    ("chronic", "acute"),
+    ("eligible", "inoperable"),
+]
+
+NEGATION_PATTERNS = [
+    r"\bno\b",
+    r"\bnot\b",
+    r"\bwithout\b",
+    r"\babsence of\b",
+    r"\babsent\b",
+    r"\bdenies\b",
+    r"\bdenied\b",
+    r"\bnegative for\b",
+    r"\bno indication\b",
+    r"\bnot indicated\b",
+]
+
+
+def is_negated_text(text: str) -> bool:
+    t = _norm_text(text)
+    return any(re.search(p, t) for p in NEGATION_PATTERNS)
+
+
+def normalize_for_grounding(entity: str) -> str:
+    e = _norm_text(entity)
+
+    # remove comparisons and percentages for concept grounding
+    e = re.sub(r"(<=|>=|<|>|=|≤|≥)\s*\d+([.,]\d+)?\s*%?", " ", e)
+    e = re.sub(r"\b\d+([.,]\d+)?\s*%?\b", " ", e)
+    e = re.sub(r"\s+", " ", e).strip()
+
+    return e
+
+
+def candidate_texts(group) -> list[str]:
+    vals = []
+    for k in ["entity", "entity_standardized_candidate"]:
+        if group.get(k):
+            vals.append(group[k])
+    vals.extend(group.get("entity_original_examples", []))
+    return [_norm_text(v) for v in vals if v]
+
+
+def content_tokens(text: str) -> set[str]:
+    toks = set(_tokenize(text))
+    return {t for t in toks if t not in GENERIC_TOKENS}
+
+
+def contradiction_penalty(query_text: str, group) -> float:
+    q = _norm_text(query_text)
+    text = " | ".join(candidate_texts(group))
+
+    penalty = 0.0
+    if "chronic" in q and "acute" in text:
+        penalty += 3.0
+    if "acute" in q and "chronic" in text:
+        penalty += 3.0
+    if "eligible" in q and "inoperable" in text:
+        penalty += 3.0
+    if "surgical" in q and "bleeding" in text:
+        penalty += 1.5
+    return penalty
+
+
+def rerank_grounded_groups(query_text, collapsed_groups, keep_top=3):
+    q_norm = _norm_text(query_text)
+    q_tokens = content_tokens(q_norm)
+
+    scored = []
+    for g in collapsed_groups:
+        texts = candidate_texts(g)
+
+        exact = q_norm in texts
+        token_overlap = 0.0
+        for t in texts:
+            c_tokens = content_tokens(t)
+            if q_tokens and c_tokens:
+                token_overlap = max(
+                    token_overlap, len(q_tokens & c_tokens) / len(q_tokens)
+                )
+
+        lex = g.get("max_lexical_score") or 0.0
+        vec = g.get("max_vector_score") or 0.0
+        has_lex = g.get("max_lexical_score") is not None
+
+        score = (
+            (4.0 if exact else 0.0)
+            + 2.5 * token_overlap
+            + 0.08 * lex
+            + 0.08 * vec
+            - contradiction_penalty(query_text, g)
+        )
+
+        keep = (
+            exact
+            or token_overlap >= 0.60
+            or (has_lex and token_overlap >= 0.35)
+            or (token_overlap >= 0.40 and vec >= 0.90)
+        )
+
+        if keep:
+            scored.append((score, g))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    # strong lexical winner logic
+    if scored:
+        top_group = scored[0][1]
+        top_lex = top_group.get("max_lexical_score")
+        if top_lex is not None:
+            pruned = []
+            for s, g in scored:
+                has_lex = g.get("max_lexical_score") is not None
+                if has_lex:
+                    pruned.append((s, g))
+            scored = pruned or scored
+
+    return [g for _, g in scored[:keep_top]]
+
+
+def _norm_text(s: str) -> str:
+    if s is None:
+        return ""
+    return re.sub(r"\s+", " ", str(s).strip().lower())
+
+
+def _tokenize(s: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", _norm_text(s))
+
+
+def escape_lucene(text: str) -> str:
+    return re.sub(r'([+\-!(){}\[\]^"~*?:\\/]|&&|\|\|)', r"\\\1", text)
+
+
+def build_fulltext_query(query_text: str) -> str:
+    q = _norm_text(query_text)
+    q_escaped = escape_lucene(q)
+
+    tokens = [t for t in _tokenize(q) if t not in GENERIC_TOKENS]
+    tokens = [escape_lucene(t) for t in tokens]
+
+    clauses = [f'"{q_escaped}"^8']
+
+    if tokens:
+        clauses.append("(" + " AND ".join(tokens) + ")^4")
+
+    if "ccs" in q or "chronic coronary syndrome" in q:
+        clauses.append(
+            '("ccs" OR "chronic coronary syndrome" OR "chronic ischemic heart disease")^6'
+        )
+
+    if "cad" in q:
+        clauses.append(
+            '("cad" OR "coronary artery disease" OR "coronary heart disease")^6'
+        )
+
+    if "multivessel" in q or "multi vessel" in q or "multi-vessel" in q:
+        clauses.append('("multivessel" OR "multi vessel" OR "multi-vessel")^5')
+
+    if "three-vessel" in q or "triple vessel" in q:
+        clauses.append('("three-vessel" OR "three vessel" OR "triple vessel")^5')
+
+    if "two-vessel" in q:
+        clauses.append('("two-vessel" OR "two vessel")^5')
+
+    if "proximal lad" in q:
+        clauses.append('("proximal lad" OR "left anterior descending")^6')
+
+    if "left main stem" in q:
+        clauses.append('("left main stem" OR "left coronary artery main stem")^6')
+
+    if "surgically eligible" in q:
+        clauses.append(
+            '("surgically eligible" OR "fit for surgery" OR "medically fit for surgery")^6'
+        )
+
+    if "high surgical risk" in q:
+        clauses.append('("high surgical risk" OR "high operative risk")^6')
+
+    return " OR ".join(clauses)
 
 
 def create_concept_fulltext_index(
@@ -382,6 +583,42 @@ def create_decisionnode_vector_index(
         session.run(query)
 
 
+def hydrate_decisionnode_grounding_fields(driver):
+    cypher = """
+    MATCH (d:DecisionNode)
+    OPTIONAL MATCH (d)-[:CHECKS_FOR|EVALUATES]->(c)
+    WITH d, c,
+         [x IN coalesce(c.abbreviations, []) WHERE x IS NOT NULL AND trim(x) <> ""] AS abbrs,
+         [x IN coalesce(c.snomed_synonyms, []) WHERE x IS NOT NULL AND trim(x) <> ""] AS syns
+
+    WITH d, c, abbrs, syns,
+         [x IN [
+            d.entity_original,
+            d.entity_standardized_candidate,
+            d.entity,
+            coalesce(c.entity_standardized_candidate, c.preferred_term, c.entity, c.name)
+         ] WHERE x IS NOT NULL AND trim(x) <> ""] AS head_terms
+
+    WITH d, c, head_terms + abbrs + syns AS raw_aliases
+    WITH d, c,
+         reduce(acc = [], x IN raw_aliases |
+            CASE WHEN x IN acc THEN acc ELSE acc + x END
+         ) AS aliases
+
+    SET d.search_aliases = aliases,
+        d.search_text =
+            "entity_original: " + coalesce(d.entity_original, "") + "\n" +
+            "entity_standardized: " + coalesce(d.entity_standardized_candidate, "") + "\n" +
+            "entity: " + coalesce(d.entity, "") + "\n" +
+            "context: " + coalesce(d.context, "") + "\n" +
+            "aliases: " + reduce(s = "", x IN aliases |
+                CASE WHEN s = "" THEN x ELSE s + ", " + x END
+            )
+    """
+    with driver.session() as session:
+        session.run(cypher)
+
+
 def embed_decisionnodes_and_create_indexes(
     uri: str,
     auth: tuple[str, str],
@@ -389,28 +626,22 @@ def embed_decisionnodes_and_create_indexes(
     *,
     dimensions: int = 1024,
     label: str = "DecisionNode",
-    source_property: str = "entity_standardized_candidate",
-    embedding_property: str = "embedding_entity_standardized",
-    fulltext_index_name: str = "decisionnode_entity_lexical_idx",
-    vector_index_name: str = "decisionnode_entity_vector_idx",
+    source_property: str = "search_text",
+    embedding_property: str = "embedding_grounding",
+    fulltext_index_name: str = "decisionnode_grounding_lexical_idx",
+    vector_index_name: str = "decisionnode_grounding_vector_idx",
     similarity_fn: str = "cosine",
 ) -> None:
-    """
-    1. Embed all DecisionNode nodes that do not yet have an embedding.
-    2. Create a fulltext index on entity_original + entity_standardized_candidate.
-    3. Create a vector index on embedding_property.
-
-    By default, embeddings are built from entity_standardized_candidate.
-    """
     driver = GraphDatabase.driver(uri, auth=auth)
 
     try:
+        hydrate_decisionnode_grounding_fields(driver)
+
         with driver.session() as session:
             result = session.run(
                 f"""
                 MATCH (n:{label})
                 WHERE n.{source_property} IS NOT NULL
-                  AND n.{embedding_property} IS NULL
                 RETURN elementId(n) AS id,
                        n.rule_unique_id AS rule_unique_id,
                        n.decision_id AS decision_id,
@@ -423,8 +654,6 @@ def embed_decisionnodes_and_create_indexes(
 
             for i, row in enumerate(rows, start=1):
                 node_id = row["id"]
-                rule_unique_id = row["rule_unique_id"]
-                decision_id = row["decision_id"]
                 text = row["text"]
 
                 if not text or not str(text).strip():
@@ -443,14 +672,18 @@ def embed_decisionnodes_and_create_indexes(
 
                 print(
                     f"Embedded {i}/{len(rows)}: "
-                    f"rule={rule_unique_id}, decision={decision_id}, text={text}"
+                    f"rule={row['rule_unique_id']}, decision={row['decision_id']}"
                 )
 
         create_decisionnode_fulltext_index(
             driver=driver,
             index_name=fulltext_index_name,
             label=label,
-            properties=["entity_original", "entity_standardized_candidate"],
+            properties=[
+                "entity_original",
+                "entity_standardized_candidate",
+                "search_aliases",
+            ],
         )
 
         create_decisionnode_vector_index(
@@ -462,7 +695,7 @@ def embed_decisionnodes_and_create_indexes(
             similarity_fn=similarity_fn,
         )
 
-        print("DecisionNode embedding + index creation complete.")
+        print("DecisionNode grounding embedding + index creation complete.")
 
     finally:
         driver.close()
@@ -474,54 +707,61 @@ def hybrid_search_decisionnodes(
     query_text: str,
     *,
     vector_index_name: str = "decisionnode_entity_vector_idx",
-    fulltext_index_name: str = "decisionnode_entity_lexical_idx",
-    top_k_vector: int = 15,
-    top_k_fulltext: int = 15,
-    min_vector_score: float = 0.70,
+    fulltext_index_name: str = "decisionnode_grounding_lexical_idx",
+    top_k_vector: int = 25,
+    top_k_fulltext: int = 25,
+    min_vector_score: float = 0.82,
     min_fulltext_score: float = 0.0,
-    final_limit: int = 20,
+    final_limit: int = 30,
 ) -> List[Dict[str, Any]]:
-    """
-    Hybrid search over DecisionNode using:
-      - lexical search on entity_original + entity_standardized_candidate
-      - vector search on embedding_entity_standardized
-
-    Returns deduplicated DecisionNode hits.
-    """
-    query_embedding = embedder.embed_query(query_text)
+    ground_query = normalize_for_grounding(query_text)
+    query_embedding = embedder.embed_query(ground_query)
+    fulltext_query = build_fulltext_query(ground_query)
 
     cypher = """
     CALL {
-        CALL db.index.fulltext.queryNodes($fulltext_index_name, $query_text)
+        CALL db.index.fulltext.queryNodes(
+            $fulltext_index_name,
+            $fulltext_query
+        )
         YIELD node, score
         WHERE score >= $min_fulltext_score
+        WITH collect({node: node, score: score})[0..$top_k_fulltext] AS rows
+        UNWIND range(0, size(rows)-1) AS i
+        WITH rows[i] AS r, i + 1 AS rank
         RETURN
-            coalesce(node.decision_id, elementId(node)) AS did,
-            node,
-            score AS lexical_score,
-            null AS vector_score
-        LIMIT $top_k_fulltext
+            coalesce(r.node.decision_id, elementId(r.node)) AS did,
+            r.node AS node,
+            r.score AS lexical_score,
+            rank AS lexical_rank,
+            null AS vector_score,
+            null AS vector_rank
 
-        UNION
+        UNION ALL
 
-        CALL db.index.vector.queryNodes($vector_index_name, $top_k_vector, $query_embedding)
+        CALL db.index.vector.queryNodes(
+            $vector_index_name,
+            $top_k_vector,
+            $query_embedding
+        )
         YIELD node, score
         WHERE score >= $min_vector_score
         RETURN
             coalesce(node.decision_id, elementId(node)) AS did,
             node,
             null AS lexical_score,
-            score AS vector_score
+            null AS lexical_rank,
+            score AS vector_score,
+            1 AS vector_rank
     }
     WITH did, node,
          max(lexical_score) AS lexical_score,
-         max(vector_score) AS vector_score
-    WITH did, node, lexical_score, vector_score,
-         CASE
-             WHEN lexical_score IS NOT NULL AND vector_score IS NOT NULL THEN "both"
-             WHEN lexical_score IS NOT NULL THEN "lexical"
-             ELSE "vector"
-         END AS hit_source
+         min(lexical_rank) AS lexical_rank,
+         max(vector_score) AS vector_score,
+         min(vector_rank) AS vector_rank
+    WITH did, node, lexical_score, vector_score, lexical_rank, vector_rank,
+         coalesce(1.0 / (60 + lexical_rank), 0.0) +
+         coalesce(1.0 / (60 + vector_rank), 0.0) AS rrf_score
     RETURN
         did,
         node.rule_unique_id AS rule_unique_id,
@@ -535,18 +775,14 @@ def hybrid_search_decisionnodes(
         node.threshold AS threshold,
         node.unit AS unit,
         node.logic_type AS logic_type,
+        node.search_aliases AS search_aliases,
         labels(node) AS labels,
         lexical_score,
         vector_score,
-        hit_source
-    ORDER BY
-        CASE hit_source
-            WHEN "both" THEN 0
-            WHEN "lexical" THEN 1
-            ELSE 2
-        END,
-        lexical_score DESC,
-        vector_score DESC
+        lexical_rank,
+        vector_rank,
+        rrf_score
+    ORDER BY rrf_score DESC, lexical_score DESC, vector_score DESC
     LIMIT $final_limit
     """
 
@@ -555,6 +791,7 @@ def hybrid_search_decisionnodes(
             cypher,
             {
                 "query_text": query_text,
+                "fulltext_query": fulltext_query,
                 "query_embedding": query_embedding,
                 "vector_index_name": vector_index_name,
                 "fulltext_index_name": fulltext_index_name,
@@ -565,7 +802,31 @@ def hybrid_search_decisionnodes(
                 "final_limit": final_limit,
             },
         )
-        return [dict(record) for record in result]
+        rows = [dict(record) for record in result]
+
+    # fix vector ranks after retrieval
+    vector_sorted = sorted(
+        [r for r in rows if r["vector_score"] is not None],
+        key=lambda x: x["vector_score"],
+        reverse=True,
+    )
+    vector_rank_map = {r["did"]: i + 1 for i, r in enumerate(vector_sorted)}
+
+    for r in rows:
+        if r["did"] in vector_rank_map:
+            r["vector_rank"] = vector_rank_map[r["did"]]
+            r["rrf_score"] = (
+                1.0 / (60 + r["lexical_rank"]) if r["lexical_rank"] else 0.0
+            ) + (1.0 / (60 + r["vector_rank"]) if r["vector_rank"] else 0.0)
+
+    rows.sort(
+        key=lambda x: (
+            -(x["rrf_score"] or 0.0),
+            -(x["lexical_score"] or -1.0),
+            -(x["vector_score"] or -1.0),
+        )
+    )
+    return rows[:final_limit]
 
 
 def pretty_print_decisionnode_hits(results, max_text_len=140, show_rank=True):
@@ -780,14 +1041,6 @@ def pretty_print_collapsed(collapsed, max_ids=10, max_examples=10):
     print(f"Total standardized groups: {len(collapsed)}")
 
 
-def _norm_text(s: str) -> str:
-    if s is None:
-        return ""
-    s = str(s).strip().lower()
-    s = re.sub(r"\s+", " ", s)
-    return s
-
-
 def filter_grounded_groups(query_text, collapsed_groups, min_vector_score=0.82):
     """
     Filter collapsed DecisionNode groups for concept grounding.
@@ -833,16 +1086,6 @@ def filter_grounded_groups(query_text, collapsed_groups, min_vector_score=0.82):
             vector_supported.append(g)
 
     return vector_supported
-
-
-def _norm_text(s: str) -> str:
-    if s is None:
-        return ""
-    return re.sub(r"\s+", " ", str(s).strip().lower())
-
-
-def _tokenize(s: str) -> list[str]:
-    return re.findall(r"[a-z0-9]+", _norm_text(s))
 
 
 def filter_grounded_groups_strict_short_query(
@@ -901,6 +1144,25 @@ def pretty_print_filtered_groups(groups):
     print("=" * 100)
 
 
+def fully_embed_and_create_indexes_for_decisionnodes(
+    URI, AUTH, model="mxbai-embed-large:latest", host="http://localhost:11434"
+):
+
+    embedder = SimpleOllamaEmbedder(
+        model=model,
+        host=host,
+    )
+    embed_decisionnodes_and_create_indexes(
+        uri=URI,
+        auth=AUTH,
+        embedder=embedder,
+        dimensions=1024,
+        source_property="entity_standardized_candidate",
+        embedding_property="embedding_entity_standardized",
+    )
+    return
+
+
 def decision_main(
     URI,
     AUTH,
@@ -934,12 +1196,12 @@ def decision_main(
         top_k_fulltext=100,
         min_vector_score=0.8,
         min_fulltext_score=0.0,
-        final_limit=200,
+        final_limit=50,
     )
 
     pretty_print_decisionnode_hits(results)
     collapsed = collapse_decisionnode_hits(results)
-    filtered = filter_grounded_groups_strict_short_query(entity, collapsed)
+    filtered = rerank_grounded_groups(entity, collapsed, keep_top=3)
 
     pretty_print_filtered_groups(filtered)
 

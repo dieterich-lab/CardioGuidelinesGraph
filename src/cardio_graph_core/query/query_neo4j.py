@@ -7,9 +7,11 @@ from datetime import datetime
 from collections import defaultdict
 from typing import Any, Dict, List
 from cardio_graph_core.query.clients import create_client_registry
+from cardio_graph_core.query.question import triple_batch
 from cardio_graph_core.query.query_helper_functions import (
     entities_to_list,
     decision_main,
+    is_negated_text,
 )
 from cardio_graph_core.query.baml_client.sync_client import b
 
@@ -28,64 +30,112 @@ def get_patient_info_from_question(question, cr):
     return entity_list
 
 
+def decompose_entity(entity: str) -> list[str]:
+    e = _norm_text(entity)
+    out = []
+
+    if "chronic coronary syndrome" in e or "ccs" in e:
+        out.append("chronic coronary syndrome")
+
+    if "surgically eligible" in e:
+        out.append("surgically eligible")
+
+    if "high surgical risk" in e:
+        out.append("high surgical risk")
+
+    if "multivessel" in e or "multi vessel" in e or "multi-vessel" in e:
+        out.append("multivessel disease")
+
+    if "three-vessel" in e or "triple vessel" in e:
+        out.append("three-vessel disease")
+
+    if "two-vessel" in e:
+        out.append("two-vessel disease")
+
+    if "proximal lad" in e:
+        out.append("proximal LAD")
+
+    if "left main stem" in e:
+        out.append("left main stem disease")
+
+    return list(dict.fromkeys(out or [entity]))
+
+
 def hybrid_search_input_nodes(entity_list, host, URI=URI, AUTH=AUTH):
     matched_nodes = []
     seen = set()
 
     for entity in entity_list:
-        print(f"\nSearching for entity: {entity}")
+        if is_negated_text(entity):
+            print(f"\nSkipping negated entity: {entity}")
+            continue
+        subqueries = decompose_entity(entity)
 
-        filtered = (
-            decision_main(
-                URI=URI,
-                AUTH=AUTH,
-                entity=entity,
-                host=host,
-            )
-            or []
-        )
+        for subq in subqueries:
+            print(f"\nSearching for entity: {subq}")
 
-        for i, g in enumerate(filtered, start=1):
-            entity_name = g.get("entity") or "-"
-            standardized = g.get("entity_standardized_candidate") or "-"
-            original_examples = ", ".join(g.get("entity_original_examples", [])) or "-"
-            questions = ", ".join(g.get("questions", [])[:5]) or "-"
-            contexts = ", ".join(g.get("contexts", [])[:3]) or "-"
-
-            print(f"Plausibility Check {i}:")
-            print(f"Entity             : {entity_name}")
-            print(f"Original examples  : {original_examples}")
-            print(f"Standardized       : {standardized}")
-            print(f"Questions          : {questions}")
-
-            found_node = (
-                f"Standardized candidate: {standardized}\n"
-                f"Entity: {entity_name}\n"
-                f"Original examples: {original_examples}\n"
-                f"Questions: {questions}\n"
-                f"Contexts: {contexts}"
+            filtered = (
+                decision_main(
+                    URI=URI,
+                    AUTH=AUTH,
+                    entity=subq,
+                    host=host,
+                )
+                or []
             )
 
-            # is_match = b.EntityCorrector(
-            #     found_node=found_node,
-            #     original=entity,
-            # )
-            is_match = True
-            if is_match:
-                matched_node = (
-                    g.get("entity_standardized_candidate") or g.get("entity") or entity
+            for i, g in enumerate(filtered, start=1):
+                entity_name = g.get("entity") or "-"
+                standardized = g.get("entity_standardized_candidate") or "-"
+                original_examples = (
+                    ", ".join(g.get("entity_original_examples", [])) or "-"
+                )
+                questions = ", ".join(g.get("questions", [])[:5]) or "-"
+                contexts = ", ".join(g.get("contexts", [])[:3]) or "-"
+
+                print(f"Plausibility Check {i}:")
+                print(f"Entity             : {entity_name}")
+                print(f"Original examples  : {original_examples}")
+                print(f"Standardized       : {standardized}")
+                print(f"Questions          : {questions}")
+
+                found_node = (
+                    f"Standardized candidate: {standardized}\n"
+                    f"Entity: {entity_name}\n"
+                    f"Original examples: {original_examples}\n"
+                    f"Questions: {questions}\n"
+                    f"Contexts: {contexts}"
                 )
 
-                dedup_key = (_norm_text(entity), _norm_text(matched_node))
-                if dedup_key not in seen:
-                    matched_nodes.append(
-                        {
-                            "query_entity": entity,
-                            "matched_node": matched_node,
-                            "group": g,
-                        }
+                # is_match = b.EntityCorrector(
+                #     found_node=found_node,
+                #     original=entity,
+                # )
+                is_match = True
+                if is_match:
+                    matched_node = (
+                        g.get("entity_standardized_candidate")
+                        or g.get("entity")
+                        or entity
                     )
-                    seen.add(dedup_key)
+
+                    dedup_key = (
+                        _norm_text(entity),
+                        _norm_text(
+                            g.get("entity_standardized_candidate")
+                            or g.get("entity")
+                            or subq
+                        ),
+                    )
+                    if dedup_key not in seen:
+                        matched_nodes.append(
+                            {
+                                "query_entity": entity,
+                                "matched_node": matched_node,
+                                "group": g,
+                            }
+                        )
+                        seen.add(dedup_key)
 
     return matched_nodes
 
@@ -695,16 +745,16 @@ def serialize_group_for_baml(group: Dict[str, Any], max_raw_hits: int = 8) -> st
 def build_step0_evidence_from_matches(
     matched_nodes: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """
-    Convert first-stage grounded patient matches into machine-readable step-0 evidence.
-    Uses BAML PatientEvidenceFormatter when available; falls back to presence-only evidence.
-    """
     step0_evidence = []
 
     for item in matched_nodes:
         original_entity = item.get("query_entity")
         matched_node = item.get("matched_node")
         group = item.get("group", {})
+
+        if is_negated_text(original_entity):
+            print(f"Skipping negated matched node for: {original_entity}")
+            continue
 
         found_decision_nodes = serialize_group_for_baml(group)
 
@@ -714,6 +764,13 @@ def build_step0_evidence_from_matches(
                 found_decision_nodes=found_decision_nodes,
             )
 
+            assertion = _safe_get(structured, "assertion", "AFFIRMED")
+            present = _safe_get(structured, "present", True)
+
+            if str(assertion).upper() == "NEGATED" or present is False:
+                print(f"Dropping negated evidence: {original_entity}")
+                continue
+
             evidence = {
                 "original_text": _safe_get(
                     structured, "original_text", original_entity
@@ -721,7 +778,7 @@ def build_step0_evidence_from_matches(
                 "standardized_concept": _safe_get(
                     structured, "standardized_concept", matched_node
                 ),
-                "present": _safe_get(structured, "present", True),
+                "present": True,
                 "value": _safe_get(structured, "value"),
                 "unit": _safe_get(structured, "unit"),
                 "comparator": _safe_get(structured, "comparator"),
@@ -1131,21 +1188,17 @@ test_inputs = [
     "what should we measure for a patient undergoing intervention with multivessel disease?",
     "what is recommended at the end of myocardial revascularization in a patient with chronic coronary syndrome?",
 ]
-q4 = ["what should we do for a ccs patient with lvef 30%?"]
+q4 = [
+    "what is recommended at the end of myocardial revascularization in a patient with chronic coronary syndrome and no indication for oral anticoagulation?"
+]
 # test_inputs = ["what should we do with a ccs patient with has had an MI?"]
 if __name__ == "__main__":
     # cr = create_client_registry(model_name=model, node=node, port=30)
     # entity_list = get_patient_info_from_question(
-    #     "what should we do with a ccs patient with has had an MI?",
+    #     "Patient with chronic coronary syndrome, prior myocardial infarction, and who has tolerated dual antiplatelet therapy for 1 year",
     #     cr,
     # )
     # print(entity_list)
-    # # decision_main(
-    # #     URI=URI,
-    # #     entity="single vessel disease",
-    # #     AUTH=("neo4j", "KWCeoHhkJYAiFa3XTZZZLC77bHiZ5xzj"),
-    # #     host="10.250.135.153:11430",
-    # # )
     # matched = hybrid_search_input_nodes(entity_list, host, URI=URI, AUTH=AUTH)
     # print("\nMatched Nodes:")
     # for match in matched:
@@ -1161,10 +1214,27 @@ if __name__ == "__main__":
     # )
     # for rule in result["true_rules"]:
     #     summarize_rule_evaluation(rule)
-    results = test_battery(
-        test_inputs=test_inputs,
+    # results = test_battery(
+    #     test_inputs=triple_batch[2],
+    #     URI=URI,
+    #     AUTH=AUTH,
+    #     host=host,
+    #     output_path="/prj/doctoral_letters/guide/data/query_test_output/table_17_b2_redo.txt",
+    # )
+    decision_main(
         URI=URI,
-        AUTH=AUTH,
-        host=host,
-        output_path="/prj/doctoral_letters/guide/data/query_test_output/guideline_testv3_report.txt",
+        entity="dual antiplatelet therapy",
+        AUTH=("neo4j", "KWCeoHhkJYAiFa3XTZZZLC77bHiZ5xzj"),
+        host="10.250.135.153:11430",
     )
+    # num = 0
+    # for batch in triple_batch:
+    #     num += 1
+    #     batch_name = f"batch_{num}"
+    #     result = test_battery(
+    #         test_inputs=batch,
+    #         URI=URI,
+    #         AUTH=AUTH,
+    #         host=host,
+    #         output_path=f"/prj/doctoral_letters/guide/data/query_test_output/{batch_name}.txt",
+    #     )
