@@ -8,6 +8,13 @@ DEFAULT_USER = "neo4j"
 DEFAULT_CYPHER_DIR = "/prj/doctoral_letters/guide/outputs2/cypher"
 DEFAULT_SECRETS_ENV_PATH = Path.home() / ".config" / "cardio_graph" / "secrets.env"
 
+# Backward-compatible module constants used by existing tests/tools.
+URI = os.environ.get("CARDIO_GRAPH_NEO4J_URI", DEFAULT_URI)
+AUTH = (
+    os.environ.get("CARDIO_GRAPH_NEO4J_USER", DEFAULT_USER),
+    os.environ.get("CARDIO_GRAPH_NEO4J_PASSWORD", ""),
+)
+
 
 def _load_env_file(env_path: Path) -> None:
     if not env_path.is_file():

@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import click
 import yaml
 
+from cardio_graph_core.common.paths import grounding_manifest_path
 from cardio_graph_core.extraction.clients import create_client_registry, ip_dict
 from cardio_graph_core.extraction.vector_candidate_retriever import (
     Neo4jVectorCandidateRetriever,
@@ -404,6 +405,36 @@ class GuidelineGraphBuilder:
         self.enable_domain_filter = enable_domain_filter
         self.enable_semantic_tag_filter = enable_semantic_tag_filter
         self.off_domain_min_score = off_domain_min_score
+        self.enable_role_soft_constraints = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_SOFT_CONSTRAINTS", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.role_mismatch_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_MISMATCH_PENALTY", "0.08")
+            or "0.08"
+        )
+        self.role_tension_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_ROLE_TENSION_PENALTY", "0.03")
+            or "0.03"
+        )
+        default_tension_terms = (
+            "using decision making strategies,preferences,health literacy,"
+            "intracoronary pressure guide wire,assessment score,"
+            "general characteristic of patient,left ventricular ejection fraction,"
+            "coronary artery structure,likely outcome"
+        )
+        configured_tension_terms = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_ROLE_TENSION_TERMS",
+                default_tension_terms,
+            )
+            or default_tension_terms
+        )
+        self.role_tension_terms = {
+            self._normalize(token)
+            for token in configured_tension_terms.split(",")
+            if self._normalize(token)
+        }
         self.enable_vector_grounding = (
             os.environ.get("CARDIO_GRAPH_GROUNDING_ENABLE_VECTOR", "false") or "false"
         ).strip().lower() in {"1", "true", "yes", "on"}
@@ -426,6 +457,64 @@ class GuidelineGraphBuilder:
         self.vector_tie_epsilon = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_TIE_EPSILON", "0.002")
             or "0.002"
+        )
+        self.enable_vector_context_query = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        configured_context_roles = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ALLOWED_ROLES", "Procedure"
+            )
+            or "Procedure"
+        )
+        self.vector_context_allowed_roles = {
+            token.strip().lower()
+            for token in configured_context_roles.split(",")
+            if token.strip()
+        }
+        self.vector_context_append_term = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_APPEND_TERM", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.vector_context_max_tokens = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_MAX_TOKENS", "8")
+            or "8"
+        )
+        self.vector_rank_prior_enabled = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.vector_rank_prior_top_k = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_TOP_K", "3") or "3"
+        )
+        self.vector_rank_prior_bonus = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_BONUS", "0.03")
+            or "0.03"
+        )
+        self.vector_rank_prior_lexical_floor = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_LEXICAL_FLOOR", "0.55"
+            )
+            or "0.55"
+        )
+        self.vector_rank_rescue_enabled = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.vector_rank_rescue_margin = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MARGIN", "0.015")
+            or "0.015"
+        )
+        self.vector_rank_rescue_max_rank = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MAX_RANK", "3")
+            or "3"
+        )
+        self.vector_rank_rescue_min_coverage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MIN_COVERAGE", "0.70"
+            )
+            or "0.70"
         )
         self.min_weighted_query_coverage = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_MIN_WEIGHTED_QUERY_COVERAGE", "0.45")
@@ -459,6 +548,88 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_DEBUG_TOP_CANDIDATES", "false")
             or "false"
         ).strip().lower() in {"1", "true", "yes", "on"}
+        self.hard_negative_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_PENALTY", "0.05")
+            or "0.05"
+        )
+        self.ambiguity_abstain_margin = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_ABSTAIN_MARGIN", "0.0")
+            or "0.0"
+        )
+        self.ambiguity_min_coverage = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_MIN_COVERAGE", "0.55")
+            or "0.55"
+        )
+        self.ambiguity_lexical_force_pick = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_AMBIGUITY_LEXICAL_FORCE_PICK", "0.90"
+            )
+            or "0.90"
+        )
+        self.ambiguity_confidence_backoff_enabled = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_AMBIGUITY_CONFIDENCE_BACKOFF_ENABLED",
+                "true",
+            )
+            or "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.ambiguity_backoff_max_drop = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_BACKOFF_MAX_DROP", "0.05")
+            or "0.05"
+        )
+        self.ambiguity_backoff_min_score = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_AMBIGUITY_BACKOFF_MIN_SCORE", "0.35")
+            or "0.35"
+        )
+        self.role_semantic_mismatch_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_MISMATCH_PENALTY", "0.06"
+            )
+            or "0.06"
+        )
+        self.role_semantic_crossclass_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_CROSSCLASS_PENALTY", "0.02"
+            )
+            or "0.02"
+        )
+        self.semantic_penalty_evidence_relief_enabled = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_RELIEF_ENABLED",
+                "false",
+            )
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.semantic_penalty_evidence_min_coverage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_MIN_COVERAGE",
+                "0.75",
+            )
+            or "0.75"
+        )
+        self.semantic_penalty_evidence_max_vector_rank = int(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_MAX_VECTOR_RANK",
+                "3",
+            )
+            or "3"
+        )
+        self.semantic_penalty_evidence_scale = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_SCALE", "0.5"
+            )
+            or "0.5"
+        )
+        self.hard_negative_manifest_path = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_MANIFEST",
+                str(grounding_manifest_path("table_22", "vector")),
+            )
+            or ""
+        ).strip()
+        self.hard_negative_map = self._load_hard_negative_manifest(
+            self.hard_negative_manifest_path
+        )
         self.vector_retriever: Optional[Neo4jVectorCandidateRetriever] = None
         if self.enable_vector_grounding:
             try:
@@ -530,6 +701,68 @@ class GuidelineGraphBuilder:
                     "Failed to initialize vector grounding retriever: %s", exc
                 )
                 self.enable_vector_grounding = False
+
+        from cardio_graph_core.grounding.entity_grounding_service import (
+            EntityGroundingService,
+        )
+
+        self.entity_grounding_service = EntityGroundingService(self)
+
+    def _load_hard_negative_manifest(
+        self, manifest_path: str
+    ) -> Dict[Tuple[str, str], set[int]]:
+        if not manifest_path or not os.path.exists(manifest_path):
+            return {}
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+        except Exception as exc:
+            logger.warning(
+                "Failed to read hard-negative manifest '%s': %s", manifest_path, exc
+            )
+            return {}
+
+        rows = payload.get("top_persistent_errors") or []
+        mapping: Dict[Tuple[str, str], set[int]] = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            term = self._normalize((row.get("term") or "").strip())
+            role = (row.get("role") or "").strip()
+            if not term or not role:
+                continue
+            wrong_ids = row.get("predicted_snomed_ids_on_miss") or {}
+            if not isinstance(wrong_ids, dict):
+                continue
+            ids: set[int] = set()
+            for raw in wrong_ids.keys():
+                try:
+                    ids.add(int(raw))
+                except (TypeError, ValueError):
+                    continue
+            if ids:
+                mapping[(term, role)] = ids
+        if mapping:
+            logger.info(
+                "Loaded hard-negative manifest (%d term-role rows): %s",
+                len(mapping),
+                manifest_path,
+            )
+        return mapping
+
+    def _hard_negative_penalty_for(
+        self, term: str, role: Optional[str], concept_id: int
+    ) -> float:
+        if self.hard_negative_penalty <= 0.0:
+            return 0.0
+        normalized_term = self._normalize(term)
+        role_key = (role or "").strip()
+        if not normalized_term or not role_key:
+            return 0.0
+        blocked = self.hard_negative_map.get((normalized_term, role_key), set())
+        if concept_id in blocked:
+            return self.hard_negative_penalty
+        return 0.0
 
     def _collect_root_concepts(self, mapping_rules: List[Dict]) -> List[int]:
         roots = []
@@ -833,165 +1066,62 @@ class GuidelineGraphBuilder:
         return deduped
 
     def _important_tokens(self, text: str) -> List[str]:
-        tokens = re.findall(r"[a-z0-9]+", self._normalize(text))
-        normalized_tokens = [self._normalize_token(t) for t in tokens]
-        return [t for t in normalized_tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
+        return self.entity_grounding_service._important_tokens(text)
+
+    def _context_query_variants(
+        self, context: Any, role: Optional[str] = None
+    ) -> List[str]:
+        return self.entity_grounding_service._context_query_variants(context, role)
 
     def _has_disallowed_semantic_tag(self, term: Optional[str]) -> bool:
-        if not term:
-            return False
-        match = re.search(r"\(([^)]+)\)\s*$", term)
-        if not match:
-            return False
-        tag = match.group(1).strip().lower()
-        return tag in DISALLOWED_SEMANTIC_TAGS
+        return self.entity_grounding_service._has_disallowed_semantic_tag(term)
 
     def _has_allowed_semantic_tag(
         self, role: Optional[str], term: Optional[str]
     ) -> bool:
-        if not role or not term:
-            return True
-        allowed = ALLOWED_SEMANTIC_TAGS_BY_ROLE.get(role)
-        if not allowed:
-            return True
-        match = re.search(r"\(([^)]+)\)\s*$", term)
-        if not match:
-            return False
-        tag = match.group(1).strip().lower()
-        return tag in allowed
+        return self.entity_grounding_service._has_allowed_semantic_tag(role, term)
+
+    def _semantic_tag(self, term: Optional[str]) -> str:
+        return self.entity_grounding_service._semantic_tag(term)
+
+    def _role_semantic_penalty(self, role: Optional[str], term: Optional[str]) -> float:
+        return self.entity_grounding_service._role_semantic_penalty(role, term)
 
     def _score(self, query: str, candidate: str) -> float:
-        q = self._normalize(query)
-        c = self._normalize(candidate)
-        if not q or not c:
-            return 0.0
-        if q == c:
-            return 1.0
-        seq = SequenceMatcher(None, q, c).ratio()
-        partial = 0.0
-        if q in c or c in q:
-            partial = min(len(q), len(c)) / max(len(q), len(c))
-        q_tokens = set(self._important_tokens(q))
-        c_tokens = set(self._important_tokens(c))
-        token_jaccard = 0.0
-        if q_tokens and c_tokens:
-            token_jaccard = len(q_tokens & c_tokens) / len(q_tokens | c_tokens)
-        coverage = self._weighted_query_coverage(q_tokens, c_tokens)
-        combined = 0.45 * coverage + 0.25 * token_jaccard + 0.20 * seq + 0.10 * partial
-        return min(1.0, max(combined, coverage, token_jaccard))
+        return self.entity_grounding_service._score(query, candidate)
 
     def _token_weight(self, token: str) -> float:
-        if not token:
-            return 0.0
-        if token in GENERIC_CONCEPT_TOKENS:
-            return 0.35
-        return min(1.5, 0.8 + (len(token) / 12.0))
+        return self.entity_grounding_service._token_weight(token)
 
     def _weighted_query_coverage(
         self, query_tokens: set[str], candidate_tokens: set[str]
     ) -> float:
-        if not query_tokens:
-            return 0.0
-        denom = sum(self._token_weight(token) for token in query_tokens)
-        if denom <= 0:
-            return 0.0
-        numer = sum(
-            self._token_weight(token)
-            for token in query_tokens
-            if token in candidate_tokens
+        return self.entity_grounding_service._weighted_query_coverage(
+            query_tokens, candidate_tokens
         )
-        return numer / denom
 
     def _discriminative_query_tokens(self, query_tokens: set[str]) -> set[str]:
-        return {
-            token
-            for token in query_tokens
-            if token not in GENERIC_CONCEPT_TOKENS and len(token) >= 5
-        }
+        return self.entity_grounding_service._discriminative_query_tokens(query_tokens)
 
     def _extra_qualifier_ratio(
         self, query_tokens: set[str], candidate_tokens: set[str]
     ) -> float:
-        if not candidate_tokens:
-            return 0.0
-        discriminative_candidate_tokens = {
-            token
-            for token in candidate_tokens
-            if token not in GENERIC_CONCEPT_TOKENS and len(token) >= 5
-        }
-        if not discriminative_candidate_tokens:
-            return 0.0
-        extra = discriminative_candidate_tokens - query_tokens
-        return len(extra) / max(len(discriminative_candidate_tokens), 1)
+        return self.entity_grounding_service._extra_qualifier_ratio(
+            query_tokens, candidate_tokens
+        )
 
     def _vector_candidates(
         self, term: str
     ) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
-        if not self.enable_vector_grounding or not self.vector_retriever:
-            return [], {}
-        try:
-            candidates = self.vector_retriever.retrieve(term, top_k=self.vector_top_k)
-        except Exception as exc:
-            logger.warning("Vector retrieval failed for '%s': %s", term, exc)
-            return [], {}
-
-        vector_score_by_concept: Dict[int, float] = {}
-        for row in candidates:
-            concept_id = row.get("conceptid")
-            if concept_id is None:
-                continue
-            try:
-                concept_id = int(concept_id)
-            except (TypeError, ValueError):
-                continue
-            row_score = float(row.get("vector_score") or 0.0)
-            if concept_id not in vector_score_by_concept:
-                vector_score_by_concept[concept_id] = row_score
-            else:
-                vector_score_by_concept[concept_id] = max(
-                    vector_score_by_concept[concept_id], row_score
-                )
-        return candidates, vector_score_by_concept
+        return self.entity_grounding_service._vector_candidates(term)
 
     def _token_overlap_ratio(self, tokens: set, term: Optional[str]) -> float:
-        if not tokens or not term:
-            return 0.0
-        term_tokens = set(self._important_tokens(term))
-        if not term_tokens:
-            return 0.0
-        return len(tokens & term_tokens) / max(len(tokens), 1)
+        return self.entity_grounding_service._token_overlap_ratio(tokens, term)
 
     def _specificity_penalty(self, query_tokens: set, candidate_tokens: set) -> float:
-        if not query_tokens or not candidate_tokens:
-            return 0.0
-
-        penalty = 0.0
-        contradictions = (
-            ("multi", "single"),
-            ("single", "multi"),
-            ("triple", "single"),
-            ("left", "right"),
-            ("right", "left"),
-            ("proximal", "distal"),
-            ("distal", "proximal"),
+        return self.entity_grounding_service._specificity_penalty(
+            query_tokens, candidate_tokens
         )
-        for expected, conflicting in contradictions:
-            if expected in query_tokens and conflicting in candidate_tokens:
-                penalty += 0.08
-
-        has_coronary_artery_query = {"coronary", "artery"}.issubset(query_tokens)
-        has_bypass_graft_candidate = (
-            "bypass" in candidate_tokens or "graft" in candidate_tokens
-        )
-        if (
-            has_coronary_artery_query
-            and "bypass" not in query_tokens
-            and "graft" not in query_tokens
-            and has_bypass_graft_candidate
-        ):
-            penalty += 0.10
-
-        return min(0.25, penalty)
 
     def _is_noise_phrase(self, text: str) -> bool:
         if not text:
@@ -1111,403 +1241,18 @@ class GuidelineGraphBuilder:
         return alt_names
 
     def _search_best_concept(
-        self, term: str, role: Optional[str], limit: int = 100
+        self,
+        term: str,
+        role: Optional[str],
+        limit: int = 100,
+        query_context: Any = None,
     ) -> Tuple[Optional[int], Optional[str], float]:
-        if not term:
-            return None, None, 0.0
-
-        search_start = time.perf_counter()
-
-        stripped_term = re.sub(r"\s*\([^)]*\)\s*", " ", term).strip()
-        normalized_term = self._normalize(term)
-        paren_tokens = []
-        for group in re.findall(r"\(([^)]+)\)", term):
-            for token in re.findall(r"[A-Za-z0-9]+", group):
-                if token:
-                    paren_tokens.append(token)
-
-        normalized_tokens = [
-            t
-            for t in self._normalize(term).split()
-            if len(t) > 2 and t not in STOPWORD_TOKENS
-        ]
-        important_tokens = self._important_tokens(term)
-        use_short_query = len(normalized_tokens) > MAX_QUERY_TOKENS
-
-        search_terms: List[str] = []
-        expanded_terms: List[str] = []
-        if use_short_query:
-            tokens = important_tokens[:MAX_QUERY_TOKENS]
-            for token in paren_tokens:
-                if token not in tokens:
-                    tokens.append(token)
-            condensed = " ".join(tokens)
-            if condensed:
-                search_terms.append(condensed)
-            search_terms.extend(tokens)
-            logger.info(
-                "Grounding short-query tokens for '%s': %s",
-                term,
-                tokens,
-            )
-        else:
-            expanded_terms = self._expand_term(term)
-            expanded_terms.extend(self._expand_term_variants(term))
-            search_terms.extend(self._query_variants(term))
-            search_terms.extend(expanded_terms)
-            search_terms.extend(normalized_tokens)
-            if stripped_term and stripped_term != term:
-                search_terms.extend(self._query_variants(stripped_term))
-                search_terms.extend(self._expand_term(stripped_term))
-            if paren_tokens:
-                search_terms.extend(paren_tokens)
-
-        if "coronary syndrome" in normalized_term:
-            ischemic_variant = normalized_term.replace(
-                "coronary syndrome", "ischemic heart disease"
-            )
-            search_terms.append(ischemic_variant)
-
-        if not search_terms:
-            search_terms = [term]
-
-        results = []
-        seen = set()
-        for t in search_terms:
-            if t in seen:
-                continue
-            seen.add(t)
-            cached = self._search_cache.get(t)
-            if cached is None:
-                explorer = self._ensure_snomed_connected()
-                cached = explorer.search_concepts_by_term(t, limit=limit)
-                self._search_cache[t] = cached
-            results.extend(cached)
-
-        vector_results: List[Dict[str, Any]] = []
-        vector_score_by_concept: Dict[int, float] = {}
-        if self.enable_vector_grounding and self.vector_retriever:
-            vector_search_terms = [term]
-            if stripped_term and stripped_term != term:
-                vector_search_terms.append(stripped_term)
-            compact_tokens = important_tokens[:MAX_QUERY_TOKENS]
-            if compact_tokens:
-                vector_search_terms.append(" ".join(compact_tokens))
-            if len(important_tokens) > MAX_QUERY_TOKENS:
-                vector_search_terms.append(
-                    " ".join(important_tokens[-MAX_QUERY_TOKENS:])
-                )
-            for vt in vector_search_terms:
-                retrieved, score_map = self._vector_candidates(vt)
-                vector_results.extend(retrieved)
-                for concept_id, vector_score in score_map.items():
-                    prev = vector_score_by_concept.get(concept_id, 0.0)
-                    vector_score_by_concept[concept_id] = max(prev, vector_score)
-
-        results.extend(vector_results)
-
-        if not results:
-            return None, None, 0.0
-
-        concept_terms: Dict[int, List[str]] = {}
-        for r in results:
-            concept_id = r.get("conceptid") or r.get("conceptId")
-            term_value = r.get("term") or ""
-            if concept_id is None:
-                continue
-            try:
-                concept_id = int(concept_id)
-            except (TypeError, ValueError):
-                continue
-            concept_terms.setdefault(concept_id, []).append(term_value)
-
-        best_id = None
-        best_term = None
-        best_score = 0.0
-
-        concept_items_all = list(concept_terms.items())
-        concept_items_allowed = concept_items_all
-        if self.enable_domain_filter and role:
-            allowed_roots = self._allowed_root_concepts_for_role(role)
-            if allowed_roots:
-                concept_items_allowed = [
-                    (concept_id, terms)
-                    for concept_id, terms in concept_items_all
-                    if self._concept_in_allowed_roots(concept_id, allowed_roots)
-                ]
-        concept_items = concept_items_allowed
-        if len(concept_items) > MAX_CONCEPT_CANDIDATES:
-            logger.info(
-                "Truncating concept candidates from %d to %d for '%s'",
-                len(concept_items),
-                MAX_CONCEPT_CANDIDATES,
-                term,
-            )
-            concept_items = concept_items[:MAX_CONCEPT_CANDIDATES]
-
-        if use_short_query:
-            query_terms = tokens
-        else:
-            query_terms = [term] + expanded_terms
-            if stripped_term and stripped_term != term:
-                query_terms.append(stripped_term)
-            if paren_tokens:
-                query_terms.extend(paren_tokens)
-            if "coronary syndrome" in normalized_term:
-                query_terms.append(ischemic_variant)
-        if not query_terms:
-            query_terms = [term]
-
-        important_query_tokens = set()
-        for q in query_terms:
-            important_query_tokens.update(self._important_tokens(q))
-
-        def score_candidates(concept_items_to_score, role_filter):
-            candidate_debug_rows: List[Dict[str, Any]] = []
-            scored_candidates: List[Dict[str, Any]] = []
-            normalized_query_terms = {
-                self._normalize(q) for q in query_terms if self._normalize(q)
-            }
-            for concept_id, terms in concept_items_to_score:
-                if role_filter and not self._candidate_matches_role(
-                    concept_id, role_filter
-                ):
-                    continue
-                preferred = self._get_preferred_term(concept_id)
-                candidates = list(terms)
-                if preferred:
-                    candidates.append(preferred)
-
-                if important_query_tokens:
-                    if not any(
-                        important_query_tokens & set(self._important_tokens(candidate))
-                        for candidate in candidates
-                    ):
-                        continue
-
-                score = 0.0
-                best_candidate_term = None
-                best_candidate_overlap = 0.0
-                for candidate in candidates:
-                    candidate_norm = self._normalize(candidate)
-                    candidate_tokens = set(self._important_tokens(candidate))
-                    candidate_score = max(
-                        (self._score(q, candidate) for q in query_terms if q),
-                        default=0.0,
-                    )
-                    stripped_norm = (
-                        self._normalize(stripped_term) if stripped_term else ""
-                    )
-                    if stripped_norm and stripped_norm in candidate_norm:
-                        candidate_score = candidate_score + 0.05
-                    if paren_tokens and any(
-                        token.lower() in candidate_norm for token in paren_tokens
-                    ):
-                        candidate_score = candidate_score + 0.03
-                    overlap_ratio = self._token_overlap_ratio(
-                        important_query_tokens, candidate
-                    )
-                    weighted_coverage = self._weighted_query_coverage(
-                        important_query_tokens, candidate_tokens
-                    )
-                    if overlap_ratio:
-                        candidate_score = candidate_score + overlap_ratio * 0.08
-                    if weighted_coverage:
-                        candidate_score = candidate_score + weighted_coverage * 0.10
-                    penalty = self._specificity_penalty(
-                        important_query_tokens, candidate_tokens
-                    )
-                    if penalty:
-                        candidate_score = max(0.0, candidate_score - penalty)
-                    if candidate_score > score:
-                        score = candidate_score
-                        best_candidate_term = candidate
-                        best_candidate_overlap = weighted_coverage
-
-                preferred_overlap = self._token_overlap_ratio(
-                    important_query_tokens, preferred or ""
-                )
-                best_overlap = max(
-                    preferred_overlap,
-                    best_candidate_overlap,
-                )
-
-                discriminative_tokens = self._discriminative_query_tokens(
-                    important_query_tokens
-                )
-                candidate_tokens_for_best = set(
-                    self._important_tokens(best_candidate_term or preferred or "")
-                )
-                discriminative_coverage = 0.0
-                if discriminative_tokens:
-                    discriminative_coverage = len(
-                        discriminative_tokens & candidate_tokens_for_best
-                    ) / max(len(discriminative_tokens), 1)
-                final_penalty = 0.0
-                if (
-                    important_query_tokens
-                    and best_overlap < self.min_weighted_query_coverage
-                ):
-                    final_penalty += self.low_coverage_penalty
-                if discriminative_tokens and not (
-                    discriminative_tokens & candidate_tokens_for_best
-                ):
-                    final_penalty += self.missing_discriminative_penalty
-                extra_qualifier_ratio = self._extra_qualifier_ratio(
-                    important_query_tokens, candidate_tokens_for_best
-                )
-                final_penalty += (
-                    extra_qualifier_ratio * self.extra_qualifier_penalty_weight
-                )
-
-                vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
-                vector_bonus = 0.0
-                if score >= self.vector_min_lexical_for_bonus:
-                    vector_bonus = min(
-                        self.vector_bonus_cap,
-                        vector_raw * self.vector_rerank_weight,
-                    )
-                final_score = min(1.0, max(0.0, score + vector_bonus - final_penalty))
-
-                if self.enable_grounding_candidate_debug:
-                    candidate_debug_rows.append(
-                        {
-                            "concept_id": concept_id,
-                            "preferred": preferred,
-                            "best_candidate_term": best_candidate_term,
-                            "lexical": round(score, 6),
-                            "vector_raw": round(vector_raw, 6),
-                            "vector_bonus": round(vector_bonus, 6),
-                            "coverage": round(best_overlap, 6),
-                            "discriminative_coverage": round(
-                                discriminative_coverage, 6
-                            ),
-                            "extra_qualifier_ratio": round(extra_qualifier_ratio, 6),
-                            "final_penalty": round(final_penalty, 6),
-                            "final_score": round(final_score, 6),
-                        }
-                    )
-
-                preferred_norm = self._normalize(preferred or "")
-                best_term_norm = self._normalize(best_candidate_term or "")
-                exact_query_match = (
-                    preferred_norm in normalized_query_terms
-                    or best_term_norm in normalized_query_terms
-                )
-
-                scored_candidates.append(
-                    {
-                        "concept_id": concept_id,
-                        "term": preferred or best_candidate_term,
-                        "final_score": final_score,
-                        "lexical": score,
-                        "coverage": best_overlap,
-                        "preferred_overlap": preferred_overlap,
-                        "exact_query_match": exact_query_match,
-                        "extra_qualifier_ratio": extra_qualifier_ratio,
-                        "discriminative_coverage": discriminative_coverage,
-                        "term_len": len((preferred_norm or best_term_norm).split()),
-                    }
-                )
-
-            local_best_id = None
-            local_best_term = None
-            local_best_score = -1.0
-
-            for candidate in scored_candidates:
-                if local_best_id is None:
-                    local_best_id = candidate["concept_id"]
-                    local_best_term = candidate["term"]
-                    local_best_score = candidate["final_score"]
-                    local_best = candidate
-                    continue
-
-                better_final = candidate["final_score"] > (
-                    local_best["final_score"] + self.vector_tie_epsilon
-                )
-                tied_final = (
-                    abs(candidate["final_score"] - local_best["final_score"])
-                    <= self.vector_tie_epsilon
-                )
-                candidate_rank = (
-                    int(candidate["exact_query_match"]),
-                    candidate["coverage"],
-                    candidate["lexical"],
-                    -candidate["extra_qualifier_ratio"],
-                    -candidate["term_len"],
-                    -int(candidate["concept_id"]),
-                )
-                local_best_rank = (
-                    int(local_best["exact_query_match"]),
-                    local_best["coverage"],
-                    local_best["lexical"],
-                    -local_best["extra_qualifier_ratio"],
-                    -local_best["term_len"],
-                    -int(local_best["concept_id"]),
-                )
-
-                if better_final or (tied_final and candidate_rank > local_best_rank):
-                    local_best_id = candidate["concept_id"]
-                    local_best_term = candidate["term"]
-                    local_best_score = candidate["final_score"]
-                    local_best = candidate
-
-            if len(scored_candidates) >= 2:
-                top_two = sorted(
-                    scored_candidates,
-                    key=lambda row: row["final_score"],
-                    reverse=True,
-                )[:2]
-                top = top_two[0]
-                runner = top_two[1]
-                if (
-                    (top["final_score"] - runner["final_score"])
-                    <= self.guarded_fallback_margin
-                    and top["discriminative_coverage"]
-                    < self.min_discriminative_coverage_for_top
-                    and runner["discriminative_coverage"]
-                    > top["discriminative_coverage"]
-                    and runner["coverage"] >= top["coverage"]
-                ):
-                    local_best_id = runner["concept_id"]
-                    local_best_term = runner["term"]
-                    local_best_score = runner["final_score"]
-
-            if self.enable_grounding_candidate_debug and candidate_debug_rows:
-                top_rows = sorted(
-                    candidate_debug_rows,
-                    key=lambda row: row["final_score"],
-                    reverse=True,
-                )[:5]
-                logger.info(
-                    "Grounding top candidates term='%s' role='%s': %s",
-                    term,
-                    role_filter or "ANY",
-                    top_rows,
-                )
-            return local_best_id, local_best_term, local_best_score
-
-        best_id, best_term, best_score = score_candidates(concept_items, role)
-
-        if self.off_domain_min_score is not None and role:
-            if best_score < self.off_domain_min_score:
-                fallback_items = concept_items_all
-                if len(fallback_items) > MAX_CONCEPT_CANDIDATES:
-                    fallback_items = fallback_items[:MAX_CONCEPT_CANDIDATES]
-                off_id, off_term, off_score = score_candidates(fallback_items, None)
-                if off_score >= self.off_domain_min_score and off_score > best_score:
-                    best_id, best_term, best_score = off_id, off_term, off_score
-
-        if self._has_disallowed_semantic_tag(best_term):
-            return None, None, 0.0
-        if self.enable_semantic_tag_filter and not self._has_allowed_semantic_tag(
-            role, best_term
-        ):
-            return None, None, 0.0
-
-        _ = time.perf_counter() - search_start
-
-        return best_id, best_term, best_score
+        return self.entity_grounding_service.ground_entity(
+            term=term,
+            role=role,
+            query_context=query_context,
+            limit=limit,
+        )
 
     def _get_taxonomy_path_cached(self, concept_id: Optional[int]) -> List[int]:
         if concept_id is None:
@@ -2051,155 +1796,7 @@ class GuidelineGraphBuilder:
         extracted = self._explode_or_conditions(extracted)
         extracted = self._drop_redundant_compound_conditions(extracted)
         self._log_extracted_concepts(extracted)
-        grounded: List[GroundedConcept] = []
-        has_clinical_anchor = any(
-            c.role in {"ClinicalCondition", "Medication", "Procedure"}
-            for c in extracted
-        )
-
-        for concept in extracted:
-            if (concept.role or "").strip() == "Recommendation":
-                concept.role = "ClinicalCondition"
-            if (concept.role or "").strip() == "Other":
-                grounded.append(
-                    GroundedConcept(
-                        entity_original=concept.entity_original,
-                        entity_standardized_candidate=concept.entity_standardized_candidate,
-                        role=concept.role,
-                        logic=concept.logic,
-                        logic_structured=concept.logic_structured,
-                        snomed_id=None,
-                        preferred_term=None,
-                        alt_names=[],
-                        score=0.0,
-                        taxonomy_path=[],
-                        target_label=self._fallback_target_label_for_role("Other"),
-                    )
-                )
-                continue
-            cached = self.index.lookup(concept.entity_standardized_candidate)
-            if cached:
-                cache_term = cached.get("preferred_term") or cached.get(
-                    "entity_standardized_candidate"
-                )
-                cache_tokens = set(
-                    self._important_tokens(
-                        concept.entity_standardized_candidate
-                        or concept.entity_original
-                        or ""
-                    )
-                )
-                if (
-                    cache_tokens
-                    and self._token_overlap_ratio(cache_tokens, cache_term) < 0.5
-                ):
-                    cached = None
-            if cached:
-                if cached.get("target_label") is None and concept.role:
-                    fallback_label = self._fallback_target_label_for_role(concept.role)
-                    if fallback_label:
-                        cached["target_label"] = fallback_label
-                if self._should_skip_concept(
-                    concept,
-                    cached.get("score", 1.0),
-                    cached.get("target_label"),
-                    has_clinical_anchor,
-                ):
-                    continue
-                grounded.append(
-                    GroundedConcept(
-                        entity_original=concept.entity_original,
-                        entity_standardized_candidate=concept.entity_standardized_candidate,
-                        role=concept.role,
-                        logic=concept.logic,
-                        logic_structured=concept.logic_structured,
-                        snomed_id=cached.get("snomed_id"),
-                        preferred_term=cached.get("preferred_term"),
-                        alt_names=cached.get("alt_names", []),
-                        score=cached.get("score", 1.0),
-                        taxonomy_path=cached.get("taxonomy_path", []),
-                        target_label=cached.get("target_label"),
-                    )
-                )
-                continue
-            search_term = concept.entity_standardized_candidate
-            if search_term and "scheduled" in search_term.lower():
-                search_term = re.sub(
-                    r"\bscheduled\b", "", search_term, flags=re.IGNORECASE
-                ).strip()
-            concept_id, preferred_term, score = self._search_best_concept(
-                search_term, concept.role
-            )
-            path_ids = self._get_taxonomy_path_cached(concept_id)
-            target_label = self._resolve_target_label(path_ids)
-            if target_label is None and concept.role:
-                target_label = self._resolve_target_label_for_role(
-                    concept.role, path_ids
-                )
-            if target_label is None and concept.role and len(path_ids) <= 1:
-                target_label = self._fallback_target_label_for_role(concept.role)
-            taxonomy_path = self._format_taxonomy_path(path_ids)
-            alt_names: List[str] = []
-
-            if concept_id is None or score < self.min_match_score:
-                concept_id = None
-                preferred_term = None
-                score = 0.0
-                path_ids = []
-                taxonomy_path = []
-                alt_names = []
-                target_label = self._fallback_target_label_for_role(concept.role)
-            else:
-                alt_names = self._get_alt_names(concept_id, preferred_term)
-
-            if self._should_skip_concept(
-                concept, score, target_label, has_clinical_anchor, allow_unmapped=True
-            ):
-                continue
-
-            grounded_concept = GroundedConcept(
-                entity_original=concept.entity_original,
-                entity_standardized_candidate=concept.entity_standardized_candidate,
-                role=concept.role,
-                logic=concept.logic,
-                logic_structured=concept.logic_structured,
-                snomed_id=concept_id,
-                preferred_term=preferred_term,
-                alt_names=alt_names,
-                score=score,
-                taxonomy_path=taxonomy_path,
-                target_label=target_label,
-            )
-            grounded.append(grounded_concept)
-
-            self.index.add(
-                {
-                    "entity_standardized_candidate": concept.entity_standardized_candidate,
-                    "snomed_id": concept_id,
-                    "preferred_term": preferred_term,
-                    "alt_names": alt_names,
-                    "score": score,
-                    "taxonomy_path": taxonomy_path,
-                    "target_label": target_label,
-                }
-            )
-            logger.info(
-                "Index output entry: %s",
-                json.dumps(
-                    {
-                        "entity_standardized_candidate": concept.entity_standardized_candidate,
-                        "snomed_id": concept_id,
-                        "preferred_term": preferred_term,
-                        "alt_names": alt_names,
-                        "score": score,
-                        "taxonomy_path": taxonomy_path,
-                        "target_label": target_label,
-                    }
-                ),
-            )
-
-        self.index.save()
-        self._log_grounded_concepts(grounded)
+        grounded = self.entity_grounding_service.ground_extracted_concepts(extracted)
         return extracted, grounded
 
     def ground_sentence(

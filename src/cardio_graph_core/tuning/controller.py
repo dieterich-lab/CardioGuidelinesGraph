@@ -14,6 +14,7 @@ from typing import Dict, List, Set, Tuple
 
 import click
 
+from cardio_graph_core.common.paths import autotuning_dry_run_dir
 from cardio_graph_core.tuning.contracts import (
     ErrorItem,
     Metrics,
@@ -207,7 +208,7 @@ def _run_evaluation(
     out_dir.mkdir(parents=True, exist_ok=True)
     rows_dir = out_dir / "rows"
     rows_dir.mkdir(parents=True, exist_ok=True)
-    alignment_path = out_dir / "table22_rowwise_alignment.json"
+    alignment_path = out_dir / "alignment.json"
 
     import os
 
@@ -219,13 +220,9 @@ def _run_evaluation(
     env["CARDIO_GRAPH_TABLE22_ENTRY_MATCH_THRESHOLD"] = str(entry_match_threshold)
     env["CARDIO_GRAPH_TABLE22_SKIP_ROWS"] = skip_rows
     env["CARDIO_GRAPH_TABLE22_TARGET_ROWS"] = ",".join(row_ids)
-    env["CARDIO_GRAPH_TABLE22_REPORT_MD"] = str(
-        out_dir / "table22_rowwise_comparison.md"
-    )
+    env["CARDIO_GRAPH_TABLE22_REPORT_MD"] = str(out_dir / "overview.md")
     env["CARDIO_GRAPH_TABLE22_REPORT_JSON"] = str(alignment_path)
-    env["CARDIO_GRAPH_TABLE22_REPORT_CSV"] = str(
-        out_dir / "table22_rowwise_summary.csv"
-    )
+    env["CARDIO_GRAPH_TABLE22_REPORT_CSV"] = str(out_dir / "summary.csv")
     env["CARDIO_GRAPH_TABLE22_ROWS_DIR"] = str(rows_dir)
     env["CARDIO_GRAPH_TABLE22_LIVE_LLM"] = "true" if live_llm else "false"
     env["CARDIO_GRAPH_TABLE22_LLM_MODEL"] = model_name
@@ -309,7 +306,7 @@ def _run_evaluation(
 @click.option(
     "--output-dir",
     type=click.Path(path_type=Path),
-    default=Path("docs/table22_tuning_runs/autotune_dryrun"),
+    default=autotuning_dry_run_dir("table_22"),
     show_default=True,
 )
 @click.option("--seed", type=int, default=22, show_default=True)

@@ -8,6 +8,11 @@ Evaluator entrypoint:
 
 - `cardio_graph_core.evaluation.table22_snomed_grounding_only_eval`
 
+Artifact policy:
+
+- Durable tracker docs stay under `docs/trackers/`.
+- Generated evaluation artifacts live under `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/`.
+
 ## What it does
 
 For each gold concept item (condition/action), it runs grounding via `GuidelineGraphBuilder._search_best_concept`, then reports:
@@ -40,7 +45,7 @@ poetry run python -m cardio_graph_core.evaluation.table22_snomed_grounding_only_
   --embedding-model Qwen3embed \
   --embedding-node g4 \
   --embedding-port 11434 \
-  --output-json docs/table22_snomed_grounding_compare/grounding_only/nonvector_local/nonvector_eval.json
+  --output-json /prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/non_vector/runs/local/eval.json
 ```
 
 ### 2) Vector run (compared to baseline)
@@ -58,8 +63,8 @@ poetry run python -m cardio_graph_core.evaluation.table22_snomed_grounding_only_
   --embedding-model Qwen3embed \
   --embedding-node g4 \
   --embedding-port 11434 \
-  --output-json docs/table22_snomed_grounding_compare/grounding_only/vector_local/vector_eval.json \
-  --compare-with docs/table22_snomed_grounding_compare/grounding_only/nonvector_local/nonvector_eval.json
+  --output-json /prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/vector/runs/local/eval.json \
+  --compare-with /prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/non_vector/runs/local/eval.json
 ```
 
 ## SLURM launcher (vector)
@@ -83,9 +88,15 @@ tail -f slurm/run_table22_snomed_grounding_only_vector.log
 
 Output artifact:
 
-- `docs/table22_snomed_grounding_compare/grounding_only/vector_job_<JOB_ID>/vector_eval.json`
+- `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/vector/runs/job_<JOB_ID>/eval.json`
 
-The script auto-detects the latest `nonvector_eval.json` in `docs/table22_snomed_grounding_compare/grounding_only/` and passes it to `--compare-with` when found.
+Persistent machine-readable manifest:
+
+- `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/vector/persistent_error_manifest.json`
+
+Durable milestone doc:
+
+- `docs/trackers/grounding/table_22.md`
 
 ## Important grounding env knobs
 

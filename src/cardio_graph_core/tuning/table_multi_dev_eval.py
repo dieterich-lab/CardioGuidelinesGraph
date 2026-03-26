@@ -47,9 +47,9 @@ def _run_single_benchmark(
     )
 
     benchmark_out_dir.mkdir(parents=True, exist_ok=True)
-    benchmark_json = benchmark_out_dir / "table22_rowwise_alignment.json"
-    benchmark_md = benchmark_out_dir / "table22_rowwise_comparison.md"
-    benchmark_csv = benchmark_out_dir / "table22_rowwise_summary.csv"
+    benchmark_json = benchmark_out_dir / "alignment.json"
+    benchmark_md = benchmark_out_dir / "overview.md"
+    benchmark_csv = benchmark_out_dir / "summary.csv"
     env["CARDIO_GRAPH_TABLE22_REPORT_JSON"] = str(benchmark_json)
     env["CARDIO_GRAPH_TABLE22_REPORT_MD"] = str(benchmark_md)
     env["CARDIO_GRAPH_TABLE22_REPORT_CSV"] = str(benchmark_csv)

@@ -3,8 +3,11 @@
 import argparse
 import json
 import re
+import socket
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+from cardio_graph_core.snomedct.snomed_query import SnomedExplorer
 
 
 def _extract_rows(payload: dict) -> List[dict]:
@@ -85,6 +88,40 @@ def _resolve_abbreviation(
     return None
 
 
+def _resolve_abbreviations(
+    term: str, expanded_to_abbrs: Dict[str, List[str]]
+) -> List[str]:
+    if not term:
+        return []
+    normalized_term = _normalize_term(term)
+    if not normalized_term:
+        return []
+
+    resolved: List[str] = []
+    seen = set()
+
+    def _append(values: List[str]) -> None:
+        for value in values:
+            cleaned = (value or "").strip()
+            if not cleaned:
+                continue
+            key = cleaned.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            resolved.append(cleaned)
+
+    exact = expanded_to_abbrs.get(normalized_term)
+    if exact:
+        _append(exact)
+
+    for expanded, abbreviations in expanded_to_abbrs.items():
+        if expanded in normalized_term or normalized_term in expanded:
+            _append(abbreviations)
+
+    return resolved
+
+
 def _dedupe_synonyms(values: List[str], concept: str, max_items: int = 10) -> List[str]:
     normalized_concept = _normalize_term(concept)
     seen = set()
@@ -103,11 +140,158 @@ def _dedupe_synonyms(values: List[str], concept: str, max_items: int = 10) -> Li
     return cleaned
 
 
+def _synonym_cache_key(concept: str, role: str) -> str:
+    return f"{_normalize_term(concept)}||{_normalize_term(role)}"
+
+
+def _normalize_cache_entry(value: Any) -> Dict[str, List[str]]:
+    if isinstance(value, list):
+        legacy_synonyms = [str(v).strip() for v in value if str(v).strip()]
+        merged = _dedupe_synonyms(legacy_synonyms, concept="", max_items=50)
+        return {
+            "llm_synonyms": [],
+            "snomed_synonyms": [],
+            "abbreviations": [],
+            "synonyms": merged,
+        }
+
+    if isinstance(value, dict):
+        llm_synonyms = [
+            str(v).strip() for v in (value.get("llm_synonyms") or []) if str(v).strip()
+        ]
+        snomed_synonyms = [
+            str(v).strip()
+            for v in (value.get("snomed_synonyms") or [])
+            if str(v).strip()
+        ]
+        abbreviations = [
+            str(v).strip() for v in (value.get("abbreviations") or []) if str(v).strip()
+        ]
+        merged_source = (
+            value.get("synonyms") or llm_synonyms + snomed_synonyms + abbreviations
+        )
+        merged = _dedupe_synonyms(
+            [str(v).strip() for v in merged_source if str(v).strip()],
+            concept="",
+            max_items=50,
+        )
+        return {
+            "llm_synonyms": _dedupe_synonyms(llm_synonyms, concept="", max_items=50),
+            "snomed_synonyms": _dedupe_synonyms(
+                snomed_synonyms, concept="", max_items=50
+            ),
+            "abbreviations": _dedupe_synonyms(abbreviations, concept="", max_items=20),
+            "synonyms": merged,
+        }
+
+    return {
+        "llm_synonyms": [],
+        "snomed_synonyms": [],
+        "abbreviations": [],
+        "synonyms": [],
+    }
+
+
+def _normalize_synonym_channels(
+    llm_synonyms: List[str], snomed_synonyms: List[str]
+) -> Tuple[List[str], List[str]]:
+    llm_clean = _dedupe_synonyms(llm_synonyms or [], concept="", max_items=50)
+    snomed_clean = _dedupe_synonyms(snomed_synonyms or [], concept="", max_items=50)
+    return llm_clean, snomed_clean
+
+
+def _load_synonym_cache(path: Path) -> Dict[str, Dict[str, List[str]]]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"WARNING: failed to read synonym cache at {path}: {exc}")
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+
+    cache: Dict[str, Dict[str, List[str]]] = {}
+    for key, value in payload.items():
+        if not isinstance(key, str):
+            continue
+        cache[key] = _normalize_cache_entry(value)
+    return cache
+
+
+def _save_synonym_cache(path: Path, cache: Dict[str, Dict[str, List[str]]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(cache, indent=2) + "\n", encoding="utf-8")
+
+
+def _ensure_ollama_reachable(
+    node: str, port: Optional[int], timeout_s: float = 3.0
+) -> None:
+    from cardio_graph_core.extraction.clients import resolve_ollama_base_url
+
+    base_url = resolve_ollama_base_url(node=node, port=port)
+    host_port = base_url.split("//", 1)[-1].split("/", 1)[0]
+    host, raw_port = host_port.rsplit(":", 1)
+    target_port = int(raw_port)
+    try:
+        with socket.create_connection((host, target_port), timeout=timeout_s):
+            return
+    except Exception as exc:
+        raise RuntimeError(
+            f"Ollama endpoint unavailable at {base_url} for synonym generation. "
+            "Start the server or disable --enable-llm-synonyms. "
+            f"Underlying error: {exc}"
+        ) from exc
+
+
+def _build_snomed_synonyms_fetcher(
+    enabled: bool,
+    uri: Optional[str],
+    user: Optional[str],
+    password: Optional[str],
+):
+    if not enabled:
+        return None, None
+
+    explorer = SnomedExplorer()
+    explorer.connect()
+    cache: Dict[str, List[str]] = {}
+
+    def _fetch(snomed_id: str, preferred_term: str) -> List[str]:
+        key = str(snomed_id)
+        if key in cache:
+            return cache[key]
+
+        collected: List[str] = []
+        try:
+            descriptions = explorer.get_descriptions_for_concept(int(key))
+        except Exception:
+            descriptions = []
+
+        for row in descriptions:
+            if not isinstance(row, dict):
+                continue
+            term = str(row.get("term") or "").strip()
+            if not term:
+                continue
+            desc_type = str(row.get("type") or "").strip().lower()
+            if desc_type == "fsn":
+                continue
+            collected.append(term)
+
+        cleaned = _dedupe_synonyms(collected, concept=preferred_term, max_items=50)
+        cache[key] = cleaned
+        return cleaned
+
+    return _fetch, explorer
+
+
 def _build_synonyms_generator(
     enabled: bool,
     model: str,
     node: str,
     port: Optional[int],
+    synonym_stats: Optional[Dict[str, int]] = None,
 ):
     if not enabled:
         return None
@@ -115,10 +299,14 @@ def _build_synonyms_generator(
     from cardio_graph_core.extraction.baml_client.sync_client import b
     from cardio_graph_core.extraction.clients import create_client_registry
 
+    _ensure_ollama_reachable(node=node, port=port)
+
     client_registry = create_client_registry(model, node=node, port=port)
     baml_options = {"client_registry": client_registry}
 
     def _generate(concept: str, role: str) -> List[str]:
+        if synonym_stats is not None:
+            synonym_stats["llm_calls"] = synonym_stats.get("llm_calls", 0) + 1
         try:
             result = b.GenerateConceptSynonyms(
                 concept=concept,
@@ -126,10 +314,12 @@ def _build_synonyms_generator(
                 baml_options=baml_options,
             )
             synonyms = list(getattr(result, "synonyms", []) or [])
-            return _dedupe_synonyms(synonyms, concept=concept, max_items=10)
+            cleaned = _dedupe_synonyms(synonyms, concept=concept, max_items=10)
+            return cleaned
         except Exception as exc:
-            print(f"WARNING: synonym generation failed for '{concept}': {exc}")
-            return []
+            raise RuntimeError(
+                f"Synonym generation failed for concept '{concept}' (role '{role}'): {exc}"
+            ) from exc
 
     return _generate
 
@@ -138,6 +328,9 @@ def convert_manual_payloads(
     input_paths: List[Path],
     abbreviation_lookup: Optional[Dict[str, List[str]]] = None,
     synonym_generator=None,
+    synonym_cache: Optional[Dict[str, Dict[str, List[str]]]] = None,
+    snomed_synonym_fetcher=None,
+    synonym_stats: Optional[Dict[str, int]] = None,
 ) -> Tuple[Dict[str, dict], List[dict], List[str]]:
     role_to_label = {
         "ClinicalCondition": "ClinicalCondition",
@@ -230,14 +423,76 @@ def convert_manual_payloads(
                             )
 
                             if snomed_id and snomed_id not in by_snomed_id:
+                                abbreviations: List[str] = []
                                 abbreviation = None
                                 if abbreviation_lookup is not None:
-                                    abbreviation = _resolve_abbreviation(
+                                    abbreviations = _resolve_abbreviations(
                                         standardized, abbreviation_lookup
                                     )
-                                synonyms = []
-                                if synonym_generator is not None:
-                                    synonyms = synonym_generator(standardized, role)
+                                    abbreviation = (
+                                        abbreviations[0] if abbreviations else None
+                                    )
+
+                                cache_entry = {
+                                    "llm_synonyms": [],
+                                    "snomed_synonyms": [],
+                                    "abbreviations": abbreviations,
+                                    "synonyms": [],
+                                }
+                                cache_key = _synonym_cache_key(standardized, role)
+                                if (
+                                    synonym_cache is not None
+                                    and cache_key in synonym_cache
+                                ):
+                                    cache_entry = _normalize_cache_entry(
+                                        synonym_cache.get(cache_key)
+                                    )
+                                    if synonym_stats is not None:
+                                        synonym_stats["cache_hits"] = (
+                                            synonym_stats.get("cache_hits", 0) + 1
+                                        )
+
+                                snomed_synonyms = (
+                                    cache_entry.get("snomed_synonyms") or []
+                                )
+                                if snomed_synonym_fetcher is not None:
+                                    snomed_synonyms = snomed_synonym_fetcher(
+                                        snomed_id,
+                                        standardized,
+                                    )
+                                    if synonym_stats is not None:
+                                        synonym_stats["snomed_db_lookups"] = (
+                                            synonym_stats.get("snomed_db_lookups", 0)
+                                            + 1
+                                        )
+
+                                llm_synonyms = cache_entry.get("llm_synonyms") or []
+                                if synonym_generator is not None and not llm_synonyms:
+                                    llm_synonyms = synonym_generator(standardized, role)
+
+                                llm_synonyms, snomed_synonyms = (
+                                    _normalize_synonym_channels(
+                                        llm_synonyms=llm_synonyms or [],
+                                        snomed_synonyms=snomed_synonyms or [],
+                                    )
+                                )
+
+                                merged_synonyms = _dedupe_synonyms(
+                                    (llm_synonyms or [])
+                                    + (snomed_synonyms or [])
+                                    + (abbreviations or []),
+                                    concept=standardized,
+                                    max_items=50,
+                                )
+
+                                if synonym_cache is not None:
+                                    synonym_cache[cache_key] = {
+                                        "llm_synonyms": llm_synonyms or [],
+                                        "snomed_synonyms": snomed_synonyms or [],
+                                        "abbreviations": abbreviations or [],
+                                        "synonyms": merged_synonyms,
+                                    }
+
                                 by_snomed_id[snomed_id] = {
                                     "snomed_id": snomed_id,
                                     "preferred_term": standardized,
@@ -246,7 +501,9 @@ def convert_manual_payloads(
                                     "entity_standardized_candidate": standardized,
                                     "target_label": target_label,
                                     "abbr": abbreviation,
-                                    "synonyms": synonyms,
+                                    "abbreviations": abbreviations,
+                                    "llm_synonyms": llm_synonyms or [],
+                                    "snomed_synonyms": snomed_synonyms or [],
                                     "taxonomy_path": [],
                                 }
 
@@ -281,8 +538,28 @@ def main() -> int:
         help="Generate synonyms with BAML LLM prompt",
     )
     parser.add_argument(
+        "--enable-snomed-db-synonyms",
+        action="store_true",
+        help="Fetch synonyms from Neo4j concepts by snomed_id",
+    )
+    parser.add_argument(
+        "--snomed-db-uri",
+        default=None,
+        help="Neo4j URI used to fetch SNOMED synonyms by concept id",
+    )
+    parser.add_argument(
+        "--snomed-db-user",
+        default=None,
+        help="Neo4j user for SNOMED synonym lookup",
+    )
+    parser.add_argument(
+        "--snomed-db-password",
+        default=None,
+        help="Neo4j password for SNOMED synonym lookup",
+    )
+    parser.add_argument(
         "--synonym-model",
-        default="Qwen32b",
+        default="Qwen3next",
         help="Model alias used by create_client_registry",
     )
     parser.add_argument(
@@ -296,6 +573,16 @@ def main() -> int:
         default=11436,
         help="Port for synonym generation model endpoint",
     )
+    parser.add_argument(
+        "--synonym-cache-path",
+        default=None,
+        help="Optional JSON cache path for concept+role -> synonyms",
+    )
+    parser.add_argument(
+        "--out-concept-dict",
+        default=None,
+        help="Optional output path for reusable concept dictionary JSON",
+    )
     args = parser.parse_args()
 
     input_paths = [Path(p) for p in args.input]
@@ -306,18 +593,52 @@ def main() -> int:
     else:
         print(f"WARNING: abbreviation file not found at {abbrv_path}")
 
-    synonym_generator = _build_synonyms_generator(
-        enabled=args.enable_llm_synonyms,
-        model=args.synonym_model,
-        node=args.synonym_node,
-        port=args.synonym_port,
-    )
+    synonym_cache: Optional[Dict[str, Dict[str, List[str]]]] = None
+    synonym_cache_path: Optional[Path] = None
+    synonym_stats: Dict[str, int] = {
+        "cache_hits": 0,
+        "llm_calls": 0,
+        "snomed_db_lookups": 0,
+    }
+    if args.synonym_cache_path:
+        synonym_cache_path = Path(args.synonym_cache_path)
+        synonym_cache = _load_synonym_cache(synonym_cache_path)
 
-    by_snomed_id, rules_rows, used_sources = convert_manual_payloads(
-        input_paths,
-        abbreviation_lookup=abbreviation_lookup,
-        synonym_generator=synonym_generator,
-    )
+    snomed_synonym_fetcher = None
+    snomed_resource = None
+    try:
+        snomed_synonym_fetcher, snomed_resource = _build_snomed_synonyms_fetcher(
+            enabled=args.enable_snomed_db_synonyms,
+            uri=args.snomed_db_uri,
+            user=args.snomed_db_user,
+            password=args.snomed_db_password,
+        )
+
+        synonym_generator = _build_synonyms_generator(
+            enabled=args.enable_llm_synonyms,
+            model=args.synonym_model,
+            node=args.synonym_node,
+            port=args.synonym_port,
+            synonym_stats=synonym_stats,
+        )
+
+        by_snomed_id, rules_rows, used_sources = convert_manual_payloads(
+            input_paths,
+            abbreviation_lookup=abbreviation_lookup,
+            synonym_generator=synonym_generator,
+            synonym_cache=synonym_cache,
+            snomed_synonym_fetcher=snomed_synonym_fetcher,
+            synonym_stats=synonym_stats,
+        )
+    except RuntimeError as exc:
+        print(f"ERROR: {exc}")
+        return 2
+    finally:
+        if snomed_resource is not None:
+            if hasattr(snomed_resource, "disconnect"):
+                snomed_resource.disconnect()
+            elif hasattr(snomed_resource, "close"):
+                snomed_resource.close()
 
     out_index = Path(args.out_index)
     out_rules = Path(args.out_rules)
@@ -328,6 +649,37 @@ def main() -> int:
         json.dumps({"by_snomed_id": by_snomed_id}, indent=2) + "\n",
         encoding="utf-8",
     )
+
+    if synonym_cache_path is not None and synonym_cache is not None:
+        _save_synonym_cache(synonym_cache_path, synonym_cache)
+
+    if args.out_concept_dict:
+        out_concept_dict = Path(args.out_concept_dict)
+        out_concept_dict.parent.mkdir(parents=True, exist_ok=True)
+        out_concept_dict.write_text(
+            json.dumps(
+                {
+                    "generated_from": used_sources,
+                    "abbreviation_source": str(abbrv_path),
+                    "llm_synonym_generation": args.enable_llm_synonyms,
+                    "snomed_db_synonym_generation": args.enable_snomed_db_synonyms,
+                    "synonym_model": (
+                        args.synonym_model if args.enable_llm_synonyms else None
+                    ),
+                    "synonym_node": (
+                        args.synonym_node if args.enable_llm_synonyms else None
+                    ),
+                    "synonym_port": (
+                        args.synonym_port if args.enable_llm_synonyms else None
+                    ),
+                    "concepts_by_snomed_id": by_snomed_id,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
     with out_rules.open("w", encoding="utf-8") as handle:
         for row in rules_rows:
             handle.write(json.dumps(row) + "\n")
@@ -339,10 +691,22 @@ def main() -> int:
     print(
         f"LLM synonym generation: {'enabled' if args.enable_llm_synonyms else 'disabled'}"
     )
+    print(
+        f"SNOMED DB synonym generation: {'enabled' if args.enable_snomed_db_synonyms else 'disabled'}"
+    )
+    print(f"Synonym cache hits: {synonym_stats.get('cache_hits', 0)}")
+    if args.enable_llm_synonyms:
+        print(f"Synonym LLM calls: {synonym_stats.get('llm_calls', 0)}")
+    if args.enable_snomed_db_synonyms:
+        print(f"SNOMED DB lookups: {synonym_stats.get('snomed_db_lookups', 0)}")
+    if synonym_cache_path is not None:
+        print(f"Synonym cache path: {synonym_cache_path}")
     print(f"Rules rows: {len(rules_rows)}")
     print(f"Unique SNOMED concepts: {len(by_snomed_id)}")
     print(f"Index output: {out_index}")
     print(f"Rules output: {out_rules}")
+    if args.out_concept_dict:
+        print(f"Concept dictionary output: {args.out_concept_dict}")
     return 0
 
 

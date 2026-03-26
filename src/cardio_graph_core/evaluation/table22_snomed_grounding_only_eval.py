@@ -5,7 +5,21 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from cardio_graph_core.extraction.guideline_graph_builder import GuidelineGraphBuilder
+from cardio_graph_core.grounding.entity_grounding_service import EntityGroundingService
+
+
+def _compose_context(row: Dict[str, Any], concept: Dict[str, Any]) -> str:
+    parts: List[str] = []
+    concept_context = concept.get("context")
+    if concept_context:
+        parts.append(str(concept_context))
+    logic_structured = concept.get("logic_structured")
+    if logic_structured:
+        parts.append(json.dumps(logic_structured, ensure_ascii=False, sort_keys=True))
+    recommendation = row.get("recommendation")
+    if recommendation:
+        parts.append(str(recommendation))
+    return " ".join(part.strip() for part in parts if str(part).strip())
 
 
 def _read_gold_items(gold_path: Path, deduplicate: bool = True) -> List[Dict[str, str]]:
@@ -39,6 +53,7 @@ def _read_gold_items(gold_path: Path, deduplicate: bool = True) -> List[Dict[str
                                 "term": term,
                                 "role": role,
                                 "gold_snomed_id": gold_snomed_id,
+                                "context": _compose_context(row, concept),
                             }
                         )
 
@@ -69,17 +84,42 @@ def _evaluate(
         "true" if mode == "vector" else "false"
     )
 
+    from cardio_graph_core.extraction.guideline_graph_builder import (
+        GuidelineGraphBuilder,
+    )
+
     builder = GuidelineGraphBuilder(model=model, node=node, port=port)
+    service = EntityGroundingService(builder)
     role_total = Counter()
     role_hits = Counter()
     predictions: List[Dict[str, Any]] = []
+    concept_term_cache: Dict[int, str] = {}
+
+    def _resolve_concept_term(concept_id_value: str) -> str:
+        if not concept_id_value:
+            return ""
+        try:
+            concept_id_int = int(concept_id_value)
+        except (TypeError, ValueError):
+            return ""
+        if concept_id_int in concept_term_cache:
+            return concept_term_cache[concept_id_int]
+        concept_term = service.get_concept_term(concept_id_int) or ""
+        concept_term_cache[concept_id_int] = concept_term
+        return concept_term
 
     for item in items:
-        concept_id, preferred_term, score = builder._search_best_concept(
-            item["term"], item["role"]
+        concept_id, preferred_term, score = service.ground_entity(
+            item["term"],
+            item["role"],
+            query_context=item.get("context") or "",
         )
         pred_snomed_id = "" if concept_id is None else str(concept_id)
         hit = pred_snomed_id == item["gold_snomed_id"]
+        gold_concept_term = _resolve_concept_term(item["gold_snomed_id"])
+        pred_concept_term = _resolve_concept_term(pred_snomed_id)
+        if not pred_concept_term and preferred_term:
+            pred_concept_term = preferred_term
         role_total[item["role"]] += 1
         if hit:
             role_hits[item["role"]] += 1
@@ -88,6 +128,8 @@ def _evaluate(
                 **item,
                 "pred_snomed_id": pred_snomed_id,
                 "pred_preferred_term": preferred_term,
+                "gold_concept_term": gold_concept_term,
+                "pred_concept_term": pred_concept_term,
                 "pred_score": score,
                 "hit": hit,
             }
@@ -108,10 +150,7 @@ def _evaluate(
         for role in sorted(role_total)
     }
 
-    if builder.vector_retriever and hasattr(builder.vector_retriever, "close"):
-        builder.vector_retriever.close()
-    if builder.snomed_explorer and hasattr(builder.snomed_explorer, "close"):
-        builder.snomed_explorer.close()
+    service.close()
 
     return {
         "mode": mode,
@@ -266,6 +305,24 @@ def main() -> int:
     print(f"hits={output['hits']}")
     print(f"accuracy={output['accuracy']:.6f}")
     print(f"output_json={args.output_json}")
+    misses = [row for row in output.get("predictions", []) if not row.get("hit")]
+    print(f"misses={len(misses)}")
+    for row in misses:
+        row_id = row.get("row_id", "")
+        side = row.get("side", "")
+        role = row.get("role", "")
+        term = row.get("term", "")
+        gold_id = row.get("gold_snomed_id", "")
+        gold_term = row.get("gold_concept_term", "")
+        pred_id = row.get("pred_snomed_id", "") or "<empty>"
+        pred_term = row.get("pred_concept_term", "") or "<empty>"
+        score = float(row.get("pred_score") or 0.0)
+        print(
+            "MISS "
+            f"row={row_id} side={side} role={role} term={term!r} "
+            f"gold={gold_id} ({gold_term}) pred={pred_id} ({pred_term}) "
+            f"score={score:.6f}"
+        )
     if output.get("comparison"):
         comp = output["comparison"]
         print(f"baseline={comp['baseline_mode']} {comp['baseline_accuracy']:.6f}")

@@ -8,6 +8,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
+from cardio_graph_core.common.paths import rule_alignment_dir
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SLURM_DIR = PROJECT_ROOT / "slurm"
 
@@ -21,6 +23,7 @@ def _submit(
     out_dir: Path,
 ) -> tuple[int, Path]:
     log_path = SLURM_DIR / f"run_table22_concept_rules_{run_tag}.log"
+    rows_dir = out_dir / "rows"
 
     env_vars = {
         "PYTHONPATH": str(PROJECT_ROOT / "src"),
@@ -51,14 +54,10 @@ def _submit(
             "CARDIO_GRAPH_TABLE22_GROUND_AFTER_EXTRACTION", "false"
         ),
         "CARDIO_GRAPH_TABLE22_USE_SNAPSHOT": "false",
-        "CARDIO_GRAPH_TABLE22_ROWS_DIR": str(out_dir),
-        "CARDIO_GRAPH_TABLE22_REPORT_MD": str(
-            out_dir / "table22_rowwise_comparison.md"
-        ),
-        "CARDIO_GRAPH_TABLE22_REPORT_JSON": str(
-            out_dir / "table22_rowwise_alignment.json"
-        ),
-        "CARDIO_GRAPH_TABLE22_REPORT_CSV": str(out_dir / "table22_rowwise_summary.csv"),
+        "CARDIO_GRAPH_TABLE22_ROWS_DIR": str(rows_dir),
+        "CARDIO_GRAPH_TABLE22_REPORT_MD": str(out_dir / "overview.md"),
+        "CARDIO_GRAPH_TABLE22_REPORT_JSON": str(out_dir / "alignment.json"),
+        "CARDIO_GRAPH_TABLE22_REPORT_CSV": str(out_dir / "summary.csv"),
     }
 
     export_cmd = " ".join(
@@ -69,11 +68,11 @@ def _submit(
 
     wrapped = (
         f"cd {shlex.quote(str(PROJECT_ROOT))} && "
-        f"mkdir -p {shlex.quote(str(out_dir))} && "
-        f"rm -f {shlex.quote(str(out_dir / 'row_*.md'))} && "
-        f"rm -f {shlex.quote(str(out_dir / 'table22_rowwise_comparison.md'))} && "
-        f"rm -f {shlex.quote(str(out_dir / 'table22_rowwise_alignment.json'))} && "
-        f"rm -f {shlex.quote(str(out_dir / 'table22_rowwise_summary.csv'))} && "
+        f"mkdir -p {shlex.quote(str(out_dir))} {shlex.quote(str(rows_dir))} && "
+        f"find {shlex.quote(str(rows_dir))} -maxdepth 1 -type f -name 'row_*.md' -delete && "
+        f"rm -f {shlex.quote(str(out_dir / 'overview.md'))} && "
+        f"rm -f {shlex.quote(str(out_dir / 'alignment.json'))} && "
+        f"rm -f {shlex.quote(str(out_dir / 'summary.csv'))} && "
         f"export {export_cmd} && "
         f"echo '[table22-concept-rules] run_tag={run_tag}' && "
         f"echo '[table22-concept-rules] out_dir={out_dir}' && "
@@ -135,8 +134,8 @@ def main() -> None:
         type=Path,
         default=Path(
             os.environ.get(
-                "CARDIO_GRAPH_TABLE22_ROWS_DIR",
-                PROJECT_ROOT / "docs" / "table22_rows_comparison",
+                "CARDIO_GRAPH_TABLE22_REPORT_ROOT",
+                str(rule_alignment_dir("table_22")),
             )
         ),
     )

@@ -5,7 +5,6 @@ import logging
 import statistics
 import sys
 import time
-import unittest
 from pathlib import Path
 
 
@@ -28,24 +27,23 @@ def main() -> int:
     # Keep eval logs compact in SLURM output; full details remain in artifacts.
     logging.getLogger("GuidelineGraphBuilder").setLevel(logging.WARNING)
 
-    from tests.test_table_22_concept_rules import (
+    from cardio_graph_core.evaluation.table22_rule_alignment_eval import (
         REPORT_CSV_PATH,
         REPORT_JSON_PATH,
         REPORT_MD_PATH,
-        Table22ConceptRulesTests,
+        run_table22_rule_alignment_eval,
     )
 
-    case = Table22ConceptRulesTests(methodName="test_table_22_rules_match_ground_truth")
     start = time.time()
 
     print("[table22-dev-eval] start")
     try:
-        case.setUp()
-        case.test_table_22_rules_match_ground_truth()
-    except unittest.SkipTest as exc:
-        print(f"[table22-dev-eval] skipped reason={exc}")
-        return 2
+        run_table22_rule_alignment_eval()
     except Exception as exc:
+        # SkipTest can be raised by the evaluation module when inputs are unavailable.
+        if exc.__class__.__name__ == "SkipTest":
+            print(f"[table22-dev-eval] skipped reason={exc}")
+            return 2
         print(f"[table22-dev-eval] failed error={exc}")
         return 1
 
