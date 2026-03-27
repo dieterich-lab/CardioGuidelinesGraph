@@ -372,6 +372,7 @@ def convert_manual_payloads(
     snomed_synonym_fetcher=None,
     synonym_stats: Optional[Dict[str, int]] = None,
     embedding_generator=None,
+    row_id_filters: Optional[List[str]] = None,
 ) -> Tuple[Dict[str, dict], List[dict], List[str]]:
     role_to_label = {
         "ClinicalCondition": "ClinicalCondition",
@@ -383,6 +384,9 @@ def convert_manual_payloads(
     by_snomed_id: Dict[str, dict] = {}
     rules_rows: List[dict] = []
     used_sources: List[str] = []
+    normalized_row_filters = {
+        value.strip() for value in (row_id_filters or []) if value and value.strip()
+    }
 
     for path in input_paths:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -392,6 +396,9 @@ def convert_manual_payloads(
 
         for row_idx, row in enumerate(rows, start=1):
             if not isinstance(row, dict):
+                continue
+            row_id = f"{table_tag}:row_{row_idx:02d}"
+            if normalized_row_filters and row_id not in normalized_row_filters:
                 continue
             recommendation_text = (
                 row.get("recommendation")
@@ -567,6 +574,15 @@ def main() -> int:
         help="Manual ground-truth JSON (can be passed multiple times)",
     )
     parser.add_argument(
+        "--row-id-filter",
+        action="append",
+        default=None,
+        help=(
+            "Optional row id filter in format <table_stem>:row_XX "
+            "(can be passed multiple times)."
+        ),
+    )
+    parser.add_argument(
         "--out-index", required=True, help="Output grounding_index.json path"
     )
     parser.add_argument("--out-rules", required=True, help="Output rules.jsonl path")
@@ -712,6 +728,7 @@ def main() -> int:
             snomed_synonym_fetcher=snomed_synonym_fetcher,
             synonym_stats=synonym_stats,
             embedding_generator=embedding_generator,
+            row_id_filters=args.row_id_filter,
         )
     except RuntimeError as exc:
         print(f"ERROR: {exc}")
