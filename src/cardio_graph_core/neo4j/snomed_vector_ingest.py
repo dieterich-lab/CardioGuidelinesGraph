@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 import time
 from typing import Any, Dict, List, Optional
@@ -230,6 +231,12 @@ def _count_existing_embeddings(
 @click.option("--batch-size", default=24, type=int, show_default=True)
 @click.option("--language-code", default="en", show_default=True)
 @click.option("--max-rows", default=0, type=int, show_default=True)
+@click.option(
+    "--subset-concept-ids-path",
+    default=None,
+    show_default=False,
+    help="Optional JSON file containing cardiology subset concept IDs under 'concept_ids'.",
+)
 @click.option("--log-every", default=5000, type=int, show_default=True)
 @click.option("--wipe-db/--no-wipe-db", default=False, show_default=True)
 @click.option("--resume-only/--no-resume-only", default=True, show_default=True)
@@ -265,6 +272,7 @@ def main(
     batch_size: int,
     language_code: str,
     max_rows: int,
+    subset_concept_ids_path: Optional[str],
     log_every: int,
     wipe_db: bool,
     resume_only: bool,
@@ -294,9 +302,30 @@ def main(
 
     language_filter = ""
     params: Dict[str, Any] = {}
+    subset_filter = ""
     if language_code:
         language_filter = " AND languagecode = :language_code"
         params["language_code"] = language_code
+
+    if subset_concept_ids_path:
+        with open(subset_concept_ids_path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        concept_ids = payload.get("concept_ids")
+        if not isinstance(concept_ids, list) or not concept_ids:
+            raise click.ClickException(
+                f"Invalid subset file '{subset_concept_ids_path}': expected non-empty 'concept_ids' list"
+            )
+        try:
+            concept_ids = [int(c) for c in concept_ids]
+        except Exception as exc:
+            raise click.ClickException(
+                f"Invalid concept id value in subset file '{subset_concept_ids_path}': {exc}"
+            )
+        params["subset_concept_ids"] = concept_ids
+        subset_filter = " AND conceptid = ANY(:subset_concept_ids)"
+        click.echo(
+            f"[vector-ingest] subset filtering enabled: {len(concept_ids)} concept ids from {subset_concept_ids_path}"
+        )
 
     count_query = text(
         f"""
@@ -305,6 +334,7 @@ def main(
         WHERE active = true
           AND term IS NOT NULL
           {language_filter}
+                    {subset_filter}
         """
     )
 
@@ -357,6 +387,7 @@ def main(
             WHERE active = true
               AND term IS NOT NULL
               {language_filter}
+                                {subset_filter}
             ORDER BY conceptid, id
             """
         )
