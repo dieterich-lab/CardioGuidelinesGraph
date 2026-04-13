@@ -100,6 +100,33 @@ def _drop_all_vector_indexes(session) -> None:
         session.run(f"DROP INDEX `{name}` IF EXISTS")
 
 
+def _wipe_database_in_batches(
+    driver,
+    batch_size: int,
+    max_attempts: int,
+    retry_backoff_seconds: float,
+) -> None:
+    query = f"""
+        MATCH (n)
+        CALL {{
+            WITH n
+            DETACH DELETE n
+        }} IN TRANSACTIONS OF {int(batch_size)} ROWS
+        """
+
+    def operation() -> None:
+        with driver.session() as session:
+            session.run(query).consume()
+
+    _run_neo4j_with_retry(
+        driver=driver,
+        operation=operation,
+        operation_name="wipe database in batches",
+        max_attempts=max_attempts,
+        retry_backoff_seconds=retry_backoff_seconds,
+    )
+
+
 def _create_vector_index(
     session,
     index_name: str,
@@ -350,12 +377,20 @@ def main(
 
     with GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password)) as driver:
         driver.verify_connectivity()
-        with driver.session() as session:
-            if wipe_db:
-                click.echo("[vector-ingest] wiping Neo4j database (all nodes + rels)")
-                session.run("MATCH (n) DETACH DELETE n")
-                click.echo("[vector-ingest] wipe complete")
 
+        if wipe_db:
+            click.echo(
+                "[vector-ingest] wiping Neo4j database (all nodes + rels) in batches"
+            )
+            _wipe_database_in_batches(
+                driver=driver,
+                batch_size=1000,
+                max_attempts=neo4j_max_attempts,
+                retry_backoff_seconds=neo4j_retry_backoff,
+            )
+            click.echo("[vector-ingest] wipe complete")
+
+        with driver.session() as session:
             if drop_existing_vector_indexes:
                 click.echo("[vector-ingest] dropping existing vector indexes")
                 _drop_all_vector_indexes(session)
