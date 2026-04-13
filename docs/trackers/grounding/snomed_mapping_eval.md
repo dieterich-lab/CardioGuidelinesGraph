@@ -1,5 +1,36 @@
 # Automated SNOMED Mapping Evaluation Milestone
 
+Canonical tracker note:
+- This file is the single source of truth for grounding-eval status, comparisons, and next-step decisions.
+- Generated files under `docs/generated/grounding/` are treated as raw artifacts, not decision trackers.
+
+## Update 2026-04-13 (cardio-subset vector DB)
+
+New completed run:
+- `630319` (GT3: tables 22/8/17, `233` items)
+- overall accuracy: `0.510730` (`119/233`)
+- rank metrics: `MRR=0.561925`, `mean_gt_rank=1.2828`, `median_gt_rank=1`
+
+Pre-cardio comparison (same GT3 evaluation family, previous full-space index window):
+- Reference pre-cardio run (same `vector_context_enabled=false` profile): `628367`
+	- overall: `0.530435` (`122/230`)
+	- delta vs new (`630319`): `-0.019705` overall
+- Role deltas (`630319 - 628367`):
+	- `Procedure`: `+0.159420` (`0.275 -> 0.435`)
+	- `ClinicalCondition`: `-0.117842` (`0.654 -> 0.536`)
+	- `Medication`: `-0.068182` (`0.523 -> 0.455`)
+	- `ClinicalParameter`: `0.000000` (`1.000 -> 1.000`)
+
+Interpretation:
+- The cardio-subset run improved Procedure grounding substantially.
+- Overall accuracy still trailed the best pre-cardio GT3 run because ClinicalCondition and Medication regressions outweighed Procedure gains.
+- This suggests retrieval-space narrowing helped procedure semantics but did not yet resolve condition/medication disambiguation behavior.
+
+Immediate analysis focus for next tuning cycle:
+1. Keep cardio-subset index as baseline retrieval space.
+2. Target ClinicalCondition confusion pairs (`Use of anticoagulation`, `Indication of`, `Myocardial ischemia`) with stricter role/semantic penalties.
+3. Target Medication false-nearest neighbors (`Aspirin -> Aluminium aspirin`, empty fallback on `Drug therapy with explicit context`).
+
 Runs analyzed: 627576, 627880, 628092, 628305, 628306
 
 Criterion: term-role pairs that missed in at least 2 analyzed runs.
