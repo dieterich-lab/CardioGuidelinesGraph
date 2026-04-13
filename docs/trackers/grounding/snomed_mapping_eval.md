@@ -149,3 +149,58 @@ Decision from latest evidence:
 - If Arm B improves Procedure without ClinicalCondition collapse, run one confirmation replicate before promoting.
 - Keep a focused error watchlist for recurring Procedure misses: Intracoronary pressure guide wire, Percutaneous coronary revascularization, Using decision making strategies.
 - If ClinicalCondition drift reappears, test a stricter condition-side disambiguation variant before changing retrieval settings.
+
+## Overnight Ablation Chain (2026-04-13)
+
+Reference baseline run (A):
+- `630319` (completed prior to the chain)
+
+Sequential queue submitted via Slurm dependency (`afterok`) using `slurm/gt-eval-vector.sbatch`:
+
+| Arm | Job ID | Dependency | Log file | Status/Result |
+|---|---:|---|---|---|
+| B | `630455` | none | `slurm/gt-eval-B_630455.log` | pending update |
+| C | `630456` | `afterok:630455` | `slurm/gt-eval-C_630456.log` | pending update |
+| D | `630457` | `afterok:630456` | `slurm/gt-eval-D_630457.log` | pending update |
+| E | `630458` | `afterok:630457` | `slurm/gt-eval-E_630458.log` | pending update |
+| F | `630459` | `afterok:630458` | `slurm/gt-eval-F_630459.log` | pending update |
+| G | `630460` | `afterok:630459` | `slurm/gt-eval-G_630460.log` | pending update |
+
+Exact knob overrides per arm (`sbatch --export=ALL,...`):
+
+Arm B (stronger semantic-role penalties):
+- `CARDIO_GRAPH_GROUNDING_ROLE_MISMATCH_PENALTY=0.08`
+- `CARDIO_GRAPH_GROUNDING_ROLE_TENSION_PENALTY=0.03`
+- `CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_MISMATCH_PENALTY=0.10`
+- `CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_CROSSCLASS_PENALTY=0.04`
+
+Arm C (lexical-first medication precision guard):
+- `CARDIO_GRAPH_GROUNDING_VECTOR_RERANK_WEIGHT=0.02`
+- `CARDIO_GRAPH_GROUNDING_VECTOR_BONUS_CAP=0.03`
+- `CARDIO_GRAPH_GROUNDING_VECTOR_MIN_LEXICAL_FOR_BONUS=0.94`
+- `CARDIO_GRAPH_GROUNDING_AMBIGUITY_LEXICAL_FORCE_PICK=0.94`
+
+Arm D (stronger over-qualification/discriminative penalties):
+- `CARDIO_GRAPH_GROUNDING_EXTRA_QUALIFIER_PENALTY=0.16`
+- `CARDIO_GRAPH_GROUNDING_MISSING_DISCRIMINATIVE_PENALTY=0.14`
+- `CARDIO_GRAPH_GROUNDING_MIN_DISCRIMINATIVE_COVERAGE_FOR_TOP=0.70`
+
+Arm E (condition disambiguation via stricter coverage/fallback):
+- `CARDIO_GRAPH_GROUNDING_MIN_WEIGHTED_QUERY_COVERAGE=0.55`
+- `CARDIO_GRAPH_GROUNDING_LOW_COVERAGE_PENALTY=0.16`
+- `CARDIO_GRAPH_GROUNDING_GUARDED_FALLBACK_MARGIN=0.025`
+
+Arm F (tighter ambiguity handling):
+- `CARDIO_GRAPH_GROUNDING_AMBIGUITY_ABSTAIN_MARGIN=0.025`
+- `CARDIO_GRAPH_GROUNDING_AMBIGUITY_MIN_COVERAGE=0.65`
+- `CARDIO_GRAPH_GROUNDING_AMBIGUITY_BACKOFF_MAX_DROP=0.08`
+- `CARDIO_GRAPH_GROUNDING_AMBIGUITY_BACKOFF_MIN_SCORE=0.45`
+
+Arm G (controlled context-aware vector expansion):
+- `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ENABLED=true`
+- `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ALLOWED_ROLES=Procedure:ClinicalCondition`
+- `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_APPEND_TERM=true`
+- `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_MAX_TOKENS=10`
+
+Traceability note:
+- The per-job log headers print many active knobs, and this section is the canonical record of the exact submitted override set.
