@@ -359,6 +359,15 @@ def _run_evaluation(
     help="Stream full evaluator stdout into autotune log.",
 )
 @click.option(
+    "--initial-prompt-appendix",
+    type=click.Path(path_type=Path),
+    default=None,
+    help=(
+        "Optional path to initial tuning appendix text. "
+        "If omitted, controller starts from an empty appendix."
+    ),
+)
+@click.option(
     "--dry-run/--no-dry-run",
     default=True,
     show_default=True,
@@ -390,6 +399,7 @@ def main(
     eval_command: str,
     benchmark_manifest: Path,
     stream_eval_logs: bool,
+    initial_prompt_appendix: Path | None,
     dry_run: bool,
 ) -> None:
     if candidates_per_iter <= 0:
@@ -462,7 +472,23 @@ def main(
     prompts_dir.mkdir(parents=True, exist_ok=True)
 
     champion_prompt_path = prompts_dir / "prompt_v0.txt"
-    champion_prompt_path.write_text("", encoding="utf-8")
+    initial_prompt_text = ""
+    initial_prompt_source = "empty"
+
+    if initial_prompt_appendix and initial_prompt_appendix.is_file():
+        initial_prompt_text = initial_prompt_appendix.read_text(encoding="utf-8")
+        initial_prompt_source = str(initial_prompt_appendix)
+    else:
+        env_initial_prompt = (
+            os.environ.get("CARDIO_GRAPH_TUNING_INITIAL_PROMPT_APPENDIX_PATH", "") or ""
+        ).strip()
+        if env_initial_prompt:
+            env_path = Path(env_initial_prompt)
+            if env_path.is_file():
+                initial_prompt_text = env_path.read_text(encoding="utf-8")
+                initial_prompt_source = env_initial_prompt
+
+    champion_prompt_path.write_text(initial_prompt_text, encoding="utf-8")
 
     champion_prompt = "prompt_v0"
     champion_dev = _initial_metrics()
@@ -477,6 +503,10 @@ def main(
         "[autotune] start "
         f"run_tag={run_tag} dry_run={dry_run} iterations={iterations} run_locked_every={run_locked_every} "
         f"candidates_per_iter={candidates_per_iter} early_stop_patience={early_stop_patience}"
+    )
+    click.echo(
+        "[autotune] initial_prompt "
+        f"source={initial_prompt_source} lines={len(initial_prompt_text.splitlines())}"
     )
     click.echo(
         "[autotune] models "
