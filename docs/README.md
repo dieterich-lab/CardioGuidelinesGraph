@@ -9,7 +9,7 @@ This repository separates **manual documentation** from **generated snapshots**.
 
 Current examples:
 
-- `docs/trackers/autotuning/table_22.md`
+- `docs/trackers/autotuning/multi_table.md`
 - `docs/trackers/grounding/snomed_mapping_eval.md`
 - `docs/trackers/grounding/procedure_mis_mapping_report.md`
 - `docs/reference/ground_truth_rule_graphs/`
