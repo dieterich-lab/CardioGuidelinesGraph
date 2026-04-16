@@ -43,8 +43,7 @@ poetry run python -m cardio_graph_core.evaluation.ground_truth_snomed_grounding_
   --vector-user neo4j \
   --vector-index snomed_term_embeddings_4096 \
   --embedding-model Qwen3embed \
-  --embedding-node g4 \
-  --embedding-port 11434 \
+  --embedding-node local \
   --output-json /prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/non_vector/runs/local/eval.json
 ```
 
@@ -61,8 +60,7 @@ poetry run python -m cardio_graph_core.evaluation.ground_truth_snomed_grounding_
   --vector-user neo4j \
   --vector-index snomed_term_embeddings_4096 \
   --embedding-model Qwen3embed \
-  --embedding-node g4 \
-  --embedding-port 11434 \
+  --embedding-node local \
   --output-json /prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/vector/runs/local/eval.json \
   --compare-with /prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/grounding/table_22/non_vector/runs/local/eval.json
 ```

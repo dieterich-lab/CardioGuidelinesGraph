@@ -444,6 +444,38 @@ class EntityGroundingService:
         if not search_terms:
             search_terms = [term]
 
+        rescue_concept_id = b._grounding_rescue_override(term, role)
+        if rescue_concept_id is not None:
+            rescue_term = b._get_preferred_term(rescue_concept_id)
+            if rescue_term:
+                rescue_candidates = [
+                    {
+                        "concept_id": rescue_concept_id,
+                        "term": rescue_term,
+                        "final_score": 1.0,
+                        "coverage": 1.0,
+                        "lexical": 1.0,
+                        "discriminative_coverage": 1.0,
+                        "extra_qualifier_ratio": 0.0,
+                        "vector_rank": 1,
+                        "rank": 1,
+                        "rescue_override": True,
+                    }
+                ]
+                logger.info(
+                    "Grounding rescue override term='%s' role='%s' -> %s (%s)",
+                    term,
+                    role or "",
+                    rescue_concept_id,
+                    rescue_term,
+                )
+                return _return_result(
+                    rescue_concept_id,
+                    rescue_term,
+                    1.0,
+                    rescue_candidates,
+                )
+
         results = []
         seen = set()
         for t in search_terms:

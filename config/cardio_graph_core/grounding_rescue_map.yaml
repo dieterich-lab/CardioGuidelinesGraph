@@ -1,0 +1,43 @@
+# Deterministic rescue overrides for recurring grounding misses.
+# Applied only when CARDIO_GRAPH_GROUNDING_RESCUE_ENABLED=true.
+
+overrides:
+  - term: "Drug therapy with explicit context"
+    role: "Medication"
+    concept_id: 1290126002
+
+  - term: "Percutaneous coronary revascularization"
+    role: "Procedure"
+    concept_id: 415070008
+
+  - term: "Use of anticoagulation"
+    role: "ClinicalCondition"
+    concept_id: 260678004
+
+  - term: "Indication of"
+    role: "ClinicalCondition"
+    concept_id: 230165009
+
+  - term: "Aspirin"
+    role: "Medication"
+    concept_id: 387458008
+
+  - term: "Clopidogrel"
+    role: "Medication"
+    concept_id: 386952008
+
+  - term: "Prasugrel"
+    role: "Medication"
+    concept_id: 443129001
+
+  - term: "Ticagrelor"
+    role: "Medication"
+    concept_id: 698805004
+
+  - term: "Proton pump inhibitor"
+    role: "Medication"
+    concept_id: 734582004
+
+  - term: "Platelet aggregation inhibitor therapy"
+    role: "Medication"
+    concept_id: 840595002

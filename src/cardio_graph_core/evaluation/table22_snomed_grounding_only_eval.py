@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import os
+import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -351,8 +352,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--vector-user", default="neo4j")
     parser.add_argument("--vector-index", default="snomed_term_embeddings_4096")
     parser.add_argument("--embedding-model", default="Qwen3embed")
-    parser.add_argument("--embedding-node", default="g4")
-    parser.add_argument("--embedding-port", default="11434")
+    parser.add_argument("--embedding-node", default="local")
+    parser.add_argument("--embedding-port", type=int, default=None)
     parser.add_argument(
         "--run-manifest-jsonl",
         type=Path,
@@ -366,6 +367,28 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional CSV file to append compact run summaries for parameter sweeps.",
     )
     return parser
+
+
+def _resolve_embedding_port(cli_port: int | None) -> int:
+    if cli_port is not None:
+        return int(cli_port)
+
+    for key in (
+        "CARDIO_GRAPH_GROUNDING_EMBEDDING_PORT",
+        "OLLAMA_PORT",
+    ):
+        raw = (os.environ.get(key) or "").strip()
+        if raw.isdigit():
+            return int(raw)
+
+    host = (os.environ.get("OLLAMA_HOST") or "").strip()
+    if host:
+        # Supports forms like "127.0.0.1:11434" and "http://127.0.0.1:11434".
+        match = re.search(r":(\d+)$", host)
+        if match:
+            return int(match.group(1))
+
+    return 11434
 
 
 def _capture_config_env() -> Dict[str, str]:
@@ -457,12 +480,17 @@ def main() -> int:
             Path("/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json")
         ]
 
+    embedding_port = _resolve_embedding_port(args.embedding_port)
+
     os.environ["CARDIO_GRAPH_GROUNDING_VECTOR_URI"] = args.vector_uri
     os.environ["CARDIO_GRAPH_GROUNDING_VECTOR_USER"] = args.vector_user
     os.environ["CARDIO_GRAPH_GROUNDING_VECTOR_INDEX"] = args.vector_index
     os.environ["CARDIO_GRAPH_GROUNDING_EMBEDDING_MODEL"] = args.embedding_model
     os.environ["CARDIO_GRAPH_GROUNDING_EMBEDDING_NODE"] = args.embedding_node
-    os.environ["CARDIO_GRAPH_GROUNDING_EMBEDDING_PORT"] = str(args.embedding_port)
+    os.environ["CARDIO_GRAPH_GROUNDING_EMBEDDING_PORT"] = str(embedding_port)
+
+    if args.embedding_node.strip().lower() == "local":
+        os.environ.setdefault("OLLAMA_HOST", f"127.0.0.1:{embedding_port}")
 
     items = _read_gold_items(
         gold_paths=args.gold_paths,
@@ -492,7 +520,7 @@ def main() -> int:
             "vector_index": args.vector_index,
             "embedding_model": args.embedding_model,
             "embedding_node": args.embedding_node,
-            "embedding_port": args.embedding_port,
+            "embedding_port": embedding_port,
         },
         **result,
     }

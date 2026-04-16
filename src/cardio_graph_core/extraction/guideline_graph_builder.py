@@ -56,6 +56,12 @@ DEFAULT_ABBRV_PATH = os.path.join(
     "cardio_graph_core",
     "abbrv.txt",
 )
+DEFAULT_GROUNDING_RESCUE_MAP_PATH = os.path.join(
+    Path(__file__).resolve().parents[3],
+    "config",
+    "cardio_graph_core",
+    "grounding_rescue_map.yaml",
+)
 DEFAULT_INDEX_PATH = "/prj/doctoral_letters/guide/data/graph/grounding_index.json"
 DEFAULT_RULES_PATH = "/prj/doctoral_letters/guide/data/graph/extracted_rules.jsonl"
 DEFAULT_MIN_MATCH_SCORE = 0.6
@@ -630,6 +636,19 @@ class GuidelineGraphBuilder:
         self.hard_negative_map = self._load_hard_negative_manifest(
             self.hard_negative_manifest_path
         )
+        self.enable_grounding_rescue = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_RESCUE_ENABLED", "false") or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.grounding_rescue_map_path = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_RESCUE_MAP_PATH",
+                DEFAULT_GROUNDING_RESCUE_MAP_PATH,
+            )
+            or DEFAULT_GROUNDING_RESCUE_MAP_PATH
+        ).strip()
+        self.grounding_rescue_map = self._load_grounding_rescue_map(
+            self.grounding_rescue_map_path
+        )
         self.vector_retriever: Optional[Neo4jVectorCandidateRetriever] = None
         if self.enable_vector_grounding:
             try:
@@ -763,6 +782,60 @@ class GuidelineGraphBuilder:
         if concept_id in blocked:
             return self.hard_negative_penalty
         return 0.0
+
+    def _load_grounding_rescue_map(
+        self, rescue_map_path: str
+    ) -> Dict[Tuple[str, str], int]:
+        if not rescue_map_path or not os.path.exists(rescue_map_path):
+            return {}
+        try:
+            with open(rescue_map_path, "r", encoding="utf-8") as handle:
+                payload = yaml.safe_load(handle) or {}
+        except Exception as exc:
+            logger.warning(
+                "Failed to read grounding rescue map '%s': %s",
+                rescue_map_path,
+                exc,
+            )
+            return {}
+
+        rows = payload.get("overrides") or []
+        mapping: Dict[Tuple[str, str], int] = {}
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            term = self._normalize((row.get("term") or "").strip())
+            role = (row.get("role") or "").strip().lower()
+            raw_concept_id = row.get("concept_id")
+            if not term or not role:
+                continue
+            try:
+                concept_id = int(raw_concept_id)
+            except (TypeError, ValueError):
+                continue
+            mapping[(term, role)] = concept_id
+
+        if mapping:
+            logger.info(
+                "Loaded grounding rescue map (%d rows): %s",
+                len(mapping),
+                rescue_map_path,
+            )
+        return mapping
+
+    def _grounding_rescue_override(
+        self, term: str, role: Optional[str]
+    ) -> Optional[int]:
+        if not self.enable_grounding_rescue:
+            return None
+        normalized_term = self._normalize(term)
+        role_key = (role or "").strip().lower()
+        if not normalized_term or not role_key:
+            return None
+        exact = self.grounding_rescue_map.get((normalized_term, role_key))
+        if exact is not None:
+            return exact
+        return self.grounding_rescue_map.get((normalized_term, "*"))
 
     def _collect_root_concepts(self, mapping_rules: List[Dict]) -> List[int]:
         roots = []
