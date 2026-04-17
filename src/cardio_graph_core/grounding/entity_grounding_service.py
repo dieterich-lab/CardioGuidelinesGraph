@@ -667,33 +667,43 @@ class EntityGroundingService:
                         discriminative_tokens & candidate_tokens_for_best
                     ) / max(len(discriminative_tokens), 1)
                 final_penalty = 0.0
+                low_coverage_penalty = 0.0
                 if (
                     important_query_tokens
                     and best_overlap < b.min_weighted_query_coverage
                 ):
-                    final_penalty += b.low_coverage_penalty
+                    low_coverage_penalty = b.low_coverage_penalty
+                    final_penalty += low_coverage_penalty
+                missing_discriminative_penalty = 0.0
                 if discriminative_tokens and not (
                     discriminative_tokens & candidate_tokens_for_best
                 ):
-                    final_penalty += b.missing_discriminative_penalty
+                    missing_discriminative_penalty = b.missing_discriminative_penalty
+                    final_penalty += missing_discriminative_penalty
                 extra_qualifier_ratio = self._extra_qualifier_ratio(
                     important_query_tokens, candidate_tokens_for_best
                 )
-                final_penalty += (
+                extra_qualifier_penalty = (
                     extra_qualifier_ratio * b.extra_qualifier_penalty_weight
                 )
-                final_penalty += self._hard_negative_penalty_for(
+                final_penalty += extra_qualifier_penalty
+                hard_negative_penalty = self._hard_negative_penalty_for(
                     normalized_source_term,
                     role_filter,
                     concept_id,
                 )
+                final_penalty += hard_negative_penalty
                 base_semantic_penalty = self._role_semantic_penalty(
                     role_filter, preferred
                 )
+                role_mismatch_penalty = 0.0
                 if role_mismatch:
-                    final_penalty += b.role_mismatch_penalty
+                    role_mismatch_penalty = b.role_mismatch_penalty
+                    final_penalty += role_mismatch_penalty
+                role_tension_penalty = 0.0
                 if role_mismatch and is_role_tension_term:
-                    final_penalty += b.role_tension_penalty
+                    role_tension_penalty = b.role_tension_penalty
+                    final_penalty += role_tension_penalty
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
                 vector_rank = vector_rank_by_concept.get(int(concept_id))
@@ -751,7 +761,19 @@ class EntityGroundingService:
                         "lexical": score,
                         "discriminative_coverage": discriminative_coverage,
                         "extra_qualifier_ratio": extra_qualifier_ratio,
+                        "extra_qualifier_penalty": extra_qualifier_penalty,
+                        "low_coverage_penalty": low_coverage_penalty,
+                        "missing_discriminative_penalty": missing_discriminative_penalty,
+                        "hard_negative_penalty": hard_negative_penalty,
+                        "role_mismatch_penalty": role_mismatch_penalty,
+                        "role_tension_penalty": role_tension_penalty,
+                        "base_semantic_penalty": base_semantic_penalty,
+                        "semantic_penalty": semantic_penalty,
                         "vector_rank": vector_rank,
+                        "vector_raw": vector_raw,
+                        "vector_bonus": vector_bonus,
+                        "final_penalty": final_penalty,
+                        "role_mismatch": role_mismatch,
                     }
                 )
 

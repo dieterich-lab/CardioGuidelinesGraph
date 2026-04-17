@@ -7,7 +7,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import median
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from cardio_graph_core.grounding.entity_grounding_service import EntityGroundingService
 
@@ -140,6 +140,7 @@ def _evaluate(
     role_total = Counter()
     role_hits = Counter()
     predictions: List[Dict[str, Any]] = []
+    debug_rows: List[Dict[str, Any]] = []
     concept_term_cache: Dict[int, str] = {}
     rank_cutoffs = (1, 3, 5, 10)
     hit_at_k_counts = {k: 0 for k in rank_cutoffs}
@@ -180,6 +181,177 @@ def _evaluate(
                 gt_rank = int(candidate.get("rank") or 0) or None
                 break
 
+        pred_rank = None
+        pred_candidate: Optional[Dict[str, Any]] = None
+        gt_candidate: Optional[Dict[str, Any]] = None
+        for candidate in ranked_candidates:
+            if concept_id is not None and candidate.get("concept_id") == concept_id:
+                pred_rank = int(candidate.get("rank") or 0) or None
+                pred_candidate = candidate
+            if candidate.get("concept_id") == gold_snomed_id_int:
+                gt_candidate = candidate
+
+        top_candidate = ranked_candidates[0] if ranked_candidates else None
+        runner_candidate = ranked_candidates[1] if len(ranked_candidates) > 1 else None
+        top_score = (
+            float(top_candidate.get("final_score") or 0.0) if top_candidate else 0.0
+        )
+        runner_score = (
+            float(runner_candidate.get("final_score") or 0.0)
+            if runner_candidate
+            else None
+        )
+        score_gap_top_runner = (
+            (top_score - runner_score) if runner_score is not None else None
+        )
+
+        pred_final_score = (
+            float(pred_candidate.get("final_score") or 0.0)
+            if pred_candidate is not None
+            else 0.0
+        )
+        gt_final_score = (
+            float(gt_candidate.get("final_score") or 0.0)
+            if gt_candidate is not None
+            else None
+        )
+        score_delta_pred_vs_gt = (
+            (pred_final_score - gt_final_score) if gt_final_score is not None else None
+        )
+
+        debug_rows.append(
+            {
+                "row_id": item["row_id"],
+                "side": item["side"],
+                "role": item["role"],
+                "term": item["term"],
+                "gold_snomed_id": item["gold_snomed_id"],
+                "pred_snomed_id": pred_snomed_id,
+                "hit": hit,
+                "gt_rank": gt_rank,
+                "pred_rank": pred_rank,
+                "num_ranked_candidates": len(ranked_candidates),
+                "top1_concept_id": (
+                    top_candidate.get("concept_id") if top_candidate else None
+                ),
+                "top1_term": top_candidate.get("term") if top_candidate else None,
+                "top1_final_score": top_score,
+                "top2_concept_id": (
+                    runner_candidate.get("concept_id") if runner_candidate else None
+                ),
+                "top2_term": runner_candidate.get("term") if runner_candidate else None,
+                "top2_final_score": runner_score,
+                "score_gap_top1_top2": score_gap_top_runner,
+                "pred_final_score": pred_final_score,
+                "gt_final_score": gt_final_score,
+                "score_delta_pred_vs_gt": score_delta_pred_vs_gt,
+                "near_tie_top1_top2": (
+                    score_gap_top_runner is not None and score_gap_top_runner <= 0.01
+                ),
+                "pred_lexical": (
+                    pred_candidate.get("lexical") if pred_candidate else None
+                ),
+                "pred_coverage": (
+                    pred_candidate.get("coverage") if pred_candidate else None
+                ),
+                "pred_discriminative_coverage": (
+                    pred_candidate.get("discriminative_coverage")
+                    if pred_candidate
+                    else None
+                ),
+                "pred_vector_rank": (
+                    pred_candidate.get("vector_rank") if pred_candidate else None
+                ),
+                "pred_vector_raw": (
+                    pred_candidate.get("vector_raw") if pred_candidate else None
+                ),
+                "pred_vector_bonus": (
+                    pred_candidate.get("vector_bonus") if pred_candidate else None
+                ),
+                "pred_final_penalty": (
+                    pred_candidate.get("final_penalty") if pred_candidate else None
+                ),
+                "pred_semantic_penalty": (
+                    pred_candidate.get("semantic_penalty") if pred_candidate else None
+                ),
+                "pred_role_mismatch_penalty": (
+                    pred_candidate.get("role_mismatch_penalty")
+                    if pred_candidate
+                    else None
+                ),
+                "pred_role_tension_penalty": (
+                    pred_candidate.get("role_tension_penalty")
+                    if pred_candidate
+                    else None
+                ),
+                "pred_low_coverage_penalty": (
+                    pred_candidate.get("low_coverage_penalty")
+                    if pred_candidate
+                    else None
+                ),
+                "pred_missing_discriminative_penalty": (
+                    pred_candidate.get("missing_discriminative_penalty")
+                    if pred_candidate
+                    else None
+                ),
+                "pred_extra_qualifier_penalty": (
+                    pred_candidate.get("extra_qualifier_penalty")
+                    if pred_candidate
+                    else None
+                ),
+                "pred_hard_negative_penalty": (
+                    pred_candidate.get("hard_negative_penalty")
+                    if pred_candidate
+                    else None
+                ),
+                "gt_lexical": gt_candidate.get("lexical") if gt_candidate else None,
+                "gt_coverage": gt_candidate.get("coverage") if gt_candidate else None,
+                "gt_discriminative_coverage": (
+                    gt_candidate.get("discriminative_coverage")
+                    if gt_candidate
+                    else None
+                ),
+                "gt_vector_rank": (
+                    gt_candidate.get("vector_rank") if gt_candidate else None
+                ),
+                "gt_vector_raw": (
+                    gt_candidate.get("vector_raw") if gt_candidate else None
+                ),
+                "gt_vector_bonus": (
+                    gt_candidate.get("vector_bonus") if gt_candidate else None
+                ),
+                "gt_final_penalty": (
+                    gt_candidate.get("final_penalty") if gt_candidate else None
+                ),
+                "gt_semantic_penalty": (
+                    gt_candidate.get("semantic_penalty") if gt_candidate else None
+                ),
+                "gt_role_mismatch_penalty": (
+                    gt_candidate.get("role_mismatch_penalty") if gt_candidate else None
+                ),
+                "gt_role_tension_penalty": (
+                    gt_candidate.get("role_tension_penalty") if gt_candidate else None
+                ),
+                "gt_low_coverage_penalty": (
+                    gt_candidate.get("low_coverage_penalty") if gt_candidate else None
+                ),
+                "gt_missing_discriminative_penalty": (
+                    gt_candidate.get("missing_discriminative_penalty")
+                    if gt_candidate
+                    else None
+                ),
+                "gt_extra_qualifier_penalty": (
+                    gt_candidate.get("extra_qualifier_penalty")
+                    if gt_candidate
+                    else None
+                ),
+                "gt_hard_negative_penalty": (
+                    gt_candidate.get("hard_negative_penalty") if gt_candidate else None
+                ),
+                "gt_present_in_ranked": gt_candidate is not None,
+            }
+        )
+
         if gt_rank is not None:
             gt_ranks.append(gt_rank)
             gt_found_count += 1
@@ -211,7 +383,24 @@ def _evaluate(
                         "final_score": candidate.get("final_score"),
                         "lexical": candidate.get("lexical"),
                         "coverage": candidate.get("coverage"),
+                        "discriminative_coverage": candidate.get(
+                            "discriminative_coverage"
+                        ),
+                        "vector_raw": candidate.get("vector_raw"),
+                        "vector_bonus": candidate.get("vector_bonus"),
                         "vector_rank": candidate.get("vector_rank"),
+                        "semantic_penalty": candidate.get("semantic_penalty"),
+                        "final_penalty": candidate.get("final_penalty"),
+                        "role_mismatch_penalty": candidate.get("role_mismatch_penalty"),
+                        "role_tension_penalty": candidate.get("role_tension_penalty"),
+                        "low_coverage_penalty": candidate.get("low_coverage_penalty"),
+                        "missing_discriminative_penalty": candidate.get(
+                            "missing_discriminative_penalty"
+                        ),
+                        "extra_qualifier_penalty": candidate.get(
+                            "extra_qualifier_penalty"
+                        ),
+                        "hard_negative_penalty": candidate.get("hard_negative_penalty"),
                     }
                     for candidate in ranked_candidates[:10]
                 ],
@@ -262,7 +451,72 @@ def _evaluate(
         "per_role": per_role,
         "rank_metrics": rank_metrics,
         "predictions": predictions,
+        "debug_rows": debug_rows,
     }
+
+
+def _build_debug_json_rows(output: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows_by_key = {
+        _prediction_key(row): row for row in (output.get("predictions") or [])
+    }
+    compact_rows: List[Dict[str, Any]] = []
+    for debug_row in output.get("debug_rows") or []:
+        key = (
+            str(debug_row.get("row_id") or ""),
+            str(debug_row.get("side") or ""),
+            str(debug_row.get("role") or ""),
+            str(debug_row.get("term") or ""),
+            str(debug_row.get("gold_snomed_id") or ""),
+        )
+        pred = rows_by_key.get(key) or {}
+        top10 = pred.get("candidate_rankings_top10") or []
+        compact_rows.append(
+            {
+                **debug_row,
+                "candidate_rankings_top10": top10,
+            }
+        )
+    return compact_rows
+
+
+def _write_debug_artifacts(
+    output: Dict[str, Any],
+    output_json: Path,
+    debug_csv_path: Optional[Path],
+    debug_json_path: Optional[Path],
+) -> Tuple[Optional[Path], Optional[Path]]:
+    if debug_csv_path is None:
+        debug_csv_path = output_json.with_name(f"{output_json.stem}_debug_probe.csv")
+    if debug_json_path is None:
+        debug_json_path = output_json.with_name(f"{output_json.stem}_debug_probe.json")
+
+    debug_rows = output.get("debug_rows") or []
+    if not debug_rows:
+        return None, None
+
+    debug_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = list(debug_rows[0].keys())
+    with debug_csv_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(debug_rows)
+
+    debug_json_rows = _build_debug_json_rows(output)
+    payload = {
+        "run_id": os.getenv("SLURM_JOB_ID", "local"),
+        "mode": output.get("mode"),
+        "total": output.get("total"),
+        "hits": output.get("hits"),
+        "accuracy": output.get("accuracy"),
+        "rank_metrics": output.get("rank_metrics"),
+        "rows": debug_json_rows,
+    }
+    debug_json_path.parent.mkdir(parents=True, exist_ok=True)
+    debug_json_path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    return debug_csv_path, debug_json_path
 
 
 def _prediction_key(row: Dict[str, Any]) -> Tuple[str, str, str, str, str]:
@@ -365,6 +619,18 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help="Optional CSV file to append compact run summaries for parameter sweeps.",
+    )
+    parser.add_argument(
+        "--debug-csv",
+        type=Path,
+        default=None,
+        help="Optional CSV path for per-term probing diagnostics (GT rank and score decomposition).",
+    )
+    parser.add_argument(
+        "--debug-json",
+        type=Path,
+        default=None,
+        help="Optional JSON path for per-term probing diagnostics (includes top candidate traces).",
     )
     return parser
 
@@ -535,6 +801,18 @@ def main() -> int:
         row=manifest_row,
     )
 
+    debug_csv_path, debug_json_path = _write_debug_artifacts(
+        output=output,
+        output_json=args.output_json,
+        debug_csv_path=args.debug_csv,
+        debug_json_path=args.debug_json,
+    )
+
+    if debug_csv_path is not None:
+        output["debug_probe_csv"] = str(debug_csv_path)
+    if debug_json_path is not None:
+        output["debug_probe_json"] = str(debug_json_path)
+
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
     args.output_json.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
 
@@ -544,6 +822,10 @@ def main() -> int:
     print(f"hits={output['hits']}")
     print(f"accuracy={output['accuracy']:.6f}")
     print(f"output_json={args.output_json}")
+    if debug_csv_path is not None:
+        print(f"debug_probe_csv={debug_csv_path}")
+    if debug_json_path is not None:
+        print(f"debug_probe_json={debug_json_path}")
     if args.run_manifest_jsonl is not None:
         print(f"run_manifest_jsonl={args.run_manifest_jsonl}")
     if args.run_manifest_csv is not None:
