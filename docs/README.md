@@ -10,8 +10,8 @@ This repository separates **manual documentation** from **generated snapshots**.
 Current examples:
 
 - `docs/trackers/autotuning/multi_table.md`
-- `docs/trackers/grounding/snomed_mapping_eval.md`
-- `docs/trackers/grounding/procedure_mis_mapping_report.md`
+- `docs/trackers/grounding/cardio_subset_tuning.md`
+- `docs/trackers/grounding/snomed_vector_grounding_tracks.md`
 - `docs/reference/ground_truth_rule_graphs/`
 
 ## Generated docs (machine-written snapshots)
