@@ -408,6 +408,26 @@ class GuidelineGraphBuilder:
         self.index = ConceptIndex(index_path=index_path)
         self.abbreviations = self._load_abbreviations(abbrv_path)
         self.min_match_score = min_match_score
+        env_domain_filter = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_ENABLE_DOMAIN_FILTER"
+        )
+        if env_domain_filter is not None:
+            enable_domain_filter = env_domain_filter.strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
+        env_semantic_tag_filter = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_ENABLE_SEMANTIC_TAG_FILTER"
+        )
+        if env_semantic_tag_filter is not None:
+            enable_semantic_tag_filter = env_semantic_tag_filter.strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
         self.enable_domain_filter = enable_domain_filter
         self.enable_semantic_tag_filter = enable_semantic_tag_filter
         self.off_domain_min_score = off_domain_min_score
