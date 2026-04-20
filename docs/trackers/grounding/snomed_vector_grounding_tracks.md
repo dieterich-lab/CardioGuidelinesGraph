@@ -1,6 +1,6 @@
 # SNOMED Vector Grounding Tracker (Scientific vs Production)
 
-Last updated: 2026-04-17
+Last updated: 2026-04-20
 
 ## Purpose
 Single manual tracker for the latest heldout-split grounding runs and the explicit split between:
@@ -198,3 +198,81 @@ All runs on `locked_test` with identical split filtering:
 Promotion rule:
 - Scientific winner: best strict exact-match on no-rescue split.
 - Production winner: best strict exact-match on rescue-enabled split, with no regression on audited high-risk terms.
+
+## Probing Matrix Results (Completed)
+
+Matrix launcher:
+- `slurm/submit-grounding-probing-matrix.sh`
+
+Executed run mapping (`S1`..`P3`):
+
+| Matrix arm | Run ID | Label | Rescue mode | Accuracy | Hits/Total | MRR |
+|---|---:|---|---|---:|---|---:|
+| S1 | `632860` | `H_NO_RESCUE_LOCKED` | disabled | 0.541667 | 65/120 | 0.588690 |
+| S2 | `632861` | `S2_SCI_SEMANTIC_TIGHT` | disabled | 0.516667 | 62/120 | 0.597718 |
+| S3 | `632862` | `S3_SCI_SEMANTIC_VECTOR_REDUCED` | disabled | 0.516667 | 62/120 | 0.567857 |
+| P1 | `632863` | `P1_PROD_TRAIN_ONLY_REPLAY` | train-only rescue map | 0.825000 | 99/120 | 0.842857 |
+| P2 | `632864` | `P2_PROD_FULL_MAP_REPLAY` | full rescue map | 0.800000 | 96/120 | 0.813690 |
+| P3 | `632865` | `P3_PROD_FULL_MAP_HARD_NEG` | full map + hard negatives | 0.791667 | 95/120 | 0.805357 |
+
+Outcome summary:
+
+1. Scientific winner in this matrix is `S1` (`632860`): `0.541667`.
+2. Proposed scientific tightening (`S2`, `S3`) did not beat the replay baseline on strict exact match.
+3. Production winner in this matrix is `P1` (`632863`): `0.825000`.
+4. Full-map (`P2`) and full-map+hard-negative (`P3`) underperformed `P1` on this heldout split.
+
+## Stage-Trace Instrumentation (for gt_rank=null diagnosis)
+
+Implemented in evaluation pipeline:
+
+1. `ground_entity(..., gold_concept_id=...)` now records `gt_presence_trace` with stage markers:
+  - `gold_in_initial_results`
+  - `gold_in_allowed_domain`
+  - `gold_in_truncated_set`
+  - `gold_filter_reasons`
+  - `gold_in_final_ranked`
+  - `gold_rank_final`
+  - `gold_absence_stage`
+2. Prediction output now includes:
+  - `candidate_rankings_to_gt` (all ranks from top-1 through `gt_rank` when GT is present)
+  - `gt_presence_trace` (for `gt_rank=null` stage attribution)
+
+Trace-enabled replay jobs started:
+
+- Scientific best replay with trace: `632922` (`S1_BEST_TRACE`)
+- Production best replay with trace: `632923` (`P1_BEST_TRACE`)
+
+Planned diagnostic export (once runs complete):
+
+- Script: `scripts/export_grounding_stage_trace_report.py`
+- Output CSV/JSON will enumerate each row+term with rank chain and stage markers.
+
+## Error Rank Observability (Current Capability)
+
+Current eval JSONs provide two relevant fields per prediction:
+
+1. `gt_rank`: exact rank of the gold concept if present in the returned ranked candidate list.
+2. `candidate_rankings_top10`: top-10 candidate details.
+
+Observed miss diagnostics for key scientific runs:
+
+| Run | Misses | Gold rank 2-5 | Gold rank 6-10 | Gold rank >10 | Gold not found in returned ranked list |
+|---|---:|---:|---:|---:|---:|
+| `630837` | 62 | 9 | 1 | 0 | 52 |
+| `632860` | 55 | 11 | 1 | 0 | 43 |
+
+Interpretation:
+
+1. We can already analyze many misses where gold is present but not top-1.
+2. A large miss fraction has `gt_rank=null`, meaning gold is absent from the returned ranked list.
+3. With current artifacts alone, `gt_rank=null` cannot be uniquely decomposed into:
+  - retrieved then filtered,
+  - not retrieved (vector/lexical miss),
+  - truncated before return.
+
+Recommended instrumentation upgrade for next analysis cycle:
+
+1. Persist stage-wise candidate counts and explicit drop reasons (`semantic_tag_filter`, `hard_negative`, `coverage`, `ambiguity_backoff`, truncation).
+2. Emit an optional full ranked list (or at least top-200 + gold-presence flag before/after filters).
+3. Add a per-item `gold_present_pre_filter` and `gold_present_post_filter` marker.
