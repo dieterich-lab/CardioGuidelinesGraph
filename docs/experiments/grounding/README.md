@@ -1,319 +1,189 @@
-# Automated Vector Grounding Pipeline
+# Grounding Pipeline (Conceptual Overview)
 
-This document describes the automated SNOMED CT vector grounding pipeline used in this repository:
+This document explains the grounding algorithm.
 
-- end-to-end flow
-- leakage-safe split handling
-- Slurm orchestration
-- outputs and diagnostics
-- all major runtime knobs
+## Goal
 
-## Scope and entry points
+Given a clinical phrase and its semantic role (for example, condition, procedure, or medication), the system chooses the most plausible SNOMED CT concept.
 
-Primary evaluator module:
+Formally, for each mention $m$ with role $r$, grounding selects:
 
-- `cardio_graph_core.evaluation.ground_truth_snomed_grounding_eval`
+$$
+\hat{c} = \arg\max_{c \in C(m)} S(c \mid m, r, x)
+$$
 
-Primary automation scripts:
+where:
 
-- `slurm/gt-eval-vector-dev-norescue.sbatch`
-- `slurm/derive-train-rescue-from-dev.sbatch`
-- `slurm/gt-eval-vector-locked-norescue.sbatch`
-- `slurm/gt-eval-vector-heldout-trainrescue.sbatch`
-- `slurm/submit-grounding-probing-matrix.sh`
+- $C(m)$ is the candidate set
+- $x$ is optional context
+- $S$ is a composite score balancing evidence and penalties
 
-Core grounding logic and knob defaults:
+## End-to-End Algorithm
 
-- `src/cardio_graph_core/extraction/guideline_graph_builder.py`
-- `src/cardio_graph_core/grounding/entity_grounding_service.py`
+## 1. Input normalization and query expansion
 
-## Pipeline flow
+The input phrase is normalized (case, punctuation, morphology), then expanded into multiple query variants.
 
-## 1. Build split-filtered ground truth payloads
+Typical variants include:
 
-Each Slurm wrapper:
+- original phrase
+- simplified phrase (for long or parenthetical forms)
+- lexical variants and abbreviations
+- context-informed variants (when context is available and useful)
 
-- loads `config/autotuning/split_v3_all_tables.json`
-- resolves split aliases:
-  - `dev` or `dev_rows`
-  - `locked_test` or `locked_test_rows`
-- filters source gold files into per-job artifacts:
-  - `docs/generated/ground_truth/splits/vector_job_<jobid>/table_22_<split>.json`
-  - `docs/generated/ground_truth/splits/vector_job_<jobid>/table_8_<split>.json`
-  - `docs/generated/ground_truth/splits/vector_job_<jobid>/table_17_<split>.json`
+Purpose:
 
-This is the first leakage guardrail: evaluation always runs on explicit split-filtered snapshots.
+- improve recall at candidate retrieval
+- preserve clinically relevant tokens
+- reduce brittleness to surface form changes
 
-## 2. Start per-job local embedding server
+## 2. Candidate retrieval
 
-Wrappers start `ollama serve` on a job-specific local port:
+Candidates are gathered from two complementary channels:
 
-- `OLLAMA_PORT=11434 + (SLURM_JOB_ID % 1000)` unless overridden
-- `OLLAMA_HOST=127.0.0.1:<port>`
-- `CARDIO_GRAPH_GROUNDING_EMBEDDING_URL=http://127.0.0.1:<port>`
+- lexical retrieval: candidates matching string/token structure
+- semantic retrieval: candidates near the mention in representation space
 
-This isolates embedding serving per Slurm job and avoids shared-process coupling.
+The two channels are merged into one candidate pool before ranking.
 
-## 3. Run evaluator in vector mode
+## 3. Role-aware and domain-aware filtering
 
-Each wrapper calls:
+Before detailed ranking, candidates are constrained by medical plausibility rules.
 
-```bash
-poetry run python -m cardio_graph_core.evaluation.ground_truth_snomed_grounding_eval \
-  --mode vector \
-  --gold-path <split-filtered table_22> \
-  --gold-path <split-filtered table_8> \
-  --gold-path <split-filtered table_17> \
-  --model Qwen3next \
-  --node g3 \
-  --port 11433 \
-  --vector-uri bolt://neo4j-dev3.internal:7687 \
-  --vector-user neo4j \
-  --vector-index snomed_term_embeddings_4096 \
-  --embedding-model Qwen3embed \
-  --embedding-node local \
-  --embedding-port <OLLAMA_PORT> \
-  --run-manifest-jsonl docs/generated/grounding/ground_truth_vector_runs_manifest.jsonl \
-  --run-manifest-csv docs/generated/grounding/ground_truth_vector_runs_manifest.csv \
-  --output-json docs/generated/ground_truth/grounding_only/vector_job_<jobid>/ground_truth_vector_eval.json
-```
+Key filters:
 
-The evaluator writes:
+- domain-root compatibility: keep concepts in the expected ontology region for the role (example: for a Procedure mention, prioritize candidates that live in procedural branches of the ontology rather than condition-only branches)
+- semantic-tag compatibility: discourage or exclude incompatible semantic classes (example: if the mention is a medication, concepts tagged like finding or body structure should be strongly down-weighted or rejected)
+- minimum token-overlap sanity checks: remove candidates with no meaningful lexical overlap (example: a candidate that shares only very generic words like heart or disease but misses the core phrase content is filtered out)
 
-- per-item predictions with ranked candidates
-- rank metrics (MRR, hit@k, precision@k, GT-rank stats)
-- `config_env` snapshot (grounding, Ollama, Slurm vars, with secret redaction)
-- optional debug probe CSV/JSON artifacts
+### Where this filter information comes from
 
-## 4. Derive train-only rescue map (optional, leakage-safe production track)
+- Semantic tag source:
+  - The tag is read from the SNOMED preferred term string, typically in the trailing parenthetical form, for example `myocardial infarction (disorder)`.
+  - Conceptually, the algorithm extracts the part in parentheses and uses it as the candidate semantic class.
 
-`slurm/derive-train-rescue-from-dev.sbatch` uses a dev-only eval output and creates:
+- Domain-root source:
+  - Each clinical role (for example, Procedure, Medication, ClinicalCondition) is associated with one or more SNOMED root regions.
+  - A candidate is considered domain-compatible when its taxonomy ancestry intersects with the allowed root region for that role.
 
-- `config/cardio_graph_core/grounding_rescue_map_train_only.yaml`
-- `docs/generated/grounding/train_rescue_derivation_report_from_dev_<jobid>.json`
+- Why both are used:
+  - Semantic tags provide a local class check at the concept-name level.
+  - Domain-root checks provide a structural ontology-level check.
+  - Together, they reduce both obvious class mismatches and deeper hierarchy mismatches.
 
-Derivation script:
+This stage controls gross category errors (for example, selecting a finding where a procedure is expected).
 
-- reads misses only
-- keeps only rows that belong to selected split (`--split-name dev`)
-- emits deterministic `term+role -> concept_id` overrides
-- defaults to unambiguous mappings only
+## 4. Evidence scoring per candidate
 
-This is the second leakage guardrail: rescue map derivation can be constrained to train/dev rows.
-
-## 5. Run probing matrix (scientific vs production)
-
-`slurm/submit-grounding-probing-matrix.sh` submits a dependency chain:
-
-- `S1`: no-rescue scientific baseline
-- `S2`: semantic-tight scientific
-- `S3`: semantic-tight + vector-reduced + ambiguity-tight scientific
-- `P1`: train-only rescue production replay
-- `P2`: full-map rescue production replay
-- `P3`: full-map rescue + hard-negatives production
-
-Matrix metadata is carried in `CARDIO_GRAPH_GROUNDING_ABLATION_LABEL`.
-
-## 6. Export stage-trace diagnostics (optional)
-
-If stage trace is enabled, each prediction includes `gt_presence_trace` and ranking chains.
-`scripts/export_grounding_stage_trace_report.py` converts these to tabular diagnostics:
-
-- stage where GT was lost (`gold_absence_stage`)
-- whether GT survived domain filter/truncation/final ranking
-- chain to GT rank and top-10 chain
-
-## Knob precedence and effective defaults
-
-Knob resolution order:
-
-1. Explicit env var provided at submission/runtime.
-2. Wrapper default (`${VAR:-default}`) if present.
-3. Engine default in `GuidelineGraphBuilder` / evaluator.
-
-Important consequence:
-
-- documented defaults in code are global engine defaults
-- the Slurm wrappers intentionally override many of them for the current validated H/H2 profile
-
-## Full knob reference
-
-The table below lists the key runtime knobs used by automated vector grounding.
-
-### A) Core vector backend
-
-| Env var | Meaning | Typical/Default |
-|---|---|---|
-| `CARDIO_GRAPH_GROUNDING_ENABLE_VECTOR` | Enable vector retrieval+rereanking. | Evaluator sets `true` in vector mode; engine default `false`. |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_URI` | Neo4j Bolt URI for vector index. | `bolt://neo4j-dev3.internal:7687` |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_USER` | Neo4j user. | `neo4j` |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_PASSWORD` | Neo4j password. | Required; wrappers fail fast if missing. |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_INDEX` | Vector index name. | Engine default `snomed_term_embeddings`; wrappers pass `snomed_term_embeddings_4096`. |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_TOP_K` | Vector retrieval depth. | Engine default `40`. |
-| `CARDIO_GRAPH_GROUNDING_EMBEDDING_MODEL` | Embedding model name. | `Qwen3embed` |
-| `CARDIO_GRAPH_GROUNDING_EMBEDDING_URL` | Embedding server URL. | Built from local Ollama host/port in wrappers. |
-| `CARDIO_GRAPH_GROUNDING_EMBEDDING_PORT` | Embedding port. | Resolved from CLI/env; wrapper usually equals `OLLAMA_PORT`. |
-| `CARDIO_GRAPH_GROUNDING_EMBEDDING_NODE` | Embedding host node key. | Usually `local` in wrapper runs. |
-| `CARDIO_GRAPH_GROUNDING_EMBEDDING_TIMEOUT` | Embedding request timeout (seconds). | Engine default `20`. |
-
-### B) Vector contribution and rank priors
-
-| Env var | Meaning | Engine default | Wrapper baseline |
-|---|---|---:|---:|
-| `CARDIO_GRAPH_GROUNDING_VECTOR_RERANK_WEIGHT` | Multiplier for vector score bonus. | 0.10 | 0.03 |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_BONUS_CAP` | Max vector bonus. | 0.12 | 0.05 |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_MIN_LEXICAL_FOR_BONUS` | Lexical floor before vector bonus applies. | 0.70 | 0.90 |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_TIE_EPSILON` | Tie epsilon helper. | 0.002 | (engine default) |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_ENABLED` | Enable rank-prior boost. | false | usually false |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_TOP_K` | Rank-prior scope. | 3 | 3 |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_BONUS` | Max rank-prior bonus. | 0.03 | 0.03 |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_LEXICAL_FLOOR` | Lexical floor for rank-prior. | 0.55 | 0.55 |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_ENABLED` | Enable near-tie vector-rank promotion. | false | usually false |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MARGIN` | Max final-score gap for promotion. | 0.015 | 0.015 |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MAX_RANK` | Runner rank threshold. | 3 | 3 |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MIN_COVERAGE` | Coverage floor for promotion. | 0.70 | 0.70 |
-
-### C) Context-aware vector query expansion
+Each remaining candidate receives evidence from multiple signals:
 
-| Env var | Meaning | Engine default | Wrapper baseline |
-|---|---|---:|---:|
-| `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ENABLED` | Include structured/text context variants in vector search terms. | false | true |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_ALLOWED_ROLES` | Roles eligible for context expansion. | `Procedure` | `Procedure,Medication` |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_APPEND_TERM` | Also submit `<term> + <context fragment>` variants. | false | true |
-| `CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_MAX_TOKENS` | Per-context variant token budget. | 8 | 8 |
+- lexical similarity (example: `myocardial infarction` should score closer to concepts explicitly containing `myocardial infarction` than to loosely related findings)
+- weighted token coverage (example: for `percutaneous coronary revascularization`, a candidate covering all three core tokens should outrank one matching only `coronary`)
+- discriminative token coverage (rare or highly informative tokens; example: tokens like `supravalvar` or `papillary` should strongly favor candidates that contain them)
+- semantic retrieval support (example: paraphrases such as `heart attack` can still support `myocardial infarction` even when literal token overlap is incomplete)
 
-### D) Coverage and specificity penalties
+These components produce a base plausibility estimate.
 
-| Env var | Meaning | Engine default | Wrapper baseline |
-|---|---|---:|---:|
-| `CARDIO_GRAPH_GROUNDING_MIN_WEIGHTED_QUERY_COVERAGE` | Minimum weighted token coverage before penalty. | 0.45 | 0.45 |
-| `CARDIO_GRAPH_GROUNDING_LOW_COVERAGE_PENALTY` | Penalty for low weighted coverage. | 0.12 | 0.12 |
-| `CARDIO_GRAPH_GROUNDING_MISSING_DISCRIMINATIVE_PENALTY` | Penalty if discriminative tokens are absent. | 0.10 | 0.10 |
-| `CARDIO_GRAPH_GROUNDING_EXTRA_QUALIFIER_PENALTY` | Weight penalizing extra qualifiers in candidate terms. | 0.10 | 0.10 |
-| `CARDIO_GRAPH_GROUNDING_GUARDED_FALLBACK_MARGIN` | Margin for guarded fallback to more discriminative runner. | 0.015 | 0.015 |
-| `CARDIO_GRAPH_GROUNDING_MIN_DISCRIMINATIVE_COVERAGE_FOR_TOP` | Discriminative-coverage floor for top candidate. | 0.60 | 0.60 |
+## 5. Structured penalties
 
-### E) Ambiguity handling
+The model then applies penalties for known failure modes.
 
-| Env var | Meaning | Engine default | Wrapper baseline |
-|---|---|---:|---:|
-| `CARDIO_GRAPH_GROUNDING_AMBIGUITY_ABSTAIN_MARGIN` | Near-tie margin where abstain/backoff logic can trigger. | 0.0 | 0.012 |
-| `CARDIO_GRAPH_GROUNDING_AMBIGUITY_MIN_COVERAGE` | Coverage threshold used in ambiguity checks. | 0.55 | 0.55 |
-| `CARDIO_GRAPH_GROUNDING_AMBIGUITY_LEXICAL_FORCE_PICK` | Lexical threshold above which forced pick still occurs. | 0.90 | 0.90 |
-| `CARDIO_GRAPH_GROUNDING_AMBIGUITY_CONFIDENCE_BACKOFF_ENABLED` | Enables confidence-based backoff candidate search. | true | true |
-| `CARDIO_GRAPH_GROUNDING_AMBIGUITY_BACKOFF_MAX_DROP` | Max score drop from top allowed during backoff. | 0.05 | 0.30 |
-| `CARDIO_GRAPH_GROUNDING_AMBIGUITY_BACKOFF_MIN_SCORE` | Absolute minimum score eligible for backoff candidate. | 0.35 | 0.45 |
+Major penalty families:
 
-### F) Role and semantic penalties
+- role mismatch penalty
+- semantic-class mismatch penalty
+- low-coverage penalty
+- missing-discriminative-token penalty (example: if the query includes `supravalvar` but the candidate omits it, confidence drops)
+- overspecificity/extra-qualifier penalty (example: penalize choosing a very specific subtype when the mention is broad, such as mapping a general revascularization phrase to a narrow procedural variant)
+- hard-negative penalty for repeatedly wrong concept choices
 
-| Env var | Meaning | Engine default | Wrapper baseline |
-|---|---|---:|---:|
-| `CARDIO_GRAPH_GROUNDING_ROLE_SOFT_CONSTRAINTS` | Soft-penalize role mismatch instead of hard-filtering mismatches. | false | true |
-| `CARDIO_GRAPH_GROUNDING_ROLE_MISMATCH_PENALTY` | Penalty when candidate role does not align. | 0.08 | 0.05 |
-| `CARDIO_GRAPH_GROUNDING_ROLE_TENSION_PENALTY` | Extra mismatch penalty for configured tension terms. | 0.03 | 0.02 |
-| `CARDIO_GRAPH_GROUNDING_ROLE_TENSION_TERMS` | CSV list of high-risk terms for extra role tension penalty. | Engine default list | wrapper leaves default |
-| `CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_MISMATCH_PENALTY` | Penalty for semantic-tag mismatch. | 0.06 | 0.06 |
-| `CARDIO_GRAPH_GROUNDING_ROLE_SEMANTIC_CROSSCLASS_PENALTY` | Penalty for stronger cross-class semantic mismatch. | 0.02 | 0.02 |
-| `CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_RELIEF_ENABLED` | Reduce semantic penalty when lexical/coverage/vector evidence is strong. | false | usually false |
-| `CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_MIN_COVERAGE` | Coverage floor for evidence relief. | 0.75 | 0.75 |
-| `CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_MAX_VECTOR_RANK` | Max vector rank for evidence relief. | 3 | 3 |
-| `CARDIO_GRAPH_GROUNDING_SEMANTIC_PENALTY_EVIDENCE_SCALE` | Multiplicative scale when relief applies. | 0.5 | 0.5 |
+Conceptually:
 
-### G) Hard negatives
+$$
+S(c) = E(c) + V(c) - P(c)
+$$
 
-| Env var | Meaning | Engine default | Wrapper baseline |
-|---|---|---:|---:|
-| `CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_PENALTY` | Penalty if candidate concept is blocked for term-role. | 0.05 | 0.0 (baseline), 0.10 in P3 |
-| `CARDIO_GRAPH_GROUNDING_HARD_NEGATIVE_MANIFEST` | JSON manifest containing blocked concept IDs per term-role. | default manifest path | optional override in matrix |
+with:
 
-### H) Rescue overrides
+- $E(c)$ lexical and coverage evidence
+- $V(c)$ semantic/vector support bonus
+- $P(c)$ sum of penalties
 
-| Env var | Meaning | Typical value |
-|---|---|---|
-| `CARDIO_GRAPH_GROUNDING_RESCUE_ENABLED` | Enable deterministic rescue overrides. | `false` (scientific), `true` (production) |
-| `CARDIO_GRAPH_GROUNDING_RESCUE_MAP_PATH` | YAML map path for term-role overrides. | `.../grounding_rescue_map_train_only.yaml` or full map |
+## 6. Tie handling and ambiguity control
 
-### I) Run metadata and diagnostics
+When top candidates are very close, the system applies guarded rules rather than always taking top-1 blindly.
 
-| Env var | Meaning |
-|---|---|
-| `CARDIO_GRAPH_GROUNDING_ABLATION_LABEL` | Label carried in run environment/logs for experiment traceability. |
-| `CARDIO_GRAPH_GROUNDING_DEBUG_TOP_CANDIDATES` | Log top candidate decomposition rows during grounding. |
-| `CARDIO_GRAPH_GROUNDING_STAGE_TRACE_ENABLED` | Enable stage-level GT presence diagnostics in evaluator outputs. |
+Typical ambiguity logic:
 
-### J) Split and infrastructure knobs used by wrappers
+- abstain or back off when confidence is low and near-ties exist
+- prefer candidates with better discriminative coverage under small score gaps (example: if two candidates are nearly tied, prefer the one that preserves the key distinguishing token from the query)
+- allow conservative reranking only in narrowly defined near-tie conditions
 
-| Env var | Meaning |
-|---|---|
-| `CARDIO_GRAPH_GROUNDING_SPLIT_FILE` | Split definition JSON path (default `config/autotuning/split_v3_all_tables.json`). |
-| `CARDIO_GRAPH_GROUNDING_SPLIT_NAME` | Selected split (used by heldout wrapper; default `locked_test`). |
-| `CARDIO_GRAPH_SECRETS_ENV_PATH` | Optional env file for secrets. |
-| `OLLAMA_PORT`, `OLLAMA_HOST`, `OLLAMA_KEEP_ALIVE`, `OLLAMA_TIMEOUT` | Per-job local embedding server controls. |
+This reduces unstable picks caused by superficial score noise.
 
-## Automation recipes
+## 7. Optional deterministic rescue layer
 
-## A) Scientific baseline (locked_test, no rescue)
+A separate override layer can map specific term+role pairs to fixed concepts.
 
-```bash
-sbatch slurm/gt-eval-vector-locked-norescue.sbatch
-```
+Important principle:
 
-## B) Dev baseline for deriving train-only rescue map
+- scientific evaluation and production optimization are treated as separate tracks
+- overrides are used for operational stability, not to inflate unbiased scientific estimates
 
-```bash
-DEV_JOB_ID=$(sbatch --parsable slurm/gt-eval-vector-dev-norescue.sbatch)
-sbatch --dependency=afterok:${DEV_JOB_ID} --export=ALL,DEV_JOB_ID=${DEV_JOB_ID} \
-  slurm/derive-train-rescue-from-dev.sbatch
-```
+## 8. Final output
 
-## C) Production validation with train-only rescue
+For each mention, the system returns:
 
-```bash
-sbatch slurm/gt-eval-vector-heldout-trainrescue.sbatch
-```
+- predicted concept (or abstain)
+- confidence score
+- ranked alternatives
+- diagnostic traces explaining where evidence or filtering changed the outcome
 
-## D) Full probing matrix
+## Why this pipeline is structured this way
 
-```bash
-bash slurm/submit-grounding-probing-matrix.sh
-```
+The design addresses three common grounding tensions:
 
-## Outputs and where to look
+- Recall vs precision:
+  - broad retrieval increases coverage, while filtering and penalties recover precision.
+- Semantic flexibility vs ontological validity:
+  - semantic similarity helps with paraphrases, while role/domain constraints preserve clinical correctness.
+- Determinism vs adaptability:
+  - deterministic rescue can stabilize recurrent errors, while the core scorer remains general.
 
-Main outputs:
+## Typical error classes (and corresponding controls)
 
-- `docs/generated/ground_truth/grounding_only/vector_job_<jobid>/ground_truth_vector_eval.json`
-- `docs/generated/grounding/ground_truth_vector_runs_manifest.jsonl`
-- `docs/generated/grounding/ground_truth_vector_runs_manifest.csv`
+- Overspecific prediction:
+  - controlled by extra-qualifier and discriminative-coverage logic.
+- Cross-role/cross-class prediction:
+  - controlled by role and semantic-tag penalties or filters.
+- Near-tie instability:
+  - controlled by ambiguity backoff and guarded reranking.
+- Recurrent known confusions:
+  - controlled by hard negatives or deterministic overrides.
 
-Support artifacts:
+## Evaluation philosophy
 
-- split snapshots: `docs/generated/ground_truth/splits/vector_job_<jobid>/...`
-- Ollama logs: `slurm/ollama-server_<jobname>_<jobid>.log`
-- Slurm logs: `slurm/<jobname>_<jobid>.log`
-- rescue derivation reports: `docs/generated/grounding/train_rescue_derivation_report_from_dev_<jobid>.json`
+Evaluation emphasizes exact concept correctness while also tracking rank-sensitive behavior.
 
-Optional diagnostics:
+Common quality views:
 
-- debug probes: `<eval_json_stem>_debug_probe.csv` and `<eval_json_stem>_debug_probe.json`
-- stage trace export via `scripts/export_grounding_stage_trace_report.py`
+- top-1 exact accuracy
+- hit@k
+- mean reciprocal rank
+- GT-rank diagnostics (where the gold concept appears in the candidate list)
+- stage-level diagnostics (where gold concepts are filtered or lost)
 
-## Troubleshooting quick checks
+To prevent leakage, model development and policy derivation are separated from locked evaluation.
 
-- Missing Neo4j password:
-  - set `CARDIO_GRAPH_GROUNDING_VECTOR_PASSWORD` (or one of accepted fallbacks in wrapper).
-- Ollama not found on node:
-  - wrapper exits early; verify `ollama` availability in job environment.
-- Split not found:
-  - confirm split keys in `config/autotuning/split_v3_all_tables.json`.
-- Rescue map expected but missing:
-  - heldout rescue wrapper checks `CARDIO_GRAPH_GROUNDING_RESCUE_MAP_PATH` exists.
+## Summary
 
-## Recommended policy usage
+At a high level, grounding is a constrained ranking problem:
 
-- Scientific reporting:
-  - run no-rescue (`CARDIO_GRAPH_GROUNDING_RESCUE_ENABLED=false`) on locked split.
-- Production reporting:
-  - validate with train-only rescue map first.
-  - evaluate full map and hard-negative variants separately.
-- Keep scientific and production tracks separate in conclusions.
+1. retrieve broadly
+2. filter clinically implausible candidates
+3. rank with multi-signal evidence
+4. penalize known failure patterns
+5. resolve ambiguity conservatively
+6. optionally apply deterministic corrections in a separate production track
+
+This yields a system that is both semantically flexible and clinically disciplined.
