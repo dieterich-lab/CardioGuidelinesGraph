@@ -1,5 +1,7 @@
 # Grounding Pipeline (Conceptual Overview)
 
+For the exact, implementation-level procedure used to establish the SNOMED cardiology subset, see [Cardio Subset from SNOMED](cardio_subset/README.md).
+
 This document explains the grounding algorithm.
 
 ## Goal
