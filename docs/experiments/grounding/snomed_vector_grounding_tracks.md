@@ -21,7 +21,7 @@ Single manual tracker for the latest heldout-split grounding runs and the explic
   - `slurm/ollama-server_gt-eval-vector-locked-norescue_630837.log`
   - `slurm/ollama-server_gt-eval-vector-heldout_630838.log`
 - Scientific mapping reference:
-  - `docs/reference/grounding/current_snomed_mappings_scientific_track.md`
+  - `docs/reports/grounding/current_snomed_mappings_scientific_track.md`
 
 ## Track Definitions
 
@@ -66,7 +66,7 @@ Single manual tracker for the latest heldout-split grounding runs and the explic
 
 Interpretation:
 - On the same `locked_test` split, enabling the train-only rescue map yields a large gain in top-1 grounding quality.
-- The scientific comparison reference remains run `630837` and is mirrored in `docs/reference/grounding/current_snomed_mappings_scientific_track.md`.
+- The scientific comparison reference remains run `630837` and is mirrored in `docs/reports/grounding/current_snomed_mappings_scientific_track.md`.
 
 ## Run Settings Snapshot (Common + Differences)
 
@@ -99,9 +99,9 @@ For each new run, append:
 ## Colleague Evaluation Intake (Issue #56)
 
 Inputs reviewed:
-- `docs/reference/grounding/current_snomed_mappings_scientific_track.md`
-- `docs/reference/grounding/snomed_eval.csv`
-- `docs/reference/grounding/snomed_eval.xlsx`
+- `docs/reports/grounding/current_snomed_mappings_scientific_track.md`
+- `docs/reports/grounding/snomed_eval.csv`
+- `docs/reports/grounding/snomed_eval.xlsx`
 
 Reviewer note (issue #56, latest comment):
 - Negatives reviewed: 62

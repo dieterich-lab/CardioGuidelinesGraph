@@ -4,15 +4,16 @@ This repository separates **manual documentation** from **generated snapshots**.
 
 ## Manual docs (authored and tracked)
 
-- `docs/trackers/`: milestone notes, decisions, and experiment tracking.
-- `docs/reference/`: stable reference visuals/explanations.
+- `docs/experiments/`: milestone notes, decisions, and experiment tracking.
+- `docs/reports/`: stable reference visuals, summaries, and evaluation tables.
 
 Current examples:
 
-- `docs/trackers/autotuning/multi_table.md`
-- `docs/trackers/grounding/cardio_subset_tuning.md`
-- `docs/trackers/grounding/snomed_vector_grounding_tracks.md`
-- `docs/reference/ground_truth_rule_graphs/`
+- `docs/experiments/grounding/README.md`
+- `docs/experiments/autotuning/multi_table.md`
+- `docs/experiments/grounding/cardio_subset_tuning.md`
+- `docs/experiments/grounding/snomed_vector_grounding_tracks.md`
+- `docs/reports/ground_truth_rule_graphs/`
 
 ## Generated docs (machine-written snapshots)
 

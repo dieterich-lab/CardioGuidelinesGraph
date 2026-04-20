@@ -17,7 +17,7 @@ Track all tuning decisions for SNOMED cardiology subset generation until groundi
 
 ## Historical Notes
 - 2026-04-09: pruned noisy lexical terms from config (`cardiac`, `failure`, `pericard`, `pacemaker`, `transplant`, `depression`, `death`, `ESC`, `AF`) via commit `ecab2c6`.
-- 2026-04-10: baseline 200-sample audit created in `docs/trackers/grounding/cardio_subset_sample_audit_200.json` before recall recovery.
+- 2026-04-10: baseline 200-sample audit created in `docs/experiments/grounding/cardio_subset_sample_audit_200.json` before recall recovery.
   - Proxy sensitivity: `0.85`
   - Proxy specificity: `0.97`
   - Gold coverage (T22/T17/T8): `69/69`.

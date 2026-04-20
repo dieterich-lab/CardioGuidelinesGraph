@@ -10,7 +10,7 @@ Evaluator entrypoint:
 
 Artifact policy:
 
-- Durable tracker docs stay under `docs/trackers/`.
+- Durable tracker docs stay under `docs/experiments/`.
 - Generated evaluation artifacts live under `/prj/doctoral_letters/guide/data/cardio_guidelines_graph/artifacts/`.
 
 ## What it does
@@ -94,7 +94,7 @@ Persistent machine-readable manifest:
 
 Durable milestone doc:
 
-- `docs/trackers/grounding/snomed_mapping_eval.md`
+- `docs/experiments/grounding/snomed_vector_grounding_tracks.md`
 
 ## Important grounding env knobs
 
