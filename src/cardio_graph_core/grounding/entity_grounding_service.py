@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 import unicodedata
@@ -372,6 +373,7 @@ class EntityGroundingService:
         role: Optional[str],
         query_context: Any = None,
         limit: int = 100,
+        gold_concept_id: Optional[int] = None,
         return_ranked: bool = False,
     ) -> Any:
         b = self.builder
@@ -381,9 +383,16 @@ class EntityGroundingService:
             best_term: Optional[str],
             best_score: float,
             ranked_candidates: Optional[List[Dict[str, Any]]] = None,
+            diagnostics: Optional[Dict[str, Any]] = None,
         ):
             if return_ranked:
-                return best_id, best_term, best_score, ranked_candidates or []
+                return (
+                    best_id,
+                    best_term,
+                    best_score,
+                    ranked_candidates or [],
+                    diagnostics or {},
+                )
             return best_id, best_term, best_score
 
         if not term:
@@ -444,6 +453,22 @@ class EntityGroundingService:
         if not search_terms:
             search_terms = [term]
 
+        trace_enabled = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_STAGE_TRACE_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        gold_presence_trace: Dict[str, Any] = {
+            "gold_concept_id": gold_concept_id,
+            "trace_enabled": trace_enabled,
+            "gold_in_initial_results": None,
+            "gold_in_allowed_domain": None,
+            "gold_in_truncated_set": None,
+            "gold_filter_reasons": [],
+            "gold_in_final_ranked": None,
+            "gold_rank_final": None,
+            "gold_absence_stage": None,
+        }
+
         rescue_concept_id = b._grounding_rescue_override(term, role)
         if rescue_concept_id is not None:
             rescue_term = b._get_preferred_term(rescue_concept_id)
@@ -474,6 +499,11 @@ class EntityGroundingService:
                     rescue_term,
                     1.0,
                     rescue_candidates,
+                    {
+                        "gold_concept_id": gold_concept_id,
+                        "trace_enabled": trace_enabled,
+                        "gold_absence_stage": "rescue_override",
+                    },
                 )
 
         results = []
@@ -527,7 +557,12 @@ class EntityGroundingService:
         results.extend(vector_results)
 
         if not results:
-            return _return_result(None, None, 0.0, [])
+            if trace_enabled and gold_concept_id is not None:
+                gold_presence_trace["gold_in_initial_results"] = False
+                gold_presence_trace["gold_in_allowed_domain"] = False
+                gold_presence_trace["gold_in_truncated_set"] = False
+                gold_presence_trace["gold_absence_stage"] = "not_retrieved"
+            return _return_result(None, None, 0.0, [], gold_presence_trace)
 
         concept_terms: Dict[int, List[str]] = {}
         for r in results:
@@ -565,6 +600,17 @@ class EntityGroundingService:
             )
             concept_items = concept_items[:MAX_CONCEPT_CANDIDATES]
 
+        if trace_enabled and gold_concept_id is not None:
+            gold_presence_trace["gold_in_initial_results"] = any(
+                concept_id == gold_concept_id for concept_id, _ in concept_items_all
+            )
+            gold_presence_trace["gold_in_allowed_domain"] = any(
+                concept_id == gold_concept_id for concept_id, _ in concept_items_allowed
+            )
+            gold_presence_trace["gold_in_truncated_set"] = any(
+                concept_id == gold_concept_id for concept_id, _ in concept_items
+            )
+
         if use_short_query:
             query_terms = tokens
         else:
@@ -585,6 +631,7 @@ class EntityGroundingService:
         def score_candidates(concept_items_to_score, role_filter):
             candidate_debug_rows: List[Dict[str, Any]] = []
             scored_candidates: List[Dict[str, Any]] = []
+            gold_filter_reasons: List[str] = []
             normalized_query_terms = {
                 self._normalize(q) for q in query_terms if self._normalize(q)
             }
@@ -595,6 +642,12 @@ class EntityGroundingService:
                     concept_id, role_filter
                 )
                 if role_mismatch and not b.enable_role_soft_constraints:
+                    if (
+                        trace_enabled
+                        and gold_concept_id is not None
+                        and concept_id == gold_concept_id
+                    ):
+                        gold_filter_reasons.append("role_mismatch_hard_filter")
                     continue
                 preferred = b._get_preferred_term(concept_id)
                 candidates = list(terms)
@@ -606,6 +659,12 @@ class EntityGroundingService:
                         important_query_tokens & set(self._important_tokens(candidate))
                         for candidate in candidates
                     ):
+                        if (
+                            trace_enabled
+                            and gold_concept_id is not None
+                            and concept_id == gold_concept_id
+                        ):
+                            gold_filter_reasons.append("token_overlap_filter")
                         continue
 
                 score = 0.0
@@ -778,7 +837,7 @@ class EntityGroundingService:
                 )
 
             if not scored_candidates:
-                return None, None, 0.0, []
+                return None, None, 0.0, [], {"gold_filter_reasons": gold_filter_reasons}
 
             scored_candidates = sorted(
                 scored_candidates,
@@ -891,20 +950,38 @@ class EntityGroundingService:
                     role_filter or "ANY",
                     top_rows,
                 )
-            return local_best_id, local_best_term, local_best_score, scored_candidates
+            return (
+                local_best_id,
+                local_best_term,
+                local_best_score,
+                scored_candidates,
+                {"gold_filter_reasons": gold_filter_reasons},
+            )
 
-        best_id, best_term, best_score, ranked_candidates = score_candidates(
-            concept_items, role
-        )
+        (
+            best_id,
+            best_term,
+            best_score,
+            ranked_candidates,
+            scoring_trace,
+        ) = score_candidates(concept_items, role)
+        if trace_enabled:
+            gold_presence_trace["gold_filter_reasons"] = list(
+                (scoring_trace or {}).get("gold_filter_reasons") or []
+            )
 
         if b.off_domain_min_score is not None and role:
             if best_score < b.off_domain_min_score:
                 fallback_items = concept_items_all
                 if len(fallback_items) > MAX_CONCEPT_CANDIDATES:
                     fallback_items = fallback_items[:MAX_CONCEPT_CANDIDATES]
-                off_id, off_term, off_score, off_ranked = score_candidates(
-                    fallback_items, None
-                )
+                (
+                    off_id,
+                    off_term,
+                    off_score,
+                    off_ranked,
+                    _off_trace,
+                ) = score_candidates(fallback_items, None)
                 if off_score >= b.off_domain_min_score and off_score > best_score:
                     best_id, best_term, best_score, ranked_candidates = (
                         off_id,
@@ -914,15 +991,64 @@ class EntityGroundingService:
                     )
 
         if self._has_disallowed_semantic_tag(best_term):
-            return _return_result(None, None, 0.0, ranked_candidates)
+            if trace_enabled and gold_concept_id is not None:
+                gold_presence_trace["gold_absence_stage"] = (
+                    "prediction_blocked_disallowed_semantic_tag"
+                )
+            return _return_result(
+                None, None, 0.0, ranked_candidates, gold_presence_trace
+            )
         if b.enable_semantic_tag_filter and not self._has_allowed_semantic_tag(
             role, best_term
         ):
-            return _return_result(None, None, 0.0, ranked_candidates)
+            if trace_enabled and gold_concept_id is not None:
+                gold_presence_trace["gold_absence_stage"] = (
+                    "prediction_blocked_semantic_tag_filter"
+                )
+            return _return_result(
+                None, None, 0.0, ranked_candidates, gold_presence_trace
+            )
+
+        if trace_enabled and gold_concept_id is not None:
+            gold_candidate = None
+            for candidate in ranked_candidates:
+                if candidate.get("concept_id") == gold_concept_id:
+                    gold_candidate = candidate
+                    break
+            gold_presence_trace["gold_in_final_ranked"] = gold_candidate is not None
+            gold_presence_trace["gold_rank_final"] = (
+                int(gold_candidate.get("rank") or 0) or None
+                if gold_candidate is not None
+                else None
+            )
+            if gold_candidate is None:
+                if not gold_presence_trace.get("gold_in_initial_results"):
+                    gold_presence_trace["gold_absence_stage"] = "not_retrieved"
+                elif not gold_presence_trace.get("gold_in_allowed_domain"):
+                    gold_presence_trace["gold_absence_stage"] = (
+                        "filtered_by_domain_roots"
+                    )
+                elif not gold_presence_trace.get("gold_in_truncated_set"):
+                    gold_presence_trace["gold_absence_stage"] = (
+                        "truncated_before_scoring"
+                    )
+                elif gold_presence_trace.get("gold_filter_reasons"):
+                    gold_presence_trace["gold_absence_stage"] = "filtered_pre_score"
+                else:
+                    gold_presence_trace["gold_absence_stage"] = (
+                        "lost_during_scoring_or_ranking"
+                    )
+            else:
+                gold_presence_trace["gold_absence_stage"] = "ranked"
 
         _ = time.perf_counter() - search_start
-
-        return _return_result(best_id, best_term, best_score, ranked_candidates)
+        return _return_result(
+            best_id,
+            best_term,
+            best_score,
+            ranked_candidates,
+            gold_presence_trace,
+        )
 
     def ground_extracted_concepts(self, extracted: List[Any]) -> List[GroundedConcept]:
         b = self.builder

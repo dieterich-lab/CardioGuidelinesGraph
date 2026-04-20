@@ -162,18 +162,22 @@ def _evaluate(
         return concept_term
 
     for item in items:
-        concept_id, preferred_term, score, ranked_candidates = service.ground_entity(
-            item["term"],
-            item["role"],
-            query_context=item.get("context") or "",
-            return_ranked=True,
-        )
-        pred_snomed_id = "" if concept_id is None else str(concept_id)
-        hit = pred_snomed_id == item["gold_snomed_id"]
         try:
             gold_snomed_id_int = int(item["gold_snomed_id"])
         except (TypeError, ValueError):
             gold_snomed_id_int = None
+
+        concept_id, preferred_term, score, ranked_candidates, gt_presence_trace = (
+            service.ground_entity(
+                item["term"],
+                item["role"],
+                query_context=item.get("context") or "",
+                gold_concept_id=gold_snomed_id_int,
+                return_ranked=True,
+            )
+        )
+        pred_snomed_id = "" if concept_id is None else str(concept_id)
+        hit = pred_snomed_id == item["gold_snomed_id"]
 
         gt_rank = None
         for candidate in ranked_candidates:
@@ -404,6 +408,40 @@ def _evaluate(
                     }
                     for candidate in ranked_candidates[:10]
                 ],
+                "candidate_rankings_to_gt": [
+                    {
+                        "rank": int(candidate.get("rank") or 0),
+                        "concept_id": candidate.get("concept_id"),
+                        "term": candidate.get("term"),
+                        "final_score": candidate.get("final_score"),
+                        "lexical": candidate.get("lexical"),
+                        "coverage": candidate.get("coverage"),
+                        "discriminative_coverage": candidate.get(
+                            "discriminative_coverage"
+                        ),
+                        "vector_raw": candidate.get("vector_raw"),
+                        "vector_bonus": candidate.get("vector_bonus"),
+                        "vector_rank": candidate.get("vector_rank"),
+                        "semantic_penalty": candidate.get("semantic_penalty"),
+                        "final_penalty": candidate.get("final_penalty"),
+                        "role_mismatch_penalty": candidate.get("role_mismatch_penalty"),
+                        "role_tension_penalty": candidate.get("role_tension_penalty"),
+                        "low_coverage_penalty": candidate.get("low_coverage_penalty"),
+                        "missing_discriminative_penalty": candidate.get(
+                            "missing_discriminative_penalty"
+                        ),
+                        "extra_qualifier_penalty": candidate.get(
+                            "extra_qualifier_penalty"
+                        ),
+                        "hard_negative_penalty": candidate.get("hard_negative_penalty"),
+                    }
+                    for candidate in (
+                        ranked_candidates[:gt_rank]
+                        if gt_rank is not None and gt_rank > 0
+                        else []
+                    )
+                ],
+                "gt_presence_trace": gt_presence_trace,
                 "hit": hit,
             }
         )
