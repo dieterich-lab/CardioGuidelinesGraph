@@ -354,14 +354,19 @@ def main(
             f"[vector-ingest] subset filtering enabled: {len(concept_ids)} concept ids from {subset_concept_ids_path}"
         )
 
+    language_filter_aliased = language_filter.replace("languagecode", "d.languagecode")
+    subset_filter_aliased = subset_filter.replace("conceptid", "d.conceptid")
+
     count_query = text(
         f"""
         SELECT COUNT(*) AS cnt
-        FROM description
-        WHERE active = true
-          AND term IS NOT NULL
-          {language_filter}
-                    {subset_filter}
+        FROM description d
+        JOIN concept c ON d.conceptid = c.id
+        WHERE d.active = true
+          AND c.active = true
+          AND d.term IS NOT NULL
+                    {language_filter_aliased}
+                    {subset_filter_aliased}
         """
     )
 
@@ -417,13 +422,15 @@ def main(
 
         query = text(
             f"""
-            SELECT conceptid, term
-            FROM description
-            WHERE active = true
-              AND term IS NOT NULL
-              {language_filter}
-                                {subset_filter}
-            ORDER BY conceptid, id
+            SELECT d.conceptid, d.term
+            FROM description d
+            JOIN concept c ON d.conceptid = c.id
+            WHERE d.active = true
+              AND c.active = true
+              AND d.term IS NOT NULL
+              {language_filter_aliased}
+              {subset_filter_aliased}
+            ORDER BY d.conceptid, d.id
             """
         )
 

@@ -226,6 +226,27 @@ def _expand_ids(
     return all_ids, source_tags, isa_parents_index, isa_children_index
 
 
+def _filter_active_concept_ids(
+    explorer: SnomedExplorer, concept_ids: Set[int]
+) -> Set[int]:
+    if not concept_ids:
+        return set()
+    query = text(
+        """
+        SELECT id
+        FROM concept
+        WHERE active = true
+          AND id = ANY(:concept_ids)
+        """
+    )
+    active_ids: Set[int] = set()
+    for ids in _batch(sorted(concept_ids), 2000):
+        rows = explorer.session.execute(query, {"concept_ids": ids})
+        for (concept_id,) in rows:
+            active_ids.add(int(concept_id))
+    return active_ids
+
+
 def _parse_semantic_tag(fsn: str | None) -> str | None:
     if not fsn:
         return None
@@ -417,6 +438,10 @@ def main() -> int:
         for cid, tags in expanded_tags.items():
             source_tags[cid].update(tags)
 
+        active_expanded_ids = _filter_active_concept_ids(explorer, expanded_ids)
+        dropped_inactive = len(expanded_ids - active_expanded_ids)
+        expanded_ids = active_expanded_ids
+
         metadata_items = _build_metadata(
             explorer=explorer,
             concept_ids=expanded_ids,
@@ -485,6 +510,7 @@ def main() -> int:
     print(f"Generated subset concept IDs: {len(concept_ids_sorted)}")
     print(f"Seed term IDs: {len(term_seed_ids)}")
     print(f"Seed gold IDs: {len(gold_ids)}")
+    print(f"Inactive concepts dropped: {dropped_inactive}")
     print(
         "Gold coverage: "
         f"{coverage['covered']}/{coverage['gold_total']} "
