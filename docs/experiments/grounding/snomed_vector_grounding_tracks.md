@@ -1,6 +1,6 @@
 # SNOMED Vector Grounding Tracker (Scientific vs Production)
 
-Last updated: 2026-04-20
+Last updated: 2026-04-21
 
 ## Purpose
 
@@ -388,3 +388,216 @@ Core changes:
 4. Ambiguity handling adjusted to avoid premature abstain-like behavior in near-tie settings.
 
 These adjustments are now ready for the next replay cycle (scientific no-rescue and production train-only rescue).
+
+## Post-Run Loss Analysis (Completed Runs: 632933 / 632934)
+
+Primary artifacts used:
+
+- `docs/generated/ground_truth/grounding_only/vector_job_632933/ground_truth_vector_eval.json`
+- `docs/generated/ground_truth/grounding_only/vector_job_632934/ground_truth_vector_eval.json`
+- `docs/generated/ground_truth/grounding_only/vector_job_632933/ground_truth_vector_eval_debug_probe.csv`
+- `docs/generated/ground_truth/grounding_only/vector_job_632934/ground_truth_vector_eval_debug_probe.csv`
+- `docs/generated/grounding/mismatch_analysis_trace_632933_vs_632934.md`
+
+### Top-Line
+
+| Run | Label | Accuracy | Hits/Total | Misses |
+|---|---|---:|---:|---:|
+| `632933` | `H_NO_RESCUE_LOCKED` | 0.691667 | 83/120 | 37 |
+| `632934` | `H_HELDOUT_TRAIN_RESCUE` | 0.900000 | 108/120 | 12 |
+
+### Where GT Is Lost
+
+Important implementation detail for these two runs:
+
+1. `gt_presence_trace.gold_absence_stage` is mostly `unknown` in the eval JSON for this pair.
+2. Therefore, stage attribution below is derived from `ground_truth_vector_eval_debug_probe.csv` fields (`gt_present_in_ranked`, `gt_rank`, score columns).
+
+Loss decomposition:
+
+| Run | Misses | GT present in ranked list | GT absent from ranked list |
+|---|---:|---:|---:|
+| `632933` | 37 | 29 | 8 |
+| `632934` | 12 | 12 | 0 |
+
+Interpretation:
+
+1. In the best finished run (`632934`), residual errors are entirely ranking/disambiguation errors (GT survives retrieval/filtering).
+2. In `632933`, there is still a smaller upstream-loss slice (`8/37`) where GT is absent from ranked candidates.
+
+### Scientific Run 632933: GT-Absent Cluster
+
+All 8 GT-absent misses in `632933` are the same term-role family:
+
+- Role: `Procedure`
+- Source term: `Percutaneous coronary revascularization`
+- Gold: `415070008`
+
+This indicates a retrieval/candidate-generation recall gap for this expression in the no-rescue path.
+
+### Production Run 632934: Residual Miss Families (All GT-Ranked)
+
+Residual 12 misses split into 4 recurring clusters:
+
+| Cluster | Count | Share of misses | Potential absolute gain if fixed |
+|---|---:|---:|---:|
+| Medication form/salt variant (`Clopidogrel`/`Prasugrel` -> besilate variants) | 5 | 41.7% | +0.0417 |
+| Condition granularity (`Myocardial ischemia` -> acute ischemic heart disease) | 3 | 25.0% | +0.0250 |
+| Procedure variant/situation-vs-procedure (`CABG` variants/planned situation) | 2 | 16.7% | +0.0167 |
+| ID variant with same label/context qualifier (`Informing patient`, `Indication of`) | 2 | 16.7% | +0.0167 |
+
+Ranking behavior of residual misses (`632934`):
+
+1. All misses are near-tie cases.
+2. `score_gap_top1_top2 = 0.0` for all 12 misses.
+3. GT ranks are mostly low but non-top: `{2:2, 3:2, 4:7, 11:1}`.
+
+This is strong evidence that the remaining issue is tie-breaking policy, not hard pre-emptive filtering.
+
+### Stricter vs Less-Strict Guidance (Next Cycle)
+
+Current conclusion:
+
+1. Do **not** loosen upstream domain/semantic filters further in this tuned profile; `632934` already has `GT absent = 0`.
+2. Focus on **stricter reranking/tie-break rules** that resolve clinically important near ties.
+
+#### A) Stricter (recommended now): tie-break and semantic precision
+
+1. Add a role-aware penalty for `situation` predictions when role is `Procedure` and the query does not contain planning intent tokens (`planned`, `scheduled`, `intended`).
+2. Add a medication-specific qualifier penalty for salt/form suffixes (for example `besilate`) when the query is the base substance term.
+3. In exact-score ties, prefer the candidate with lower extra qualifier burden and closer normalized head term match.
+
+Expected impact: directly targets 7/12 residual misses (`CABG planned/situation` + `besilate` confusions).
+
+#### B) Less strict (targeted): retrieval recall for scientific no-rescue
+
+1. Add lexical variant expansion for the `Percutaneous coronary revascularization` family (intervention/revascularization synonyms) in the no-rescue path.
+2. Keep this as retrieval expansion only; do not add term-specific rescue overrides to scientific scoring.
+
+Expected impact: addresses the `8/37` GT-absent cluster in `632933` without introducing production-only exceptions into the scientific track.
+
+### Proposed Ablation Sequence (Immediate)
+
+1. `N1` no-rescue scientific rerun with targeted retrieval expansion for the PCI revascularization phrase family.
+2. `N2` no-rescue + stricter procedure/situation tie-break rule.
+3. `N3` no-rescue + medication salt/form qualifier penalty.
+4. `P1` production train-rescue rerun with stricter tie-break rules (same as N2/N3).
+
+Decision rule:
+
+1. Scientific winner: best strict exact-match in no-rescue run.
+2. Production winner: best strict exact-match with train-only rescue, with no regressions in audited high-risk terms.
+
+### Detailed Residual Error Report (632933 / 632934)
+
+Artifacts used for this detailed expansion:
+
+- `docs/generated/ground_truth/grounding_only/vector_job_632934/ground_truth_vector_eval_debug_probe.csv`
+- `docs/generated/grounding/ground_truth_vector_latest_miss_triage.csv`
+
+#### A) Exact-Tie Terms in 632934 (Complete List)
+
+All 12 residual misses in `632934` are exact-score ties (`score_gap_top1_top2 = 0.0`).
+
+| Row | Side | Role | Source term | Gold ID | Pred ID | GT rank |
+|---|---|---|---|---:|---:|---:|
+| `t0_row_01` | condition | Procedure | Coronary artery bypass grafting | 232717009 | 698378009 | 11 |
+| `t0_row_01` | action | Procedure | Informing patient | 310866003 | 148292006 | 3 |
+| `t0_row_01` | condition | ClinicalCondition | Myocardial ischemia | 414795007 | 32598000 | 4 |
+| `t0_row_02` | action | Medication | Clopidogrel | 386952008 | 734972007 | 4 |
+| `t0_row_03` | action | Medication | Prasugrel | 443129001 | 1149423007 | 2 |
+| `t0_row_01` | action | Medication | Clopidogrel | 386952008 | 734972007 | 4 |
+| `t0_row_03` | condition | ClinicalCondition | Myocardial ischemia | 414795007 | 32598000 | 4 |
+| `t1_row_01` | condition | ClinicalCondition | Myocardial ischemia | 414795007 | 32598000 | 4 |
+| `t1_row_02` | action | Medication | Prasugrel | 443129001 | 1149423007 | 2 |
+| `t1_row_04` | action | Medication | Clopidogrel | 386952008 | 734972007 | 4 |
+| `t1_row_06` | condition | Medication | Indication of | 230165009 | 39816005 | 3 |
+| `t1_row_07` | condition | Procedure | Coronary artery bypass graft | 232717009 | 149173009 | 4 |
+
+Frequency by term-role:
+
+| Term + role | Count |
+|---|---:|
+| Myocardial ischemia + ClinicalCondition | 3 |
+| Clopidogrel + Medication | 3 |
+| Prasugrel + Medication | 2 |
+| Coronary artery bypass grafting + Procedure | 1 |
+| Informing patient + Procedure | 1 |
+| Indication of + Medication | 1 |
+| Coronary artery bypass graft + Procedure | 1 |
+
+GT-rank distribution among the 12 misses:
+
+| GT rank | Count |
+|---:|---:|
+| 2 | 2 |
+| 3 | 2 |
+| 4 | 7 |
+| 11 | 1 |
+
+Interpretation: in `632934`, error mode is tie-break/disambiguation, not candidate absence.
+
+#### B) In-Depth Error Clusters (632934)
+
+##### B1) Tricky near-miss cluster (5)
+
+Definition: high lexical overlap where medication base substance and salt/form variant compete at equal score.
+
+| Row | Role | Source term | Gold | Pred | Reason |
+|---|---|---|---|---|---|
+| `t0_row_02` | Medication | Clopidogrel | 386952008 (Clopidogrel) | 734972007 (Clopidogrel besilate) | high_lexical_overlap |
+| `t0_row_03` | Medication | Prasugrel | 443129001 (Prasugrel) | 1149423007 (Prasugrel besilate) | high_lexical_overlap |
+| `t0_row_01` | Medication | Clopidogrel | 386952008 (Clopidogrel) | 734972007 (Clopidogrel besilate) | high_lexical_overlap |
+| `t1_row_02` | Medication | Prasugrel | 443129001 (Prasugrel) | 1149423007 (Prasugrel besilate) | high_lexical_overlap |
+| `t1_row_04` | Medication | Clopidogrel | 386952008 (Clopidogrel) | 734972007 (Clopidogrel besilate) | high_lexical_overlap |
+
+Observed shape:
+
+1. `Clopidogrel` errors: 3/5.
+2. `Prasugrel` errors: 2/5.
+3. All are exact ties, so deterministic tie-break policy dominates outcome.
+
+##### B2) Obvious tuning cluster (4)
+
+Definition: high-confidence semantic mismatch where predicted concept is plausible but clinically/role-wise less precise than gold.
+
+| Row | Role | Source term | Gold | Pred | Reason |
+|---|---|---|---|---|---|
+| `t0_row_01` | Procedure | Coronary artery bypass grafting | 232717009 (procedure) | 698378009 (planned situation) | high_confidence_semantic_mismatch |
+| `t0_row_01` | ClinicalCondition | Myocardial ischemia | 414795007 | 32598000 (Acute ischemic heart disease) | high_confidence_semantic_mismatch |
+| `t0_row_03` | ClinicalCondition | Myocardial ischemia | 414795007 | 32598000 (Acute ischemic heart disease) | high_confidence_semantic_mismatch |
+| `t1_row_01` | ClinicalCondition | Myocardial ischemia | 414795007 | 32598000 (Acute ischemic heart disease) | high_confidence_semantic_mismatch |
+
+Observed shape:
+
+1. `Myocardial ischemia` granularity drift drives 3/4 cases.
+2. 1/4 is procedure-vs-situation drift for CABG.
+3. All are exact ties, so role/semantic precision tie-breakers are the critical control.
+
+##### B3) Annotation-review cluster (3)
+
+Definition: same normalized label text but different SNOMED IDs.
+
+| Row | Role | Source term | Gold | Pred | Reason |
+|---|---|---|---|---|---|
+| `t0_row_01` | Procedure | Informing patient | 310866003 (Informing patient) | 148292006 (Informing patient) | same_normalized_concept_text_different_id |
+| `t1_row_06` | Medication | Indication of | 230165009 (Indication of) | 39816005 (Indication of) | same_normalized_concept_text_different_id |
+| `t1_row_07` | Procedure | Coronary artery bypass graft | 232717009 (CABG) | 149173009 (CABG) | same_normalized_concept_text_different_id |
+
+Observed shape:
+
+1. These are likely terminology/annotation equivalence disputes, not strict semantic mismatches.
+2. They should be tracked separately from model semantic failures in strict-accuracy interpretation.
+
+#### C) Cross-Run Contrast: Remaining Upstream Loss in 632933
+
+The no-rescue run `632933` still contains a GT-absent retrieval cluster (`8/37` misses), concentrated entirely on:
+
+1. role `Procedure`
+2. term `Percutaneous coronary revascularization`
+3. gold `415070008`
+
+Interpretation:
+
+1. `632934` residual error is tie-break/rerank dominated.
+2. `632933` still has a targeted retrieval-recall deficiency for one phrase family.
