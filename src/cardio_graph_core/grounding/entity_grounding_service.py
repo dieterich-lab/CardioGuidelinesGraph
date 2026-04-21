@@ -147,6 +147,127 @@ class EntityGroundingService:
             return b.role_semantic_crossclass_penalty
         return b.role_semantic_mismatch_penalty
 
+    def _has_planning_intent(self, term: str, query_context: Any) -> bool:
+        planning_tokens = {
+            "plan",
+            "planned",
+            "planning",
+            "schedule",
+            "scheduled",
+            "intended",
+            "intent",
+            "elective",
+        }
+        haystacks = [self._normalize(term)]
+        if query_context is not None:
+            if isinstance(query_context, (dict, list)):
+                haystacks.append(
+                    self._normalize(
+                        json.dumps(query_context, ensure_ascii=False, sort_keys=True)
+                    )
+                )
+            else:
+                haystacks.append(self._normalize(str(query_context)))
+        return any(
+            token in hs.split() for hs in haystacks if hs for token in planning_tokens
+        )
+
+    def _procedure_situation_penalty(
+        self,
+        role: Optional[str],
+        preferred_term: Optional[str],
+        source_term: str,
+        query_context: Any,
+    ) -> float:
+        if role != "Procedure":
+            return 0.0
+        if self._semantic_tag(preferred_term) != "situation":
+            return 0.0
+        if self._has_planning_intent(source_term, query_context):
+            return 0.0
+        return float(
+            getattr(
+                self.builder,
+                "procedure_situation_without_intent_penalty",
+                0.06,
+            )
+        )
+
+    def _medication_salt_form_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        if role != "Medication" or not candidate_term:
+            return 0.0
+        query_tokens = set(self._important_tokens(source_term))
+        if not query_tokens:
+            return 0.0
+        qualifier_tokens = {
+            "besilate",
+            "hydrochloride",
+            "hydrobromide",
+            "succinate",
+            "phosphate",
+            "acetate",
+            "nitrate",
+            "sulfate",
+            "maleate",
+            "mesylate",
+            "tablet",
+            "capsule",
+            "release",
+            "milligram",
+        }
+        if query_tokens & qualifier_tokens:
+            return 0.0
+        candidate_tokens = set(self._important_tokens(candidate_term))
+        extra_qualifiers = qualifier_tokens & (candidate_tokens - query_tokens)
+        if not extra_qualifiers:
+            return 0.0
+        per_token_penalty = float(
+            getattr(self.builder, "medication_salt_form_penalty", 0.03)
+        )
+        return min(0.12, per_token_penalty * float(len(extra_qualifiers)))
+
+    def _normalized_head_term_match(
+        self, source_term: str, candidate_term: str
+    ) -> float:
+        query_tokens = self._important_tokens(source_term)
+        candidate_tokens = self._important_tokens(candidate_term)
+        if not query_tokens or not candidate_tokens:
+            return 0.0
+        q_head = query_tokens[0]
+        c_head = candidate_tokens[0]
+        if q_head == c_head:
+            return 1.0
+        if q_head in candidate_tokens:
+            return 0.85
+        return SequenceMatcher(None, q_head, c_head).ratio() * 0.5
+
+    def _no_rescue_pci_retrieval_variants(
+        self, term: str, role: Optional[str]
+    ) -> List[str]:
+        if role != "Procedure":
+            return []
+        label = (os.environ.get("CARDIO_GRAPH_GROUNDING_ABLATION_LABEL") or "").upper()
+        if "NO_RESCUE" not in label:
+            return []
+        normalized = self._normalize(term)
+        if (
+            not ("revascularization" in normalized and "coronary" in normalized)
+            and "percutaneous coronary intervention" not in normalized
+        ):
+            return []
+        return [
+            "percutaneous coronary intervention",
+            "percutaneous transluminal coronary intervention",
+            "percutaneous transluminal coronary angioplasty",
+            "coronary revascularization percutaneous",
+            "pci coronary intervention",
+        ]
+
     def _score(self, query: str, candidate: str) -> float:
         q = self._normalize(query)
         c = self._normalize(candidate)
@@ -450,6 +571,10 @@ class EntityGroundingService:
             )
             search_terms.append(ischemic_variant)
 
+        no_rescue_pci_variants = self._no_rescue_pci_retrieval_variants(term, role)
+        if no_rescue_pci_variants:
+            search_terms.extend(no_rescue_pci_variants)
+
         if not search_terms:
             search_terms = [term]
 
@@ -533,6 +658,8 @@ class EntityGroundingService:
                 vector_search_terms.append(
                     " ".join(important_tokens[-MAX_QUERY_TOKENS:])
                 )
+            if no_rescue_pci_variants:
+                vector_search_terms.extend(no_rescue_pci_variants)
             for context_variant in self._context_query_variants(query_context, role):
                 vector_search_terms.append(context_variant)
                 if b.vector_context_append_term:
@@ -621,6 +748,8 @@ class EntityGroundingService:
                 query_terms.extend(paren_tokens)
             if "coronary syndrome" in normalized_term:
                 query_terms.append(ischemic_variant)
+            if no_rescue_pci_variants:
+                query_terms.extend(no_rescue_pci_variants)
         if not query_terms:
             query_terms = [term]
 
@@ -763,6 +892,19 @@ class EntityGroundingService:
                 if role_mismatch and is_role_tension_term:
                     role_tension_penalty = b.role_tension_penalty
                     final_penalty += role_tension_penalty
+                procedure_situation_penalty = self._procedure_situation_penalty(
+                    role_filter,
+                    preferred,
+                    term,
+                    query_context,
+                )
+                final_penalty += procedure_situation_penalty
+                medication_salt_form_penalty = self._medication_salt_form_penalty(
+                    role_filter,
+                    term,
+                    preferred,
+                )
+                final_penalty += medication_salt_form_penalty
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
                 vector_rank = vector_rank_by_concept.get(int(concept_id))
@@ -788,6 +930,10 @@ class EntityGroundingService:
                     vector_rank,
                 )
                 final_penalty += semantic_penalty
+                normalized_head_match = self._normalized_head_term_match(
+                    term,
+                    preferred or "",
+                )
                 final_score = min(1.0, max(0.0, score + vector_bonus - final_penalty))
 
                 if b.enable_grounding_candidate_debug:
@@ -805,6 +951,16 @@ class EntityGroundingService:
                             "vector_rank": vector_rank,
                             "vector_bonus": round(vector_bonus, 6),
                             "semantic_penalty": round(semantic_penalty, 6),
+                            "procedure_situation_penalty": round(
+                                procedure_situation_penalty, 6
+                            ),
+                            "medication_salt_form_penalty": round(
+                                medication_salt_form_penalty, 6
+                            ),
+                            "normalized_head_match": round(
+                                normalized_head_match,
+                                6,
+                            ),
                             "role_mismatch": role_mismatch,
                             "final_penalty": round(final_penalty, 6),
                             "final_score": round(final_score, 6),
@@ -826,12 +982,15 @@ class EntityGroundingService:
                         "hard_negative_penalty": hard_negative_penalty,
                         "role_mismatch_penalty": role_mismatch_penalty,
                         "role_tension_penalty": role_tension_penalty,
+                        "procedure_situation_penalty": procedure_situation_penalty,
+                        "medication_salt_form_penalty": medication_salt_form_penalty,
                         "base_semantic_penalty": base_semantic_penalty,
                         "semantic_penalty": semantic_penalty,
                         "vector_rank": vector_rank,
                         "vector_raw": vector_raw,
                         "vector_bonus": vector_bonus,
                         "final_penalty": final_penalty,
+                        "normalized_head_match": normalized_head_match,
                         "role_mismatch": role_mismatch,
                     }
                 )
@@ -843,10 +1002,11 @@ class EntityGroundingService:
                 scored_candidates,
                 key=lambda row: (
                     row["final_score"],
+                    row.get("normalized_head_match", 0.0),
+                    -row["extra_qualifier_ratio"],
                     row["coverage"],
                     row["lexical"],
                     row["discriminative_coverage"],
-                    -row["extra_qualifier_ratio"],
                 ),
                 reverse=True,
             )
@@ -903,10 +1063,11 @@ class EntityGroundingService:
                                 backoff_pool,
                                 key=lambda row: (
                                     row["final_score"],
+                                    row.get("normalized_head_match", 0.0),
+                                    -row["extra_qualifier_ratio"],
                                     row["coverage"],
                                     row["lexical"],
                                     row["discriminative_coverage"],
-                                    -row["extra_qualifier_ratio"],
                                 ),
                             )
 
