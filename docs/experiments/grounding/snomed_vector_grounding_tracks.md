@@ -41,6 +41,36 @@ It is intentionally ordered **newest first** and preserves the full sequence of:
 
 ## Change Timeline (Newest First)
 
+### 2026-04-23: 4-case matrix formalized + dedicated runners
+
+Matrix now treated as first-class:
+
+- Scientific x `entity_standardized_candidate`
+- Scientific x `entity_original`
+- Production x `entity_standardized_candidate`
+- Production x `entity_original`
+
+Implementations added:
+
+- Separate production rescue maps by term source:
+  - standardized: `config/cardio_graph_core/grounding_rescue_map_train_only.yaml`
+  - original: `config/cardio_graph_core/grounding_rescue_map_train_only_original.yaml`
+- New LLM normalization step for scientific-original viability:
+  - BAML function `GenerateStandardizedCandidate(concept, role)` in `src/cardio_graph_core/extraction/baml_src/grounding_enrichment.baml`
+  - integrated in grounding service behind `CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_ENABLED`
+  - current generation client set to `Qwen30b5` (candidate generation only)
+- Dedicated slurm runners created for all four matrix cells:
+  - `slurm/gt-eval-vector-locked-norescue-standardized.sbatch`
+  - `slurm/gt-eval-vector-locked-norescue-original-hopper.sbatch`
+  - `slurm/gt-eval-vector-heldout-trainrescue-standardized.sbatch`
+  - `slurm/gt-eval-vector-heldout-trainrescue-original.sbatch`
+- Scientific-original runner is pinned to hopper as required (`#SBATCH --gres=gpu:hopper:1`).
+
+Runs launched from this matrix setup:
+
+- Production x original (new original rescue map): `run_id=633686` (running)
+- Scientific x original (LLM candidate step enabled): `run_id=633687` (running)
+
 ### 2026-04-23: Methodology Correction (short)
 
 - Important finding: our GT grounding evaluation fed `entity_standardized_candidate` as the query term by default (optimistic setting).
