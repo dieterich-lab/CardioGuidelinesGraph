@@ -359,6 +359,13 @@ class EntityGroundingService:
         # Prefer intervention/revascularization variants over angioplasty-only variants.
         if "angioplasty" in candidate_norm:
             return float(getattr(self.builder, "pci_angioplasty_variant_penalty", 0.08))
+        # Penalize chronic-total-occlusion sub-variants when the source query is generic.
+        if (
+            ("chronic total occlusion" in candidate_norm or "total occlusion" in candidate_norm)
+            and "occlusion" not in normalized_source
+            and "chronic" not in normalized_source
+        ):
+            return float(getattr(self.builder, "pci_cto_variant_penalty", 0.08))
         return 0.0
 
     def _indication_context_penalty(

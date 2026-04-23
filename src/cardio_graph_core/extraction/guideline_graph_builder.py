@@ -600,6 +600,13 @@ class GuidelineGraphBuilder:
             )
             or "0.08"
         )
+        self.pci_cto_variant_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_PCI_CTO_VARIANT_PENALTY",
+                "0.08",
+            )
+            or "0.08"
+        )
         self.indication_finding_penalty = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_INDICATION_FINDING_PENALTY", "0.10")
             or "0.10"
