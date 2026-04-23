@@ -41,6 +41,36 @@ It is intentionally ordered **newest first** and preserves the full sequence of:
 
 ## Change Timeline (Newest First)
 
+### 2026-04-23: LH3 PCI/Indication tuning runs completed (633654/633655)
+
+Reviewed logs/artifacts:
+
+- `slurm/gt-eval-vector-locked-norescue_633654.log`
+- `slurm/gt-eval-vector-heldout_633655.log`
+- `docs/generated/ground_truth/grounding_only/vector_job_633654/ground_truth_vector_eval.json`
+- `docs/generated/ground_truth/grounding_only/vector_job_633655/ground_truth_vector_eval.json`
+
+Confirmed outcomes:
+
+- Scientific `633654`: accuracy `0.908333` (`109/120`), MRR `0.913333`, misses `11`
+- Production `633655`: accuracy `0.975000` (`117/120`), MRR `0.978472`, misses `3`
+
+Delta vs prior LH pair (`633138`/`633139`):
+
+- Scientific improved: `0.866667 -> 0.908333` (`+0.041667`, `104/120 -> 109/120`)
+- Production slight regression: `0.983333 -> 0.975000` (`-0.008333`, `118/120 -> 117/120`)
+
+Residual miss families after LH3:
+
+- Scientific still dominated by PCI variant decision (`415070008` vs `713617008`, 8 repeats).
+- Scientific residuals: CABG granularity, one `Indication of` drift, one proton-pump-inhibitor abstraction.
+- Production residuals: CABG granularity, one `General characteristic of patient` qualifier variant, one rivaroxaban abstraction.
+
+Interpretation:
+
+- Scientific track crossed 90% on locked test without rescue and improved substantially.
+- Production remains very strong, with a small drop concentrated in one additional miss.
+
 ### 2026-04-23: LH results review + next targeted runs planned
 
 Reviewed logs:
@@ -166,6 +196,8 @@ Finding:
 
 | timestamp_utc | run_id | split | track | accuracy | hits/total | mrr | artifact |
 |---|---:|---|---|---:|---|---:|---|
+| 2026-04-23T09:55:00.219744+00:00 | 633654 | locked_test | scientific | 0.908333 | 109/120 | 0.913333 | `docs/generated/ground_truth/grounding_only/vector_job_633654/ground_truth_vector_eval.json` |
+| 2026-04-23T09:51:07.616376+00:00 | 633655 | locked_test | production | 0.975000 | 117/120 | 0.978472 | `docs/generated/ground_truth/grounding_only/vector_job_633655/ground_truth_vector_eval.json` |
 | 2026-04-22T16:24:24.065082+00:00 | 633138 | locked_test | scientific | 0.866667 | 104/120 | 0.881389 | `docs/generated/ground_truth/grounding_only/vector_job_633138/ground_truth_vector_eval.json` |
 | 2026-04-22T16:20:07.258508+00:00 | 633139 | locked_test | production | 0.983333 | 118/120 | 0.984722 | `docs/generated/ground_truth/grounding_only/vector_job_633139/ground_truth_vector_eval.json` |
 | 2026-04-22T11:50:16.300712+00:00 | 632982 | locked_test | scientific | 0.791667 | 95/120 | 0.806389 | `docs/generated/ground_truth/grounding_only/vector_job_632982/ground_truth_vector_eval.json` |
@@ -217,7 +249,7 @@ These files carry the detailed intermediate analyses that were accumulated acros
 2. Post-alignment residuals shifted from inactive-ID contamination to tie-break/semantic disambiguation.
 3. Trace instrumentation showed substantial miss mass from domain filtering in earlier phases.
 4. Production exception strategy and scientific no-rescue purity were kept explicitly separated by policy.
-5. Current LH reruns delivered the strongest observed pair in this tracker window (`633138` / `633139`).
+5. Current best split pair is `633654` (scientific best) and `633139` (production best), showing distinct scientific/production optima.
 
 ## Update Rule
 
