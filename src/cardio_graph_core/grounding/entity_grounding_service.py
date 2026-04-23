@@ -204,7 +204,20 @@ class EntityGroundingService:
         query_tokens = set(self._important_tokens(source_term))
         if not query_tokens:
             return 0.0
-        qualifier_tokens = {
+        qualifier_tokens = self._medication_qualifier_tokens()
+        if query_tokens & qualifier_tokens:
+            return 0.0
+        candidate_tokens = set(self._important_tokens(candidate_term))
+        extra_qualifiers = qualifier_tokens & (candidate_tokens - query_tokens)
+        if not extra_qualifiers:
+            return 0.0
+        per_token_penalty = float(
+            getattr(self.builder, "medication_salt_form_penalty", 0.03)
+        )
+        return min(0.12, per_token_penalty * float(len(extra_qualifiers)))
+
+    def _medication_qualifier_tokens(self) -> set[str]:
+        return {
             "besilate",
             "hydrochloride",
             "hydrobromide",
@@ -220,16 +233,166 @@ class EntityGroundingService:
             "release",
             "milligram",
         }
-        if query_tokens & qualifier_tokens:
+
+    def _has_medication_therapy_intent(self, term: str, query_context: Any) -> bool:
+        cue_tokens = set(
+            getattr(
+                self.builder,
+                "medication_therapy_cue_tokens",
+                {"therapy", "treatment", "regimen", "management"},
+            )
+        )
+        if not cue_tokens:
+            return False
+        haystacks = [self._normalize(term)]
+        if query_context is not None:
+            if isinstance(query_context, (dict, list)):
+                haystacks.append(
+                    self._normalize(
+                        json.dumps(query_context, ensure_ascii=False, sort_keys=True)
+                    )
+                )
+            else:
+                haystacks.append(self._normalize(str(query_context)))
+        for hs in haystacks:
+            if not hs:
+                continue
+            tokens = set(self._important_tokens(hs))
+            if tokens & cue_tokens:
+                return True
+        return False
+
+    def _medication_abstraction_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+        query_context: Any,
+    ) -> float:
+        if role != "Medication" or not candidate_term:
+            return 0.0
+        if self._has_medication_therapy_intent(source_term, query_context):
             return 0.0
         candidate_tokens = set(self._important_tokens(candidate_term))
-        extra_qualifiers = qualifier_tokens & (candidate_tokens - query_tokens)
-        if not extra_qualifiers:
-            return 0.0
-        per_token_penalty = float(
-            getattr(self.builder, "medication_salt_form_penalty", 0.03)
+        semantic_tag = self._semantic_tag(candidate_term)
+        abstraction_tags = {
+            "procedure",
+            "finding",
+            "situation",
+            "observable entity",
+            "qualifier value",
+        }
+        penalty = 0.0
+        if semantic_tag in abstraction_tags:
+            penalty += float(
+                getattr(
+                    self.builder,
+                    "medication_non_substance_semantic_penalty",
+                    0.07,
+                )
+            )
+        cue_tokens = set(
+            getattr(
+                self.builder,
+                "medication_therapy_cue_tokens",
+                {"therapy", "treatment", "regimen", "management"},
+            )
         )
-        return min(0.12, per_token_penalty * float(len(extra_qualifiers)))
+        if candidate_tokens & cue_tokens:
+            penalty += float(
+                getattr(self.builder, "medication_therapy_context_penalty", 0.04)
+            )
+        max_penalty = float(
+            getattr(self.builder, "medication_max_abstraction_penalty", 0.16)
+        )
+        return min(max_penalty, penalty)
+
+    def _medication_base_preference_score(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+        query_context: Any,
+    ) -> float:
+        if role != "Medication" or not candidate_term:
+            return 0.0
+        if self._has_medication_therapy_intent(source_term, query_context):
+            return 0.0
+        candidate_tokens = set(self._important_tokens(candidate_term))
+        cue_tokens = set(
+            getattr(
+                self.builder,
+                "medication_therapy_cue_tokens",
+                {"therapy", "treatment", "regimen", "management"},
+            )
+        )
+        if candidate_tokens & cue_tokens:
+            return 0.0
+        semantic_tag = self._semantic_tag(candidate_term)
+        preferred_tags = {
+            "substance",
+            "product",
+            "medicinal product",
+            "clinical drug",
+            "pharmaceutical / biologic product",
+        }
+        if semantic_tag not in preferred_tags:
+            return 0.0
+        query_tokens = set(self._important_tokens(source_term))
+        extra_qualifiers = self._medication_qualifier_tokens() & (
+            candidate_tokens - query_tokens
+        )
+        return 0.85 if extra_qualifiers else 1.0
+
+    def _pci_angioplasty_variant_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        if role != "Procedure" or not candidate_term:
+            return 0.0
+        normalized_source = self._normalize(source_term)
+        if "percutaneous coronary revascularization" not in normalized_source:
+            return 0.0
+        candidate_norm = self._normalize(candidate_term)
+        # Prefer intervention/revascularization variants over angioplasty-only variants.
+        if "angioplasty" in candidate_norm:
+            return float(getattr(self.builder, "pci_angioplasty_variant_penalty", 0.08))
+        return 0.0
+
+    def _indication_context_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        if role != "ClinicalCondition" or not candidate_term:
+            return 0.0
+        normalized_source = self._normalize(source_term)
+        if not normalized_source.startswith("indication of"):
+            return 0.0
+        candidate_tag = self._semantic_tag(candidate_term)
+        if candidate_tag != "finding":
+            return 0.0
+        return float(getattr(self.builder, "indication_finding_penalty", 0.10))
+
+    def _indication_context_preference_score(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        if role != "ClinicalCondition" or not candidate_term:
+            return 0.0
+        normalized_source = self._normalize(source_term)
+        if not normalized_source.startswith("indication of"):
+            return 0.0
+        candidate_tag = self._semantic_tag(candidate_term)
+        candidate_norm = self._normalize(candidate_term)
+        if candidate_tag == "qualifier value" and "indication of" in candidate_norm:
+            return float(getattr(self.builder, "indication_qualifier_preference", 1.0))
+        return 0.0
 
     def _normalized_head_term_match(
         self, source_term: str, candidate_term: str
@@ -905,6 +1068,25 @@ class EntityGroundingService:
                     preferred,
                 )
                 final_penalty += medication_salt_form_penalty
+                medication_abstraction_penalty = self._medication_abstraction_penalty(
+                    role_filter,
+                    term,
+                    preferred,
+                    query_context,
+                )
+                final_penalty += medication_abstraction_penalty
+                pci_angioplasty_penalty = self._pci_angioplasty_variant_penalty(
+                    role_filter,
+                    term,
+                    preferred,
+                )
+                final_penalty += pci_angioplasty_penalty
+                indication_context_penalty = self._indication_context_penalty(
+                    role_filter,
+                    term,
+                    preferred,
+                )
+                final_penalty += indication_context_penalty
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
                 vector_rank = vector_rank_by_concept.get(int(concept_id))
@@ -934,6 +1116,19 @@ class EntityGroundingService:
                     term,
                     preferred or "",
                 )
+                medication_base_preference = self._medication_base_preference_score(
+                    role_filter,
+                    term,
+                    preferred,
+                    query_context,
+                )
+                indication_context_preference = (
+                    self._indication_context_preference_score(
+                        role_filter,
+                        term,
+                        preferred,
+                    )
+                )
                 final_score = min(1.0, max(0.0, score + vector_bonus - final_penalty))
 
                 if b.enable_grounding_candidate_debug:
@@ -957,8 +1152,28 @@ class EntityGroundingService:
                             "medication_salt_form_penalty": round(
                                 medication_salt_form_penalty, 6
                             ),
+                            "medication_abstraction_penalty": round(
+                                medication_abstraction_penalty,
+                                6,
+                            ),
+                            "pci_angioplasty_penalty": round(
+                                pci_angioplasty_penalty,
+                                6,
+                            ),
+                            "indication_context_penalty": round(
+                                indication_context_penalty,
+                                6,
+                            ),
                             "normalized_head_match": round(
                                 normalized_head_match,
+                                6,
+                            ),
+                            "medication_base_preference": round(
+                                medication_base_preference,
+                                6,
+                            ),
+                            "indication_context_preference": round(
+                                indication_context_preference,
                                 6,
                             ),
                             "role_mismatch": role_mismatch,
@@ -984,6 +1199,9 @@ class EntityGroundingService:
                         "role_tension_penalty": role_tension_penalty,
                         "procedure_situation_penalty": procedure_situation_penalty,
                         "medication_salt_form_penalty": medication_salt_form_penalty,
+                        "medication_abstraction_penalty": medication_abstraction_penalty,
+                        "pci_angioplasty_penalty": pci_angioplasty_penalty,
+                        "indication_context_penalty": indication_context_penalty,
                         "base_semantic_penalty": base_semantic_penalty,
                         "semantic_penalty": semantic_penalty,
                         "vector_rank": vector_rank,
@@ -991,6 +1209,8 @@ class EntityGroundingService:
                         "vector_bonus": vector_bonus,
                         "final_penalty": final_penalty,
                         "normalized_head_match": normalized_head_match,
+                        "medication_base_preference": medication_base_preference,
+                        "indication_context_preference": indication_context_preference,
                         "role_mismatch": role_mismatch,
                     }
                 )
@@ -1002,6 +1222,8 @@ class EntityGroundingService:
                 scored_candidates,
                 key=lambda row: (
                     row["final_score"],
+                    row.get("indication_context_preference", 0.0),
+                    row.get("medication_base_preference", 0.0),
                     row.get("normalized_head_match", 0.0),
                     -row["extra_qualifier_ratio"],
                     row["coverage"],

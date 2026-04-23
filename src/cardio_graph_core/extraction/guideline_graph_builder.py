@@ -560,6 +560,57 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_EXTRA_QUALIFIER_PENALTY", "0.10")
             or "0.10"
         )
+        self.medication_non_substance_semantic_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MEDICATION_NON_SUBSTANCE_SEMANTIC_PENALTY",
+                "0.07",
+            )
+            or "0.07"
+        )
+        self.medication_therapy_context_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MEDICATION_THERAPY_CONTEXT_PENALTY",
+                "0.04",
+            )
+            or "0.04"
+        )
+        self.medication_max_abstraction_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MEDICATION_MAX_ABSTRACTION_PENALTY",
+                "0.16",
+            )
+            or "0.16"
+        )
+        configured_medication_cues = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MEDICATION_THERAPY_CUE_TOKENS",
+                "therapy,treatment,drug,drugs,regimen,management,anticoagulation",
+            )
+            or "therapy,treatment,drug,drugs,regimen,management,anticoagulation"
+        )
+        self.medication_therapy_cue_tokens = {
+            self._normalize(token)
+            for token in configured_medication_cues.split(",")
+            if self._normalize(token)
+        }
+        self.pci_angioplasty_variant_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_PCI_ANGIOPLASTY_VARIANT_PENALTY",
+                "0.08",
+            )
+            or "0.08"
+        )
+        self.indication_finding_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_INDICATION_FINDING_PENALTY", "0.10")
+            or "0.10"
+        )
+        self.indication_qualifier_preference = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_INDICATION_QUALIFIER_PREFERENCE",
+                "1.0",
+            )
+            or "1.0"
+        )
         self.guarded_fallback_margin = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_GUARDED_FALLBACK_MARGIN", "0.015")
             or "0.015"
