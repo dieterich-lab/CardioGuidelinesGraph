@@ -25,6 +25,69 @@ class EntityGroundingService:
 
     def __init__(self, builder: Any):
         self.builder = builder
+        self._standardized_candidate_cache: Dict[Tuple[str, str], str] = {}
+
+    def _llm_standardized_candidate(self, term: str, role: Optional[str]) -> str:
+        b = self.builder
+        if not term:
+            return term
+        enabled = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_ENABLED", "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        term_source = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_TERM_SOURCE", "standardized")
+            .strip()
+            .lower()
+        )
+        if not enabled or term_source != "original":
+            return term
+
+        role_key = (role or "").strip()
+        cache_key = (self._normalize(term), role_key)
+        cached = self._standardized_candidate_cache.get(cache_key)
+        if cached is not None:
+            return cached or term
+
+        standardized = term
+        try:
+            from cardio_graph_core.extraction.baml_client.sync_client import (
+                b as baml_sync,
+            )
+
+            baml_options = (
+                {"client_registry": b.client_registry}
+                if getattr(b, "client_registry", None) is not None
+                else None
+            )
+            result = (
+                baml_sync.GenerateStandardizedCandidate(
+                    concept=term,
+                    role=role_key,
+                    baml_options=baml_options,
+                )
+                if baml_options is not None
+                else baml_sync.GenerateStandardizedCandidate(
+                    concept=term,
+                    role=role_key,
+                )
+            )
+            candidate = (
+                getattr(result, "entity_standardized_candidate", None)
+                if result is not None
+                else None
+            )
+            if candidate:
+                standardized = str(candidate).strip()
+        except Exception as exc:
+            logger.debug(
+                "LLM standardized candidate generation failed term='%s' role='%s': %s",
+                term,
+                role_key,
+                exc,
+            )
+
+        self._standardized_candidate_cache[cache_key] = standardized
+        return standardized or term
 
     def _normalize(self, text: str) -> str:
         text = (text or "").strip().lower()
@@ -361,7 +424,10 @@ class EntityGroundingService:
             return float(getattr(self.builder, "pci_angioplasty_variant_penalty", 0.08))
         # Penalize chronic-total-occlusion sub-variants when the source query is generic.
         if (
-            ("chronic total occlusion" in candidate_norm or "total occlusion" in candidate_norm)
+            (
+                "chronic total occlusion" in candidate_norm
+                or "total occlusion" in candidate_norm
+            )
             and "occlusion" not in normalized_source
             and "chronic" not in normalized_source
         ):
@@ -688,6 +754,8 @@ class EntityGroundingService:
 
         if not term:
             return _return_result(None, None, 0.0, [])
+
+        term = self._llm_standardized_candidate(term, role)
 
         search_start = time.perf_counter()
 

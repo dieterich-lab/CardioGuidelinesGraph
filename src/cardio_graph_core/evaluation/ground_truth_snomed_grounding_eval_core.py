@@ -84,7 +84,9 @@ def _iter_tables(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def _read_gold_items(
-    gold_paths: List[Path], deduplicate: bool = True, term_source: str = TERM_SOURCE_STANDARDIZED
+    gold_paths: List[Path],
+    deduplicate: bool = True,
+    term_source: str = TERM_SOURCE_STANDARDIZED,
 ) -> List[Dict[str, str]]:
     items: List[Dict[str, str]] = []
 
@@ -822,7 +824,9 @@ def main() -> int:
 
     term_source = (
         args.term_source
-        or (os.environ.get("CARDIO_GRAPH_GROUNDING_TERM_SOURCE", "") or "").strip().lower()
+        or (os.environ.get("CARDIO_GRAPH_GROUNDING_TERM_SOURCE", "") or "")
+        .strip()
+        .lower()
         or TERM_SOURCE_STANDARDIZED
     )
     if term_source not in {TERM_SOURCE_STANDARDIZED, TERM_SOURCE_ORIGINAL}:
