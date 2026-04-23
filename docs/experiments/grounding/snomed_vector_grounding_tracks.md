@@ -41,6 +41,16 @@ It is intentionally ordered **newest first** and preserves the full sequence of:
 
 ## Change Timeline (Newest First)
 
+### 2026-04-23: Methodology Correction (short)
+
+- Important finding: our GT grounding evaluation fed `entity_standardized_candidate` as the query term by default (optimistic setting).
+- This can overestimate real-world performance, because deployment input is usually extractor raw text (`entity_original`).
+- Corrective action implemented: evaluator now supports explicit term source switching (`standardized` vs `original`).
+- Strict replay launched with original-only queries:
+  - Scientific no-rescue: `run_id=633663`
+  - Production heldout train-rescue: `run_id=633664`
+- These runs are in progress and will be treated as the realism baseline once complete.
+
 ### 2026-04-23: LH3 PCI/Indication tuning runs completed (633654/633655)
 
 Reviewed logs/artifacts:
