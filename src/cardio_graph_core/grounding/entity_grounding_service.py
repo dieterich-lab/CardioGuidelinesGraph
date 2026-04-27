@@ -34,6 +34,18 @@ class EntityGroundingService:
         enabled = os.environ.get(
             "CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_ENABLED", "true"
         ).strip().lower() in {"1", "true", "yes", "on"}
+        strict_mode = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_STRICT", "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        retry_attempts_raw = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_RETRIES", "2"
+        )
+        retry_attempts = max(1, int(retry_attempts_raw))
+        retry_temperature_raw = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_RETRY_TEMPERATURE",
+            "0.2",
+        )
+        retry_temperature = float(retry_temperature_raw)
         term_source = (
             os.environ.get("CARDIO_GRAPH_GROUNDING_TERM_SOURCE", "standardized")
             .strip()
@@ -49,41 +61,103 @@ class EntityGroundingService:
             return cached or term
 
         standardized = term
+        errors: List[str] = []
         try:
+            from baml_py import ClientRegistry
+
             from cardio_graph_core.extraction.baml_client.sync_client import (
                 b as baml_sync,
             )
+            from cardio_graph_core.extraction.clients import (
+                resolve_ollama_base_url,
+                resolve_ollama_model_name,
+            )
 
-            baml_options = (
+            base_options = (
                 {"client_registry": b.client_registry}
                 if getattr(b, "client_registry", None) is not None
                 else None
             )
-            result = (
-                baml_sync.GenerateStandardizedCandidate(
-                    concept=term,
-                    role=role_key,
-                    baml_options=baml_options,
-                )
-                if baml_options is not None
-                else baml_sync.GenerateStandardizedCandidate(
-                    concept=term,
-                    role=role_key,
-                )
-            )
-            candidate = (
-                getattr(result, "entity_standardized_candidate", None)
-                if result is not None
-                else None
-            )
-            if candidate:
-                standardized = str(candidate).strip()
+
+            retry_options = None
+            llm_model = os.environ.get("CARDIO_GRAPH_GROUNDING_LLM_MODEL", "").strip()
+            llm_node = os.environ.get("CARDIO_GRAPH_GROUNDING_LLM_NODE", "").strip()
+            llm_port_raw = os.environ.get("CARDIO_GRAPH_GROUNDING_LLM_PORT", "").strip()
+            if llm_model and llm_node and llm_port_raw:
+                try:
+                    llm_port = int(llm_port_raw)
+                    retry_client = f"{llm_model}_retry_temp"
+                    retry_registry = ClientRegistry()
+                    retry_registry.add_llm_client(
+                        name=retry_client,
+                        provider="openai-generic",
+                        options={
+                            "base_url": resolve_ollama_base_url(llm_node, llm_port),
+                            "model": resolve_ollama_model_name(llm_model),
+                            "max_tokens": 10000,
+                            "temperature": retry_temperature,
+                            "format": "json",
+                            "timeout": 600,
+                            "request_timeout": 600,
+                        },
+                    )
+                    retry_registry.set_primary(retry_client)
+                    retry_options = {
+                        "client_registry": retry_registry,
+                        "client": retry_client,
+                    }
+                except Exception:
+                    retry_options = None
+
+            for attempt_idx in range(retry_attempts):
+                use_retry_profile = attempt_idx > 0 and retry_options is not None
+                baml_options = retry_options if use_retry_profile else base_options
+                try:
+                    result = (
+                        baml_sync.GenerateStandardizedCandidate(
+                            concept=term,
+                            role=role_key,
+                            baml_options=baml_options,
+                        )
+                        if baml_options is not None
+                        else baml_sync.GenerateStandardizedCandidate(
+                            concept=term,
+                            role=role_key,
+                        )
+                    )
+                    candidate = (
+                        getattr(result, "entity_standardized_candidate", None)
+                        if result is not None
+                        else None
+                    )
+                    standardized = str(candidate).strip() if candidate else ""
+                    if standardized:
+                        break
+                    raise RuntimeError(
+                        "Empty standardized candidate returned by LLM "
+                        f"for term='{term}' role='{role_key}'"
+                    )
+                except Exception as exc:
+                    errors.append(f"attempt={attempt_idx + 1}: {exc}")
+                    if attempt_idx + 1 < retry_attempts:
+                        logger.warning(
+                            "LLM standardized candidate retry %d/%d term='%s' role='%s'",
+                            attempt_idx + 1,
+                            retry_attempts,
+                            term,
+                            role_key,
+                        )
+                    else:
+                        raise
         except Exception as exc:
+            if strict_mode:
+                raise
             logger.debug(
-                "LLM standardized candidate generation failed term='%s' role='%s': %s",
+                "LLM standardized candidate generation failed term='%s' role='%s': %s | retries=%s",
                 term,
                 role_key,
                 exc,
+                "; ".join(errors) if errors else "none",
             )
 
         self._standardized_candidate_cache[cache_key] = standardized
