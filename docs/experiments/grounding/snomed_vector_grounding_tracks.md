@@ -71,6 +71,35 @@ Runs launched from this matrix setup:
 - Production x original (new original rescue map): `run_id=633686` (running)
 - Scientific x original (LLM candidate step enabled): `run_id=633687` (running)
 
+### 2026-04-27: Report matrix summary (current)
+
+Scope confirmed for reporting:
+
+- Scientific track = no rescue map.
+- Production track = rescue-enabled heldout mode.
+- Helper meaning:
+  - scientific helper = LLM candidate generation on `entity_original`
+  - production helper = train-derived rescue map for the chosen term source
+
+Current matrix snapshot:
+
+| Cell | Definition | Run | Hits/Total | Accuracy | MRR | Status |
+|---|---|---:|---:|---:|---:|---|
+| 1a | Scientific + `entity_standardized_candidate` | `633654` | `109/120` | `0.908333` | `0.913333` | completed |
+| 0  | Scientific + `entity_original` (absolute baseline) | `633663` | `33/132` | `0.250000` | `0.304885` | completed |
+| 2a | Scientific + `entity_original` + LLM helper | `643994` | n/a | n/a | n/a | failed late (single runtime parse/empty LLM response) |
+| 1b | Production + `entity_standardized_candidate` + standardized rescue map | `633655` | `117/120` | `0.975000` | `0.978472` | completed |
+| 2b | Production + `entity_original` + original-derived rescue map | `633686` | `65/132` | `0.492424` | `0.517432` | completed |
+
+Notes:
+
+- The latest scientific helper replay (`643994`) did not finish end-to-end: many candidate generations succeeded, but one later call (`Prasugrel`) returned an empty non-JSON response and triggered strict parse failure.
+- Last completed scientific helper run is still `633687` (`32/132`, accuracy `0.242424`, MRR `0.296058`), but that run had known endpoint instability in candidate generation.
+- Practical interpretation remains unchanged:
+  - standardized input is strongly optimistic,
+  - original-only no-helper baseline is severely degraded,
+  - production rescue on original terms recovers a substantial portion (`0.25 -> 0.492424`) but remains far below standardized-track ceilings.
+
 ### 2026-04-23: Methodology Correction (short)
 
 - Important finding: our GT grounding evaluation fed `entity_standardized_candidate` as the query term by default (optimistic setting).
