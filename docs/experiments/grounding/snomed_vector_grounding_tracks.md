@@ -50,7 +50,7 @@ Implemented changes:
   - vector lookup (`db.index.vector.queryNodes`),
   - lexical lookup (`db.index.fulltext.queryNodes`),
   - hybrid merge by `conceptid`.
-- Grounding service lexical stage now prefers subset lexical retrieval and only falls back to SNOMED DB lexical search if subset lexical retrieval fails.
+- Grounding service lexical stage now uses subset lexical retrieval directly (no fallback to SNOMED DB lexical search when subset lexical retrieval fails).
 - Vector ingest now creates/maintains a fulltext index (`snomed_term_text_idx` by default) on `SnomedTerm.term`.
 - Vector ingest stores additional term metadata (`type_id`, `term_type`, `language_code`) to enable future type-aware weighting (preferred/synonym/FSN handling).
 
