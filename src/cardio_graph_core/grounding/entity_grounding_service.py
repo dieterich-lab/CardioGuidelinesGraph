@@ -189,15 +189,18 @@ class EntityGroundingService:
         normalized_tokens = [self._normalize_token(t) for t in tokens]
         return [t for t in normalized_tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
 
-    def _context_query_variants(self, context: Any, role: Optional[str]) -> List[str]:
-        b = self.builder
-        if context is None or not b.enable_vector_context_query:
+    def _build_context_query_variants(
+        self,
+        context: Any,
+        role: Optional[str],
+        enabled: bool,
+        allowed_roles: set[str],
+        max_tokens: int,
+    ) -> List[str]:
+        if context is None or not enabled:
             return []
         role_key = (role or "").strip().lower()
-        if (
-            b.vector_context_allowed_roles
-            and role_key not in b.vector_context_allowed_roles
-        ):
+        if allowed_roles and role_key not in allowed_roles:
             return []
         if isinstance(context, (dict, list)):
             raw_context = json.dumps(context, ensure_ascii=False, sort_keys=True)
@@ -209,7 +212,7 @@ class EntityGroundingService:
         context_tokens = self._important_tokens(cleaned_context)
         if not context_tokens:
             return []
-        max_tokens = max(2, b.vector_context_max_tokens)
+        max_tokens = max(2, max_tokens)
         variants: List[str] = [" ".join(context_tokens[:max_tokens])]
         if len(context_tokens) > max_tokens:
             variants.append(" ".join(context_tokens[-max_tokens:]))
@@ -228,6 +231,28 @@ class EntityGroundingService:
             if len(deduped) >= 3:
                 break
         return deduped
+
+    def _context_query_variants(self, context: Any, role: Optional[str]) -> List[str]:
+        b = self.builder
+        return self._build_context_query_variants(
+            context=context,
+            role=role,
+            enabled=b.enable_vector_context_query,
+            allowed_roles=b.vector_context_allowed_roles,
+            max_tokens=b.vector_context_max_tokens,
+        )
+
+    def _lexical_context_query_variants(
+        self, context: Any, role: Optional[str]
+    ) -> List[str]:
+        b = self.builder
+        return self._build_context_query_variants(
+            context=context,
+            role=role,
+            enabled=getattr(b, "enable_lexical_context_query", False),
+            allowed_roles=getattr(b, "lexical_context_allowed_roles", set()),
+            max_tokens=getattr(b, "lexical_context_max_tokens", 8),
+        )
 
     def _has_disallowed_semantic_tag(self, term: Optional[str]) -> bool:
         if not term:
@@ -945,14 +970,42 @@ class EntityGroundingService:
 
         results = []
         seen = set()
-        for t in search_terms:
+        lexical_terms = list(search_terms)
+        for context_variant in self._lexical_context_query_variants(
+            query_context, role
+        ):
+            lexical_terms.append(context_variant)
+            if getattr(b, "lexical_context_append_term", False):
+                lexical_terms.append(f"{term} {context_variant}")
+
+        use_subset_lexical = bool(
+            getattr(b, "enable_subset_lexical_grounding", False)
+            and getattr(b, "vector_retriever", None)
+        )
+
+        for t in lexical_terms:
             if t in seen:
                 continue
             seen.add(t)
             cached = b._search_cache.get(t)
             if cached is None:
-                explorer = b._ensure_snomed_connected()
-                cached = explorer.search_concepts_by_term(t, limit=limit)
+                if use_subset_lexical:
+                    try:
+                        cached = b.vector_retriever.retrieve_lexical(
+                            t,
+                            top_k=getattr(b, "lexical_top_k", 80),
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "Subset lexical retrieval failed for '%s' (fallback to SNOMED DB): %s",
+                            t,
+                            exc,
+                        )
+                        explorer = b._ensure_snomed_connected()
+                        cached = explorer.search_concepts_by_term(t, limit=limit)
+                else:
+                    explorer = b._ensure_snomed_connected()
+                    cached = explorer.search_concepts_by_term(t, limit=limit)
                 b._search_cache[t] = cached
             results.extend(cached)
 

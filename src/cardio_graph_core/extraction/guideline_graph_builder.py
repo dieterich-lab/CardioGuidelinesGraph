@@ -507,6 +507,39 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_MAX_TOKENS", "8")
             or "8"
         )
+        self.enable_subset_lexical_grounding = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_SUBSET_LEXICAL_ENABLED", "true")
+            or "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.lexical_top_k = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_LEXICAL_TOP_K", "80") or "80"
+        )
+        self.enable_lexical_context_query = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        configured_lexical_context_roles = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_ALLOWED_ROLES",
+                configured_context_roles,
+            )
+            or configured_context_roles
+        )
+        self.lexical_context_allowed_roles = {
+            token.strip().lower()
+            for token in configured_lexical_context_roles.split(",")
+            if token.strip()
+        }
+        self.lexical_context_append_term = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_APPEND_TERM", "false"
+            )
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.lexical_context_max_tokens = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_MAX_TOKENS", "8")
+            or "8"
+        )
         self.vector_rank_prior_enabled = (
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_ENABLED", "false")
             or "false"
@@ -762,6 +795,13 @@ class GuidelineGraphBuilder:
                         )
                         or "snomed_term_embeddings"
                     ).strip(),
+                    fulltext_index_name=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_FULLTEXT_INDEX",
+                            "snomed_term_text_idx",
+                        )
+                        or "snomed_term_text_idx"
+                    ).strip(),
                     embedding_url=(
                         os.environ.get(
                             "CARDIO_GRAPH_GROUNDING_EMBEDDING_URL",
@@ -776,6 +816,15 @@ class GuidelineGraphBuilder:
                         or "Qwen3embed"
                     ).strip(),
                     top_k=self.vector_top_k,
+                    lexical_top_k=self.lexical_top_k,
+                    lexical_weight=float(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_LEXICAL_WEIGHT", "0.30")
+                        or "0.30"
+                    ),
+                    vector_weight=float(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_WEIGHT", "0.70")
+                        or "0.70"
+                    ),
                     timeout_seconds=int(
                         os.environ.get("CARDIO_GRAPH_GROUNDING_EMBEDDING_TIMEOUT", "20")
                         or "20"
