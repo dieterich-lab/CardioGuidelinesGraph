@@ -1,6 +1,6 @@
 # SNOMED Vector Grounding Tracker (Scientific vs Production)
 
-Last revised: 2026-04-23
+Last revised: 2026-04-28
 
 ## Purpose
 
@@ -41,6 +41,82 @@ It is intentionally ordered **newest first** and preserves the full sequence of:
 
 ## Change Timeline (Newest First)
 
+### 2026-04-28: Unified subset-backed hybrid retrieval implemented (vector + lexical in Neo4j)
+
+Implemented changes:
+
+- Lexical grounding can now run against the same cardio-subset Neo4j store used by vector retrieval (no mandatory SNOMED DB lexical dependency).
+- Retriever now supports:
+  - vector lookup (`db.index.vector.queryNodes`),
+  - lexical lookup (`db.index.fulltext.queryNodes`),
+  - hybrid merge by `conceptid`.
+- Grounding service lexical stage now prefers subset lexical retrieval and only falls back to SNOMED DB lexical search if subset lexical retrieval fails.
+- Vector ingest now creates/maintains a fulltext index (`snomed_term_text_idx` by default) on `SnomedTerm.term`.
+- Vector ingest stores additional term metadata (`type_id`, `term_type`, `language_code`) to enable future type-aware weighting (preferred/synonym/FSN handling).
+
+Expected effect:
+
+- Better retrieval coherence before reranking (same subset corpus for both channels).
+- Reduced lexical/vector candidate disagreement caused by mixed backends.
+- Improved recall opportunity for terminology variants through fulltext + vector over the same term nodes.
+
+New runtime flags (defaults shown):
+
+- `CARDIO_GRAPH_GROUNDING_SUBSET_LEXICAL_ENABLED=true`
+- `CARDIO_GRAPH_GROUNDING_LEXICAL_TOP_K=80`
+- `CARDIO_GRAPH_GROUNDING_FULLTEXT_INDEX=snomed_term_text_idx`
+- `CARDIO_GRAPH_GROUNDING_LEXICAL_WEIGHT=0.30`
+- `CARDIO_GRAPH_GROUNDING_VECTOR_WEIGHT=0.70`
+- `CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_ENABLED=false`
+- `CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_ALLOWED_ROLES=Procedure`
+- `CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_APPEND_TERM=false`
+- `CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_MAX_TOKENS=8`
+
+Matrix extension request (to schedule):
+
+Add context toggle as an explicit experiment dimension for retrieval-time query construction:
+
+| Arm | Vector context | Lexical context | Goal |
+|---|---|---|---|
+| C0 | OFF | OFF | baseline unified hybrid |
+| C1 | ON | OFF | isolate vector-context effect |
+| C2 | OFF | ON | isolate lexical-context effect |
+| C3 | ON | ON | combined context effect |
+
+Recommendation:
+
+- Run this context matrix first on scientific-original (`2a`) and production-original (`2b`) cells, since they are the most sensitive to retrieval recall before reranking.
+
+### 2026-04-27: Report matrix summary (current)
+
+Scope confirmed for reporting:
+
+- Scientific track = no rescue map.
+- Production track = rescue-enabled heldout mode.
+- Helper meaning:
+  - scientific helper = LLM candidate generation on `entity_original`
+  - production helper = train-derived rescue map for the chosen term source
+
+Current matrix snapshot:
+
+| Cell | Definition | Run | Hits/Total | Accuracy | MRR | Status |
+|---|---|---:|---:|---:|---:|---|
+| 1a | Scientific + `entity_standardized_candidate` | `633654` | `109/120` | `0.908333` | `0.913333` | completed |
+| 0  | Scientific + `entity_original` (absolute baseline) | `633663` | `33/132` | `0.250000` | `0.304885` | completed |
+| 2a | Scientific + `entity_original` + LLM helper | `646306` | `57/132` | `0.431818` | `0.377936` | completed (retry-stabilized) |
+| 1b | Production + `entity_standardized_candidate` + standardized rescue map | `633655` | `117/120` | `0.975000` | `0.978472` | completed |
+| 2b | Production + `entity_original` + original-derived rescue map | `633686` | `65/132` | `0.492424` | `0.517432` | completed |
+
+Notes:
+
+- Latest scientific helper run (`646306`) completed end-to-end with retry protection enabled for transient empty/non-JSON LLM responses.
+- Scientific helper improved substantially over original-only scientific baseline: accuracy `0.250000 -> 0.431818` (`+0.181818`, `+24` hits).
+- Prior helper run `643994` remains useful as failure anatomy: many successful candidate calls, then late single-call parse failure (`Prasugrel`).
+- Practical interpretation remains unchanged:
+  - standardized input is strongly optimistic,
+  - original-only no-helper baseline is severely degraded,
+  - production rescue on original terms recovers more than scientific helper in this snapshot (`0.492424` vs `0.431818`), while both remain below standardized-track ceilings.
+
 ### 2026-04-23: 4-case matrix formalized + dedicated runners
 
 Matrix now treated as first-class:
@@ -70,35 +146,6 @@ Runs launched from this matrix setup:
 
 - Production x original (new original rescue map): `run_id=633686` (running)
 - Scientific x original (LLM candidate step enabled): `run_id=633687` (running)
-
-### 2026-04-27: Report matrix summary (current)
-
-Scope confirmed for reporting:
-
-- Scientific track = no rescue map.
-- Production track = rescue-enabled heldout mode.
-- Helper meaning:
-  - scientific helper = LLM candidate generation on `entity_original`
-  - production helper = train-derived rescue map for the chosen term source
-
-Current matrix snapshot:
-
-| Cell | Definition | Run | Hits/Total | Accuracy | MRR | Status |
-|---|---|---:|---:|---:|---:|---|
-| 1a | Scientific + `entity_standardized_candidate` | `633654` | `109/120` | `0.908333` | `0.913333` | completed |
-| 0  | Scientific + `entity_original` (absolute baseline) | `633663` | `33/132` | `0.250000` | `0.304885` | completed |
-| 2a | Scientific + `entity_original` + LLM helper | `643994` | n/a | n/a | n/a | failed late (single runtime parse/empty LLM response) |
-| 1b | Production + `entity_standardized_candidate` + standardized rescue map | `633655` | `117/120` | `0.975000` | `0.978472` | completed |
-| 2b | Production + `entity_original` + original-derived rescue map | `633686` | `65/132` | `0.492424` | `0.517432` | completed |
-
-Notes:
-
-- The latest scientific helper replay (`643994`) did not finish end-to-end: many candidate generations succeeded, but one later call (`Prasugrel`) returned an empty non-JSON response and triggered strict parse failure.
-- Last completed scientific helper run is still `633687` (`32/132`, accuracy `0.242424`, MRR `0.296058`), but that run had known endpoint instability in candidate generation.
-- Practical interpretation remains unchanged:
-  - standardized input is strongly optimistic,
-  - original-only no-helper baseline is severely degraded,
-  - production rescue on original terms recovers a substantial portion (`0.25 -> 0.492424`) but remains far below standardized-track ceilings.
 
 ### 2026-04-23: Methodology Correction (short)
 
