@@ -997,12 +997,11 @@ class EntityGroundingService:
                         )
                     except Exception as exc:
                         logger.warning(
-                            "Subset lexical retrieval failed for '%s' (fallback to SNOMED DB): %s",
+                            "Subset lexical retrieval failed for '%s' (no DB fallback): %s",
                             t,
                             exc,
                         )
-                        explorer = b._ensure_snomed_connected()
-                        cached = explorer.search_concepts_by_term(t, limit=limit)
+                        cached = []
                 else:
                     explorer = b._ensure_snomed_connected()
                     cached = explorer.search_concepts_by_term(t, limit=limit)
