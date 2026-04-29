@@ -581,28 +581,6 @@ class EntityGroundingService:
             return 0.85
         return SequenceMatcher(None, q_head, c_head).ratio() * 0.5
 
-    def _no_rescue_pci_retrieval_variants(
-        self, term: str, role: Optional[str]
-    ) -> List[str]:
-        if role != "Procedure":
-            return []
-        label = (os.environ.get("CARDIO_GRAPH_GROUNDING_ABLATION_LABEL") or "").upper()
-        if "NO_RESCUE" not in label:
-            return []
-        normalized = self._normalize(term)
-        if (
-            not ("revascularization" in normalized and "coronary" in normalized)
-            and "percutaneous coronary intervention" not in normalized
-        ):
-            return []
-        return [
-            "percutaneous coronary intervention",
-            "percutaneous transluminal coronary intervention",
-            "percutaneous transluminal coronary angioplasty",
-            "coronary revascularization percutaneous",
-            "pci coronary intervention",
-        ]
-
     def _score(self, query: str, candidate: str) -> float:
         q = self._normalize(query)
         c = self._normalize(candidate)
@@ -908,10 +886,6 @@ class EntityGroundingService:
             )
             search_terms.append(ischemic_variant)
 
-        no_rescue_pci_variants = self._no_rescue_pci_retrieval_variants(term, role)
-        if no_rescue_pci_variants:
-            search_terms.extend(no_rescue_pci_variants)
-
         if not search_terms:
             search_terms = [term]
 
@@ -1022,8 +996,6 @@ class EntityGroundingService:
                 vector_search_terms.append(
                     " ".join(important_tokens[-MAX_QUERY_TOKENS:])
                 )
-            if no_rescue_pci_variants:
-                vector_search_terms.extend(no_rescue_pci_variants)
             for context_variant in self._context_query_variants(query_context, role):
                 vector_search_terms.append(context_variant)
                 if b.vector_context_append_term:
@@ -1112,8 +1084,6 @@ class EntityGroundingService:
                 query_terms.extend(paren_tokens)
             if "coronary syndrome" in normalized_term:
                 query_terms.append(ischemic_variant)
-            if no_rescue_pci_variants:
-                query_terms.extend(no_rescue_pci_variants)
         if not query_terms:
             query_terms = [term]
 
