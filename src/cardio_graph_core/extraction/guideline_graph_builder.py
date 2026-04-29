@@ -593,6 +593,20 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_EXTRA_QUALIFIER_PENALTY", "0.10")
             or "0.10"
         )
+        self.unmatched_modifier_penalty_weight = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_UNMATCHED_MODIFIER_PENALTY",
+                "0.03",
+            )
+            or "0.03"
+        )
+        self.unmatched_modifier_penalty_cap = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_UNMATCHED_MODIFIER_PENALTY_CAP",
+                "0.12",
+            )
+            or "0.12"
+        )
         self.medication_non_substance_semantic_penalty = float(
             os.environ.get(
                 "CARDIO_GRAPH_GROUNDING_MEDICATION_NON_SUBSTANCE_SEMANTIC_PENALTY",

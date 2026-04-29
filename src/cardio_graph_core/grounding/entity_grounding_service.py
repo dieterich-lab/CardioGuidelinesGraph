@@ -666,6 +666,65 @@ class EntityGroundingService:
         extra = discriminative_candidate_tokens - query_tokens
         return len(extra) / max(len(discriminative_candidate_tokens), 1)
 
+    def _modifier_tokens(self, tokens: set[str]) -> set[str]:
+        if not tokens:
+            return set()
+        explicit = {
+            "single",
+            "double",
+            "triple",
+            "quadruple",
+            "multiple",
+            "multi",
+            "first",
+            "second",
+            "third",
+            "fourth",
+            "fifth",
+            "left",
+            "right",
+            "bilateral",
+            "unilateral",
+            "proximal",
+            "distal",
+            "mid",
+            "middle",
+            "upper",
+            "lower",
+            "anterior",
+            "posterior",
+            "medial",
+            "lateral",
+        }
+        out: set[str] = set()
+        for token in tokens:
+            if token in explicit:
+                out.add(token)
+                continue
+            if re.fullmatch(r"x\d+", token):
+                out.add(token)
+                continue
+            if token.isdigit():
+                out.add(token)
+                continue
+        return out
+
+    def _unmatched_modifier_penalty(
+        self, query_tokens: set[str], candidate_tokens: set[str]
+    ) -> Tuple[int, float]:
+        b = self.builder
+        query_modifiers = self._modifier_tokens(query_tokens)
+        candidate_modifiers = self._modifier_tokens(candidate_tokens)
+        unmatched = candidate_modifiers - query_modifiers
+        unmatched_count = len(unmatched)
+        if unmatched_count <= 0:
+            return 0, 0.0
+        penalty = min(
+            b.unmatched_modifier_penalty_cap,
+            unmatched_count * b.unmatched_modifier_penalty_weight,
+        )
+        return unmatched_count, penalty
+
     def _vector_candidates(
         self, term: str
     ) -> Tuple[List[Dict[str, Any]], Dict[int, float], Dict[int, int]]:
@@ -1219,6 +1278,13 @@ class EntityGroundingService:
                     extra_qualifier_ratio * b.extra_qualifier_penalty_weight
                 )
                 final_penalty += extra_qualifier_penalty
+                unmatched_modifier_count, unmatched_modifier_penalty = (
+                    self._unmatched_modifier_penalty(
+                        important_query_tokens,
+                        candidate_tokens_for_best,
+                    )
+                )
+                final_penalty += unmatched_modifier_penalty
                 hard_negative_penalty = self._hard_negative_penalty_for(
                     normalized_source_term,
                     role_filter,
@@ -1318,7 +1384,8 @@ class EntityGroundingService:
                         preferred,
                     )
                 )
-                final_score = min(1.0, max(0.0, score + vector_bonus - final_penalty))
+                raw_final_score = score + vector_bonus - final_penalty
+                final_score = min(1.0, max(0.0, raw_final_score))
 
                 if b.enable_grounding_candidate_debug:
                     candidate_debug_rows.append(
@@ -1331,6 +1398,11 @@ class EntityGroundingService:
                                 discriminative_coverage, 6
                             ),
                             "extra_qualifier_ratio": round(extra_qualifier_ratio, 6),
+                            "unmatched_modifier_count": unmatched_modifier_count,
+                            "unmatched_modifier_penalty": round(
+                                unmatched_modifier_penalty,
+                                6,
+                            ),
                             "vector_raw": round(vector_raw, 6),
                             "vector_rank": vector_rank,
                             "vector_bonus": round(vector_bonus, 6),
@@ -1371,6 +1443,7 @@ class EntityGroundingService:
                             ),
                             "role_mismatch": role_mismatch,
                             "final_penalty": round(final_penalty, 6),
+                            "raw_final_score": round(raw_final_score, 6),
                             "final_score": round(final_score, 6),
                         }
                     )
@@ -1384,6 +1457,8 @@ class EntityGroundingService:
                         "lexical": score,
                         "discriminative_coverage": discriminative_coverage,
                         "extra_qualifier_ratio": extra_qualifier_ratio,
+                        "unmatched_modifier_count": unmatched_modifier_count,
+                        "unmatched_modifier_penalty": unmatched_modifier_penalty,
                         "extra_qualifier_penalty": extra_qualifier_penalty,
                         "low_coverage_penalty": low_coverage_penalty,
                         "missing_discriminative_penalty": missing_discriminative_penalty,
@@ -1401,11 +1476,13 @@ class EntityGroundingService:
                         "vector_rank": vector_rank,
                         "vector_raw": vector_raw,
                         "vector_bonus": vector_bonus,
+                        "raw_final_score": raw_final_score,
                         "final_penalty": final_penalty,
                         "normalized_head_match": normalized_head_match,
                         "medication_base_preference": medication_base_preference,
                         "indication_context_preference": indication_context_preference,
                         "role_mismatch": role_mismatch,
+                        "term_length": len(self._important_tokens(preferred or "")),
                     }
                 )
 
@@ -1415,16 +1492,18 @@ class EntityGroundingService:
             scored_candidates = sorted(
                 scored_candidates,
                 key=lambda row: (
-                    row["final_score"],
-                    row.get("indication_context_preference", 0.0),
-                    row.get("medication_base_preference", 0.0),
-                    row.get("normalized_head_match", 0.0),
-                    -row["extra_qualifier_ratio"],
-                    row["coverage"],
-                    row["lexical"],
-                    row["discriminative_coverage"],
+                    -row.get("raw_final_score", row["final_score"]),
+                    -row.get("indication_context_preference", 0.0),
+                    -row.get("medication_base_preference", 0.0),
+                    -row.get("normalized_head_match", 0.0),
+                    row.get("unmatched_modifier_count", 0),
+                    row["extra_qualifier_ratio"],
+                    -row["coverage"],
+                    -row["lexical"],
+                    -row["discriminative_coverage"],
+                    row.get("term_length", 0),
+                    int(row["concept_id"]),
                 ),
-                reverse=True,
             )
 
             for idx, row in enumerate(scored_candidates, start=1):
@@ -1438,14 +1517,17 @@ class EntityGroundingService:
             if len(scored_candidates) > 1:
                 top_two = sorted(
                     scored_candidates,
-                    key=lambda row: row["final_score"],
+                    key=lambda row: row.get("raw_final_score", row["final_score"]),
                     reverse=True,
                 )[:2]
                 top = top_two[0]
                 runner = top_two[1]
                 if (
                     b.ambiguity_abstain_margin > 0.0
-                    and (top["final_score"] - runner["final_score"])
+                    and (
+                        top.get("raw_final_score", top["final_score"])
+                        - runner.get("raw_final_score", runner["final_score"])
+                    )
                     <= b.ambiguity_abstain_margin
                     and top["coverage"] < b.ambiguity_min_coverage
                     and runner["coverage"] < b.ambiguity_min_coverage
@@ -1455,12 +1537,14 @@ class EntityGroundingService:
                     if b.ambiguity_confidence_backoff_enabled:
                         min_backoff_score = max(
                             b.ambiguity_backoff_min_score,
-                            top["final_score"] - b.ambiguity_backoff_max_drop,
+                            top.get("raw_final_score", top["final_score"])
+                            - b.ambiguity_backoff_max_drop,
                         )
                         backoff_pool = [
                             row
                             for row in scored_candidates
-                            if row["final_score"] >= min_backoff_score
+                            if row.get("raw_final_score", row["final_score"])
+                            >= min_backoff_score
                         ]
                         if role_filter and b.enable_semantic_tag_filter:
                             role_compatible_pool = [
@@ -1478,8 +1562,9 @@ class EntityGroundingService:
                             backoff_candidate = max(
                                 backoff_pool,
                                 key=lambda row: (
-                                    row["final_score"],
+                                    row.get("raw_final_score", row["final_score"]),
                                     row.get("normalized_head_match", 0.0),
+                                    -row.get("unmatched_modifier_count", 0),
                                     -row["extra_qualifier_ratio"],
                                     row["coverage"],
                                     row["lexical"],
@@ -1497,7 +1582,10 @@ class EntityGroundingService:
                         local_best_score = backoff_candidate["final_score"]
                 if (
                     local_best_id is not None
-                    and (top["final_score"] - runner["final_score"])
+                    and (
+                        top.get("raw_final_score", top["final_score"])
+                        - runner.get("raw_final_score", runner["final_score"])
+                    )
                     <= b.guarded_fallback_margin
                     and top["discriminative_coverage"]
                     < b.min_discriminative_coverage_for_top
@@ -1518,7 +1606,7 @@ class EntityGroundingService:
             if b.enable_grounding_candidate_debug and candidate_debug_rows:
                 top_rows = sorted(
                     candidate_debug_rows,
-                    key=lambda row: row["final_score"],
+                    key=lambda row: row.get("raw_final_score", row["final_score"]),
                     reverse=True,
                 )[:5]
                 logger.info(
