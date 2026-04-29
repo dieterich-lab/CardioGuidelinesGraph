@@ -1,6 +1,6 @@
 # SNOMED Vector Grounding Tracker (Scientific vs Production)
 
-Last revised: 2026-04-28
+Last revised: 2026-04-29
 
 ## Purpose
 
@@ -40,6 +40,72 @@ It is intentionally ordered **newest first** and preserves the full sequence of:
   - non-eval pipeline steps are tracked in local scheduler time from `sacct`.
 
 ## Change Timeline (Newest First)
+
+### 2026-04-29: Production C0-C3 replay after lexical query sanitization
+
+Replay scope:
+
+- Replayed affected production original arms after adding Lucene-safe lexical query sanitization in retriever:
+  - C0 (`655823`), C1 (`655824`), C2 (`655825`), C3 (`655826`)
+
+Replay outcomes:
+
+- C0 (`655823`): accuracy `0.537879` (`71/132`), MRR `0.577625`
+- C1 (`655824`): accuracy `0.537879` (`71/132`), MRR `0.577692`
+- C2 (`655825`): accuracy `0.537879` (`71/132`), MRR `0.577624`
+- C3 (`655826`): accuracy `0.537879` (`71/132`), MRR `0.577624`
+
+Verification of sanitizer effect:
+
+- Replay logs show no occurrences of:
+  - `Lexical error at line`
+  - `Subset lexical retrieval failed`
+  - `Vector retrieval failed for` (from the prior Lucene parser failure mode)
+
+Interpretation:
+
+- Sanitizing worked operationally (parser failures removed).
+- Top-line metrics remained unchanged in this replay, indicating the prior parser-failure paths did not change final top-1 outcomes in this specific slice.
+- Context-toggle conclusion remains the same: no meaningful production C0-C3 separation on top-1.
+
+Decision:
+
+- Adopt C0 as the default runtime profile for future experiments (scientific and production).
+- Reserve C1/C2/C3 only for explicit context-ablation studies.
+
+### 2026-04-29: C0-C3 context matrix completed (scientific-original and production-original)
+
+Completed run battery:
+
+- Scientific original (no rescue):
+  - C0 (`653782`): accuracy `0.363636` (`48/132`), MRR `0.406924`
+  - C1 (`653783`): accuracy `0.363636` (`48/132`), MRR `0.407028`
+  - C2 (`653784`): accuracy `0.356061` (`47/132`), MRR `0.399323`
+  - C3 (`653785`): accuracy `0.363636` (`48/132`), MRR `0.406906`
+- Production original (train-rescue enabled):
+  - C0 (`653786`): accuracy `0.537879` (`71/132`), MRR `0.577625`
+  - C1 (`653787`): accuracy `0.537879` (`71/132`), MRR `0.577692`
+  - C2 (`653788`): accuracy `0.537879` (`71/132`), MRR `0.577624`
+  - C3 (`653789`): accuracy `0.537879` (`71/132`), MRR `0.577624`
+
+Interpretation:
+
+- Context toggles showed no meaningful top-1 impact in this battery.
+- Scientific had a minor C2 dip (`-1` hit vs C0/C1/C3), indicating lexical-context-only did not help in this slice.
+- Production was effectively invariant across C0-C3 (identical hits/accuracy; only tiny MRR jitter).
+
+Operational finding from logs:
+
+- Multiple runs emitted Neo4j fulltext query parser errors for long queries containing `with/out` and parenthesized text.
+- Because lexical fallback to SNOMED DB is disabled by policy, these lexical query failures now hard-drop those lexical candidate paths.
+- Representative examples are visible in:
+  - `slurm/gt-eval-prod-orig-C2_653788.log`
+  - `slurm/gt-eval-prod-orig-C3_653789.log`
+
+Recommendation:
+
+- Keep C0 as the default context setting for now (same or better than context-on arms with lower risk).
+- Prioritize a lexical query sanitizer/escaper for Lucene special-character sequences before the next matrix replay.
 
 ### 2026-04-28: Unified subset-backed hybrid retrieval implemented (vector + lexical in Neo4j)
 
@@ -312,6 +378,18 @@ Finding:
 
 | timestamp_utc | run_id | split | track | accuracy | hits/total | mrr | artifact |
 |---|---:|---|---|---:|---|---:|---|
+| 2026-04-29T09:27:42.985682+00:00 | 655824 | locked_test | production | 0.537879 | 71/132 | 0.577692 | `docs/generated/ground_truth/grounding_only/vector_job_655824/ground_truth_vector_eval.json` |
+| 2026-04-29T09:27:25.848244+00:00 | 655826 | locked_test | production | 0.537879 | 71/132 | 0.577624 | `docs/generated/ground_truth/grounding_only/vector_job_655826/ground_truth_vector_eval.json` |
+| 2026-04-29T09:24:57.719135+00:00 | 655825 | locked_test | production | 0.537879 | 71/132 | 0.577624 | `docs/generated/ground_truth/grounding_only/vector_job_655825/ground_truth_vector_eval.json` |
+| 2026-04-29T09:21:30.769986+00:00 | 655823 | locked_test | production | 0.537879 | 71/132 | 0.577625 | `docs/generated/ground_truth/grounding_only/vector_job_655823/ground_truth_vector_eval.json` |
+| 2026-04-28T15:29:49.706489+00:00 | 653785 | locked_test | scientific | 0.363636 | 48/132 | 0.406906 | `docs/generated/ground_truth/grounding_only/vector_job_653785/ground_truth_vector_eval.json` |
+| 2026-04-28T14:53:13.859511+00:00 | 653783 | locked_test | scientific | 0.363636 | 48/132 | 0.407028 | `docs/generated/ground_truth/grounding_only/vector_job_653783/ground_truth_vector_eval.json` |
+| 2026-04-28T14:50:19.300495+00:00 | 653784 | locked_test | scientific | 0.356061 | 47/132 | 0.399323 | `docs/generated/ground_truth/grounding_only/vector_job_653784/ground_truth_vector_eval.json` |
+| 2026-04-28T14:45:48.413538+00:00 | 653782 | locked_test | scientific | 0.363636 | 48/132 | 0.406924 | `docs/generated/ground_truth/grounding_only/vector_job_653782/ground_truth_vector_eval.json` |
+| 2026-04-28T14:32:18.756688+00:00 | 653787 | locked_test | production | 0.537879 | 71/132 | 0.577692 | `docs/generated/ground_truth/grounding_only/vector_job_653787/ground_truth_vector_eval.json` |
+| 2026-04-28T14:31:31.123506+00:00 | 653789 | locked_test | production | 0.537879 | 71/132 | 0.577624 | `docs/generated/ground_truth/grounding_only/vector_job_653789/ground_truth_vector_eval.json` |
+| 2026-04-28T14:28:15.811134+00:00 | 653788 | locked_test | production | 0.537879 | 71/132 | 0.577624 | `docs/generated/ground_truth/grounding_only/vector_job_653788/ground_truth_vector_eval.json` |
+| 2026-04-28T14:24:31.085411+00:00 | 653786 | locked_test | production | 0.537879 | 71/132 | 0.577625 | `docs/generated/ground_truth/grounding_only/vector_job_653786/ground_truth_vector_eval.json` |
 | 2026-04-23T09:55:00.219744+00:00 | 633654 | locked_test | scientific | 0.908333 | 109/120 | 0.913333 | `docs/generated/ground_truth/grounding_only/vector_job_633654/ground_truth_vector_eval.json` |
 | 2026-04-23T09:51:07.616376+00:00 | 633655 | locked_test | production | 0.975000 | 117/120 | 0.978472 | `docs/generated/ground_truth/grounding_only/vector_job_633655/ground_truth_vector_eval.json` |
 | 2026-04-22T16:24:24.065082+00:00 | 633138 | locked_test | scientific | 0.866667 | 104/120 | 0.881389 | `docs/generated/ground_truth/grounding_only/vector_job_633138/ground_truth_vector_eval.json` |
