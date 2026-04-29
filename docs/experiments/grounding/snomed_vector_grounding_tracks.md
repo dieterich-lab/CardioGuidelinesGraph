@@ -61,12 +61,17 @@ Completed matrix results:
 
 | Cell | Definition | Run | Hits/Total | Accuracy | MRR | Status |
 |---|---|---:|---:|---:|---:|---|
-| S-A | Scientific + standardized | `633654` | `109/120` | `0.908333` | `0.913333` | completed |
+| S-A | Scientific + standardized | `655938` | `119/120` | `0.991667` | `0.988889` | completed (rerun) |
 | S-B | Scientific + original (no helper, C0) | `633663` | `33/132` | `0.250000` | `0.304885` | completed |
 | S-C | Scientific + original + LLM helper (C0) | `655921` | `50/132` | `0.378788` | `0.393282` | completed |
-| P-A | Production + standardized + rescue | `633655` | `117/120` | `0.975000` | `0.978472` | completed |
+| P-A | Production + standardized + rescue | `655939` | `119/120` | `0.991667` | `0.988889` | completed (rerun) |
 | P-B | Production + original + rescue (C0) | `633686` | `65/132` | `0.492424` | `0.517432` | completed |
 | P-C | Production + original + rescue + LLM helper (C0) | `655922` | `71/132` | `0.537879` | `0.577625` | completed |
+
+Short note on rerun outcome:
+
+- Standardized-track reruns improved both S-A and P-A to `119/120`.
+- Single residual miss in both reruns: `Coronary artery bypass grafting` (`232717009`) predicted as `232722009` (CABG x4), with gold present at rank `6`.
 
 Outcome read (final):
 
@@ -77,8 +82,8 @@ Outcome read (final):
   - No helper (`P-B - S-B`): accuracy `+0.242424` (`+32` hits), MRR `+0.212547`.
   - With helper (`P-C - S-C`): accuracy `+0.159091` (`+21` hits), MRR `+0.184343`.
 - Standardized ceiling vs realism gap:
-  - Scientific gap: `S-A - S-B = 0.658333`; `S-A - S-C = 0.529545`.
-  - Production gap: `P-A - P-B = 0.482576`; `P-A - P-C = 0.437121`.
+  - Scientific gap: `S-A - S-B = 0.741667`; `S-A - S-C = 0.612879`.
+  - Production gap: `P-A - P-B = 0.499243`; `P-A - P-C = 0.453788`.
 - Primary metric for rank-1 correctness: accuracy (`hits/total`).
 - Secondary metric for ranking quality under ties: MRR.
 
