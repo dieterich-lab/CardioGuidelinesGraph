@@ -533,6 +533,16 @@ class EntityGroundingService:
             return float(getattr(self.builder, "pci_cto_variant_penalty", 0.08))
         return 0.0
 
+    def _procedure_count_overspec_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        # Simplification experiment: disable specialized count-overspec heuristic
+        # and rely on generic extra-qualifier penalties.
+        return 0.0
+
     def _indication_context_penalty(
         self,
         role: Optional[str],
@@ -1252,6 +1262,14 @@ class EntityGroundingService:
                     preferred,
                 )
                 final_penalty += pci_angioplasty_penalty
+                procedure_count_overspec_penalty = (
+                    self._procedure_count_overspec_penalty(
+                        role_filter,
+                        term,
+                        preferred,
+                    )
+                )
+                final_penalty += procedure_count_overspec_penalty
                 indication_context_penalty = self._indication_context_penalty(
                     role_filter,
                     term,
@@ -1331,6 +1349,10 @@ class EntityGroundingService:
                                 pci_angioplasty_penalty,
                                 6,
                             ),
+                            "procedure_count_overspec_penalty": round(
+                                procedure_count_overspec_penalty,
+                                6,
+                            ),
                             "indication_context_penalty": round(
                                 indication_context_penalty,
                                 6,
@@ -1372,6 +1394,7 @@ class EntityGroundingService:
                         "medication_salt_form_penalty": medication_salt_form_penalty,
                         "medication_abstraction_penalty": medication_abstraction_penalty,
                         "pci_angioplasty_penalty": pci_angioplasty_penalty,
+                        "procedure_count_overspec_penalty": procedure_count_overspec_penalty,
                         "indication_context_penalty": indication_context_penalty,
                         "base_semantic_penalty": base_semantic_penalty,
                         "semantic_penalty": semantic_penalty,
