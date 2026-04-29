@@ -41,6 +41,84 @@ It is intentionally ordered **newest first** and preserves the full sequence of:
 
 ## Change Timeline (Newest First)
 
+### 2026-04-29: 2x3 matrix (C0 default) completed
+
+Scope locked for this matrix:
+
+- Context profile: `C0` (vector context OFF, lexical context OFF) for all cells.
+- Scientific row policy: no rescue map.
+- Production row policy: train-rescue map enabled.
+- Input denominator: `132` entities (`entity_original` realism set) for original-term cells.
+
+Matrix definition (2 tracks x 3 query/helper modes):
+
+| Row | Col A (standardized) | Col B (original, no helper) | Col C (original, helper) |
+|---|---|---|---|
+| Scientific | no rescue + `entity_standardized_candidate` | no rescue + `entity_original` | no rescue + `entity_original` + LLM candidate standardization |
+| Production | train-rescue + `entity_standardized_candidate` | train-rescue + `entity_original` | train-rescue + `entity_original` + LLM candidate standardization |
+
+Completed matrix results:
+
+| Cell | Definition | Run | Hits/Total | Accuracy | MRR | Status |
+|---|---|---:|---:|---:|---:|---|
+| S-A | Scientific + standardized | `633654` | `109/120` | `0.908333` | `0.913333` | completed |
+| S-B | Scientific + original (no helper, C0) | `633663` | `33/132` | `0.250000` | `0.304885` | completed |
+| S-C | Scientific + original + LLM helper (C0) | `655921` | `50/132` | `0.378788` | `0.393282` | completed |
+| P-A | Production + standardized + rescue | `633655` | `117/120` | `0.975000` | `0.978472` | completed |
+| P-B | Production + original + rescue (C0) | `633686` | `65/132` | `0.492424` | `0.517432` | completed |
+| P-C | Production + original + rescue + LLM helper (C0) | `655922` | `71/132` | `0.537879` | `0.577625` | completed |
+
+Outcome read (final):
+
+- Row-wise helper effect (primary):
+  - Scientific helper lift (`S-C - S-B`): accuracy `+0.128788` (`+17` hits), MRR `+0.088397`.
+  - Production helper lift (`P-C - P-B`): accuracy `+0.045455` (`+6` hits), MRR `+0.060193`.
+- Cross-row rescue effect on original terms:
+  - No helper (`P-B - S-B`): accuracy `+0.242424` (`+32` hits), MRR `+0.212547`.
+  - With helper (`P-C - S-C`): accuracy `+0.159091` (`+21` hits), MRR `+0.184343`.
+- Standardized ceiling vs realism gap:
+  - Scientific gap: `S-A - S-B = 0.658333`; `S-A - S-C = 0.529545`.
+  - Production gap: `P-A - P-B = 0.482576`; `P-A - P-C = 0.437121`.
+- Primary metric for rank-1 correctness: accuracy (`hits/total`).
+- Secondary metric for ranking quality under ties: MRR.
+
+Net conclusion:
+
+- Helper is beneficial in both rows under C0, with larger gain in scientific.
+- Rescue-map policy remains a major independent driver on original-term performance.
+- Even after helper gains, both rows remain below standardized-input ceilings; realism gap persists.
+
+Per-miss audit for S-A (`633654`, `109/120`):
+
+Audit summary:
+
+- Total misses: `11`
+- Family A (candidate recall miss, gold not present in ranked list): `8/11`
+- Family B (gold present but outranked by competing concept): `3/11`
+- Of the `11` misses, only `1` has standardized term text exactly matching the gold preferred term string (`Coronary artery bypass grafting`).
+
+| # | row_id | side | role | standardized candidate term | gold id | predicted id | gt_rank | Failure mode |
+|---|---|---|---|---|---:|---:|---:|---|
+| 1 | t0_row_01 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | 713617008 | null | A: PCI variant family; gold absent from ranked list |
+| 2 | t0_row_04 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | 713617008 | null | A: PCI variant family; gold absent from ranked list |
+| 3 | t0_row_03 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | 713617008 | null | A: PCI variant family; gold absent from ranked list |
+| 4 | t1_row_01 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | 713617008 | null | A: PCI variant family; gold absent from ranked list |
+| 5 | t1_row_03 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | 713617008 | null | A: PCI variant family; gold absent from ranked list |
+| 6 | t1_row_04 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | 713617008 | null | A: PCI variant family; gold absent from ranked list |
+| 7 | t1_row_05 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | 713617008 | null | A: PCI variant family; gold absent from ranked list |
+| 8 | t1_row_06 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | 713617008 | null | A: PCI variant family; gold absent from ranked list |
+| 9 | t0_row_01 | condition | Procedure | Coronary artery bypass grafting | 232717009 | 232722009 | 6 | B: granularity overspecification (CABG x4 outranks generic CABG) |
+| 10 | t1_row_06 | condition | Medication | Indication of | 230165009 | 432678004 | 3 | B: semantic/class drift within indication concepts |
+| 11 | t1_row_08 | action | Medication | Proton pump inhibitor | 734582004 | 870251000 | 10 | B: abstraction drift (substance/disposition -> therapy procedure) |
+
+Operational interpretation:
+
+- The dominant remaining loss is a single repeated recall gap (`Percutaneous coronary revascularization`), accounting for `8` misses.
+- Remaining misses are ranking-time preference errors where the gold concept is present but not selected as rank-1.
+- This indicates a two-stage improvement target:
+  - improve candidate recall for the PCI synonym cluster,
+  - tighten reranker preference against overspecific or cross-class alternatives when generic/qualifier gold concepts are present.
+
 ### 2026-04-29: Production C0-C3 replay after lexical query sanitization
 
 Replay scope:
