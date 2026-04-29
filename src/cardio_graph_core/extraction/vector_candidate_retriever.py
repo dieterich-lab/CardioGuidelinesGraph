@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
@@ -96,6 +97,21 @@ class Neo4jVectorCandidateRetriever:
                 return str(candidate)
         return ""
 
+    @staticmethod
+    def _sanitize_fulltext_query(query_text: str) -> str:
+        """Sanitize free text for Lucene query parser used by Neo4j fulltext index."""
+        text = str(query_text or "").strip()
+        if not text:
+            return ""
+        # Replace slash-like separators and other Lucene operators with spaces.
+        text = text.replace("/", " ")
+        text = text.replace("\\", " ")
+        text = re.sub(r"\bAND\b|\bOR\b|\bNOT\b", " ", text, flags=re.IGNORECASE)
+        # Remove remaining Lucene special characters that can trigger parser failures.
+        text = re.sub(r"[+\-!(){}\[\]^\"~*?:|&]", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
     def retrieve_vector(
         self, term: str, top_k: int | None = None
     ) -> List[Dict[str, Any]]:
@@ -141,6 +157,10 @@ class Neo4jVectorCandidateRetriever:
         if not query_text:
             return []
 
+        safe_query_text = self._sanitize_fulltext_query(query_text)
+        if not safe_query_text:
+            return []
+
         k = int(top_k or self.config.lexical_top_k)
         query = """
         CALL db.index.fulltext.queryNodes($index_name, $query_text, {limit: $k})
@@ -152,7 +172,7 @@ class Neo4jVectorCandidateRetriever:
             rows = session.run(
                 query,
                 index_name=self.config.fulltext_index_name,
-                query_text=query_text,
+                query_text=safe_query_text,
                 k=k,
             )
 
