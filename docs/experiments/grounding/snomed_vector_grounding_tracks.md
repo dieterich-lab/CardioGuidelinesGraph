@@ -1,6 +1,6 @@
 # SNOMED Vector Grounding Tracker (Scientific vs Production)
 
-Last revised: 2026-04-29
+Last revised: 2026-04-30
 
 ## Purpose
 
@@ -40,6 +40,38 @@ It is intentionally ordered **newest first** and preserves the full sequence of:
   - non-eval pipeline steps are tracked in local scheduler time from `sacct`.
 
 ## Change Timeline (Newest First)
+
+### 2026-04-30: Generic raw-score/tie-break replay completed (mixed outcome)
+
+Replay scope:
+
+- New generalized reranking changes were evaluated:
+  - sort by unclipped raw score,
+  - deterministic tie-break update,
+  - unmatched-modifier penalty (generic; non-CABG-specific).
+- Standardized tracks replayed:
+  - Scientific no-rescue: run `655967`
+  - Production train-rescue: run `655968`
+
+Outcomes:
+
+- `655968` (P-A): `120/120`, accuracy `1.000000`, MRR `1.000000`.
+- `655967` (S-A): `112/120`, accuracy `0.933333`, MRR `0.966667`.
+
+Miss audit for `655967`:
+
+- Total misses: `8`
+- All `8` misses are the same PCI family:
+  - term: `Percutaneous coronary revascularization`
+  - gold: `415070008`
+  - predicted: `713617008`
+  - gold rank: `2` (present, but outranked)
+
+Interpretation:
+
+- The generic change removed the prior CABG residual in the production/recovery setting (`655968`).
+- The same change harmed scientific no-rescue behavior (`655967`) by consistently preferring a competing PCI variant for eight rows.
+- Net: this configuration is not a stable cross-track default; further tuning is required before adoption for scientific no-rescue.
 
 ### 2026-04-29: 2x3 matrix (C0 default) completed
 
