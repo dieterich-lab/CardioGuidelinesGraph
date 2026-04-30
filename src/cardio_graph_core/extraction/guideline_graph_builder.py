@@ -603,6 +603,41 @@ class GuidelineGraphBuilder:
             )
             or "0.04"
         )
+        self.qualifier_tie_prefer_enabled = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_ENABLED",
+                "true",
+            )
+            or "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.qualifier_tie_prefer_margin = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_MARGIN",
+                "0.02",
+            )
+            or "0.02"
+        )
+        self.qualifier_tie_prefer_min_qualifier_delta = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_MIN_QUALIFIER_DELTA",
+                "0.03",
+            )
+            or "0.03"
+        )
+        self.qualifier_tie_prefer_min_vector_raw_advantage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_MIN_VECTOR_RAW_ADVANTAGE",
+                "0.02",
+            )
+            or "0.02"
+        )
+        self.qualifier_tie_prefer_max_lexical_gap = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_MAX_LEXICAL_GAP",
+                "0.25",
+            )
+            or "0.25"
+        )
         self.min_weighted_query_coverage = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_MIN_WEIGHTED_QUERY_COVERAGE", "0.45")
             or "0.45"

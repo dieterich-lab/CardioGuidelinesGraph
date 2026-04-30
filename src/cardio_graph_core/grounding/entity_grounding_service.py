@@ -825,6 +825,38 @@ class EntityGroundingService:
             return False
         return True
 
+    def _should_prefer_lower_qualifier_tie(
+        self, top: Dict[str, Any], runner: Dict[str, Any]
+    ) -> bool:
+        b = self.builder
+        if not b.qualifier_tie_prefer_enabled:
+            return False
+        top_score = float(top.get("raw_final_score", top.get("final_score", 0.0)))
+        runner_score = float(
+            runner.get("raw_final_score", runner.get("final_score", 0.0))
+        )
+        score_gap = top_score - runner_score
+        if score_gap < 0.0 or score_gap > b.qualifier_tie_prefer_margin:
+            return False
+        qualifier_delta = float(top.get("extra_qualifier_ratio", 0.0)) - float(
+            runner.get("extra_qualifier_ratio", 0.0)
+        )
+        if qualifier_delta < b.qualifier_tie_prefer_min_qualifier_delta:
+            return False
+        vector_raw_advantage = float(runner.get("vector_raw", 0.0)) - float(
+            top.get("vector_raw", 0.0)
+        )
+        if vector_raw_advantage < b.qualifier_tie_prefer_min_vector_raw_advantage:
+            return False
+        lexical_gap = float(top.get("lexical", 0.0)) - float(runner.get("lexical", 0.0))
+        if lexical_gap > b.qualifier_tie_prefer_max_lexical_gap:
+            return False
+        if int(runner.get("unmatched_modifier_count", 0)) > int(
+            top.get("unmatched_modifier_count", 0)
+        ):
+            return False
+        return True
+
     def _token_overlap_ratio(self, tokens: set, term: Optional[str]) -> float:
         if not tokens or not term:
             return 0.0
@@ -1614,6 +1646,13 @@ class EntityGroundingService:
                     and runner["discriminative_coverage"]
                     > top["discriminative_coverage"]
                     and runner["coverage"] >= top["coverage"]
+                ):
+                    local_best_id = runner["concept_id"]
+                    local_best_term = runner["term"]
+                    local_best_score = runner["final_score"]
+                if (
+                    local_best_id is not None
+                    and self._should_prefer_lower_qualifier_tie(top, runner)
                 ):
                     local_best_id = runner["concept_id"]
                     local_best_term = runner["term"]
