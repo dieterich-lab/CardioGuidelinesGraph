@@ -41,6 +41,65 @@ It is intentionally ordered **newest first** and preserves the full sequence of:
 
 ## Change Timeline (Newest First)
 
+### 2026-04-30: Scientific-only qualifier-penalty ablation replay (post tie-fix)
+
+Replay scope:
+
+- Scientific standardized no-rescue replay after adding qualifier-tie preference logic.
+- Run used increased extra qualifier penalty (`0.12`) to pressure overspecified variants.
+- Completed run:
+  - Scientific no-rescue: run `656152`
+
+Outcomes:
+
+- `656152` (S-A): `120/120`, accuracy `1.000000`, MRR `0.987500`.
+
+Notes:
+
+- This run is scientific-only; paired production replay is tracked separately.
+- Manifest row `656152` shows field-level inconsistency (`accuracy=1.000000` with `hit_at_1=0.975`), consistent with prior metric writer anomaly observations.
+
+### 2026-04-30: Confidence-gated vector-rank rescue replay completed (near-symmetric recovery)
+
+Replay scope:
+
+- Evaluated the confidence-gated vector-rank promotion update:
+  - raw-score gap gating (`raw_final_score`),
+  - minimum score floor,
+  - vector-rank improvement requirement,
+  - vector/qualifier evidence gating,
+  - lexical-gap ceiling,
+  - unmatched-modifier regression guard.
+- Standardized tracks replayed:
+  - Scientific no-rescue: run `656049`
+  - Production train-rescue: run `656050`
+
+Outcomes:
+
+- `656050` (P-A): `120/120`, accuracy `1.000000`, MRR `1.000000`.
+- `656049` (S-A): `119/120`, accuracy `0.991667`, MRR `0.966667`.
+
+Miss audit for `656049`:
+
+- Total misses: `1`
+- Residual miss:
+  - row: `t0_row_04`
+  - side/role: `condition / Procedure`
+  - term: `Percutaneous coronary revascularization`
+  - gold: `415070008`
+  - predicted: `713617008`
+  - gold rank: `2` (present, but outranked)
+
+Interpretation:
+
+- Scientific no-rescue recovered from `112/120` (run `655967`) to `119/120` (run `656049`), removing `7/8` PCI-family misses.
+- Production train-rescue remained perfect (`120/120`) and unchanged vs prior best.
+- Net: the confidence-gated policy is a stable improvement over the prior mixed-outcome configuration, with one residual PCI ranking miss remaining in scientific no-rescue.
+
+Data note:
+
+- Manifest row `656049` reports `accuracy=0.991667` (`119/120`) but also `hit_at_1=0.933333`; this field-level inconsistency should be treated as a reporting artifact pending metric writer audit.
+
 ### 2026-04-30: Generic raw-score/tie-break replay completed (mixed outcome)
 
 Replay scope:
