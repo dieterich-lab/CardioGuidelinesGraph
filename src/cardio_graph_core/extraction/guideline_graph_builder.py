@@ -575,6 +575,34 @@ class GuidelineGraphBuilder:
             )
             or "0.70"
         )
+        self.vector_rank_rescue_min_final_score = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MIN_FINAL_SCORE",
+                "0.95",
+            )
+            or "0.95"
+        )
+        self.vector_rank_rescue_max_lexical_gap = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MAX_LEXICAL_GAP",
+                "0.25",
+            )
+            or "0.25"
+        )
+        self.vector_rank_rescue_min_vector_raw_advantage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MIN_VECTOR_RAW_ADVANTAGE",
+                "0.05",
+            )
+            or "0.05"
+        )
+        self.vector_rank_rescue_min_qualifier_advantage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MIN_QUALIFIER_ADVANTAGE",
+                "0.04",
+            )
+            or "0.04"
+        )
         self.min_weighted_query_coverage = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_MIN_WEIGHTED_QUERY_COVERAGE", "0.45")
             or "0.45"

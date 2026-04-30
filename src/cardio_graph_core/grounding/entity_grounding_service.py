@@ -786,20 +786,42 @@ class EntityGroundingService:
         b = self.builder
         if not b.vector_rank_rescue_enabled:
             return False
-        score_gap = float(top.get("final_score", 0.0)) - float(
-            runner.get("final_score", 0.0)
+        top_score = float(top.get("raw_final_score", top.get("final_score", 0.0)))
+        runner_score = float(
+            runner.get("raw_final_score", runner.get("final_score", 0.0))
         )
+        score_gap = top_score - runner_score
         if score_gap < 0.0 or score_gap > b.vector_rank_rescue_margin:
             return False
         runner_rank = runner.get("vector_rank")
         if runner_rank is None or runner_rank > b.vector_rank_rescue_max_rank:
             return False
         top_rank = top.get("vector_rank")
-        if top_rank is not None and top_rank <= b.vector_rank_rescue_max_rank:
+        if top_rank is not None and runner_rank >= top_rank:
+            return False
+        if min(top_score, runner_score) < b.vector_rank_rescue_min_final_score:
             return False
         if float(runner.get("coverage", 0.0)) < b.vector_rank_rescue_min_coverage:
             return False
-        if float(runner.get("lexical", 0.0)) + 0.02 < float(top.get("lexical", 0.0)):
+        lexical_gap = float(top.get("lexical", 0.0)) - float(runner.get("lexical", 0.0))
+        vector_raw_advantage = float(runner.get("vector_raw", 0.0)) - float(
+            top.get("vector_raw", 0.0)
+        )
+        qualifier_advantage = float(top.get("extra_qualifier_ratio", 0.0)) - float(
+            runner.get("extra_qualifier_ratio", 0.0)
+        )
+        if vector_raw_advantage < b.vector_rank_rescue_min_vector_raw_advantage and (
+            qualifier_advantage < b.vector_rank_rescue_min_qualifier_advantage
+        ):
+            return False
+        if (
+            lexical_gap > b.vector_rank_rescue_max_lexical_gap
+            and vector_raw_advantage < b.vector_rank_rescue_min_vector_raw_advantage
+        ):
+            return False
+        if int(runner.get("unmatched_modifier_count", 0)) > int(
+            top.get("unmatched_modifier_count", 0)
+        ):
             return False
         return True
 
