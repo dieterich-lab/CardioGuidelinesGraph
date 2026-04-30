@@ -764,21 +764,26 @@ def _build_compact_manifest_row(
     precision_at_k = rank_metrics.get("precision_at_k") or {}
     settings = output.get("settings") or {}
     config_env = output.get("config_env") or {}
+    total = int(output.get("total") or 0)
+    hits = int(output.get("hits") or 0)
+    accuracy = float(output.get("accuracy") or 0.0)
+    top1_consistent = (hits / total) if total > 0 else accuracy
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "run_id": os.getenv("SLURM_JOB_ID", "local"),
         "mode": output.get("mode"),
-        "accuracy": output.get("accuracy"),
-        "hits": output.get("hits"),
-        "total": output.get("total"),
+        "accuracy": accuracy,
+        "hits": hits,
+        "total": total,
         "mrr": rank_metrics.get("mrr"),
         "mean_gt_rank": rank_metrics.get("mean_gt_rank"),
         "median_gt_rank": rank_metrics.get("median_gt_rank"),
-        "hit_at_1": hit_at_k.get("1"),
+        # Keep top-1 manifest metrics aligned with final prediction correctness.
+        "hit_at_1": top1_consistent,
         "hit_at_3": hit_at_k.get("3"),
         "hit_at_5": hit_at_k.get("5"),
         "hit_at_10": hit_at_k.get("10"),
-        "precision_at_1": precision_at_k.get("1"),
+        "precision_at_1": top1_consistent,
         "precision_at_3": precision_at_k.get("3"),
         "precision_at_5": precision_at_k.get("5"),
         "precision_at_10": precision_at_k.get("10"),
