@@ -3,6 +3,7 @@
 import argparse
 import json
 import re
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -52,7 +53,62 @@ def _relative_path(path: Path, root: Path) -> str:
         return str(path)
 
 
-def _render_markdown(payload: dict[str, Any], eval_path: Path, repo_root: Path) -> str:
+def _norm(text: Any) -> str:
+    return " ".join(str(text or "").strip().lower().split())
+
+
+def _load_strength_indexes(
+    annotation_path: Path,
+) -> tuple[
+    dict[tuple[str, str, str], set[str]],
+    dict[tuple[str, str], set[str]],
+]:
+    payload = json.loads(annotation_path.read_text(encoding="utf-8"))
+    by_term_sid_role: dict[tuple[str, str, str], set[str]] = defaultdict(set)
+    by_term_sid: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for item in payload.get("unique_combinations") or []:
+        entity_original = _norm(item.get("entity_original"))
+        role = _norm(item.get("role"))
+        for candidate in item.get("entity_standardized_list") or []:
+            snomed_id = str(candidate.get("snomed_id") or "").strip()
+            strength = _norm(candidate.get("match_strenght"))
+            if not entity_original or not snomed_id or not strength:
+                continue
+            by_term_sid_role[(entity_original, snomed_id, role)].add(strength)
+            by_term_sid[(entity_original, snomed_id)].add(strength)
+    return by_term_sid_role, by_term_sid
+
+
+def _resolve_strength(
+    row: dict[str, Any],
+    by_term_sid_role: dict[tuple[str, str, str], set[str]],
+    by_term_sid: dict[tuple[str, str], set[str]],
+) -> tuple[str, str]:
+    term = _norm(row.get("term"))
+    gold_snomed_id = str(row.get("gold_snomed_id") or "").strip()
+    role = _norm(row.get("role"))
+
+    labels = by_term_sid_role.get((term, gold_snomed_id, role))
+    if labels:
+        if len(labels) == 1:
+            return next(iter(labels)), "term+sid+role"
+        return "/".join(sorted(labels)), "ambiguous(term+sid+role)"
+
+    labels = by_term_sid.get((term, gold_snomed_id))
+    if labels:
+        if len(labels) == 1:
+            return next(iter(labels)), "term+sid"
+        return "/".join(sorted(labels)), "ambiguous(term+sid)"
+
+    return "", "unresolved"
+
+
+def _render_markdown(
+    payload: dict[str, Any],
+    eval_path: Path,
+    repo_root: Path,
+    annotation_path: Path | None = None,
+) -> str:
     predictions = payload.get("predictions") or []
     predictions = sorted(
         predictions,
@@ -72,6 +128,11 @@ def _render_markdown(payload: dict[str, Any], eval_path: Path, repo_root: Path) 
     rank_metrics = payload.get("rank_metrics") or {}
     mrr = float(rank_metrics.get("mrr") or 0.0)
 
+    by_term_sid_role: dict[tuple[str, str, str], set[str]] = {}
+    by_term_sid: dict[tuple[str, str], set[str]] = {}
+    if annotation_path is not None and annotation_path.exists():
+        by_term_sid_role, by_term_sid = _load_strength_indexes(annotation_path)
+
     lines = [
         "# Current SNOMED Mappings (Scientific Track)",
         "",
@@ -82,19 +143,36 @@ def _render_markdown(payload: dict[str, Any], eval_path: Path, repo_root: Path) 
         f"- MRR: `{mrr:.6f}`",
         f"- Source JSON: `{_relative_path(eval_path, repo_root)}`",
         "- Selection rule: latest `vector_job_*` eval with `CARDIO_GRAPH_GROUNDING_ABLATION_LABEL` containing `NO_RESCUE` or unset `CARDIO_GRAPH_GROUNDING_RESCUE_MAP_PATH`.",
+    ]
+    if annotation_path is not None:
+        lines.append(
+            f"- Annotation source (`match_strenght`): `{_relative_path(annotation_path, repo_root)}`"
+        )
+
+    lines += [
         "",
         "Columns:",
         "- `row_id`, `side`, `role`, `term`: source concept location and role in GT annotations",
         "- `gold_snomed_id` / `gold_concept_term`: ground truth target",
+        "- `gold_match_strength`: confidence/mapping-strength label from annotation (`exact`/`strong`/`weak`)",
+        "- `strength_source`: how strength was resolved (`term+sid+role`, `term+sid`, or unresolved/ambiguous)",
         "- `pred_snomed_id` / `pred_concept_term`: system prediction",
         "- `hit`: `1` if prediction matches ground truth else `0`",
         "",
-        "| row_id | side | role | term | gold_snomed_id | gold_concept_term | pred_snomed_id | pred_concept_term | hit |",
-        "|---|---|---|---|---:|---|---:|---|---:|",
+        "| row_id | side | role | term | gold_snomed_id | gold_concept_term | gold_match_strength | strength_source | pred_snomed_id | pred_concept_term | hit |",
+        "|---|---|---|---|---:|---|---|---|---:|---|---:|",
     ]
 
     for row in predictions:
         hit = 1 if row.get("hit") else 0
+        strength = ""
+        strength_source = ""
+        if by_term_sid:
+            strength, strength_source = _resolve_strength(
+                row,
+                by_term_sid_role,
+                by_term_sid,
+            )
         lines.append(
             "| "
             + " | ".join(
@@ -105,6 +183,8 @@ def _render_markdown(payload: dict[str, Any], eval_path: Path, repo_root: Path) 
                     _safe_cell(row.get("term")),
                     _safe_cell(row.get("gold_snomed_id")),
                     _safe_cell(row.get("gold_concept_term")),
+                    _safe_cell(strength),
+                    _safe_cell(strength_source),
                     _safe_cell(row.get("pred_snomed_id")),
                     _safe_cell(row.get("pred_concept_term")),
                     str(hit),
@@ -140,6 +220,14 @@ def main() -> int:
         ),
         help="Output markdown path, relative to repo root unless absolute.",
     )
+    parser.add_argument(
+        "--annotation-json",
+        type=Path,
+        default=Path(
+            "/prj/doctoral_letters/guide/data/manual_table_contruction/entity_index/entity_index_grounding_strenght_plus_new_include8.json"
+        ),
+        help="Optional annotation JSON with `match_strenght` labels.",
+    )
     args = parser.parse_args()
 
     repo_root = args.repo_root.resolve()
@@ -154,7 +242,11 @@ def main() -> int:
         eval_path = _find_latest_scientific_eval(base_dir)
 
     payload = json.loads(eval_path.read_text(encoding="utf-8"))
-    markdown = _render_markdown(payload, eval_path, repo_root)
+    annotation_path = args.annotation_json
+    if annotation_path is not None and not annotation_path.is_absolute():
+        annotation_path = (repo_root / annotation_path).resolve()
+
+    markdown = _render_markdown(payload, eval_path, repo_root, annotation_path)
 
     output_md.parent.mkdir(parents=True, exist_ok=True)
     output_md.write_text(markdown, encoding="utf-8")
