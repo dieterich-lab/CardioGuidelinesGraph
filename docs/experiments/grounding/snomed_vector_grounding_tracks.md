@@ -1,6 +1,6 @@
 # SNOMED Vector Grounding Tracker (Scientific vs Production)
 
-Last revised: 2026-04-30
+Last revised: 2026-05-04
 
 ## Purpose
 
@@ -40,6 +40,35 @@ It is intentionally ordered **newest first** and preserves the full sequence of:
   - non-eval pipeline steps are tracked in local scheduler time from `sacct`.
 
 ## Change Timeline (Newest First)
+
+### 2026-05-04: Final matrix overview after annotation fix
+
+- Emre confirmed ID correction in issue #58 (`713689002`), and recheck against `/prj/doctoral_letters/guide/data/manual_table_contruction/entity_index/entity_index_grounding_strenght_plus_new_include8.json` is now complete.
+- `entity_original` coverage for `S-B/S-C/P-B/P-C` is `132/132` (`1.000`) in every cell.
+- Final overview below is metric-only (no confidence/difficulty annotations).
+
+Final 2x3 matrix (all experiments):
+
+| Cell | Definition | Run | Hits/Total | Accuracy | MRR |
+|---|---|---:|---:|---:|---:|
+| S-A | Scientific + standardized | `655938` | `119/120` | `0.991667` | `0.988889` |
+| S-B | Scientific + original (no helper, C0) | `633663` | `33/132` | `0.250000` | `0.304885` |
+| S-C | Scientific + original + LLM helper (C0) | `655921` | `50/132` | `0.378788` | `0.393282` |
+| P-A | Production + standardized + rescue | `655939` | `119/120` | `0.991667` | `0.988889` |
+| P-B | Production + original + rescue (C0) | `633686` | `65/132` | `0.492424` | `0.517432` |
+| P-C | Production + original + rescue + LLM helper (C0) | `655922` | `71/132` | `0.537879` | `0.577625` |
+
+Final matrix subset (`entity_original` only, with `match_strenght` split):
+
+- Annotation source: `/prj/doctoral_letters/guide/data/manual_table_contruction/entity_index/entity_index_grounding_strenght_plus_new_include8.json`
+- Coverage in all four original-term cells: `132/132` (`1.000`).
+
+| Cell | Run | Exact (Acc/MRR) | Strong (Acc/MRR) | Weak (Acc/MRR) | Coverage | Accuracy | MRR |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| S-B | `633663` | `22/37` (`0.594595/0.705405`) | `4/25` (`0.160000/0.107729`) | `7/70` (`0.100000/0.163595`) | `132/132` | `0.250000` | `0.304885` |
+| S-C | `655921` | `33/37` (`0.891892/0.824324`) | `3/25` (`0.120000/0.096329`) | `14/70` (`0.200000/0.271500`) | `132/132` | `0.378788` | `0.393282` |
+| P-B | `633686` | `34/37` (`0.918919/0.918919`) | `18/25` (`0.720000/0.667857`) | `13/70` (`0.185714/0.251493`) | `132/132` | `0.492424` | `0.517432` |
+| P-C | `655922` | `33/37` (`0.891892/0.932432`) | `17/25` (`0.680000/0.656329`) | `21/70` (`0.300000/0.361976`) | `132/132` | `0.537879` | `0.577625` |
 
 ### 2026-04-30: Scientific-only qualifier-penalty ablation replay (post tie-fix)
 
@@ -183,6 +212,99 @@ Net conclusion:
 - Helper is beneficial in both rows under C0, with larger gain in scientific.
 - Rescue-map policy remains a major independent driver on original-term performance.
 - Even after helper gains, both rows remain below standardized-input ceilings; realism gap persists.
+
+### 2026-04-30: 2x3 matrix sliced by manual mapping strength (exact/strong/weak)
+
+Source annotation (issue #58, latest comment):
+
+- `/prj/doctoral_letters/guide/data/manual_table_contruction/entity_index/entity_index_grounding_strenght.json`
+- Label field used as provided: `match_strenght` in `{exact,strong,weak}`.
+
+Join method:
+
+- Original-term runs (`S-B/S-C/P-B/P-C`): join each prediction to annotation by `(term, gold_snomed_id, role)` where `term` is `entity_original`.
+- Standardized-term runs (`S-A/P-A`): join by `(term, gold_snomed_id, role)` where `term` is `entity_standardized_candidate` (semantic tag suffix ignored when present).
+- Rows with no unique strength label were excluded from strength-sliced numerators/denominators and reported as coverage.
+
+Coverage note:
+
+- Original-term cells: `80/132` rows mapped to a unique strength label.
+- Standardized-term cells: `77/120` rows mapped; `10/120` rows had ambiguous labels in the manual annotation (`same key -> multiple strengths`) and were excluded.
+
+Strength-sliced results (accuracy within mapped subset):
+
+| Cell | Run | Exact | Strong | Weak | Coverage (mapped/total) |
+|---|---:|---:|---:|---:|---:|
+| S-A | `655938` | `15/15` (`1.000`) | `17/17` (`1.000`) | `45/45` (`1.000`) | `77/120` |
+| S-B | `633663` | `4/17` (`0.235`) | `4/24` (`0.167`) | `3/39` (`0.077`) | `80/132` |
+| S-C | `655921` | `14/17` (`0.824`) | `3/24` (`0.125`) | `8/39` (`0.205`) | `80/132` |
+| P-A | `655939` | `15/15` (`1.000`) | `17/17` (`1.000`) | `45/45` (`1.000`) | `77/120` |
+| P-B | `633686` | `15/17` (`0.882`) | `18/24` (`0.750`) | `3/39` (`0.077`) | `80/132` |
+| P-C | `655922` | `14/17` (`0.824`) | `17/24` (`0.708`) | `8/39` (`0.205`) | `80/132` |
+
+Delta view inside mapped subset:
+
+- Scientific helper effect (`S-C - S-B`):
+  - exact: `+0.588` (`0.235 -> 0.824`)
+  - strong: `-0.042` (`0.167 -> 0.125`)
+  - weak: `+0.128` (`0.077 -> 0.205`)
+- Production helper effect (`P-C - P-B`):
+  - exact: `-0.059` (`0.882 -> 0.824`)
+  - strong: `-0.042` (`0.750 -> 0.708`)
+  - weak: `+0.128` (`0.077 -> 0.205`)
+- Rescue effect on original terms:
+  - no helper (`P-B - S-B`): exact `+0.647`, strong `+0.583`, weak `+0.000`
+  - helper (`P-C - S-C`): exact `+0.000`, strong `+0.583`, weak `+0.000`
+
+Interpretation:
+
+- In the currently mapped subset, weak-labeled cases are the persistent bottleneck in both rows.
+- The LLM helper in C0 mainly improves exact and weak strata in scientific, but does not improve strong in this snapshot.
+- Production rescue is primarily lifting strong-labeled cases on original-term inputs.
+- Because mapping coverage is partial (and standardized labels include ambiguity in the source file), this slice should be treated as a targeted lens, not a replacement for headline `hits/total`.
+
+### 2026-04-30: Entity-original-only matrix outlook (annotation update phase)
+
+Decision for next phase:
+
+- Focus evaluation on `entity_original` only (real deployment scenario).
+- Defer standardized-term strength slicing until annotation semantics for that view are explicitly defined.
+
+Planned matrix (C0 profile, original terms only):
+
+| Row | Col B (original, no helper) | Col C (original, helper) |
+|---|---|---|
+| Scientific | no rescue + `entity_original` | no rescue + `entity_original` + LLM candidate standardization |
+| Production | train-rescue + `entity_original` | train-rescue + `entity_original` + LLM candidate standardization |
+
+Current anchor runs for this matrix:
+
+| Cell | Definition | Run | Hits/Total | Accuracy | MRR |
+|---|---|---:|---:|---:|---:|
+| S-B | Scientific + original (no helper, C0) | `633663` | `33/132` | `0.250000` | `0.304885` |
+| S-C | Scientific + original + LLM helper (C0) | `655921` | `50/132` | `0.378788` | `0.393282` |
+| P-B | Production + original + rescue (C0) | `633686` | `65/132` | `0.492424` | `0.517432` |
+| P-C | Production + original + rescue + LLM helper (C0) | `655922` | `71/132` | `0.537879` | `0.577625` |
+
+Annotation-readiness checkpoint (new file):
+
+- Source: `/prj/doctoral_letters/guide/data/manual_table_contruction/entity_index/entity_index_grounding_strenght_plus_new.json`
+- Strict original-key coverage (join by `(entity_original, snomed_id, role)` with `(entity_original, snomed_id)` fallback):
+  - `121/132` per cell (`0.917`) for `S-B/S-C/P-B/P-C`.
+- Remaining unresolved unique rows: `11`
+  - `5` missing SNOMEDs in annotation index.
+  - `6` term-mismatch rows with known `(snomed_id, role)`.
+
+Execution plan when annotation fix lands:
+
+1. Recompute coverage for `S-B/S-C/P-B/P-C` using strict original-key join.
+2. Gate for full-slice reporting: require `132/132` mapped rows in each of the 4 cells.
+3. Rebuild original-only strength tables (`exact/strong/weak`) for all 4 cells.
+4. Publish deltas vs current anchor table and close the temporary unresolved-row checklist.
+
+Note:
+
+- Prior DAPT mismatch was confirmed to be a non-fitting experiment assumption (overly strict phrase-level join for umbrella medication concepts), not an annotation-quality failure.
 
 Per-miss audit for S-A (`633654`, `109/120`):
 
