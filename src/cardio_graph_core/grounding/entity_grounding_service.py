@@ -25,6 +25,143 @@ class EntityGroundingService:
 
     def __init__(self, builder: Any):
         self.builder = builder
+        self._standardized_candidate_cache: Dict[Tuple[str, str], str] = {}
+
+    def _llm_standardized_candidate(self, term: str, role: Optional[str]) -> str:
+        b = self.builder
+        if not term:
+            return term
+        enabled = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_ENABLED", "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        strict_mode = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_STRICT", "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        retry_attempts_raw = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_RETRIES", "2"
+        )
+        retry_attempts = max(1, int(retry_attempts_raw))
+        retry_temperature_raw = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_LLM_STANDARDIZE_ORIGINAL_RETRY_TEMPERATURE",
+            "0.2",
+        )
+        retry_temperature = float(retry_temperature_raw)
+        term_source = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_TERM_SOURCE", "standardized")
+            .strip()
+            .lower()
+        )
+        if not enabled or term_source != "original":
+            return term
+
+        role_key = (role or "").strip()
+        cache_key = (self._normalize(term), role_key)
+        cached = self._standardized_candidate_cache.get(cache_key)
+        if cached is not None:
+            return cached or term
+
+        standardized = term
+        errors: List[str] = []
+        try:
+            from baml_py import ClientRegistry
+
+            from cardio_graph_core.extraction.baml_client.sync_client import (
+                b as baml_sync,
+            )
+            from cardio_graph_core.extraction.clients import (
+                resolve_ollama_base_url,
+                resolve_ollama_model_name,
+            )
+
+            base_options = (
+                {"client_registry": b.client_registry}
+                if getattr(b, "client_registry", None) is not None
+                else None
+            )
+
+            retry_options = None
+            llm_model = os.environ.get("CARDIO_GRAPH_GROUNDING_LLM_MODEL", "").strip()
+            llm_node = os.environ.get("CARDIO_GRAPH_GROUNDING_LLM_NODE", "").strip()
+            llm_port_raw = os.environ.get("CARDIO_GRAPH_GROUNDING_LLM_PORT", "").strip()
+            if llm_model and llm_node and llm_port_raw:
+                try:
+                    llm_port = int(llm_port_raw)
+                    retry_client = f"{llm_model}_retry_temp"
+                    retry_registry = ClientRegistry()
+                    retry_registry.add_llm_client(
+                        name=retry_client,
+                        provider="openai-generic",
+                        options={
+                            "base_url": resolve_ollama_base_url(llm_node, llm_port),
+                            "model": resolve_ollama_model_name(llm_model),
+                            "max_tokens": 10000,
+                            "temperature": retry_temperature,
+                            "format": "json",
+                            "timeout": 600,
+                            "request_timeout": 600,
+                        },
+                    )
+                    retry_registry.set_primary(retry_client)
+                    retry_options = {
+                        "client_registry": retry_registry,
+                        "client": retry_client,
+                    }
+                except Exception:
+                    retry_options = None
+
+            for attempt_idx in range(retry_attempts):
+                use_retry_profile = attempt_idx > 0 and retry_options is not None
+                baml_options = retry_options if use_retry_profile else base_options
+                try:
+                    result = (
+                        baml_sync.GenerateStandardizedCandidate(
+                            concept=term,
+                            role=role_key,
+                            baml_options=baml_options,
+                        )
+                        if baml_options is not None
+                        else baml_sync.GenerateStandardizedCandidate(
+                            concept=term,
+                            role=role_key,
+                        )
+                    )
+                    candidate = (
+                        getattr(result, "entity_standardized_candidate", None)
+                        if result is not None
+                        else None
+                    )
+                    standardized = str(candidate).strip() if candidate else ""
+                    if standardized:
+                        break
+                    raise RuntimeError(
+                        "Empty standardized candidate returned by LLM "
+                        f"for term='{term}' role='{role_key}'"
+                    )
+                except Exception as exc:
+                    errors.append(f"attempt={attempt_idx + 1}: {exc}")
+                    if attempt_idx + 1 < retry_attempts:
+                        logger.warning(
+                            "LLM standardized candidate retry %d/%d term='%s' role='%s'",
+                            attempt_idx + 1,
+                            retry_attempts,
+                            term,
+                            role_key,
+                        )
+                    else:
+                        raise
+        except Exception as exc:
+            if strict_mode:
+                raise
+            logger.debug(
+                "LLM standardized candidate generation failed term='%s' role='%s': %s | retries=%s",
+                term,
+                role_key,
+                exc,
+                "; ".join(errors) if errors else "none",
+            )
+
+        self._standardized_candidate_cache[cache_key] = standardized
+        return standardized or term
 
     def _normalize(self, text: str) -> str:
         text = (text or "").strip().lower()
@@ -52,15 +189,18 @@ class EntityGroundingService:
         normalized_tokens = [self._normalize_token(t) for t in tokens]
         return [t for t in normalized_tokens if len(t) > 2 and t not in STOPWORD_TOKENS]
 
-    def _context_query_variants(self, context: Any, role: Optional[str]) -> List[str]:
-        b = self.builder
-        if context is None or not b.enable_vector_context_query:
+    def _build_context_query_variants(
+        self,
+        context: Any,
+        role: Optional[str],
+        enabled: bool,
+        allowed_roles: set[str],
+        max_tokens: int,
+    ) -> List[str]:
+        if context is None or not enabled:
             return []
         role_key = (role or "").strip().lower()
-        if (
-            b.vector_context_allowed_roles
-            and role_key not in b.vector_context_allowed_roles
-        ):
+        if allowed_roles and role_key not in allowed_roles:
             return []
         if isinstance(context, (dict, list)):
             raw_context = json.dumps(context, ensure_ascii=False, sort_keys=True)
@@ -72,7 +212,7 @@ class EntityGroundingService:
         context_tokens = self._important_tokens(cleaned_context)
         if not context_tokens:
             return []
-        max_tokens = max(2, b.vector_context_max_tokens)
+        max_tokens = max(2, max_tokens)
         variants: List[str] = [" ".join(context_tokens[:max_tokens])]
         if len(context_tokens) > max_tokens:
             variants.append(" ".join(context_tokens[-max_tokens:]))
@@ -91,6 +231,28 @@ class EntityGroundingService:
             if len(deduped) >= 3:
                 break
         return deduped
+
+    def _context_query_variants(self, context: Any, role: Optional[str]) -> List[str]:
+        b = self.builder
+        return self._build_context_query_variants(
+            context=context,
+            role=role,
+            enabled=b.enable_vector_context_query,
+            allowed_roles=b.vector_context_allowed_roles,
+            max_tokens=b.vector_context_max_tokens,
+        )
+
+    def _lexical_context_query_variants(
+        self, context: Any, role: Optional[str]
+    ) -> List[str]:
+        b = self.builder
+        return self._build_context_query_variants(
+            context=context,
+            role=role,
+            enabled=getattr(b, "enable_lexical_context_query", False),
+            allowed_roles=getattr(b, "lexical_context_allowed_roles", set()),
+            max_tokens=getattr(b, "lexical_context_max_tokens", 8),
+        )
 
     def _has_disallowed_semantic_tag(self, term: Optional[str]) -> bool:
         if not term:
@@ -146,6 +308,288 @@ class EntityGroundingService:
         if tag in crossclass_tags:
             return b.role_semantic_crossclass_penalty
         return b.role_semantic_mismatch_penalty
+
+    def _has_planning_intent(self, term: str, query_context: Any) -> bool:
+        planning_tokens = {
+            "plan",
+            "planned",
+            "planning",
+            "schedule",
+            "scheduled",
+            "intended",
+            "intent",
+            "elective",
+        }
+        haystacks = [self._normalize(term)]
+        if query_context is not None:
+            if isinstance(query_context, (dict, list)):
+                haystacks.append(
+                    self._normalize(
+                        json.dumps(query_context, ensure_ascii=False, sort_keys=True)
+                    )
+                )
+            else:
+                haystacks.append(self._normalize(str(query_context)))
+        return any(
+            token in hs.split() for hs in haystacks if hs for token in planning_tokens
+        )
+
+    def _procedure_situation_penalty(
+        self,
+        role: Optional[str],
+        preferred_term: Optional[str],
+        source_term: str,
+        query_context: Any,
+    ) -> float:
+        if role != "Procedure":
+            return 0.0
+        if self._semantic_tag(preferred_term) != "situation":
+            return 0.0
+        if self._has_planning_intent(source_term, query_context):
+            return 0.0
+        return float(
+            getattr(
+                self.builder,
+                "procedure_situation_without_intent_penalty",
+                0.06,
+            )
+        )
+
+    def _medication_salt_form_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        if role != "Medication" or not candidate_term:
+            return 0.0
+        query_tokens = set(self._important_tokens(source_term))
+        if not query_tokens:
+            return 0.0
+        qualifier_tokens = self._medication_qualifier_tokens()
+        if query_tokens & qualifier_tokens:
+            return 0.0
+        candidate_tokens = set(self._important_tokens(candidate_term))
+        extra_qualifiers = qualifier_tokens & (candidate_tokens - query_tokens)
+        if not extra_qualifiers:
+            return 0.0
+        per_token_penalty = float(
+            getattr(self.builder, "medication_salt_form_penalty", 0.03)
+        )
+        return min(0.12, per_token_penalty * float(len(extra_qualifiers)))
+
+    def _medication_qualifier_tokens(self) -> set[str]:
+        return {
+            "besilate",
+            "hydrochloride",
+            "hydrobromide",
+            "succinate",
+            "phosphate",
+            "acetate",
+            "nitrate",
+            "sulfate",
+            "maleate",
+            "mesylate",
+            "tablet",
+            "capsule",
+            "release",
+            "milligram",
+        }
+
+    def _has_medication_therapy_intent(self, term: str, query_context: Any) -> bool:
+        cue_tokens = set(
+            getattr(
+                self.builder,
+                "medication_therapy_cue_tokens",
+                {"therapy", "treatment", "regimen", "management"},
+            )
+        )
+        if not cue_tokens:
+            return False
+        haystacks = [self._normalize(term)]
+        if query_context is not None:
+            if isinstance(query_context, (dict, list)):
+                haystacks.append(
+                    self._normalize(
+                        json.dumps(query_context, ensure_ascii=False, sort_keys=True)
+                    )
+                )
+            else:
+                haystacks.append(self._normalize(str(query_context)))
+        for hs in haystacks:
+            if not hs:
+                continue
+            tokens = set(self._important_tokens(hs))
+            if tokens & cue_tokens:
+                return True
+        return False
+
+    def _medication_abstraction_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+        query_context: Any,
+    ) -> float:
+        if role != "Medication" or not candidate_term:
+            return 0.0
+        if self._has_medication_therapy_intent(source_term, query_context):
+            return 0.0
+        candidate_tokens = set(self._important_tokens(candidate_term))
+        semantic_tag = self._semantic_tag(candidate_term)
+        abstraction_tags = {
+            "procedure",
+            "finding",
+            "situation",
+            "observable entity",
+            "qualifier value",
+        }
+        penalty = 0.0
+        if semantic_tag in abstraction_tags:
+            penalty += float(
+                getattr(
+                    self.builder,
+                    "medication_non_substance_semantic_penalty",
+                    0.07,
+                )
+            )
+        cue_tokens = set(
+            getattr(
+                self.builder,
+                "medication_therapy_cue_tokens",
+                {"therapy", "treatment", "regimen", "management"},
+            )
+        )
+        if candidate_tokens & cue_tokens:
+            penalty += float(
+                getattr(self.builder, "medication_therapy_context_penalty", 0.04)
+            )
+        max_penalty = float(
+            getattr(self.builder, "medication_max_abstraction_penalty", 0.16)
+        )
+        return min(max_penalty, penalty)
+
+    def _medication_base_preference_score(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+        query_context: Any,
+    ) -> float:
+        if role != "Medication" or not candidate_term:
+            return 0.0
+        if self._has_medication_therapy_intent(source_term, query_context):
+            return 0.0
+        candidate_tokens = set(self._important_tokens(candidate_term))
+        cue_tokens = set(
+            getattr(
+                self.builder,
+                "medication_therapy_cue_tokens",
+                {"therapy", "treatment", "regimen", "management"},
+            )
+        )
+        if candidate_tokens & cue_tokens:
+            return 0.0
+        semantic_tag = self._semantic_tag(candidate_term)
+        preferred_tags = {
+            "substance",
+            "product",
+            "medicinal product",
+            "clinical drug",
+            "pharmaceutical / biologic product",
+        }
+        if semantic_tag not in preferred_tags:
+            return 0.0
+        query_tokens = set(self._important_tokens(source_term))
+        extra_qualifiers = self._medication_qualifier_tokens() & (
+            candidate_tokens - query_tokens
+        )
+        return 0.85 if extra_qualifiers else 1.0
+
+    def _pci_angioplasty_variant_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        if role != "Procedure" or not candidate_term:
+            return 0.0
+        normalized_source = self._normalize(source_term)
+        if "percutaneous coronary revascularization" not in normalized_source:
+            return 0.0
+        candidate_norm = self._normalize(candidate_term)
+        # Prefer intervention/revascularization variants over angioplasty-only variants.
+        if "angioplasty" in candidate_norm:
+            return float(getattr(self.builder, "pci_angioplasty_variant_penalty", 0.08))
+        # Penalize chronic-total-occlusion sub-variants when the source query is generic.
+        if (
+            (
+                "chronic total occlusion" in candidate_norm
+                or "total occlusion" in candidate_norm
+            )
+            and "occlusion" not in normalized_source
+            and "chronic" not in normalized_source
+        ):
+            return float(getattr(self.builder, "pci_cto_variant_penalty", 0.08))
+        return 0.0
+
+    def _procedure_count_overspec_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        # Simplification experiment: disable specialized count-overspec heuristic
+        # and rely on generic extra-qualifier penalties.
+        return 0.0
+
+    def _indication_context_penalty(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        if role != "ClinicalCondition" or not candidate_term:
+            return 0.0
+        normalized_source = self._normalize(source_term)
+        if not normalized_source.startswith("indication of"):
+            return 0.0
+        candidate_tag = self._semantic_tag(candidate_term)
+        if candidate_tag != "finding":
+            return 0.0
+        return float(getattr(self.builder, "indication_finding_penalty", 0.10))
+
+    def _indication_context_preference_score(
+        self,
+        role: Optional[str],
+        source_term: str,
+        candidate_term: Optional[str],
+    ) -> float:
+        if role != "ClinicalCondition" or not candidate_term:
+            return 0.0
+        normalized_source = self._normalize(source_term)
+        if not normalized_source.startswith("indication of"):
+            return 0.0
+        candidate_tag = self._semantic_tag(candidate_term)
+        candidate_norm = self._normalize(candidate_term)
+        if candidate_tag == "qualifier value" and "indication of" in candidate_norm:
+            return float(getattr(self.builder, "indication_qualifier_preference", 1.0))
+        return 0.0
+
+    def _normalized_head_term_match(
+        self, source_term: str, candidate_term: str
+    ) -> float:
+        query_tokens = self._important_tokens(source_term)
+        candidate_tokens = self._important_tokens(candidate_term)
+        if not query_tokens or not candidate_tokens:
+            return 0.0
+        q_head = query_tokens[0]
+        c_head = candidate_tokens[0]
+        if q_head == c_head:
+            return 1.0
+        if q_head in candidate_tokens:
+            return 0.85
+        return SequenceMatcher(None, q_head, c_head).ratio() * 0.5
 
     def _score(self, query: str, candidate: str) -> float:
         q = self._normalize(query)
@@ -222,6 +666,65 @@ class EntityGroundingService:
         extra = discriminative_candidate_tokens - query_tokens
         return len(extra) / max(len(discriminative_candidate_tokens), 1)
 
+    def _modifier_tokens(self, tokens: set[str]) -> set[str]:
+        if not tokens:
+            return set()
+        explicit = {
+            "single",
+            "double",
+            "triple",
+            "quadruple",
+            "multiple",
+            "multi",
+            "first",
+            "second",
+            "third",
+            "fourth",
+            "fifth",
+            "left",
+            "right",
+            "bilateral",
+            "unilateral",
+            "proximal",
+            "distal",
+            "mid",
+            "middle",
+            "upper",
+            "lower",
+            "anterior",
+            "posterior",
+            "medial",
+            "lateral",
+        }
+        out: set[str] = set()
+        for token in tokens:
+            if token in explicit:
+                out.add(token)
+                continue
+            if re.fullmatch(r"x\d+", token):
+                out.add(token)
+                continue
+            if token.isdigit():
+                out.add(token)
+                continue
+        return out
+
+    def _unmatched_modifier_penalty(
+        self, query_tokens: set[str], candidate_tokens: set[str]
+    ) -> Tuple[int, float]:
+        b = self.builder
+        query_modifiers = self._modifier_tokens(query_tokens)
+        candidate_modifiers = self._modifier_tokens(candidate_tokens)
+        unmatched = candidate_modifiers - query_modifiers
+        unmatched_count = len(unmatched)
+        if unmatched_count <= 0:
+            return 0, 0.0
+        penalty = min(
+            b.unmatched_modifier_penalty_cap,
+            unmatched_count * b.unmatched_modifier_penalty_weight,
+        )
+        return unmatched_count, penalty
+
     def _vector_candidates(
         self, term: str
     ) -> Tuple[List[Dict[str, Any]], Dict[int, float], Dict[int, int]]:
@@ -283,20 +786,74 @@ class EntityGroundingService:
         b = self.builder
         if not b.vector_rank_rescue_enabled:
             return False
-        score_gap = float(top.get("final_score", 0.0)) - float(
-            runner.get("final_score", 0.0)
+        top_score = float(top.get("raw_final_score", top.get("final_score", 0.0)))
+        runner_score = float(
+            runner.get("raw_final_score", runner.get("final_score", 0.0))
         )
+        score_gap = top_score - runner_score
         if score_gap < 0.0 or score_gap > b.vector_rank_rescue_margin:
             return False
         runner_rank = runner.get("vector_rank")
         if runner_rank is None or runner_rank > b.vector_rank_rescue_max_rank:
             return False
         top_rank = top.get("vector_rank")
-        if top_rank is not None and top_rank <= b.vector_rank_rescue_max_rank:
+        if top_rank is not None and runner_rank >= top_rank:
+            return False
+        if min(top_score, runner_score) < b.vector_rank_rescue_min_final_score:
             return False
         if float(runner.get("coverage", 0.0)) < b.vector_rank_rescue_min_coverage:
             return False
-        if float(runner.get("lexical", 0.0)) + 0.02 < float(top.get("lexical", 0.0)):
+        lexical_gap = float(top.get("lexical", 0.0)) - float(runner.get("lexical", 0.0))
+        vector_raw_advantage = float(runner.get("vector_raw", 0.0)) - float(
+            top.get("vector_raw", 0.0)
+        )
+        qualifier_advantage = float(top.get("extra_qualifier_ratio", 0.0)) - float(
+            runner.get("extra_qualifier_ratio", 0.0)
+        )
+        if vector_raw_advantage < b.vector_rank_rescue_min_vector_raw_advantage and (
+            qualifier_advantage < b.vector_rank_rescue_min_qualifier_advantage
+        ):
+            return False
+        if (
+            lexical_gap > b.vector_rank_rescue_max_lexical_gap
+            and vector_raw_advantage < b.vector_rank_rescue_min_vector_raw_advantage
+        ):
+            return False
+        if int(runner.get("unmatched_modifier_count", 0)) > int(
+            top.get("unmatched_modifier_count", 0)
+        ):
+            return False
+        return True
+
+    def _should_prefer_lower_qualifier_tie(
+        self, top: Dict[str, Any], runner: Dict[str, Any]
+    ) -> bool:
+        b = self.builder
+        if not b.qualifier_tie_prefer_enabled:
+            return False
+        top_score = float(top.get("raw_final_score", top.get("final_score", 0.0)))
+        runner_score = float(
+            runner.get("raw_final_score", runner.get("final_score", 0.0))
+        )
+        score_gap = top_score - runner_score
+        if score_gap < 0.0 or score_gap > b.qualifier_tie_prefer_margin:
+            return False
+        qualifier_delta = float(top.get("extra_qualifier_ratio", 0.0)) - float(
+            runner.get("extra_qualifier_ratio", 0.0)
+        )
+        if qualifier_delta < b.qualifier_tie_prefer_min_qualifier_delta:
+            return False
+        vector_raw_advantage = float(runner.get("vector_raw", 0.0)) - float(
+            top.get("vector_raw", 0.0)
+        )
+        if vector_raw_advantage < b.qualifier_tie_prefer_min_vector_raw_advantage:
+            return False
+        lexical_gap = float(top.get("lexical", 0.0)) - float(runner.get("lexical", 0.0))
+        if lexical_gap > b.qualifier_tie_prefer_max_lexical_gap:
+            return False
+        if int(runner.get("unmatched_modifier_count", 0)) > int(
+            top.get("unmatched_modifier_count", 0)
+        ):
             return False
         return True
 
@@ -397,6 +954,8 @@ class EntityGroundingService:
 
         if not term:
             return _return_result(None, None, 0.0, [])
+
+        term = self._llm_standardized_candidate(term, role)
 
         search_start = time.perf_counter()
 
@@ -508,14 +1067,41 @@ class EntityGroundingService:
 
         results = []
         seen = set()
-        for t in search_terms:
+        lexical_terms = list(search_terms)
+        for context_variant in self._lexical_context_query_variants(
+            query_context, role
+        ):
+            lexical_terms.append(context_variant)
+            if getattr(b, "lexical_context_append_term", False):
+                lexical_terms.append(f"{term} {context_variant}")
+
+        use_subset_lexical = bool(
+            getattr(b, "enable_subset_lexical_grounding", False)
+            and getattr(b, "vector_retriever", None)
+        )
+
+        for t in lexical_terms:
             if t in seen:
                 continue
             seen.add(t)
             cached = b._search_cache.get(t)
             if cached is None:
-                explorer = b._ensure_snomed_connected()
-                cached = explorer.search_concepts_by_term(t, limit=limit)
+                if use_subset_lexical:
+                    try:
+                        cached = b.vector_retriever.retrieve_lexical(
+                            t,
+                            top_k=getattr(b, "lexical_top_k", 80),
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "Subset lexical retrieval failed for '%s' (no DB fallback): %s",
+                            t,
+                            exc,
+                        )
+                        cached = []
+                else:
+                    explorer = b._ensure_snomed_connected()
+                    cached = explorer.search_concepts_by_term(t, limit=limit)
                 b._search_cache[t] = cached
             results.extend(cached)
 
@@ -746,6 +1332,13 @@ class EntityGroundingService:
                     extra_qualifier_ratio * b.extra_qualifier_penalty_weight
                 )
                 final_penalty += extra_qualifier_penalty
+                unmatched_modifier_count, unmatched_modifier_penalty = (
+                    self._unmatched_modifier_penalty(
+                        important_query_tokens,
+                        candidate_tokens_for_best,
+                    )
+                )
+                final_penalty += unmatched_modifier_penalty
                 hard_negative_penalty = self._hard_negative_penalty_for(
                     normalized_source_term,
                     role_filter,
@@ -763,6 +1356,46 @@ class EntityGroundingService:
                 if role_mismatch and is_role_tension_term:
                     role_tension_penalty = b.role_tension_penalty
                     final_penalty += role_tension_penalty
+                procedure_situation_penalty = self._procedure_situation_penalty(
+                    role_filter,
+                    preferred,
+                    term,
+                    query_context,
+                )
+                final_penalty += procedure_situation_penalty
+                medication_salt_form_penalty = self._medication_salt_form_penalty(
+                    role_filter,
+                    term,
+                    preferred,
+                )
+                final_penalty += medication_salt_form_penalty
+                medication_abstraction_penalty = self._medication_abstraction_penalty(
+                    role_filter,
+                    term,
+                    preferred,
+                    query_context,
+                )
+                final_penalty += medication_abstraction_penalty
+                pci_angioplasty_penalty = self._pci_angioplasty_variant_penalty(
+                    role_filter,
+                    term,
+                    preferred,
+                )
+                final_penalty += pci_angioplasty_penalty
+                procedure_count_overspec_penalty = (
+                    self._procedure_count_overspec_penalty(
+                        role_filter,
+                        term,
+                        preferred,
+                    )
+                )
+                final_penalty += procedure_count_overspec_penalty
+                indication_context_penalty = self._indication_context_penalty(
+                    role_filter,
+                    term,
+                    preferred,
+                )
+                final_penalty += indication_context_penalty
 
                 vector_raw = vector_score_by_concept.get(int(concept_id), 0.0)
                 vector_rank = vector_rank_by_concept.get(int(concept_id))
@@ -788,7 +1421,25 @@ class EntityGroundingService:
                     vector_rank,
                 )
                 final_penalty += semantic_penalty
-                final_score = min(1.0, max(0.0, score + vector_bonus - final_penalty))
+                normalized_head_match = self._normalized_head_term_match(
+                    term,
+                    preferred or "",
+                )
+                medication_base_preference = self._medication_base_preference_score(
+                    role_filter,
+                    term,
+                    preferred,
+                    query_context,
+                )
+                indication_context_preference = (
+                    self._indication_context_preference_score(
+                        role_filter,
+                        term,
+                        preferred,
+                    )
+                )
+                raw_final_score = score + vector_bonus - final_penalty
+                final_score = min(1.0, max(0.0, raw_final_score))
 
                 if b.enable_grounding_candidate_debug:
                     candidate_debug_rows.append(
@@ -801,12 +1452,52 @@ class EntityGroundingService:
                                 discriminative_coverage, 6
                             ),
                             "extra_qualifier_ratio": round(extra_qualifier_ratio, 6),
+                            "unmatched_modifier_count": unmatched_modifier_count,
+                            "unmatched_modifier_penalty": round(
+                                unmatched_modifier_penalty,
+                                6,
+                            ),
                             "vector_raw": round(vector_raw, 6),
                             "vector_rank": vector_rank,
                             "vector_bonus": round(vector_bonus, 6),
                             "semantic_penalty": round(semantic_penalty, 6),
+                            "procedure_situation_penalty": round(
+                                procedure_situation_penalty, 6
+                            ),
+                            "medication_salt_form_penalty": round(
+                                medication_salt_form_penalty, 6
+                            ),
+                            "medication_abstraction_penalty": round(
+                                medication_abstraction_penalty,
+                                6,
+                            ),
+                            "pci_angioplasty_penalty": round(
+                                pci_angioplasty_penalty,
+                                6,
+                            ),
+                            "procedure_count_overspec_penalty": round(
+                                procedure_count_overspec_penalty,
+                                6,
+                            ),
+                            "indication_context_penalty": round(
+                                indication_context_penalty,
+                                6,
+                            ),
+                            "normalized_head_match": round(
+                                normalized_head_match,
+                                6,
+                            ),
+                            "medication_base_preference": round(
+                                medication_base_preference,
+                                6,
+                            ),
+                            "indication_context_preference": round(
+                                indication_context_preference,
+                                6,
+                            ),
                             "role_mismatch": role_mismatch,
                             "final_penalty": round(final_penalty, 6),
+                            "raw_final_score": round(raw_final_score, 6),
                             "final_score": round(final_score, 6),
                         }
                     )
@@ -820,19 +1511,32 @@ class EntityGroundingService:
                         "lexical": score,
                         "discriminative_coverage": discriminative_coverage,
                         "extra_qualifier_ratio": extra_qualifier_ratio,
+                        "unmatched_modifier_count": unmatched_modifier_count,
+                        "unmatched_modifier_penalty": unmatched_modifier_penalty,
                         "extra_qualifier_penalty": extra_qualifier_penalty,
                         "low_coverage_penalty": low_coverage_penalty,
                         "missing_discriminative_penalty": missing_discriminative_penalty,
                         "hard_negative_penalty": hard_negative_penalty,
                         "role_mismatch_penalty": role_mismatch_penalty,
                         "role_tension_penalty": role_tension_penalty,
+                        "procedure_situation_penalty": procedure_situation_penalty,
+                        "medication_salt_form_penalty": medication_salt_form_penalty,
+                        "medication_abstraction_penalty": medication_abstraction_penalty,
+                        "pci_angioplasty_penalty": pci_angioplasty_penalty,
+                        "procedure_count_overspec_penalty": procedure_count_overspec_penalty,
+                        "indication_context_penalty": indication_context_penalty,
                         "base_semantic_penalty": base_semantic_penalty,
                         "semantic_penalty": semantic_penalty,
                         "vector_rank": vector_rank,
                         "vector_raw": vector_raw,
                         "vector_bonus": vector_bonus,
+                        "raw_final_score": raw_final_score,
                         "final_penalty": final_penalty,
+                        "normalized_head_match": normalized_head_match,
+                        "medication_base_preference": medication_base_preference,
+                        "indication_context_preference": indication_context_preference,
                         "role_mismatch": role_mismatch,
+                        "term_length": len(self._important_tokens(preferred or "")),
                     }
                 )
 
@@ -842,13 +1546,18 @@ class EntityGroundingService:
             scored_candidates = sorted(
                 scored_candidates,
                 key=lambda row: (
-                    row["final_score"],
-                    row["coverage"],
-                    row["lexical"],
-                    row["discriminative_coverage"],
-                    -row["extra_qualifier_ratio"],
+                    -row.get("raw_final_score", row["final_score"]),
+                    -row.get("indication_context_preference", 0.0),
+                    -row.get("medication_base_preference", 0.0),
+                    -row.get("normalized_head_match", 0.0),
+                    row.get("unmatched_modifier_count", 0),
+                    row["extra_qualifier_ratio"],
+                    -row["coverage"],
+                    -row["lexical"],
+                    -row["discriminative_coverage"],
+                    row.get("term_length", 0),
+                    int(row["concept_id"]),
                 ),
-                reverse=True,
             )
 
             for idx, row in enumerate(scored_candidates, start=1):
@@ -862,14 +1571,17 @@ class EntityGroundingService:
             if len(scored_candidates) > 1:
                 top_two = sorted(
                     scored_candidates,
-                    key=lambda row: row["final_score"],
+                    key=lambda row: row.get("raw_final_score", row["final_score"]),
                     reverse=True,
                 )[:2]
                 top = top_two[0]
                 runner = top_two[1]
                 if (
                     b.ambiguity_abstain_margin > 0.0
-                    and (top["final_score"] - runner["final_score"])
+                    and (
+                        top.get("raw_final_score", top["final_score"])
+                        - runner.get("raw_final_score", runner["final_score"])
+                    )
                     <= b.ambiguity_abstain_margin
                     and top["coverage"] < b.ambiguity_min_coverage
                     and runner["coverage"] < b.ambiguity_min_coverage
@@ -879,12 +1591,14 @@ class EntityGroundingService:
                     if b.ambiguity_confidence_backoff_enabled:
                         min_backoff_score = max(
                             b.ambiguity_backoff_min_score,
-                            top["final_score"] - b.ambiguity_backoff_max_drop,
+                            top.get("raw_final_score", top["final_score"])
+                            - b.ambiguity_backoff_max_drop,
                         )
                         backoff_pool = [
                             row
                             for row in scored_candidates
-                            if row["final_score"] >= min_backoff_score
+                            if row.get("raw_final_score", row["final_score"])
+                            >= min_backoff_score
                         ]
                         if role_filter and b.enable_semantic_tag_filter:
                             role_compatible_pool = [
@@ -902,11 +1616,13 @@ class EntityGroundingService:
                             backoff_candidate = max(
                                 backoff_pool,
                                 key=lambda row: (
-                                    row["final_score"],
+                                    row.get("raw_final_score", row["final_score"]),
+                                    row.get("normalized_head_match", 0.0),
+                                    -row.get("unmatched_modifier_count", 0),
+                                    -row["extra_qualifier_ratio"],
                                     row["coverage"],
                                     row["lexical"],
                                     row["discriminative_coverage"],
-                                    -row["extra_qualifier_ratio"],
                                 ),
                             )
 
@@ -920,13 +1636,23 @@ class EntityGroundingService:
                         local_best_score = backoff_candidate["final_score"]
                 if (
                     local_best_id is not None
-                    and (top["final_score"] - runner["final_score"])
+                    and (
+                        top.get("raw_final_score", top["final_score"])
+                        - runner.get("raw_final_score", runner["final_score"])
+                    )
                     <= b.guarded_fallback_margin
                     and top["discriminative_coverage"]
                     < b.min_discriminative_coverage_for_top
                     and runner["discriminative_coverage"]
                     > top["discriminative_coverage"]
                     and runner["coverage"] >= top["coverage"]
+                ):
+                    local_best_id = runner["concept_id"]
+                    local_best_term = runner["term"]
+                    local_best_score = runner["final_score"]
+                if (
+                    local_best_id is not None
+                    and self._should_prefer_lower_qualifier_tie(top, runner)
                 ):
                     local_best_id = runner["concept_id"]
                     local_best_term = runner["term"]
@@ -941,7 +1667,7 @@ class EntityGroundingService:
             if b.enable_grounding_candidate_debug and candidate_debug_rows:
                 top_rows = sorted(
                     candidate_debug_rows,
-                    key=lambda row: row["final_score"],
+                    key=lambda row: row.get("raw_final_score", row["final_score"]),
                     reverse=True,
                 )[:5]
                 logger.info(

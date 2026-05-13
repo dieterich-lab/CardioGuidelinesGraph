@@ -408,6 +408,26 @@ class GuidelineGraphBuilder:
         self.index = ConceptIndex(index_path=index_path)
         self.abbreviations = self._load_abbreviations(abbrv_path)
         self.min_match_score = min_match_score
+        env_domain_filter = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_ENABLE_DOMAIN_FILTER"
+        )
+        if env_domain_filter is not None:
+            enable_domain_filter = env_domain_filter.strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
+        env_semantic_tag_filter = os.environ.get(
+            "CARDIO_GRAPH_GROUNDING_ENABLE_SEMANTIC_TAG_FILTER"
+        )
+        if env_semantic_tag_filter is not None:
+            enable_semantic_tag_filter = env_semantic_tag_filter.strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
         self.enable_domain_filter = enable_domain_filter
         self.enable_semantic_tag_filter = enable_semantic_tag_filter
         self.off_domain_min_score = off_domain_min_score
@@ -487,6 +507,39 @@ class GuidelineGraphBuilder:
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_CONTEXT_MAX_TOKENS", "8")
             or "8"
         )
+        self.enable_subset_lexical_grounding = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_SUBSET_LEXICAL_ENABLED", "true")
+            or "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.lexical_top_k = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_LEXICAL_TOP_K", "80") or "80"
+        )
+        self.enable_lexical_context_query = (
+            os.environ.get("CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_ENABLED", "false")
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        configured_lexical_context_roles = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_ALLOWED_ROLES",
+                configured_context_roles,
+            )
+            or configured_context_roles
+        )
+        self.lexical_context_allowed_roles = {
+            token.strip().lower()
+            for token in configured_lexical_context_roles.split(",")
+            if token.strip()
+        }
+        self.lexical_context_append_term = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_APPEND_TERM", "false"
+            )
+            or "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.lexical_context_max_tokens = int(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_LEXICAL_CONTEXT_MAX_TOKENS", "8")
+            or "8"
+        )
         self.vector_rank_prior_enabled = (
             os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_RANK_PRIOR_ENABLED", "false")
             or "false"
@@ -522,6 +575,69 @@ class GuidelineGraphBuilder:
             )
             or "0.70"
         )
+        self.vector_rank_rescue_min_final_score = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MIN_FINAL_SCORE",
+                "0.95",
+            )
+            or "0.95"
+        )
+        self.vector_rank_rescue_max_lexical_gap = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MAX_LEXICAL_GAP",
+                "0.25",
+            )
+            or "0.25"
+        )
+        self.vector_rank_rescue_min_vector_raw_advantage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MIN_VECTOR_RAW_ADVANTAGE",
+                "0.05",
+            )
+            or "0.05"
+        )
+        self.vector_rank_rescue_min_qualifier_advantage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_VECTOR_RANK_RESCUE_MIN_QUALIFIER_ADVANTAGE",
+                "0.04",
+            )
+            or "0.04"
+        )
+        self.qualifier_tie_prefer_enabled = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_ENABLED",
+                "true",
+            )
+            or "true"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        self.qualifier_tie_prefer_margin = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_MARGIN",
+                "0.02",
+            )
+            or "0.02"
+        )
+        self.qualifier_tie_prefer_min_qualifier_delta = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_MIN_QUALIFIER_DELTA",
+                "0.03",
+            )
+            or "0.03"
+        )
+        self.qualifier_tie_prefer_min_vector_raw_advantage = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_MIN_VECTOR_RAW_ADVANTAGE",
+                "0.02",
+            )
+            or "0.02"
+        )
+        self.qualifier_tie_prefer_max_lexical_gap = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_QUALIFIER_TIE_PREFER_MAX_LEXICAL_GAP",
+                "0.25",
+            )
+            or "0.25"
+        )
         self.min_weighted_query_coverage = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_MIN_WEIGHTED_QUERY_COVERAGE", "0.45")
             or "0.45"
@@ -539,6 +655,78 @@ class GuidelineGraphBuilder:
         self.extra_qualifier_penalty_weight = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_EXTRA_QUALIFIER_PENALTY", "0.10")
             or "0.10"
+        )
+        self.unmatched_modifier_penalty_weight = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_UNMATCHED_MODIFIER_PENALTY",
+                "0.03",
+            )
+            or "0.03"
+        )
+        self.unmatched_modifier_penalty_cap = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_UNMATCHED_MODIFIER_PENALTY_CAP",
+                "0.12",
+            )
+            or "0.12"
+        )
+        self.medication_non_substance_semantic_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MEDICATION_NON_SUBSTANCE_SEMANTIC_PENALTY",
+                "0.07",
+            )
+            or "0.07"
+        )
+        self.medication_therapy_context_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MEDICATION_THERAPY_CONTEXT_PENALTY",
+                "0.04",
+            )
+            or "0.04"
+        )
+        self.medication_max_abstraction_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MEDICATION_MAX_ABSTRACTION_PENALTY",
+                "0.16",
+            )
+            or "0.16"
+        )
+        configured_medication_cues = (
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_MEDICATION_THERAPY_CUE_TOKENS",
+                "therapy,treatment,drug,drugs,regimen,management,anticoagulation",
+            )
+            or "therapy,treatment,drug,drugs,regimen,management,anticoagulation"
+        )
+        self.medication_therapy_cue_tokens = {
+            self._normalize(token)
+            for token in configured_medication_cues.split(",")
+            if self._normalize(token)
+        }
+        self.pci_angioplasty_variant_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_PCI_ANGIOPLASTY_VARIANT_PENALTY",
+                "0.08",
+            )
+            or "0.08"
+        )
+        self.pci_cto_variant_penalty = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_PCI_CTO_VARIANT_PENALTY",
+                "0.08",
+            )
+            or "0.08"
+        )
+        self.indication_finding_penalty = float(
+            os.environ.get("CARDIO_GRAPH_GROUNDING_INDICATION_FINDING_PENALTY", "0.10")
+            or "0.10"
+        )
+        self.indication_qualifier_preference = float(
+            os.environ.get(
+                "CARDIO_GRAPH_GROUNDING_INDICATION_QUALIFIER_PREFERENCE",
+                "1.0",
+            )
+            or "1.0"
         )
         self.guarded_fallback_margin = float(
             os.environ.get("CARDIO_GRAPH_GROUNDING_GUARDED_FALLBACK_MARGIN", "0.015")
@@ -684,6 +872,13 @@ class GuidelineGraphBuilder:
                         )
                         or "snomed_term_embeddings"
                     ).strip(),
+                    fulltext_index_name=(
+                        os.environ.get(
+                            "CARDIO_GRAPH_GROUNDING_FULLTEXT_INDEX",
+                            "snomed_term_text_idx",
+                        )
+                        or "snomed_term_text_idx"
+                    ).strip(),
                     embedding_url=(
                         os.environ.get(
                             "CARDIO_GRAPH_GROUNDING_EMBEDDING_URL",
@@ -698,6 +893,15 @@ class GuidelineGraphBuilder:
                         or "Qwen3embed"
                     ).strip(),
                     top_k=self.vector_top_k,
+                    lexical_top_k=self.lexical_top_k,
+                    lexical_weight=float(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_LEXICAL_WEIGHT", "0.30")
+                        or "0.30"
+                    ),
+                    vector_weight=float(
+                        os.environ.get("CARDIO_GRAPH_GROUNDING_VECTOR_WEIGHT", "0.70")
+                        or "0.70"
+                    ),
                     timeout_seconds=int(
                         os.environ.get("CARDIO_GRAPH_GROUNDING_EMBEDDING_TIMEOUT", "20")
                         or "20"

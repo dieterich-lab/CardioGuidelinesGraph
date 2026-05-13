@@ -26,6 +26,7 @@ ollama_models = {
     "Qwen4b": "qwen3:4b",
     "Qwen14b": "qwen3:14b",
     "Qwen30b": "qwen3:30b",
+    "Qwen3next30b": "qwen3-next:30b",
     "Qwen32b": "qwen3:32b",
     "Qwen235b": "qwen3:235b",
     "Qwen06b": "qwen3:0.6b",

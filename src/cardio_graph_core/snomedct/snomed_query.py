@@ -75,6 +75,13 @@ class SnomedExplorer:
             print(f"Error connecting to database: {err}")
             raise
 
+    @staticmethod
+    def _active_concept_exists_filter():
+        # `concept` is the active concept snapshot in our Postgres SNOMED schema.
+        return text(
+            "EXISTS (SELECT 1 FROM concept c WHERE c.id = description.conceptid AND c.active = true)"
+        )
+
     def disconnect(self) -> None:
         """Dispose SQLAlchemy engine and close session"""
         if self.session:
@@ -158,7 +165,11 @@ class SnomedExplorer:
         # Query the master description table once
         matching_descriptions = (
             self.session.query(SnapDescription)
-            .filter(filters, SnapDescription.active == True)
+            .filter(
+                filters,
+                SnapDescription.active == True,
+                self._active_concept_exists_filter(),
+            )
             .limit(limit * 5)  # Fetch more to get a good pool of unique concepts
             .all()
         )
@@ -273,7 +284,9 @@ class SnomedExplorer:
         matching_concept_ids_subquery = (
             self.session.query(distinct(SnapDescription.conceptid).label("conceptid"))
             .filter(
-                SnapDescription.term.ilike(term_like), SnapDescription.active == True
+                SnapDescription.term.ilike(term_like),
+                SnapDescription.active == True,
+                self._active_concept_exists_filter(),
             )
             .limit(limit)
             .subquery()
@@ -287,7 +300,10 @@ class SnomedExplorer:
                 matching_concept_ids_subquery,
                 SnapDescription.conceptid == matching_concept_ids_subquery.c.conceptid,
             )
-            .filter(SnapDescription.active == True)
+            .filter(
+                SnapDescription.active == True,
+                self._active_concept_exists_filter(),
+            )
             .all()
         )
 
@@ -515,6 +531,7 @@ class SnomedExplorer:
                 .filter(
                     SnapDescription.conceptid == concept_id,
                     SnapDescription.active == True,
+                    self._active_concept_exists_filter(),
                     # Optional: Add language filter if your DB has multiple languages
                     # SnapDescription.languagecode == lang
                 )
@@ -558,6 +575,7 @@ class SnomedExplorer:
                 .filter(
                     SnapDescription.conceptid == concept_id,
                     SnapDescription.active == True,
+                    self._active_concept_exists_filter(),
                     SnapDescription.typeid == 900000000000003001,  # FSN type ID
                 )
                 .first()
@@ -571,6 +589,7 @@ class SnomedExplorer:
                 .filter(
                     SnapDescription.conceptid == concept_id,
                     SnapDescription.active == True,
+                    self._active_concept_exists_filter(),
                 )
                 .first()
             )

@@ -2,137 +2,152 @@
 
 Canonical reference for colleague review of current system mappings under the scientific (no-rescue) protocol.
 
-- Selected run: `630837` (locked_test, no rescue)
-- Accuracy: `0.483333` (`58/120`)
-- MRR: `0.522024`
-- Source JSON: `docs/generated/ground_truth/grounding_only/vector_job_630837/ground_truth_vector_eval.json`
-- Validation note: no newer scientific locked_test run exists in `docs/generated/grounding/ground_truth_vector_runs_manifest.jsonl` as of 2026-04-16.
+- Selected run: `655921` (latest scientific locked_test, no rescue)
+- Accuracy: `0.378788` (`50/132`)
+- MRR: `0.393282`
+- Source JSON: `docs/generated/ground_truth/grounding_only/vector_job_655921/ground_truth_vector_eval.json`
+- Selection rule: latest `vector_job_*` eval with `CARDIO_GRAPH_GROUNDING_ABLATION_LABEL` containing `NO_RESCUE` or unset `CARDIO_GRAPH_GROUNDING_RESCUE_MAP_PATH`.
+- Annotation source (`match_strenght`): `/prj/doctoral_letters/guide/data/manual_table_contruction/entity_index/entity_index_grounding_strenght_plus_new_include8.json`
 
 Columns:
 - `row_id`, `side`, `role`, `term`: source concept location and role in GT annotations
 - `gold_snomed_id` / `gold_concept_term`: ground truth target
+- `gold_match_strength`: confidence/mapping-strength label from annotation (`exact`/`strong`/`weak`)
+- `strength_source`: how strength was resolved (`term+sid+role`, `term+sid`, or unresolved/ambiguous)
 - `pred_snomed_id` / `pred_concept_term`: system prediction
 - `hit`: `1` if prediction matches ground truth else `0`
 
-| row_id | side | role | term | gold_snomed_id | gold_concept_term | pred_snomed_id | pred_concept_term | hit |
-|---|---|---|---|---:|---|---:|---|---:|
-| t0_row_01 | action | Medication | Aspirin | 387458008 | Aspirin (substance) | 25796002 | Aluminium aspirin (substance) | 0 |
-| t0_row_01 | action | Medication | Clopidogrel | 386952008 | Clopidogrel (substance) | 386952008 | Clopidogrel (substance) | 1 |
-| t0_row_01 | action | Medication | Rivaroxaban | 442031002 | Rivaroxaban (substance) | 442031002 | Rivaroxaban (substance) | 1 |
-| t0_row_01 | action | Procedure | Informing patient | 310866003 | Informing patient (procedure) | 310866003 | Informing patient (procedure) | 1 |
-| t0_row_01 | action | Procedure | Using decision making strategies | 415806002 | Using decision making strategies (finding) | 133920001 | Decision making encouragement (procedure) | 0 |
-| t0_row_01 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t0_row_01 | condition | ClinicalCondition | Coronary artery disease | 53741008 | Coronary arteriosclerosis (disorder) | 53741008 | Coronary arteriosclerosis (disorder) | 1 |
-| t0_row_01 | condition | ClinicalCondition | Finding of increased risk level | 1255670000 | Finding of increased risk level (finding) | 1255670000 | Finding of increased risk level (finding) | 1 |
-| t0_row_01 | condition | ClinicalCondition | Myocardial ischemia | 414795007 | Myocardial ischemia (disorder) | 414795007 | Myocardial ischemia (disorder) | 1 |
-| t0_row_01 | condition | ClinicalCondition | Old myocardial infarction | 1755008 | Old myocardial infarction (disorder) | 164867002 | Electrocardiographic old myocardial infarction (finding) | 0 |
-| t0_row_01 | condition | ClinicalCondition | Peripheral arterial disease | 840580004 | Peripheral arterial disease (disorder) | 840580004 | Peripheral arterial disease (disorder) | 1 |
-| t0_row_01 | condition | Procedure | Coronary artery bypass grafting | 232717009 | Coronary artery bypass grafting (procedure) | 232719007 | Coronary artery bypass graft x 1 (procedure) | 0 |
-| t0_row_01 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 713617008 | Percutaneous transluminal revascularization of chronic total occlusion of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
-| t0_row_02 | action | Medication | Aspirin | 387458008 | Aspirin (substance) | 25796002 | Aluminium aspirin (substance) | 0 |
-| t0_row_02 | action | Medication | Clopidogrel | 386952008 | Clopidogrel (substance) | 386952008 | Clopidogrel (substance) | 1 |
-| t0_row_02 | action | Procedure | Medical therapy | 243121000 | Medical therapy (procedure) | 243121000 | Medical therapy (procedure) | 1 |
-| t0_row_02 | action | Procedure | Myocardial revascularization | 275227003 | Myocardial revascularization (procedure) | 70627009 | Myocardial resection (procedure) | 0 |
-| t0_row_02 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t0_row_02 | condition | ClinicalCondition | Coronary artery disease | 53741008 | Coronary arteriosclerosis (disorder) | 53741008 | Coronary arteriosclerosis (disorder) | 1 |
-| t0_row_02 | condition | ClinicalCondition | Myocardial infarction | 22298006 | Myocardial infarction (disorder) | 164865005 | Electrocardiographic myocardial infarction (finding) | 0 |
-| t0_row_02 | condition | ClinicalCondition | Old myocardial infarction | 1755008 | Old myocardial infarction (disorder) | 164867002 | Electrocardiographic old myocardial infarction (finding) | 0 |
-| t0_row_02 | condition | ClinicalCondition | Triple vessel disease of the heart | 233817007 | Triple vessel disease of the heart (disorder) | 233817007 | Triple vessel disease of the heart (disorder) | 1 |
-| t0_row_02 | condition | ClinicalParameter | Left ventricular ejection fraction | 250908004 | Left ventricular ejection fraction (observable entity) | 250908004 | Left ventricular ejection fraction (observable entity) | 1 |
-| t0_row_02 | condition | Medication | Drug therapy with explicit context | 1290126002 | Drug therapy with explicit context (situation) |  |  | 0 |
-| t0_row_02 | condition | Procedure | Repair of coronary artery | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 713689002 | Repair of coronary artery (procedure) | 0 |
-| t0_row_03 | action | Medication | Aspirin | 387458008 | Aspirin (substance) | 25796002 | Aluminium aspirin (substance) | 0 |
-| t0_row_03 | action | Medication | Prasugrel | 443129001 | Prasugrel (substance) | 443129001 | Prasugrel (substance) | 1 |
-| t0_row_03 | action | Medication | Ticagrelor | 698805004 | Ticagrelor (substance) | 698805004 | Ticagrelor (substance) | 1 |
-| t0_row_03 | action | Procedure | Medical therapy | 243121000 | Medical therapy (procedure) | 243121000 | Medical therapy (procedure) | 1 |
-| t0_row_03 | action | Procedure | Myocardial revascularization | 275227003 | Myocardial revascularization (procedure) | 70627009 | Myocardial resection (procedure) | 0 |
-| t0_row_03 | condition | ClinicalCondition | Acute coronary syndrome | 394659003 | Acute coronary syndrome (disorder) | 413439005 | Acute ischemic heart disease (disorder) | 0 |
-| t0_row_03 | condition | ClinicalCondition | At high risk for bleeding | 711536002 | At high risk for bleeding (finding) | 711536002 | At high risk for bleeding (finding) | 1 |
-| t0_row_03 | condition | ClinicalCondition | Atherosclerosis of proximal portion of anterior descending branch of left coronary artery | 1366501001 | Atherosclerosis of proximal portion of anterior descending branch of left coronary artery (disorder) | 1366498001 | Atherosclerosis of anterior descending branch of left coronary artery (disorder) | 0 |
-| t0_row_03 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t0_row_03 | condition | ClinicalCondition | Double coronary vessel disease | 194843003 | Double coronary vessel disease (disorder) | 194843003 | Double coronary vessel disease (disorder) | 1 |
-| t0_row_03 | condition | ClinicalCondition | Finding of increased risk level | 1255670000 | Finding of increased risk level (finding) | 1255670000 | Finding of increased risk level (finding) | 1 |
-| t0_row_03 | condition | ClinicalCondition | Myocardial infarction | 22298006 | Myocardial infarction (disorder) | 164865005 | Electrocardiographic myocardial infarction (finding) | 0 |
-| t0_row_03 | condition | ClinicalCondition | Myocardial ischemia | 414795007 | Myocardial ischemia (disorder) | 414795007 | Myocardial ischemia (disorder) | 1 |
-| t0_row_03 | condition | ClinicalCondition | Single coronary vessel disease | 194842008 | Single coronary vessel disease (disorder) | 194842008 | Single coronary vessel disease (disorder) | 1 |
-| t0_row_03 | condition | ClinicalParameter | Left ventricular ejection fraction | 250908004 | Left ventricular ejection fraction (observable entity) | 250908004 | Left ventricular ejection fraction (observable entity) | 1 |
-| t0_row_03 | condition | Medication | Drug therapy with explicit context | 1290126002 | Drug therapy with explicit context (situation) |  |  | 0 |
-| t0_row_03 | condition | Medication | Ticagrelor | 698805004 | Ticagrelor (substance) | 698805004 | Ticagrelor (substance) | 1 |
-| t0_row_03 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 713617008 | Percutaneous transluminal revascularization of chronic total occlusion of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
-| t0_row_04 | action | Medication | Aspirin | 387458008 | Aspirin (substance) | 25796002 | Aluminium aspirin (substance) | 0 |
-| t0_row_04 | action | Medication | Ticagrelor | 698805004 | Ticagrelor (substance) | 698805004 | Ticagrelor (substance) | 1 |
-| t0_row_04 | action | Procedure | Intravascular ultrasound of artery | 241467003 | Intravascular ultrasound of artery (procedure) | 241467003 | Intravascular ultrasound of artery (procedure) | 1 |
-| t0_row_04 | action | Procedure | Optical coherence tomography | 392010000 | Optical coherence tomography (procedure) | 392010000 | Optical coherence tomography (procedure) | 1 |
-| t0_row_04 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t0_row_04 | condition | ClinicalCondition | Lesion | 52988006 | Lesion (morphologic abnormality) | 7870007 | Vascular lesion of cord (disorder) | 0 |
-| t0_row_04 | condition | ClinicalCondition | Myocardial infarction | 22298006 | Myocardial infarction (disorder) | 164865005 | Electrocardiographic myocardial infarction (finding) | 0 |
-| t0_row_04 | condition | ClinicalCondition | Stenosis of left coronary artery main stem | 876857001 | Stenosis of left coronary artery main stem (disorder) | 876857001 | Stenosis of left coronary artery main stem (disorder) | 1 |
-| t0_row_04 | condition | Medication | Drug therapy with explicit context | 1290126002 | Drug therapy with explicit context (situation) |  |  | 0 |
-| t0_row_04 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 713617008 | Percutaneous transluminal revascularization of chronic total occlusion of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
-| t0_row_05 | action | Procedure | Angiography of coronary artery | 33367005 | Angiography of coronary artery (procedure) | 33367005 | Angiography of coronary artery (procedure) | 1 |
-| t0_row_05 | action | Procedure | Intracoronary pressure guide wire | 371789009 | Intracoronary pressure guide wire (physical object) | 431558000 | Insertion of cardiac pressure wire using fluoroscopic guidance (procedure) | 0 |
-| t0_row_05 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t0_row_05 | condition | Procedure | Myocardial revascularization | 275227003 | Myocardial revascularization (procedure) | 70627009 | Myocardial resection (procedure) | 0 |
-| t0_row_06 | action | Procedure | Angiography of coronary artery | 33367005 | Angiography of coronary artery (procedure) | 33367005 | Angiography of coronary artery (procedure) | 1 |
-| t0_row_06 | action | Procedure | Intracoronary pressure guide wire | 371789009 | Intracoronary pressure guide wire (physical object) | 431558000 | Insertion of cardiac pressure wire using fluoroscopic guidance (procedure) | 0 |
-| t0_row_06 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t0_row_06 | condition | Procedure | Myocardial revascularization | 275227003 | Myocardial revascularization (procedure) | 70627009 | Myocardial resection (procedure) | 0 |
-| t1_row_01 | action | Medication | Drug therapy with explicit context | 1290126002 | Drug therapy with explicit context (situation) |  |  | 0 |
-| t1_row_01 | action | Medication | Platelet aggregation inhibitor therapy | 840595002 | Platelet aggregation inhibitor therapy (procedure) | 771452004 | Substance with platelet aggregation inhibitor mechanism of action (substance) | 0 |
-| t1_row_01 | action | Procedure | Coronary artery structure | 41801008 | Coronary artery structure (body structure) | 294002 | Excisional biopsy of joint structure of spine (procedure) | 0 |
-| t1_row_01 | action | Procedure | General characteristic of patient | 363789004 | General characteristic of patient (observable entity) | 7922000 | General treatment (procedure) | 0 |
-| t1_row_01 | action | Procedure | Left ventricular ejection fraction | 250908004 | Left ventricular ejection fraction (observable entity) | 46258004 | Determination of ventricular ejection fraction with probe technique (procedure) | 0 |
-| t1_row_01 | action | Procedure | Likely outcome | 410596003 | Likely outcome (qualifier value) | 20481000 | Determination of prognosis (procedure) | 0 |
-| t1_row_01 | action | Procedure | Preferences | 225773000 | Preferences (qualifier value) | 1156333005 | Determination of subject's care preferences (procedure) | 0 |
-| t1_row_01 | condition | ClinicalCondition | At high risk for bleeding | 711536002 | At high risk for bleeding (finding) | 711536002 | At high risk for bleeding (finding) | 1 |
-| t1_row_01 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t1_row_01 | condition | ClinicalCondition | Finding of increased risk level | 1255670000 | Finding of increased risk level (finding) | 1255670000 | Finding of increased risk level (finding) | 1 |
-| t1_row_01 | condition | ClinicalCondition | Indication of | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1363183004 | Pain behavior (finding) | 0 |
-| t1_row_01 | condition | ClinicalCondition | Myocardial ischemia | 414795007 | Myocardial ischemia (disorder) | 414795007 | Myocardial ischemia (disorder) | 1 |
-| t1_row_01 | condition | ClinicalCondition | Use of anticoagulation | 260678004 | Use of anticoagulation (attribute) | 440678006 | Seen in hospital anticoagulation clinic (finding) | 0 |
-| t1_row_01 | condition | Procedure | Myocardial revascularization | 275227003 | Myocardial revascularization (procedure) | 70627009 | Myocardial resection (procedure) | 0 |
-| t1_row_01 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 713617008 | Percutaneous transluminal revascularization of chronic total occlusion of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
-| t1_row_02 | action | Medication | Prasugrel | 443129001 | Prasugrel (substance) | 443129001 | Prasugrel (substance) | 1 |
-| t1_row_02 | action | Medication | Ticagrelor | 698805004 | Ticagrelor (substance) | 698805004 | Ticagrelor (substance) | 1 |
-| t1_row_02 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t1_row_02 | condition | ClinicalCondition | Indication of | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1363183004 | Pain behavior (finding) | 0 |
-| t1_row_02 | condition | ClinicalCondition | Use of anticoagulation | 260678004 | Use of anticoagulation (attribute) | 440678006 | Seen in hospital anticoagulation clinic (finding) | 0 |
-| t1_row_02 | condition | Procedure | Finding of increased risk level | 1255670000 | Finding of increased risk level (finding) | 48696000 | Provocative test for increased intraocular pressure for glaucoma (procedure) | 0 |
-| t1_row_02 | condition | Procedure | Placement of stent in coronary artery | 36969009 | Placement of stent in coronary artery (procedure) | 36969009 | Placement of stent in coronary artery (procedure) | 1 |
-| t1_row_03 | action | Medication | Aspirin | 387458008 | Aspirin (substance) | 25796002 | Aluminium aspirin (substance) | 0 |
-| t1_row_03 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t1_row_03 | condition | ClinicalCondition | Indication of | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1363183004 | Pain behavior (finding) | 0 |
-| t1_row_03 | condition | ClinicalCondition | Use of anticoagulation | 260678004 | Use of anticoagulation (attribute) | 440678006 | Seen in hospital anticoagulation clinic (finding) | 0 |
-| t1_row_03 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 713617008 | Percutaneous transluminal revascularization of chronic total occlusion of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
-| t1_row_04 | action | Medication | Aspirin | 387458008 | Aspirin (substance) | 25796002 | Aluminium aspirin (substance) | 0 |
-| t1_row_04 | action | Medication | Clopidogrel | 386952008 | Clopidogrel (substance) | 386952008 | Clopidogrel (substance) | 1 |
-| t1_row_04 | action | Medication | Oral | 738956005 | Oral (intended site) | 13790009 | Product containing iron in oral dose form (medicinal product form) | 0 |
-| t1_row_04 | action | Medication | Use of anticoagulation | 260678004 | Use of anticoagulation (attribute) |  |  | 0 |
-| t1_row_04 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t1_row_04 | condition | ClinicalCondition | Indication of | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1363183004 | Pain behavior (finding) | 0 |
-| t1_row_04 | condition | ClinicalCondition | Use of anticoagulation | 260678004 | Use of anticoagulation (attribute) | 440678006 | Seen in hospital anticoagulation clinic (finding) | 0 |
-| t1_row_04 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 713617008 | Percutaneous transluminal revascularization of chronic total occlusion of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
-| t1_row_05 | action | Medication | Rivaroxaban | 442031002 | Rivaroxaban (substance) | 442031002 | Rivaroxaban (substance) | 1 |
-| t1_row_05 | condition | ClinicalCondition | At high risk for bleeding | 711536002 | At high risk for bleeding (finding) | 711536002 | At high risk for bleeding (finding) | 1 |
-| t1_row_05 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t1_row_05 | condition | ClinicalCondition | Coronary artery stent thrombosis | 421327009 | Coronary artery stent thrombosis (disorder) | 421327009 | Coronary artery stent thrombosis (disorder) | 1 |
-| t1_row_05 | condition | ClinicalCondition | Finding of increased risk level | 1255670000 | Finding of increased risk level (finding) | 1255670000 | Finding of increased risk level (finding) | 1 |
-| t1_row_05 | condition | ClinicalCondition | Indication of | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1363183004 | Pain behavior (finding) | 0 |
-| t1_row_05 | condition | ClinicalCondition | Ischemic stroke | 422504002 | Ischemic stroke (disorder) | 422504002 | Ischemic stroke (disorder) | 1 |
-| t1_row_05 | condition | ClinicalCondition | Use of anticoagulation | 260678004 | Use of anticoagulation (attribute) | 440678006 | Seen in hospital anticoagulation clinic (finding) | 0 |
-| t1_row_05 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 713617008 | Percutaneous transluminal revascularization of chronic total occlusion of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
-| t1_row_06 | action | Medication | Indirect acting anticoagulant | 419847008 | Indirect acting anticoagulant (substance) | 419847008 | Indirect acting anticoagulant (substance) | 1 |
-| t1_row_06 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t1_row_06 | condition | ClinicalCondition | Indication of | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1363183004 | Pain behavior (finding) | 0 |
-| t1_row_06 | condition | ClinicalCondition | Use of anticoagulation | 260678004 | Use of anticoagulation (attribute) | 440678006 | Seen in hospital anticoagulation clinic (finding) | 0 |
-| t1_row_06 | condition | Medication | Drug therapy with explicit context | 1290126002 | Drug therapy with explicit context (situation) |  |  | 0 |
-| t1_row_06 | condition | Medication | Indication of | 230165009 | Indication of (contextual qualifier) (qualifier value) |  |  | 0 |
-| t1_row_06 | condition | Medication | Indirect acting anticoagulant | 419847008 | Indirect acting anticoagulant (substance) | 419847008 | Indirect acting anticoagulant (substance) | 1 |
-| t1_row_06 | condition | Procedure | Percutaneous coronary revascularization | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 713617008 | Percutaneous transluminal revascularization of chronic total occlusion of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
-| t1_row_07 | action | Medication | Aspirin | 387458008 | Aspirin (substance) | 25796002 | Aluminium aspirin (substance) | 0 |
-| t1_row_07 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t1_row_07 | condition | Procedure | Coronary artery bypass graft | 232717009 | Coronary artery bypass grafting (procedure) | 232717009 | Coronary artery bypass grafting (procedure) | 1 |
-| t1_row_08 | action | Medication | Proton pump inhibitor | 734582004 | Hydrogen/potassium adenosine triphosphatase enzyme system inhibitor (disposition) | 372525000 | Substance with hydrogen/potassium adenosine triphosphatase enzyme system inhibitor mechanism of action (substance) | 0 |
-| t1_row_08 | condition | ClinicalCondition | Chronic ischemic heart disease | 413838009 | Chronic ischemic heart disease (disorder) | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
-| t1_row_08 | condition | string | Finding of increased risk level | 1255670000 | Finding of increased risk level (finding) | 1255670000 | Finding of increased risk level (finding) | 1 |
-| t1_row_08 | condition | string | Gastrointestinal hemorrhage | 74474003 | Gastrointestinal hemorrhage (disorder) | 155837004 | Gastrointestinal haemorrhage (disorder) | 0 |
+| row_id | side | role | term | gold_snomed_id | gold_concept_term | gold_match_strength | strength_source | pred_snomed_id | pred_concept_term | hit |
+|---|---|---|---|---:|---|---|---|---:|---|---:|
+| t0_row_01 | action | Medication | Aspirin | 387458008 | Aspirin (substance) | exact | term+sid+role | 387458008 | Aspirin (substance) | 1 |
+| t0_row_01 | action | Medication | Rivaroxaban | 442031002 | Rivaroxaban (substance) | exact | term+sid+role | 442031002 | Rivaroxaban (substance) | 1 |
+| t0_row_01 | action | Medication | clopidogrel | 386952008 | Clopidogrel (substance) | exact | term+sid+role | 386952008 | Clopidogrel (substance) | 1 |
+| t0_row_01 | action | Procedure | provide information | 310866003 | Informing patient (procedure) | strong | term+sid+role | 21611000175104 | Provision of written information about exercise (procedure) | 0 |
+| t0_row_01 | action | Procedure | shared clinical decision-making | 415806002 | Using decision making strategies (finding) | weak | term+sid+role | 415806002 | Using decision making strategies (finding) | 1 |
+| t0_row_01 | condition | ClinicalCondition | CAD | 53741008 | Coronary arteriosclerosis (disorder) | exact | term+sid+role | 726499301000119105 | Myocardial infarction due to atherothrombotic coronary artery disease (disorder) | 0 |
+| t0_row_01 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t0_row_01 | condition | ClinicalCondition | PAD | 840580004 | Peripheral arterial disease (disorder) | exact | term+sid+role | 238135003 | Fat pad syndrome (disorder) | 0 |
+| t0_row_01 | condition | ClinicalCondition | high risk of ischaemic events | 1255670000 | Finding of increased risk level (finding) | weak | term+sid+role | 408863003 | At increased risk for acute ischemic cardiac event (finding) | 0 |
+| t0_row_01 | condition | ClinicalCondition | high risk of ischaemic events | 414795007 | Myocardial ischemia (disorder) | weak | term+sid+role | 408863003 | At increased risk for acute ischemic cardiac event (finding) | 0 |
+| t0_row_01 | condition | ClinicalCondition | prior MI | 1755008 | Old myocardial infarction (disorder) | strong | term+sid+role | 429391004 | New myocardial infarction compared to prior study (finding) | 0 |
+| t0_row_01 | condition | Procedure | PCI | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | exact | term+sid+role | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 1 |
+| t0_row_01 | condition | Procedure | percutaneous revascularization | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | exact | term+sid+role | 713617008 | Percutaneous transluminal revascularization of chronic total occlusion of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
+| t0_row_01 | condition | Procedure | surgical revascularization | 232717009 | Coronary artery bypass grafting (procedure) | strong | term+sid+role | 387713003 | Surgical procedure (procedure) | 0 |
+| t0_row_02 | action | Medication | Clopidogrel | 386952008 | Clopidogrel (substance) | exact | term+sid+role | 386952008 | Clopidogrel (substance) | 1 |
+| t0_row_02 | action | Medication | aspirin | 387458008 | Aspirin (substance) | exact | term+sid+role | 387458008 | Aspirin (substance) | 1 |
+| t0_row_02 | action | Medication | low dose Aspirin | 387458008 | Aspirin (substance) | weak | term+sid+role | 778376004 | Product containing only aspirin and pravastatin in oral dose form (medicinal product form) | 0 |
+| t0_row_02 | action | Procedure | guideline-directed medical therapy | 243121000 | Medical therapy (procedure) | weak | term+sid+role | 243121000 | Medical therapy (procedure) | 1 |
+| t0_row_02 | action | Procedure | myocardial revascularization | 275227003 | Myocardial revascularization (procedure) | exact | term+sid+role | 275227003 | Myocardial revascularization (procedure) | 1 |
+| t0_row_02 | condition | ClinicalCondition | CAD | 53741008 | Coronary arteriosclerosis (disorder) | exact | term+sid+role | 726499301000119105 | Myocardial infarction due to atherothrombotic coronary artery disease (disorder) | 0 |
+| t0_row_02 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t0_row_02 | condition | ClinicalCondition | CCS Patient | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 371822007 | Patient post percutaneous transluminal coronary angioplasty (finding) | 0 |
+| t0_row_02 | condition | ClinicalCondition | MI | 22298006 | Myocardial infarction (disorder) | exact | term+sid+role | 22298006 | Myocardial infarction (disorder) | 1 |
+| t0_row_02 | condition | ClinicalCondition | functionally significant three-vessel disease | 233817007 | Triple vessel disease of the heart (disorder) | weak | term+sid+role | 241243009 | Angiography of celiac artery, superior mesenteric artery and inferior mesenteric artery (procedure) | 0 |
+| t0_row_02 | condition | ClinicalCondition | prior MI | 1755008 | Old myocardial infarction (disorder) | strong | term+sid+role | 429391004 | New myocardial infarction compared to prior study (finding) | 0 |
+| t0_row_02 | condition | ClinicalParameter | LVEF > 35% | 250908004 | Left ventricular ejection fraction (observable entity) | exact | term+sid+role | 250908004 | Left ventricular ejection fraction (observable entity) | 1 |
+| t0_row_02 | condition | Medication | DAPT | 1290126002 | Drug therapy with explicit context (situation) | weak | term+sid+role |  |  | 0 |
+| t0_row_02 | condition | Procedure | coronary revascularization | 713689002 | Repair of coronary artery (procedure) | weak | term+sid+role | 10190003 | Aortocoronary bypass of four or more coronary arteries (procedure) | 0 |
+| t0_row_03 | action | Medication | Prasugrel | 443129001 | Prasugrel (substance) | exact | term+sid+role | 443129001 | Prasugrel (substance) | 1 |
+| t0_row_03 | action | Medication | low dose Aspirin | 387458008 | Aspirin (substance) | weak | term+sid+role | 778376004 | Product containing only aspirin and pravastatin in oral dose form (medicinal product form) | 0 |
+| t0_row_03 | action | Medication | ticagrelor monotherapy | 698805004 | Ticagrelor (substance) | exact | term+sid+role | 698805004 | Ticagrelor (substance) | 1 |
+| t0_row_03 | action | Procedure | guideline-directed medical therapy | 243121000 | Medical therapy (procedure) | weak | term+sid+role | 243121000 | Medical therapy (procedure) | 1 |
+| t0_row_03 | action | Procedure | myocardial revascularization | 275227003 | Myocardial revascularization (procedure) | exact | term+sid+role | 275227003 | Myocardial revascularization (procedure) | 1 |
+| t0_row_03 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t0_row_03 | condition | ClinicalCondition | CCS Patient | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 371822007 | Patient post percutaneous transluminal coronary angioplasty (finding) | 0 |
+| t0_row_03 | condition | ClinicalCondition | MI | 22298006 | Myocardial infarction (disorder) | exact | term+sid+role | 22298006 | Myocardial infarction (disorder) | 1 |
+| t0_row_03 | condition | ClinicalCondition | functionally significant single-vessel disease involving the proximal LAD | 1366501001 | Atherosclerosis of proximal portion of anterior descending branch of left coronary artery (disorder) | weak | term+sid+role | 840309000 | Acute ST segment elevation myocardial infarction due to occlusion of proximal portion of anterior descending branch of left coronary artery (disorder) | 0 |
+| t0_row_03 | condition | ClinicalCondition | functionally significant single-vessel disease involving the proximal LAD | 194842008 | Single coronary vessel disease (disorder) | weak | term+sid+role | 840309000 | Acute ST segment elevation myocardial infarction due to occlusion of proximal portion of anterior descending branch of left coronary artery (disorder) | 0 |
+| t0_row_03 | condition | ClinicalCondition | functionally significant two-vessel disease involving the proximal LAD | 1366501001 | Atherosclerosis of proximal portion of anterior descending branch of left coronary artery (disorder) | weak | term+sid+role | 840309000 | Acute ST segment elevation myocardial infarction due to occlusion of proximal portion of anterior descending branch of left coronary artery (disorder) | 0 |
+| t0_row_03 | condition | ClinicalCondition | functionally significant two-vessel disease involving the proximal LAD | 194843003 | Double coronary vessel disease (disorder) | weak | term+sid+role | 840309000 | Acute ST segment elevation myocardial infarction due to occlusion of proximal portion of anterior descending branch of left coronary artery (disorder) | 0 |
+| t0_row_03 | condition | ClinicalCondition | high bleeding risk | 711536002 | At high risk for bleeding (finding) | exact | term+sid+role | 711536002 | At high risk for bleeding (finding) | 1 |
+| t0_row_03 | condition | ClinicalCondition | high ischaemic risk | 1255670000 | Finding of increased risk level (finding) | weak | term+sid+role | 723509005 | High risk (qualifier value) | 0 |
+| t0_row_03 | condition | ClinicalCondition | high ischaemic risk | 414795007 | Myocardial ischemia (disorder) | weak | term+sid+role | 723509005 | High risk (qualifier value) | 0 |
+| t0_row_03 | condition | ClinicalCondition | post ACS | 394659003 | Acute coronary syndrome (disorder) | strong | term+sid+role | 233885007 | Post-infarction pericarditis (disorder) | 0 |
+| t0_row_03 | condition | ClinicalParameter | LVEF > 35% | 250908004 | Left ventricular ejection fraction (observable entity) | exact | term+sid+role | 250908004 | Left ventricular ejection fraction (observable entity) | 1 |
+| t0_row_03 | condition | Medication | DAPT | 1290126002 | Drug therapy with explicit context (situation) | weak | term+sid+role |  |  | 0 |
+| t0_row_03 | condition | Medication | ticagrelor-based | 1290126002 | Drug therapy with explicit context (situation) | weak | term+sid+role | 698805004 | Ticagrelor (substance) | 0 |
+| t0_row_03 | condition | Medication | ticagrelor-based | 698805004 | Ticagrelor (substance) | weak | term+sid+role | 698805004 | Ticagrelor (substance) | 1 |
+| t0_row_03 | condition | Procedure | PCI | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | exact | term+sid+role | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 1 |
+| t0_row_04 | action | Medication | Ticagrelor | 698805004 | Ticagrelor (substance) | exact | term+sid+role | 698805004 | Ticagrelor (substance) | 1 |
+| t0_row_04 | action | Medication | low dose Aspirin | 387458008 | Aspirin (substance) | weak | term+sid+role | 778376004 | Product containing only aspirin and pravastatin in oral dose form (medicinal product form) | 0 |
+| t0_row_04 | action | Procedure | Intracoronary imaging guidance by IVUS recommended | 241467003 | Intravascular ultrasound of artery (procedure) | weak | term+sid+role | 431747006 | Intravascular ultrasound Doppler imaging of coronary artery using fluoroscopic guidance with contrast (procedure) | 0 |
+| t0_row_04 | action | Procedure | Intracoronary imaging guidance by OCTis recommended | 392010000 | Optical coherence tomography (procedure) | weak | term+sid+role | 431667009 | Intracoronary brachytherapy using fluoroscopic guidance with contrast (procedure) | 0 |
+| t0_row_04 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t0_row_04 | condition | ClinicalCondition | MI | 22298006 | Myocardial infarction (disorder) | exact | term+sid+role | 22298006 | Myocardial infarction (disorder) | 1 |
+| t0_row_04 | condition | ClinicalCondition | anatomically complex lesions | 52988006 | Lesion (morphologic abnormality) | weak | term+sid+role | 52988006 | Lesion (morphologic abnormality) | 1 |
+| t0_row_04 | condition | ClinicalCondition | left main stem lesions | 876857001 | Stenosis of left coronary artery main stem (disorder) | strong | term+sid+role | 3227004 | Structure of left coronary artery main stem (body structure) | 0 |
+| t0_row_04 | condition | ClinicalCondition | long lesions | 52988006 | Lesion (morphologic abnormality) | strong | term+sid+role | 402433007 | Rheumatoid arthritis with nailfold and finger-pulp infarcts (disorder) | 0 |
+| t0_row_04 | condition | ClinicalCondition | true bifurcations lesions | 52988006 | Lesion (morphologic abnormality) | weak | term+sid+role | 371894001 | Bifurcation lesion of coronary artery (disorder) | 0 |
+| t0_row_04 | condition | Medication | DAPT | 1290126002 | Drug therapy with explicit context (situation) | weak | term+sid+role |  |  | 0 |
+| t0_row_04 | condition | Procedure | PCI | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | exact | term+sid+role | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 1 |
+| t0_row_05 | action | Procedure | Intracoronary pressure measurement (FFR) | 371789009 | Intracoronary pressure guide wire (physical object) | weak | term+sid+role | 371835003 | Fractional flow reserve using intracoronary bolus (observable entity) | 0 |
+| t0_row_05 | action | Procedure | Intracoronary pressure measurement (iFR) | 371789009 | Intracoronary pressure guide wire (physical object) | weak | term+sid+role | 371789009 | Intracoronary pressure guide wire (physical object) | 1 |
+| t0_row_05 | action | Procedure | computation (QFR) | 33367005 | Angiography of coronary artery (procedure) | weak | term+sid+role | 251065009 | Cardiovascular shunt flow ratio (observable entity) | 0 |
+| t0_row_05 | condition | ClinicalCondition | patients with chronic coronary syndrome | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
+| t0_row_05 | condition | Procedure | at the end of the revascularization | 275227003 | Myocardial revascularization (procedure) | weak | term+sid+role | 13275009 | Excision of lesion of thoracic aorta with end-to-end anastomosis (procedure) | 0 |
+| t0_row_06 | action | Procedure | Intracoronary pressure measurement (FFR) | 371789009 | Intracoronary pressure guide wire (physical object) | weak | term+sid+role | 371835003 | Fractional flow reserve using intracoronary bolus (observable entity) | 0 |
+| t0_row_06 | action | Procedure | Intracoronary pressure measurement (iFR) | 371789009 | Intracoronary pressure guide wire (physical object) | weak | term+sid+role | 371789009 | Intracoronary pressure guide wire (physical object) | 1 |
+| t0_row_06 | action | Procedure | computation (QFR) | 33367005 | Angiography of coronary artery (procedure) | weak | term+sid+role | 251065009 | Cardiovascular shunt flow ratio (observable entity) | 0 |
+| t0_row_06 | condition | ClinicalCondition | patients with chronic coronary syndrome | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
+| t0_row_06 | condition | Procedure | at the end of the revascularization | 275227003 | Myocardial revascularization (procedure) | weak | term+sid+role | 13275009 | Excision of lesion of thoracic aorta with end-to-end anastomosis (procedure) | 0 |
+| t1_row_01 | action | Medication | continue single antiplatelet therapy | 840595002 | Platelet aggregation inhibitor therapy (procedure) | weak | term+sid+role | 699047009 | Duration of antiplatelet therapy (observable entity) | 0 |
+| t1_row_01 | action | Medication | discontinue DAPT | 1290126002 | Drug therapy with explicit context (situation) | weak | term+sid+role | 424287005 | Removal of peripheral intravenous catheter (procedure) | 0 |
+| t1_row_01 | action | Procedure | coronary anatomy(Multivessel disease with/out left main stem involvement, high anatomical complexity, and likelihood of revascularization completeness) | 41801008 | Coronary artery structure (body structure) | weak | term+sid+role | 3227004 | Structure of left coronary artery main stem (body structure) | 0 |
+| t1_row_01 | action | Procedure | patient profile(Age, frailty, cognitive status, diabetes, and any other comorbidities) | 363789004 | General characteristic of patient (observable entity) | weak | term+sid+role | 713632001 | Groningen Frailty Indicator score (observable entity) | 0 |
+| t1_row_01 | action | Procedure | physicians select the most appropriate revascularization modality based on LVEF | 250908004 | Left ventricular ejection fraction (observable entity) | weak | term+sid+role | 81266008 | Heart revascularization (procedure) | 0 |
+| t1_row_01 | action | Procedure | physicians select the most appropriate revascularization modality based on outcome expectation | 410596003 | Likely outcome (qualifier value) | weak | term+sid+role | 81266008 | Heart revascularization (procedure) | 0 |
+| t1_row_01 | action | Procedure | physicians select the most appropriate revascularization modality based on preferences | 225773000 | Preferences (qualifier value) | weak | term+sid+role | 81266008 | Heart revascularization (procedure) | 0 |
+| t1_row_01 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t1_row_01 | condition | ClinicalCondition | high bleeding risk | 711536002 | At high risk for bleeding (finding) | exact | term+sid+role | 711536002 | At high risk for bleeding (finding) | 1 |
+| t1_row_01 | condition | ClinicalCondition | high ischaemic risk | 1255670000 | Finding of increased risk level (finding) | weak | term+sid+role | 723509005 | High risk (qualifier value) | 0 |
+| t1_row_01 | condition | ClinicalCondition | high ischaemic risk | 414795007 | Myocardial ischemia (disorder) | weak | term+sid+role | 723509005 | High risk (qualifier value) | 0 |
+| t1_row_01 | condition | ClinicalCondition | indication for oral anticoagulation | 230165009 | Indication of (contextual qualifier) (qualifier value) | weak | term+sid+role | 413560001 | Anticoagulation not indicated (situation) | 0 |
+| t1_row_01 | condition | ClinicalCondition | indication for oral anticoagulation | 260678004 | Use of anticoagulation (attribute) | weak | term+sid+role | 413560001 | Anticoagulation not indicated (situation) | 0 |
+| t1_row_01 | condition | ClinicalCondition | patients with chronic coronary syndrome | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 413838009 | Chronic ischemic heart disease (disorder) | 1 |
+| t1_row_01 | condition | Procedure | PCI | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | exact | term+sid+role | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 1 |
+| t1_row_01 | condition | Procedure | revascularization | 275227003 | Myocardial revascularization (procedure) | strong | term+sid+role | 233508000 | Revascularization of toe (procedure) | 0 |
+| t1_row_02 | action | Medication | prasugrel | 443129001 | Prasugrel (substance) | exact | term+sid+role | 443129001 | Prasugrel (substance) | 1 |
+| t1_row_02 | action | Medication | ticagrelor | 698805004 | Ticagrelor (substance) | exact | term+sid+role | 698805004 | Ticagrelor (substance) | 1 |
+| t1_row_02 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t1_row_02 | condition | ClinicalCondition | indication for oral anticoagulation | 230165009 | Indication of (contextual qualifier) (qualifier value) | weak | term+sid+role | 413560001 | Anticoagulation not indicated (situation) | 0 |
+| t1_row_02 | condition | ClinicalCondition | indication for oral anticoagulation | 260678004 | Use of anticoagulation (attribute) | weak | term+sid+role | 413560001 | Anticoagulation not indicated (situation) | 0 |
+| t1_row_02 | condition | Procedure | high-thrombotic risk stenting | 1255670000 | Finding of increased risk level (finding) | weak | term+sid+role | 723509005 | High risk (qualifier value) | 0 |
+| t1_row_02 | condition | Procedure | high-thrombotic risk stenting | 36969009 | Placement of stent in coronary artery (procedure) | weak | term+sid+role | 723509005 | High risk (qualifier value) | 0 |
+| t1_row_03 | action | Medication | low-dose aspirin | 387458008 | Aspirin (substance) | weak | term+sid+role | 778376004 | Product containing only aspirin and pravastatin in oral dose form (medicinal product form) | 0 |
+| t1_row_03 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t1_row_03 | condition | ClinicalCondition | indication for OAC | 230165009 | Indication of (contextual qualifier) (qualifier value) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1 |
+| t1_row_03 | condition | ClinicalCondition | indication for OAC | 260678004 | Use of anticoagulation (attribute) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 0 |
+| t1_row_03 | condition | Procedure | PCI | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | exact | term+sid+role | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 1 |
+| t1_row_04 | action | Medication | Aspirin | 387458008 | Aspirin (substance) | exact | term+sid+role | 387458008 | Aspirin (substance) | 1 |
+| t1_row_04 | action | Medication | indication for OAC | 260678004 | Use of anticoagulation (attribute) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 0 |
+| t1_row_04 | action | Medication | indication for OAC | 738956005 | Oral (intended site) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 0 |
+| t1_row_04 | action | Medication | indication for clopidogrel | 386952008 | Clopidogrel (substance) | weak | term+sid+role | 386952008 | Clopidogrel (substance) | 1 |
+| t1_row_04 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t1_row_04 | condition | ClinicalCondition | indication for OAC | 230165009 | Indication of (contextual qualifier) (qualifier value) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1 |
+| t1_row_04 | condition | ClinicalCondition | indication for OAC | 260678004 | Use of anticoagulation (attribute) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 0 |
+| t1_row_04 | condition | Procedure | PCI | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | exact | term+sid+role | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 1 |
+| t1_row_05 | action | Medication | rivaroxaban 15mg daily | 442031002 | Rivaroxaban (substance) | exact | term+sid+role | 442031002 | Rivaroxaban (substance) | 1 |
+| t1_row_05 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t1_row_05 | condition | ClinicalCondition | high bleeding risk | 711536002 | At high risk for bleeding (finding) | exact | term+sid+role | 711536002 | At high risk for bleeding (finding) | 1 |
+| t1_row_05 | condition | ClinicalCondition | indication for OAC | 230165009 | Indication of (contextual qualifier) (qualifier value) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1 |
+| t1_row_05 | condition | ClinicalCondition | indication for OAC | 260678004 | Use of anticoagulation (attribute) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 0 |
+| t1_row_05 | condition | ClinicalCondition | risk of Ischemic stroke | 1255670000 | Finding of increased risk level (finding) | weak | term+sid+role | 16896891000119106 | History of cerebrovascular accident due to ischemia (situation) | 0 |
+| t1_row_05 | condition | ClinicalCondition | risk of Ischemic stroke | 422504002 | Ischemic stroke (disorder) | weak | term+sid+role | 16896891000119106 | History of cerebrovascular accident due to ischemia (situation) | 0 |
+| t1_row_05 | condition | ClinicalCondition | risk of stent thrombosis | 1255670000 | Finding of increased risk level (finding) | weak | term+sid+role | 421327009 | Coronary artery stent thrombosis (disorder) | 0 |
+| t1_row_05 | condition | ClinicalCondition | risk of stent thrombosis | 421327009 | Coronary artery stent thrombosis (disorder) | weak | term+sid+role | 421327009 | Coronary artery stent thrombosis (disorder) | 1 |
+| t1_row_05 | condition | Procedure | PCI | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | exact | term+sid+role | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 1 |
+| t1_row_06 | action | Medication | Dosage of Vitamin K Antagonist | 419847008 | Indirect acting anticoagulant (substance) | weak | term+sid+role |  |  | 0 |
+| t1_row_06 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t1_row_06 | condition | ClinicalCondition | indication for OAC | 230165009 | Indication of (contextual qualifier) (qualifier value) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 1 |
+| t1_row_06 | condition | ClinicalCondition | indication for OAC | 260678004 | Use of anticoagulation (attribute) | weak | term+sid+role | 230165009 | Indication of (contextual qualifier) (qualifier value) | 0 |
+| t1_row_06 | condition | Medication | indication of Vitamin K Antagonist | 230165009 | Indication of (contextual qualifier) (qualifier value) | weak | term+sid+role | 18414002 | Colecalciferol (substance) | 0 |
+| t1_row_06 | condition | Medication | indication of Vitamin K Antagonist | 419847008 | Indirect acting anticoagulant (substance) | weak | term+sid+role | 18414002 | Colecalciferol (substance) | 0 |
+| t1_row_06 | condition | Medication | single or dual antiplatelet therapy | 1290126002 | Drug therapy with explicit context (situation) | weak | term+sid+role | 699047009 | Duration of antiplatelet therapy (observable entity) | 0 |
+| t1_row_06 | condition | Procedure | PCI | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | exact | term+sid+role | 415070008 | Percutaneous transluminal coronary intervention using imaging guidance with contrast (procedure) | 1 |
+| t1_row_07 | action | Medication | aspirin | 387458008 | Aspirin (substance) | exact | term+sid+role | 387458008 | Aspirin (substance) | 1 |
+| t1_row_07 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t1_row_07 | condition | Procedure | CABG | 232717009 | Coronary artery bypass grafting (procedure) | exact | term+sid+role | 232717009 | Coronary artery bypass grafting (procedure) | 1 |
+| t1_row_08 | action | Medication | proton pump inhibitor | 734582004 | Hydrogen/potassium adenosine triphosphatase enzyme system inhibitor (disposition) | exact | term+sid+role | 734582004 | Hydrogen/potassium adenosine triphosphatase enzyme system inhibitor (disposition) | 1 |
+| t1_row_08 | condition | ClinicalCondition | CCS | 413838009 | Chronic ischemic heart disease (disorder) | strong | term+sid+role | 394659003 | Acute coronary syndrome (disorder) | 0 |
+| t1_row_08 | condition | string | risk of gastrointestinal bleeding | 1255670000 | Finding of increased risk level (finding) | weak | term+sid+role | 74474003 | Gastrointestinal hemorrhage (disorder) | 0 |
+| t1_row_08 | condition | string | risk of gastrointestinal bleeding | 74474003 | Gastrointestinal hemorrhage (disorder) | weak | term+sid+role | 74474003 | Gastrointestinal hemorrhage (disorder) | 1 |

@@ -11,6 +11,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from cardio_graph_core.grounding.entity_grounding_service import EntityGroundingService
 
+TERM_SOURCE_STANDARDIZED = "standardized"
+TERM_SOURCE_ORIGINAL = "original"
+
 
 def _compose_context(row: Dict[str, Any], concept: Dict[str, Any]) -> str:
     parts: List[str] = []
@@ -49,6 +52,28 @@ def _extract_standardized_candidates(concept: Dict[str, Any]) -> List[Tuple[str,
     return candidates
 
 
+def _extract_original_candidates(concept: Dict[str, Any]) -> List[Tuple[str, str]]:
+    candidates: List[Tuple[str, str]] = []
+    original_term = str(concept.get("entity_original") or "").strip()
+    if not original_term:
+        return candidates
+
+    direct_id = str(concept.get("snomed_id") or "").strip()
+    if direct_id:
+        candidates.append((original_term, direct_id))
+
+    standardized_list = concept.get("entity_standardized_list") or []
+    if isinstance(standardized_list, list):
+        for candidate in standardized_list:
+            if not isinstance(candidate, dict):
+                continue
+            cand_id = str(candidate.get("snomed_id") or "").strip()
+            if cand_id:
+                candidates.append((original_term, cand_id))
+
+    return candidates
+
+
 def _iter_tables(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     tables = payload.get("tables")
     if isinstance(tables, list) and tables:
@@ -59,7 +84,9 @@ def _iter_tables(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def _read_gold_items(
-    gold_paths: List[Path], deduplicate: bool = True
+    gold_paths: List[Path],
+    deduplicate: bool = True,
+    term_source: str = TERM_SOURCE_STANDARDIZED,
 ) -> List[Dict[str, str]]:
     items: List[Dict[str, str]] = []
 
@@ -80,13 +107,23 @@ def _read_gold_items(
                             role = (concept.get("role") or "").strip()
                             if not role:
                                 continue
-                            candidates = _extract_standardized_candidates(concept)
+                            if term_source == TERM_SOURCE_ORIGINAL:
+                                candidates = _extract_original_candidates(concept)
+                            else:
+                                candidates = _extract_standardized_candidates(concept)
                             if not candidates:
-                                fallback_term = (
-                                    concept.get("entity_standardized_candidate")
-                                    or concept.get("entity_original")
-                                    or ""
-                                ).strip()
+                                if term_source == TERM_SOURCE_ORIGINAL:
+                                    fallback_term = (
+                                        concept.get("entity_original")
+                                        or concept.get("entity_standardized_candidate")
+                                        or ""
+                                    ).strip()
+                                else:
+                                    fallback_term = (
+                                        concept.get("entity_standardized_candidate")
+                                        or concept.get("entity_original")
+                                        or ""
+                                    ).strip()
                                 fallback_id = str(
                                     concept.get("snomed_id") or ""
                                 ).strip()
@@ -647,6 +684,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--embedding-node", default="local")
     parser.add_argument("--embedding-port", type=int, default=None)
     parser.add_argument(
+        "--term-source",
+        choices=(TERM_SOURCE_STANDARDIZED, TERM_SOURCE_ORIGINAL),
+        default=None,
+        help="Input term source for grounding queries: standardized (default) or original.",
+    )
+    parser.add_argument(
         "--run-manifest-jsonl",
         type=Path,
         default=None,
@@ -721,21 +764,26 @@ def _build_compact_manifest_row(
     precision_at_k = rank_metrics.get("precision_at_k") or {}
     settings = output.get("settings") or {}
     config_env = output.get("config_env") or {}
+    total = int(output.get("total") or 0)
+    hits = int(output.get("hits") or 0)
+    accuracy = float(output.get("accuracy") or 0.0)
+    top1_consistent = (hits / total) if total > 0 else accuracy
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "run_id": os.getenv("SLURM_JOB_ID", "local"),
         "mode": output.get("mode"),
-        "accuracy": output.get("accuracy"),
-        "hits": output.get("hits"),
-        "total": output.get("total"),
+        "accuracy": accuracy,
+        "hits": hits,
+        "total": total,
         "mrr": rank_metrics.get("mrr"),
         "mean_gt_rank": rank_metrics.get("mean_gt_rank"),
         "median_gt_rank": rank_metrics.get("median_gt_rank"),
-        "hit_at_1": hit_at_k.get("1"),
+        # Keep top-1 manifest metrics aligned with final prediction correctness.
+        "hit_at_1": top1_consistent,
         "hit_at_3": hit_at_k.get("3"),
         "hit_at_5": hit_at_k.get("5"),
         "hit_at_10": hit_at_k.get("10"),
-        "precision_at_1": precision_at_k.get("1"),
+        "precision_at_1": top1_consistent,
         "precision_at_3": precision_at_k.get("3"),
         "precision_at_5": precision_at_k.get("5"),
         "precision_at_10": precision_at_k.get("10"),
@@ -779,6 +827,18 @@ def _append_manifest_rows(
 def main() -> int:
     args = _build_parser().parse_args()
 
+    term_source = (
+        args.term_source
+        or (os.environ.get("CARDIO_GRAPH_GROUNDING_TERM_SOURCE", "") or "")
+        .strip()
+        .lower()
+        or TERM_SOURCE_STANDARDIZED
+    )
+    if term_source not in {TERM_SOURCE_STANDARDIZED, TERM_SOURCE_ORIGINAL}:
+        raise SystemExit(
+            f"Unsupported term source '{term_source}'. Use '{TERM_SOURCE_STANDARDIZED}' or '{TERM_SOURCE_ORIGINAL}'."
+        )
+
     if not args.gold_paths:
         args.gold_paths = [
             Path("/prj/doctoral_letters/guide/data/evaluation/table_22_manual_1.3.json")
@@ -799,6 +859,7 @@ def main() -> int:
     items = _read_gold_items(
         gold_paths=args.gold_paths,
         deduplicate=not args.no_deduplicate,
+        term_source=term_source,
     )
     mode = "vector" if args.mode == "vector" else "non_vector"
 
@@ -814,6 +875,7 @@ def main() -> int:
         "gold_path": str(args.gold_paths[0]),
         "gold_paths": [str(path) for path in args.gold_paths],
         "deduplicated": not args.no_deduplicate,
+        "term_source": term_source,
         "config_env": _capture_config_env(),
         "settings": {
             "model": args.model,
@@ -825,6 +887,7 @@ def main() -> int:
             "embedding_model": args.embedding_model,
             "embedding_node": args.embedding_node,
             "embedding_port": embedding_port,
+            "term_source": term_source,
         },
         **result,
     }
@@ -855,6 +918,7 @@ def main() -> int:
     args.output_json.write_text(json.dumps(output, indent=2) + "\n", encoding="utf-8")
 
     print(f"mode={output['mode']}")
+    print(f"term_source={term_source}")
     print("gold_paths=" + ", ".join(output.get("gold_paths", [])))
     print(f"gold_items={output['total']}")
     print(f"hits={output['hits']}")

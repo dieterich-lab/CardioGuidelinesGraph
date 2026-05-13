@@ -150,6 +150,16 @@ def _create_vector_index(
     session.run(cypher)
 
 
+def _create_fulltext_index(
+    session, index_name: str, label: str, property_name: str
+) -> None:
+    cypher = (
+        f"CREATE FULLTEXT INDEX `{index_name}` IF NOT EXISTS "
+        f"FOR (n:`{label}`) ON EACH [n.`{property_name}`]"
+    )
+    session.run(cypher)
+
+
 def _run_neo4j_with_retry(
     driver,
     operation,
@@ -247,6 +257,9 @@ def _count_existing_embeddings(
 @click.option("--label", default="SnomedTerm", show_default=True)
 @click.option("--property-name", default="embedding", show_default=True)
 @click.option("--index-name", default="snomed_term_embeddings_4096", show_default=True)
+@click.option(
+    "--fulltext-index-name", default="snomed_term_text_idx", show_default=True
+)
 @click.option("--dimensions", default=4096, type=int, show_default=True)
 @click.option("--similarity", default="COSINE", show_default=True)
 @click.option("--embedding-url", default=None, show_default=False)
@@ -288,6 +301,7 @@ def main(
     label: str,
     property_name: str,
     index_name: str,
+    fulltext_index_name: str,
     dimensions: int,
     similarity: str,
     embedding_url: Optional[str],
@@ -319,6 +333,7 @@ def main(
         f"[vector-ingest] embedding_model={embedding_model} -> {_resolve_model_name(embedding_model)}"
     )
     click.echo(f"[vector-ingest] index_name={index_name}, dimensions={dimensions}")
+    click.echo(f"[vector-ingest] fulltext_index_name={fulltext_index_name}")
     click.echo(
         f"[vector-ingest] resume_only={resume_only}, neo4j_max_attempts={neo4j_max_attempts}, "
         f"neo4j_retry_backoff={neo4j_retry_backoff}"
@@ -354,14 +369,19 @@ def main(
             f"[vector-ingest] subset filtering enabled: {len(concept_ids)} concept ids from {subset_concept_ids_path}"
         )
 
+    language_filter_aliased = language_filter.replace("languagecode", "d.languagecode")
+    subset_filter_aliased = subset_filter.replace("conceptid", "d.conceptid")
+
     count_query = text(
         f"""
         SELECT COUNT(*) AS cnt
-        FROM description
-        WHERE active = true
-          AND term IS NOT NULL
-          {language_filter}
-                    {subset_filter}
+        FROM description d
+        JOIN concept c ON d.conceptid = c.id
+        WHERE d.active = true
+          AND c.active = true
+          AND d.term IS NOT NULL
+                    {language_filter_aliased}
+                    {subset_filter_aliased}
         """
     )
 
@@ -417,13 +437,15 @@ def main(
 
         query = text(
             f"""
-            SELECT conceptid, term
-            FROM description
-            WHERE active = true
-              AND term IS NOT NULL
-              {language_filter}
-                                {subset_filter}
-            ORDER BY conceptid, id
+                        SELECT d.conceptid, d.term, d.typeid, d.languagecode
+            FROM description d
+            JOIN concept c ON d.conceptid = c.id
+            WHERE d.active = true
+              AND c.active = true
+              AND d.term IS NOT NULL
+              {language_filter_aliased}
+              {subset_filter_aliased}
+            ORDER BY d.conceptid, d.id
             """
         )
 
@@ -476,10 +498,18 @@ def main(
 
                 payload = []
                 for item, vector in zip(rows_to_embed, embeddings):
+                    term_type = "Other"
+                    if int(item.get("typeid") or 0) == 900000000000003001:
+                        term_type = "FSN"
+                    elif int(item.get("typeid") or 0) == 900000000000013009:
+                        term_type = "Synonym"
                     payload.append(
                         {
                             "concept_id": int(item["conceptid"]),
                             "term": str(item["term"]),
+                            "type_id": int(item.get("typeid") or 0),
+                            "term_type": term_type,
+                            "language_code": str(item.get("languagecode") or ""),
                             "embedding": vector,
                         }
                     )
@@ -491,6 +521,9 @@ def main(
                             UNWIND $rows AS row
                             MERGE (n:`{label}` {{concept_id: row.concept_id, term: row.term}})
                             SET n.`{property_name}` = row.embedding,
+                                n.type_id = row.type_id,
+                                n.term_type = row.term_type,
+                                n.language_code = row.language_code,
                                 n.updated_at = datetime()
                             """,
                             rows=payload,
@@ -528,7 +561,12 @@ def main(
                 if max_rows > 0 and processed + len(rows_buffer) >= max_rows:
                     break
                 rows_buffer.append(
-                    {"conceptid": int(row["conceptid"]), "term": row["term"]}
+                    {
+                        "conceptid": int(row["conceptid"]),
+                        "term": row["term"],
+                        "typeid": int(row.get("typeid") or 0),
+                        "languagecode": row.get("languagecode"),
+                    }
                 )
                 if len(rows_buffer) >= batch_size:
                     flush_buffer()
@@ -544,6 +582,13 @@ def main(
                 property_name=property_name,
                 dimensions=dimensions,
                 similarity=similarity,
+            )
+            click.echo("[vector-ingest] creating fulltext index")
+            _create_fulltext_index(
+                session=session,
+                index_name=fulltext_index_name,
+                label=label,
+                property_name="term",
             )
 
             poll_start = time.time()
